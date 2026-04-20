@@ -32,6 +32,7 @@ export const generateSampleWebhookPayload = (
     updatedAt: now,
     completedAt: null,
     deletedAt: null,
+    shareQrCodeLink: null,
     teamId: null,
     templateId: null,
     source: DocumentSource.DOCUMENT,
@@ -206,6 +207,7 @@ export const generateSampleWebhookPayload = (
         ...basePayload,
         status: DocumentStatus.COMPLETED,
         completedAt: now,
+        shareQrCodeLink: 'https://e-sign.nomiadocs.com/share/qr_123456789',
         recipients: [
           {
             ...basePayload.recipients[0],
