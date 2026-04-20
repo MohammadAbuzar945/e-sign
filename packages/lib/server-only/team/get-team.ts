@@ -3,6 +3,7 @@ import { TeamMemberRole } from '@prisma/client';
 import { prisma } from '@documenso/prisma';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
+import { normalizeStoredKbaSettings } from '../../utils/kba-settings';
 import {
   buildTeamWhereQuery,
   extractDerivedTeamSettings,
@@ -97,5 +98,6 @@ export const getTeam = async ({
     currentTeamRole,
     teamSettings,
     derivedSettings: extractDerivedTeamSettings(organisationSettings, teamSettings),
+    organisationKbaSettings: normalizeStoredKbaSettings(organisationSettings.kbaSettings),
   };
 };

@@ -552,6 +552,7 @@ export const createDocumentFromTemplate = async ({
         authOptions: createDocumentAuthOptions({
           globalAccessAuth: templateAuthOptions.globalAccessAuth,
           globalActionAuth: templateAuthOptions.globalActionAuth,
+          kbaSettings: templateAuthOptions.kbaSettings ?? null,
         }),
         visibility: template.visibility || settings.documentVisibility,
         useLegacyFieldInsertion: template.useLegacyFieldInsertion ?? false,

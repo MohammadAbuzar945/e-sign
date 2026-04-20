@@ -33,6 +33,7 @@ export const ZUpdateEnvelopeRequestSchema = z.object({
       includeQrCodeInCertificate: z.boolean().nullish(),
       globalAccessAuth: z.array(ZDocumentAccessAuthTypesSchema).optional(),
       globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional(),
+      kbaAccessExplicitlyDisabled: z.boolean().optional(),
       folderId: z.string().nullish(),
     })
     .optional(),

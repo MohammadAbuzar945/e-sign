@@ -39,7 +39,8 @@
     "make:version": "npm version --workspace @documenso/remix --include-workspace-root --no-git-tag-version -m \"v%s\"",
     "translate": "npm run translate:extract && npm run translate:compile",
     "translate:extract": "lingui extract --clean",
-    "translate:compile": "lingui compile"
+    "translate:compile": "lingui compile",
+    "openapi:merge-nomia": "node scripts/merge-nomia-openapi.mjs"
   },
   "packageManager": "npm@10.7.0",
   "engines": {

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { SUPPORTED_LANGUAGE_CODES } from '@documenso/lib/constants/i18n';
 import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';
+import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';
 import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';
 import {
   ZDocumentMetaDateFormatSchema,
@@ -46,6 +47,9 @@ export const ZUpdateTeamSettingsRequestSchema = z.object({
     defaultRecipients: ZDefaultRecipientsSchema.nullish(),
     // AI features settings.
     aiFeaturesEnabled: z.boolean().nullish(),
+
+    /// Null = inherit organisation KBA defaults.
+    kbaSettings: ZDocumentKbaSettingsSchema.nullish(),
   }),
 });
 

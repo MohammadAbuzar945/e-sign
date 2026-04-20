@@ -27,6 +27,7 @@ import type {
   TRecipientAccessAuthTypes,
   TRecipientActionAuthTypes,
 } from '../../types/document-auth';
+import { DocumentAccessAuth } from '../../types/document-auth';
 import type { TDocumentFormValues } from '../../types/document-form-values';
 import type { TEnvelopeAttachmentType } from '../../types/envelope-attachment';
 import type { TFieldAndMeta } from '../../types/field-meta';
@@ -38,6 +39,7 @@ import { getFileServerSide } from '../../universal/upload/get-file.server';
 import { putPdfFileServerSide } from '../../universal/upload/put-file.server';
 import { extractDerivedDocumentMeta } from '../../utils/document';
 import { createDocumentAuthOptions, createRecipientAuthOptions } from '../../utils/document-auth';
+import { normalizeStoredKbaSettings } from '../../utils/kba-settings';
 import { buildTeamWhereQuery, extractDerivedTeamSettings } from '../../utils/teams';
 import { incrementDocumentId, incrementTemplateId } from '../envelope/increment-id';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
@@ -246,8 +248,19 @@ export const createEnvelope = async ({
     );
   }
 
+  const derivedKbaForAccess = normalizeStoredKbaSettings(
+    (settings as { kbaSettings?: unknown }).kbaSettings,
+  );
+  const initialGlobalAccessAuth: TDocumentAccessAuthTypes[] = [...(globalAccessAuth || [])];
+  if (
+    derivedKbaForAccess.isEnabled &&
+    !initialGlobalAccessAuth.includes(DocumentAccessAuth.KBA)
+  ) {
+    initialGlobalAccessAuth.push(DocumentAccessAuth.KBA);
+  }
+
   const authOptions = createDocumentAuthOptions({
-    globalAccessAuth: globalAccessAuth || [],
+    globalAccessAuth: initialGlobalAccessAuth,
     globalActionAuth: globalActionAuth || [],
   });
 

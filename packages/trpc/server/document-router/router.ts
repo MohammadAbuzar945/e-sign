@@ -1,5 +1,7 @@
 import { router } from '../trpc';
 import { accessAuthRequest2FAEmailRoute } from './access-auth-request-2fa-email';
+import { accessAuthGetKbaChallengeRoute } from './access-auth-get-kba-challenge';
+import { accessAuthVerifyKbaRoute } from './access-auth-verify-kba';
 import { createAttachmentRoute } from './attachment/create-attachment';
 import { deleteAttachmentRoute } from './attachment/delete-attachment';
 import { findAttachmentsRoute } from './attachment/find-attachments';
@@ -54,6 +56,8 @@ export const documentRouter = router({
 
   accessAuth: router({
     request2FAEmail: accessAuthRequest2FAEmailRoute,
+    getKbaChallenge: accessAuthGetKbaChallengeRoute,
+    verifyKba: accessAuthVerifyKbaRoute,
   }),
 
   auditLog: {

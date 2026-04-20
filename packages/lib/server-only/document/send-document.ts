@@ -4,6 +4,7 @@ import {
   DocumentStatus,
   EnvelopeType,
   FieldType,
+  KbaScopeType,
   RecipientRole,
   SendStatus,
   SigningStatus,
@@ -36,6 +37,7 @@ import {
 import { getFileServerSide } from '../../universal/upload/get-file.server';
 import { putNormalizedPdfFileServerSide } from '../../universal/upload/put-file.server';
 import { isDocumentCompleted } from '../../utils/document';
+import { DocumentAuth } from '../../types/document-auth';
 import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import { type EnvelopeIdOptions, mapSecondaryIdToDocumentId } from '../../utils/envelope';
 import { toCheckboxCustomText, toRadioCustomText } from '../../utils/fields';
@@ -44,6 +46,7 @@ import {
   isRecipientEmailValidForSending,
 } from '../../utils/recipients';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
+import { isPersistedKbaChallengeCompleteForSend } from '../kba/kba';
 import { insertFormValuesInPdf } from '../pdf/insert-form-values-in-pdf';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
@@ -78,6 +81,12 @@ export const sendDocument = async ({
       },
       fields: true,
       documentMeta: true,
+      kbaPolicy: true,
+      kbaChallenges: {
+        where: {
+          isActive: true,
+        },
+      },
       envelopeItems: {
         select: {
           id: true,
@@ -133,6 +142,51 @@ export const sendDocument = async ({
         await injectFormValuesIntoDocument(envelope, envelopeItem);
       }),
     );
+  }
+
+  const documentAuthForSend = extractDocumentAuthMethods({
+    documentAuth: envelope.authOptions,
+  });
+
+  if (documentAuthForSend.documentAuthOption.globalAccessAuth.includes(DocumentAuth.KBA)) {
+    if (!envelope.kbaPolicy?.isEnabled) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message:
+          'Knowledge-based authentication (KBA) is required for this document but is not configured. Open Document Settings, enable Security, and set the KBA question and answer before sending.',
+      });
+    }
+
+    const activeChallenges = envelope.kbaChallenges;
+
+    if (envelope.kbaPolicy.mode === 'PER_ENVELOPE') {
+      const envelopeChallenge = activeChallenges.find(
+        (challenge) => challenge.scopeType === KbaScopeType.ENVELOPE,
+      );
+
+      if (!isPersistedKbaChallengeCompleteForSend(envelopeChallenge)) {
+        throw new AppError(AppErrorCode.INVALID_REQUEST, {
+          message:
+            'KBA is selected but the security question or answer is not fully configured. Open Document Settings → Security and set both the question and the answer before sending.',
+        });
+      }
+    } else {
+      const recipientsNeedingKba = envelope.recipients.filter(
+        (recipient) => recipient.role !== RecipientRole.CC,
+      );
+
+      for (const recipient of recipientsNeedingKba) {
+        const recipientChallenge = activeChallenges.find(
+          (challenge) =>
+            challenge.scopeType === KbaScopeType.RECIPIENT && challenge.recipientId === recipient.id,
+        );
+
+        if (!isPersistedKbaChallengeCompleteForSend(recipientChallenge)) {
+          throw new AppError(AppErrorCode.INVALID_REQUEST, {
+            message: `KBA is selected but the security question or answer is incomplete for a signer. Open Document Settings → Security and complete per-recipient KBA before sending.`,
+          });
+        }
+      }
+    }
   }
 
   // Validate that recipients with auth requirements have a valid email.

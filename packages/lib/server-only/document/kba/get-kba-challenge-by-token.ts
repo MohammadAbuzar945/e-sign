@@ -1,0 +1,118 @@
+import { EnvelopeType } from '@prisma/client';
+
+import { prisma } from '@documenso/prisma';
+
+import { AppError, AppErrorCode } from '../../../errors/app-error';
+import { DOCUMENT_AUDIT_LOG_TYPE } from '../../../types/document-audit-logs';
+import { DocumentAuth } from '../../../types/document-auth';
+import { createDocumentAuditLogData } from '../../../utils/document-audit-logs';
+import { extractDocumentAuthMethods } from '../../../utils/document-auth';
+import { parseKbaMcqOptions, resolveKbaChallengeForRecipient } from '../../kba/kba';
+
+type GetKbaChallengeByTokenOptions = {
+  token: string;
+};
+
+export const getKbaChallengeByToken = async ({ token }: GetKbaChallengeByTokenOptions) => {
+  const envelope = await prisma.envelope.findFirst({
+    where: {
+      type: EnvelopeType.DOCUMENT,
+      recipients: {
+        some: {
+          token,
+        },
+      },
+    },
+    include: {
+      kbaPolicy: true,
+      kbaChallenges: {
+        where: {
+          isActive: true,
+        },
+        select: {
+          id: true,
+          answerType: true,
+          question: true,
+          scopeType: true,
+          recipientId: true,
+          mcqOptions: true,
+        },
+      },
+      recipients: {
+        where: {
+          token,
+        },
+        select: {
+          id: true,
+          name: true,
+          authOptions: true,
+          envelopeId: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  if (!envelope) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'Document not found',
+    });
+  }
+
+  const [recipient] = envelope.recipients;
+
+  const { derivedRecipientAccessAuth } = extractDocumentAuthMethods({
+    documentAuth: envelope.authOptions,
+    recipientAuth: recipient.authOptions,
+  });
+
+  if (!derivedRecipientAccessAuth.includes(DocumentAuth.KBA)) {
+    throw new AppError(AppErrorCode.INVALID_BODY, {
+      message: 'KBA is not required for this document',
+    });
+  }
+
+  const challenge = resolveKbaChallengeForRecipient({
+    recipient: {
+      ...recipient,
+      envelope: {
+        kbaPolicy: envelope.kbaPolicy,
+        kbaChallenges: envelope.kbaChallenges,
+      },
+    },
+  });
+
+  if (!challenge) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'KBA challenge not found',
+    });
+  }
+
+  if (envelope.kbaPolicy) {
+    await prisma.documentAuditLog.create({
+      data: createDocumentAuditLogData({
+        type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_CHALLENGE_VIEWED,
+        envelopeId: envelope.id,
+        user: {
+          name: recipient.name || recipient.email,
+          email: recipient.email,
+        },
+        data: {
+          recipientEmail: recipient.email,
+          recipientName: recipient.name || recipient.email,
+          recipientId: recipient.id,
+          answerType: challenge.answerType,
+          mode: envelope.kbaPolicy.mode,
+        },
+      }),
+    });
+  }
+
+  return {
+    challengeId: challenge.id,
+    answerType: challenge.answerType,
+    question: challenge.question,
+    mcqOptions: parseKbaMcqOptions(challenge.mcqOptions),
+  };
+};
+

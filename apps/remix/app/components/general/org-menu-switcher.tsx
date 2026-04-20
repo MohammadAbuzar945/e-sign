@@ -28,6 +28,7 @@ import { OrganisationMemberRole, OrganisationType } from '@documenso/prisma/gene
 import { AnimateGenericFadeInOut } from '@documenso/ui/components/animate/animate-generic-fade-in-out';
 import { LanguageSwitcherDialog } from '@documenso/ui/components/common/language-switcher-dialog';
 import { cn } from '@documenso/ui/lib/utils';
+import { useHydrated } from '@documenso/ui/lib/use-hydrated';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Button } from '@documenso/ui/primitives/button';
 import {
@@ -51,6 +52,7 @@ import { OrganisationCreateDialog } from '../dialogs/organisation-create-dialog'
 
 export const OrgMenuSwitcher = () => {
   const { _ } = useLingui();
+  const isHydrated = useHydrated();
 
   const { user, organisations } = useSession();
 
@@ -168,6 +170,25 @@ export const OrgMenuSwitcher = () => {
 
     setIsOpen(open);
   };
+
+  if (!isHydrated) {
+    return (
+      <Button
+        data-testid="menu-switcher"
+        variant="none"
+        className="relative flex h-12 flex-row items-center px-0 py-2 ring-0 focus:outline-none focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-transparent md:px-2"
+      >
+        <AvatarWithText
+          avatarSrc={dropdownMenuAvatarText.avatarSrc}
+          avatarFallback={dropdownMenuAvatarText.avatarFallback}
+          primaryText={dropdownMenuAvatarText.primaryText}
+          secondaryText={dropdownMenuAvatarText.secondaryText}
+          rightSideComponent={<ChevronsUpDown className="text-muted-foreground ml-auto h-4 w-4" />}
+          textSectionClassName="hidden lg:flex"
+        />
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>

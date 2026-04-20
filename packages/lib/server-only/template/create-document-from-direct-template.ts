@@ -192,6 +192,7 @@ export const createDocumentFromDirectTemplate = async ({
   const isAccessAuthValid = match(derivedRecipientAccessAuth.at(0))
     .with(DocumentAccessAuth.ACCOUNT, () => user && user?.email === directRecipientEmail)
     .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => false) // Not supported for direct templates
+    .with(DocumentAccessAuth.KBA, () => false) // Not supported for direct templates yet
     .with(undefined, () => true)
     .exhaustive();
 
@@ -245,6 +246,7 @@ export const createDocumentFromDirectTemplate = async ({
       const derivedRecipientActionAuth = await validateFieldAuth({
         documentAuthOptions: directTemplateEnvelope.authOptions,
         recipient: {
+          id: directTemplateRecipient.id,
           authOptions: directTemplateRecipient.authOptions,
           email: directRecipientEmail,
           envelopeId: directTemplateEnvelope.id,
@@ -381,6 +383,7 @@ export const createDocumentFromDirectTemplate = async ({
         authOptions: createDocumentAuthOptions({
           globalAccessAuth: templateAuthOptions.globalAccessAuth,
           globalActionAuth: templateAuthOptions.globalActionAuth,
+          kbaSettings: templateAuthOptions.kbaSettings ?? null,
         }),
         recipients: {
           createMany: {

@@ -25,7 +25,7 @@ export const generateSampleWebhookPayload = (
     authOptions: null,
     formValues: null,
     visibility: DocumentVisibility.EVERYONE,
-    title: 'documenso.pdf',
+    title: 'test.pdf',
     status: DocumentStatus.DRAFT,
     documentDataId: 'hs8qz1ktr9204jn7mg6c5dxy0',
     createdAt: now,

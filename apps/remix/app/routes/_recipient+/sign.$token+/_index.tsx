@@ -31,6 +31,7 @@ import { SigningCard3D } from '@documenso/ui/components/signing-card';
 import { Header as AuthenticatedHeader } from '~/components/general/app-header';
 import { DocumentSigningAuthPageView } from '~/components/general/document-signing/document-signing-auth-page';
 import { DocumentSigningAuthProvider } from '~/components/general/document-signing/document-signing-auth-provider';
+import { DocumentSigningKbaAccessGate } from '~/components/general/document-signing/document-signing-kba-access-gate';
 import { DocumentSigningPageViewV1 } from '~/components/general/document-signing/document-signing-page-view-v1';
 import { DocumentSigningPageViewV2 } from '~/components/general/document-signing/document-signing-page-view-v2';
 import { DocumentSigningProvider } from '~/components/general/document-signing/document-signing-provider';
@@ -111,6 +112,7 @@ const handleV1Loader = async ({ params, request }: Route.LoaderArgs) => {
     match(accesssAuth)
       .with(DocumentAccessAuth.ACCOUNT, () => user && user.email === recipient.email)
       .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => true) // Allow without account requirement
+      .with(DocumentAccessAuth.KBA, () => true) // KBA is validated at completion
       .exhaustive(),
   );
 
@@ -221,6 +223,7 @@ const handleV2Loader = async ({ params, request }: Route.LoaderArgs) => {
     match(accesssAuth)
       .with(DocumentAccessAuth.ACCOUNT, () => user && user.email === recipient.email)
       .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => true) // Allow without account requirement
+      .with(DocumentAccessAuth.KBA, () => true) // KBA is validated at completion
       .exhaustive(),
   );
 
@@ -400,21 +403,23 @@ const SigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV1Loade
         recipient={recipient}
         user={user}
       >
-        <>
-          {sessionData?.user && <AuthenticatedHeader />}
+        <DocumentSigningKbaAccessGate token={recipient.token}>
+          <>
+            {sessionData?.user && <AuthenticatedHeader />}
 
-          <div className="mb-8 mt-8 px-4 md:mb-12 md:mt-12 md:px-8">
-            <DocumentSigningPageViewV1
-              recipient={recipientWithFields}
-              document={document}
-              fields={fields}
-              completedFields={completedFields}
-              isRecipientsTurn={isRecipientsTurn}
-              allRecipients={allRecipients}
-              includeSenderDetails={includeSenderDetails}
-            />
-          </div>
-        </>
+            <div className="mb-8 mt-8 px-4 md:mb-12 md:mt-12 md:px-8">
+              <DocumentSigningPageViewV1
+                recipient={recipientWithFields}
+                document={document}
+                fields={fields}
+                completedFields={completedFields}
+                isRecipientsTurn={isRecipientsTurn}
+                allRecipients={allRecipients}
+                includeSenderDetails={includeSenderDetails}
+              />
+            </div>
+          </>
+        </DocumentSigningKbaAccessGate>
       </DocumentSigningAuthProvider>
     </DocumentSigningProvider>
   );
@@ -497,9 +502,11 @@ const SigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV2Loade
         recipient={recipient}
         user={user}
       >
-        <EnvelopeRenderProvider envelope={envelope} token={recipient.token}>
-          <DocumentSigningPageViewV2 />
-        </EnvelopeRenderProvider>
+        <DocumentSigningKbaAccessGate token={recipient.token}>
+          <EnvelopeRenderProvider envelope={envelope} token={recipient.token}>
+            <DocumentSigningPageViewV2 />
+          </EnvelopeRenderProvider>
+        </DocumentSigningKbaAccessGate>
       </DocumentSigningAuthProvider>
     </EnvelopeSigningProvider>
   );

@@ -8,6 +8,7 @@ import { prisma } from '@documenso/prisma';
 import { validateTwoFactorTokenFromEmail } from '../2fa/email/validate-2fa-token-from-email';
 import { verifyTwoFactorAuthenticationToken } from '../2fa/verify-2fa-token';
 import { verifyPassword } from '../2fa/verify-password';
+import { verifyKbaAttempt } from '../kba/kba';
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { TDocumentAuth, TDocumentAuthMethods } from '../../types/document-auth';
 import { DocumentAuth } from '../../types/document-auth';
@@ -19,7 +20,7 @@ type IsRecipientAuthorizedOptions = {
   // !: Probably find a better name than 'ACCESS_2FA' if requirements change.
   type: 'ACCESS' | 'ACCESS_2FA' | 'ACTION';
   documentAuthOptions: Envelope['authOptions'];
-  recipient: Pick<Recipient, 'authOptions' | 'email' | 'envelopeId'>;
+  recipient: Pick<Recipient, 'id' | 'authOptions' | 'email' | 'envelopeId'>;
 
   /**
    * The ID of the user who initiated the request.
@@ -167,6 +168,108 @@ export const isRecipientAuthorized = async ({
         userId,
         password,
       });
+    })
+    .with({ type: DocumentAuth.KBA }, async ({ answer }) => {
+      const kbaPolicy = await prisma.envelopeKbaPolicy.findUnique({
+        where: {
+          envelopeId: recipient.envelopeId,
+        },
+      });
+
+      if (!kbaPolicy || !kbaPolicy.isEnabled) {
+        return false;
+      }
+
+      const kbaChallenge = await prisma.kbaChallenge.findFirst({
+        where: {
+          envelopeId: recipient.envelopeId,
+          isActive: true,
+          scopeType: kbaPolicy.mode === 'PER_ENVELOPE' ? 'ENVELOPE' : 'RECIPIENT',
+          recipientId: kbaPolicy.mode === 'PER_ENVELOPE' ? null : recipient.id,
+        },
+      });
+
+      if (!kbaChallenge) {
+        return false;
+      }
+
+      const latestSuccessAttempt = await prisma.kbaAttempt.findFirst({
+        where: {
+          challengeId: kbaChallenge.id,
+          recipientId: recipient.id,
+          success: true,
+        },
+        orderBy: {
+          attemptedAt: 'desc',
+        },
+        select: {
+          attemptedAt: true,
+        },
+      });
+
+      const failedAttemptsSinceLastSuccess = await prisma.kbaAttempt.count({
+        where: {
+          challengeId: kbaChallenge.id,
+          recipientId: recipient.id,
+          success: false,
+          attemptedAt: latestSuccessAttempt
+            ? {
+                gt: latestSuccessAttempt.attemptedAt,
+              }
+            : undefined,
+        },
+      });
+
+      const mostRecentFailedAttempt = await prisma.kbaAttempt.findFirst({
+        where: {
+          challengeId: kbaChallenge.id,
+          recipientId: recipient.id,
+          success: false,
+          attemptedAt: latestSuccessAttempt
+            ? {
+                gt: latestSuccessAttempt.attemptedAt,
+              }
+            : undefined,
+        },
+        orderBy: {
+          attemptedAt: 'desc',
+        },
+        select: {
+          attemptedAt: true,
+        },
+      });
+
+      const lockoutCutoffDate = new Date(Date.now() - kbaPolicy.lockoutMinutes * 60 * 1000);
+      const isLocked =
+        failedAttemptsSinceLastSuccess >= kbaPolicy.maxAttempts &&
+        !!mostRecentFailedAttempt &&
+        mostRecentFailedAttempt.attemptedAt > lockoutCutoffDate;
+
+      if (isLocked) {
+        throw new AppError(AppErrorCode.KBA_AUTH_LOCKED, {
+          message: 'KBA is temporarily locked due to too many failed attempts',
+        });
+      }
+
+      const { isValid } = await verifyKbaAttempt({
+        answer,
+        challenge: {
+          ...kbaChallenge,
+          policy: kbaPolicy,
+        },
+        failedAttemptsSinceLastSuccess,
+        isLocked,
+      });
+
+      await prisma.kbaAttempt.create({
+        data: {
+          challengeId: kbaChallenge.id,
+          recipientId: recipient.id,
+          success: isValid,
+        },
+      });
+
+      return isValid;
     })
     .with({ type: DocumentAuth.EXPLICIT_NONE }, () => {
       return true;
