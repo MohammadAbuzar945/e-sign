@@ -9,6 +9,7 @@ export const ZAccessAuthVerifyKbaResponseSchema = z.object({
   success: z.boolean(),
   isLocked: z.boolean(),
   attemptsRemaining: z.number().int().min(0),
+  lockoutRemainingSeconds: z.number().int().min(0),
 });
 
 export type TAccessAuthVerifyKbaRequest = z.infer<typeof ZAccessAuthVerifyKbaRequestSchema>;

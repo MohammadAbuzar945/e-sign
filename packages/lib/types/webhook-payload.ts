@@ -142,7 +142,10 @@ export const mapEnvelopeToWebhookDocumentPayload = (
     updatedAt: envelope.updatedAt,
     completedAt: envelope.completedAt,
     deletedAt: envelope.deletedAt,
-    shareQrCodeLink: envelope.qrToken ? `${NEXT_PUBLIC_WEBAPP_URL()}/share/${envelope.qrToken}` : null,
+    shareQrCodeLink:
+      envelope.status === DocumentStatus.COMPLETED && envelope.qrToken
+        ? `${NEXT_PUBLIC_WEBAPP_URL()}/share/${envelope.qrToken}`
+        : null,
     teamId: envelope.teamId,
     templateId: envelope.templateId,
     source: envelope.source,

@@ -11,6 +11,10 @@ export const ZAccessAuthGetKbaChallengeResponseSchema = z.object({
   answerType: ZDocumentKbaAnswerTypeSchema,
   question: z.string(),
   mcqOptions: z.array(ZDocumentKbaOptionSchema),
+  maxAttempts: z.number().int().min(1),
+  lockoutMinutes: z.number().int().min(1),
+  isLocked: z.boolean(),
+  lockoutRemainingSeconds: z.number().int().min(0),
 });
 
 export type TAccessAuthGetKbaChallengeRequest = z.infer<

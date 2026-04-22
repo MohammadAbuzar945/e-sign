@@ -30,6 +30,15 @@ export const verifyKbaByToken = async ({ token, answer }: VerifyKbaByTokenOption
         where: {
           isActive: true,
         },
+        select: {
+          id: true,
+          answerType: true,
+          question: true,
+          scopeType: true,
+          recipientId: true,
+          mcqOptions: true,
+          answerHash: true,
+        },
       },
       recipients: {
         where: {
@@ -81,6 +90,16 @@ export const verifyKbaByToken = async ({ token, answer }: VerifyKbaByTokenOption
     });
   }
 
+  const persistedChallenge = envelope.kbaChallenges.find(
+    (envelopeChallenge) => envelopeChallenge.id === challenge.id,
+  );
+
+  if (!persistedChallenge) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'KBA challenge not found',
+    });
+  }
+
   const latestSuccessAttempt = await prisma.kbaAttempt.findFirst({
     where: {
       challengeId: challenge.id,
@@ -95,16 +114,22 @@ export const verifyKbaByToken = async ({ token, answer }: VerifyKbaByTokenOption
     },
   });
 
-  const failedAttemptsSinceLastSuccess = await prisma.kbaAttempt.count({
+  const lockoutDurationMs = envelope.kbaPolicy.lockoutMinutes * 60 * 1000;
+  const now = new Date();
+  const lockoutCutoffDate = new Date(now.getTime() - lockoutDurationMs);
+  const windowStartDate =
+    latestSuccessAttempt && latestSuccessAttempt.attemptedAt > lockoutCutoffDate
+      ? latestSuccessAttempt.attemptedAt
+      : lockoutCutoffDate;
+
+  const failedAttemptsInActiveWindow = await prisma.kbaAttempt.count({
     where: {
       challengeId: challenge.id,
       recipientId: recipient.id,
       success: false,
-      attemptedAt: latestSuccessAttempt
-        ? {
-            gt: latestSuccessAttempt.attemptedAt,
-          }
-        : undefined,
+      attemptedAt: {
+        gt: windowStartDate,
+      },
     },
   });
 
@@ -113,11 +138,9 @@ export const verifyKbaByToken = async ({ token, answer }: VerifyKbaByTokenOption
       challengeId: challenge.id,
       recipientId: recipient.id,
       success: false,
-      attemptedAt: latestSuccessAttempt
-        ? {
-            gt: latestSuccessAttempt.attemptedAt,
-          }
-        : undefined,
+      attemptedAt: {
+        gt: windowStartDate,
+      },
     },
     orderBy: {
       attemptedAt: 'desc',
@@ -127,31 +150,47 @@ export const verifyKbaByToken = async ({ token, answer }: VerifyKbaByTokenOption
     },
   });
 
-  const lockoutCutoffDate = new Date(Date.now() - envelope.kbaPolicy.lockoutMinutes * 60 * 1000);
-  const isLocked =
-    failedAttemptsSinceLastSuccess >= envelope.kbaPolicy.maxAttempts &&
+  const isLockedBeforeAttempt =
+    failedAttemptsInActiveWindow >= envelope.kbaPolicy.maxAttempts &&
     !!mostRecentFailedAttempt &&
-    mostRecentFailedAttempt.attemptedAt > lockoutCutoffDate;
+    mostRecentFailedAttempt.attemptedAt > windowStartDate;
+  const failedAttemptsBeforeAttempt = failedAttemptsInActiveWindow;
 
   const { isValid } = await verifyKbaAttempt({
     answer,
     challenge: {
-      ...challenge,
+      ...persistedChallenge,
       policy: envelope.kbaPolicy,
     },
-    failedAttemptsSinceLastSuccess,
-    isLocked,
+    isLocked: isLockedBeforeAttempt,
   });
 
-  await prisma.kbaAttempt.create({
-    data: {
-      challengeId: challenge.id,
-      recipientId: recipient.id,
-      success: isValid,
-    },
-  });
+  const shouldRecordAttempt = !isLockedBeforeAttempt;
 
-  if (!isValid && isLocked) {
+  if (shouldRecordAttempt) {
+    await prisma.kbaAttempt.create({
+      data: {
+        challengeId: challenge.id,
+        recipientId: recipient.id,
+        success: isValid,
+      },
+    });
+  }
+
+  const failedAttemptsAfterAttempt =
+    !shouldRecordAttempt || isValid ? failedAttemptsBeforeAttempt : failedAttemptsBeforeAttempt + 1;
+  const isLockedAfterAttempt = !isValid && failedAttemptsAfterAttempt >= envelope.kbaPolicy.maxAttempts;
+
+  const lockoutEndTimeMs = shouldRecordAttempt
+    ? now.getTime() + lockoutDurationMs
+    : mostRecentFailedAttempt
+      ? mostRecentFailedAttempt.attemptedAt.getTime() + lockoutDurationMs
+      : now.getTime() + lockoutDurationMs;
+  const lockoutRemainingSeconds = isLockedAfterAttempt
+    ? Math.max(Math.ceil((lockoutEndTimeMs - now.getTime()) / 1000), 0)
+    : 0;
+
+  if (!isValid && isLockedAfterAttempt) {
     await prisma.documentAuditLog.create({
       data: createDocumentAuditLogData({
         type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_LOCKED,
@@ -184,7 +223,7 @@ export const verifyKbaByToken = async ({ token, answer }: VerifyKbaByTokenOption
           recipientId: recipient.id,
           answerType: challenge.answerType,
           mode: envelope.kbaPolicy.mode,
-          attemptsRemaining: Math.max(envelope.kbaPolicy.maxAttempts - (failedAttemptsSinceLastSuccess + 1), 0),
+          attemptsRemaining: Math.max(envelope.kbaPolicy.maxAttempts - failedAttemptsAfterAttempt, 0),
         },
       }),
     });
@@ -211,10 +250,9 @@ export const verifyKbaByToken = async ({ token, answer }: VerifyKbaByTokenOption
 
   return {
     success: isValid,
-    isLocked: !isValid && isLocked,
-    attemptsRemaining: isValid
-      ? envelope.kbaPolicy.maxAttempts
-      : Math.max(envelope.kbaPolicy.maxAttempts - (failedAttemptsSinceLastSuccess + 1), 0),
+    isLocked: isLockedAfterAttempt,
+    attemptsRemaining: isValid ? envelope.kbaPolicy.maxAttempts : Math.max(envelope.kbaPolicy.maxAttempts - failedAttemptsAfterAttempt, 0),
+    lockoutRemainingSeconds,
   };
 };
 

@@ -148,7 +148,6 @@ export const resolveKbaChallengeForRecipient = ({
 type VerifyKbaAttemptOptions = {
   answer: string;
   challenge: KbaChallengeWithPolicy;
-  failedAttemptsSinceLastSuccess: number;
   isLocked: boolean;
 };
 
@@ -159,10 +158,9 @@ type VerifyKbaAttemptResult = {
 export const verifyKbaAttempt = async ({
   answer,
   challenge,
-  failedAttemptsSinceLastSuccess,
   isLocked,
 }: VerifyKbaAttemptOptions): Promise<VerifyKbaAttemptResult> => {
-  if (isLocked || failedAttemptsSinceLastSuccess >= challenge.policy.maxAttempts) {
+  if (isLocked) {
     return {
       isValid: false,
     };

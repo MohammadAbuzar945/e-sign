@@ -108,11 +108,82 @@ export const getKbaChallengeByToken = async ({ token }: GetKbaChallengeByTokenOp
     });
   }
 
+  let isLocked = false;
+  let lockoutRemainingSeconds = 0;
+
+  if (envelope.kbaPolicy) {
+    const latestSuccessAttempt = await prisma.kbaAttempt.findFirst({
+      where: {
+        challengeId: challenge.id,
+        recipientId: recipient.id,
+        success: true,
+      },
+      orderBy: {
+        attemptedAt: 'desc',
+      },
+      select: {
+        attemptedAt: true,
+      },
+    });
+
+    const nowMs = Date.now();
+    const lockoutDurationMs = envelope.kbaPolicy.lockoutMinutes * 60 * 1000;
+    const lockoutCutoffDate = new Date(nowMs - lockoutDurationMs);
+    const windowStartDate =
+      latestSuccessAttempt && latestSuccessAttempt.attemptedAt > lockoutCutoffDate
+        ? latestSuccessAttempt.attemptedAt
+        : lockoutCutoffDate;
+
+    const failedAttemptsInActiveWindow = await prisma.kbaAttempt.count({
+      where: {
+        challengeId: challenge.id,
+        recipientId: recipient.id,
+        success: false,
+        attemptedAt: {
+          gt: windowStartDate,
+        },
+      },
+    });
+
+    const mostRecentFailedAttempt = await prisma.kbaAttempt.findFirst({
+      where: {
+        challengeId: challenge.id,
+        recipientId: recipient.id,
+        success: false,
+        attemptedAt: {
+          gt: windowStartDate,
+        },
+      },
+      orderBy: {
+        attemptedAt: 'desc',
+      },
+      select: {
+        attemptedAt: true,
+      },
+    });
+
+    isLocked =
+      failedAttemptsInActiveWindow >= envelope.kbaPolicy.maxAttempts &&
+      !!mostRecentFailedAttempt &&
+      mostRecentFailedAttempt.attemptedAt > windowStartDate;
+
+    if (isLocked && mostRecentFailedAttempt) {
+      lockoutRemainingSeconds = Math.max(
+        Math.ceil((mostRecentFailedAttempt.attemptedAt.getTime() + lockoutDurationMs - nowMs) / 1000),
+        0,
+      );
+    }
+  }
+
   return {
     challengeId: challenge.id,
     answerType: challenge.answerType,
     question: challenge.question,
     mcqOptions: parseKbaMcqOptions(challenge.mcqOptions),
+    maxAttempts: envelope.kbaPolicy?.maxAttempts ?? 5,
+    lockoutMinutes: envelope.kbaPolicy?.lockoutMinutes ?? 15,
+    isLocked,
+    lockoutRemainingSeconds,
   };
 };
 

@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
+import { Clock3Icon, ShieldAlertIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -47,6 +48,7 @@ export const AccessAuthKBAForm = ({
   const { _ } = useLingui();
   const [selectedMcqOptionKey, setSelectedMcqOptionKey] = useState('');
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [lockoutRemainingSeconds, setLockoutRemainingSeconds] = useState(0);
 
   const form = useForm<TAccessAuthKBAFormSchema>({
     resolver: zodResolver(ZAccessAuthKBAFormSchema),
@@ -64,9 +66,26 @@ export const AccessAuthKBAForm = ({
   const isMcq = data?.answerType === 'MCQ';
   const isNumeric = data?.answerType === 'NUMERIC';
   const typedAnswer = form.watch('answer');
+  const isLocked = lockoutRemainingSeconds > 0;
+
+  useEffect(() => {
+    setLockoutRemainingSeconds(data?.lockoutRemainingSeconds ?? 0);
+  }, [data?.lockoutRemainingSeconds]);
+
+  useEffect(() => {
+    if (lockoutRemainingSeconds <= 0) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setLockoutRemainingSeconds((current) => Math.max(current - 1, 0));
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [lockoutRemainingSeconds]);
 
   const canSubmit = useMemo(() => {
-    if (!data) {
+    if (!data || isLocked) {
       return false;
     }
 
@@ -83,7 +102,7 @@ export const AccessAuthKBAForm = ({
     }
 
     return true;
-  }, [data, isMcq, isNumeric, selectedMcqOptionKey.length, typedAnswer]);
+  }, [data, isLocked, isMcq, isNumeric, selectedMcqOptionKey.length, typedAnswer]);
 
   const onFormSubmit = async (values: TAccessAuthKBAFormSchema) => {
     const answer = isMcq ? selectedMcqOptionKey : values.answer;
@@ -100,6 +119,10 @@ export const AccessAuthKBAForm = ({
       return;
     }
 
+    if (isLocked) {
+      return;
+    }
+
     setSubmissionError(null);
 
     const verificationResult = await verifyKba({
@@ -108,8 +131,10 @@ export const AccessAuthKBAForm = ({
     }).catch(() => null);
 
     if (!verificationResult || !verificationResult.success) {
+      setLockoutRemainingSeconds(verificationResult?.lockoutRemainingSeconds ?? 0);
+
       const errorMessage = verificationResult?.isLocked
-        ? _(msg`Too many failed attempts. Please try again later.`)
+        ? _(msg`Too many failed attempts. Try again in ${formatDuration(verificationResult.lockoutRemainingSeconds)}.`)
         : _(msg`Invalid answer. ${verificationResult?.attemptsRemaining ?? 0} attempts remaining.`);
 
       if (isMcq) {
@@ -160,6 +185,12 @@ export const AccessAuthKBAForm = ({
               <Trans>Please answer the question below to complete this document.</Trans>
             )}
           </p>
+          <p className="text-xs text-muted-foreground">
+            <Trans>
+              You can try up to {data.maxAttempts} times before a {data.lockoutMinutes}-minute
+              lockout.
+            </Trans>
+          </p>
         </div>
 
         <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm font-medium">
@@ -178,13 +209,40 @@ export const AccessAuthKBAForm = ({
           </Alert>
         )}
 
+        {isLocked && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-amber-900">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2">
+                <ShieldAlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">
+                    <Trans>Too many failed attempts</Trans>
+                  </p>
+                  <p className="text-xs text-amber-800">
+                    <Trans>Please wait until the lockout period ends before trying again.</Trans>
+                  </p>
+                </div>
+              </div>
+
+              <div className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2 py-1 text-xs font-semibold text-amber-900">
+                <Clock3Icon className="h-3.5 w-3.5" />
+                <span>{formatDuration(lockoutRemainingSeconds)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isMcq ? (
           <FormItem>
             <FormLabel>
               <Trans>Select one option</Trans>
             </FormLabel>
 
-            <RadioGroup value={selectedMcqOptionKey} onValueChange={setSelectedMcqOptionKey}>
+            <RadioGroup
+              value={selectedMcqOptionKey}
+              onValueChange={setSelectedMcqOptionKey}
+              disabled={isLocked}
+            >
               {data.mcqOptions.map((option) => (
                 <label
                   key={option.key}
@@ -220,6 +278,7 @@ export const AccessAuthKBAForm = ({
                         ? (e) => field.onChange(e.target.value.replace(/\D/g, ''))
                         : field.onChange
                     }
+                    disabled={isLocked}
                   />
                 </FormControl>
                 {isNumeric ? (
@@ -239,5 +298,17 @@ export const AccessAuthKBAForm = ({
       </form>
     </Form>
   );
+};
+
+const formatDuration = (totalSeconds: number) => {
+  const safeSeconds = Math.max(totalSeconds, 0);
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+
+  if (minutes <= 0) {
+    return `${seconds}s`;
+  }
+
+  return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
 };
 

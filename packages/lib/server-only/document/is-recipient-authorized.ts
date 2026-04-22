@@ -207,16 +207,21 @@ export const isRecipientAuthorized = async ({
         },
       });
 
-      const failedAttemptsSinceLastSuccess = await prisma.kbaAttempt.count({
+      const lockoutDurationMs = kbaPolicy.lockoutMinutes * 60 * 1000;
+      const lockoutCutoffDate = new Date(Date.now() - lockoutDurationMs);
+      const windowStartDate =
+        latestSuccessAttempt && latestSuccessAttempt.attemptedAt > lockoutCutoffDate
+          ? latestSuccessAttempt.attemptedAt
+          : lockoutCutoffDate;
+
+      const failedAttemptsInActiveWindow = await prisma.kbaAttempt.count({
         where: {
           challengeId: kbaChallenge.id,
           recipientId: recipient.id,
           success: false,
-          attemptedAt: latestSuccessAttempt
-            ? {
-                gt: latestSuccessAttempt.attemptedAt,
-              }
-            : undefined,
+          attemptedAt: {
+            gt: windowStartDate,
+          },
         },
       });
 
@@ -225,11 +230,9 @@ export const isRecipientAuthorized = async ({
           challengeId: kbaChallenge.id,
           recipientId: recipient.id,
           success: false,
-          attemptedAt: latestSuccessAttempt
-            ? {
-                gt: latestSuccessAttempt.attemptedAt,
-              }
-            : undefined,
+          attemptedAt: {
+            gt: windowStartDate,
+          },
         },
         orderBy: {
           attemptedAt: 'desc',
@@ -239,11 +242,10 @@ export const isRecipientAuthorized = async ({
         },
       });
 
-      const lockoutCutoffDate = new Date(Date.now() - kbaPolicy.lockoutMinutes * 60 * 1000);
       const isLocked =
-        failedAttemptsSinceLastSuccess >= kbaPolicy.maxAttempts &&
+        failedAttemptsInActiveWindow >= kbaPolicy.maxAttempts &&
         !!mostRecentFailedAttempt &&
-        mostRecentFailedAttempt.attemptedAt > lockoutCutoffDate;
+        mostRecentFailedAttempt.attemptedAt > windowStartDate;
 
       if (isLocked) {
         throw new AppError(AppErrorCode.KBA_AUTH_LOCKED, {
@@ -257,7 +259,6 @@ export const isRecipientAuthorized = async ({
           ...kbaChallenge,
           policy: kbaPolicy,
         },
-        failedAttemptsSinceLastSuccess,
         isLocked,
       });
 

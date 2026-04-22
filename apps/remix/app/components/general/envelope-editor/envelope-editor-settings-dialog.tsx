@@ -141,6 +141,8 @@ export const ZAddSettingsFormSchema = z.object({
     .default(['-1']),
   globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional().default([]),
   kbaMode: ZKbaModeSchema.default('PER_ENVELOPE'),
+  kbaMaxAttempts: z.number().int().min(1).max(20).default(5),
+  kbaLockoutMinutes: z.number().int().min(1).max(1440).default(15),
   kbaAnswerType: ZKbaAnswerTypeSchema.default('STRING'),
   kbaApplySameToAllRecipients: z.boolean().default(true),
   kbaQuestion: z.string().optional(),
@@ -425,6 +427,9 @@ export const EnvelopeEditorSettingsDialog = ({
       globalAccessAuth: globalAccessAuthForForm,
       globalActionAuth: documentAuthOption?.globalActionAuth || [],
       kbaMode: envelopeKbaConfig?.settings?.mode ?? ('PER_ENVELOPE' as const),
+      kbaMaxAttempts: envelopeKbaConfig?.settings?.maxAttempts ?? teamDerivedKba.maxAttempts,
+      kbaLockoutMinutes:
+        envelopeKbaConfig?.settings?.lockoutMinutes ?? teamDerivedKba.lockoutMinutes,
       kbaAnswerType: firstKbaChallenge?.answerType ?? ('STRING' as const),
       kbaApplySameToAllRecipients: (envelopeKbaConfig?.settings?.mode ?? 'PER_ENVELOPE') === 'PER_ENVELOPE',
       kbaQuestion: envelopeKbaConfig?.envelopeChallenge?.question ?? '',
@@ -499,10 +504,6 @@ export const EnvelopeEditorSettingsDialog = ({
     const parsedGlobalAccessAuth = z
       .array(ZDocumentAccessAuthTypesSchema)
       .safeParse(data.globalAccessAuth);
-
-    const resolvedKbaPolicyDefaults = normalizeStoredKbaSettings(
-      teamForKbaDefaults?.derivedSettings?.kbaSettings ?? envelopeKbaConfig?.settings,
-    );
 
     const teamKbaDefaultEnabled = normalizeStoredKbaSettings(
       teamForKbaDefaults?.derivedSettings?.kbaSettings,
@@ -580,8 +581,8 @@ export const EnvelopeEditorSettingsDialog = ({
             settings: {
               mode: data.kbaMode,
               isEnabled: true,
-              maxAttempts: resolvedKbaPolicyDefaults.maxAttempts,
-              lockoutMinutes: resolvedKbaPolicyDefaults.lockoutMinutes,
+              maxAttempts: data.kbaMaxAttempts,
+              lockoutMinutes: data.kbaLockoutMinutes,
             },
             envelopeChallenge:
               data.kbaMode === 'PER_ENVELOPE'
@@ -603,8 +604,8 @@ export const EnvelopeEditorSettingsDialog = ({
             settings: {
               mode: 'PER_ENVELOPE',
               isEnabled: false,
-              maxAttempts: resolvedKbaPolicyDefaults.maxAttempts,
-              lockoutMinutes: resolvedKbaPolicyDefaults.lockoutMinutes,
+              maxAttempts: data.kbaMaxAttempts,
+              lockoutMinutes: data.kbaLockoutMinutes,
             },
             envelopeChallenge: null,
             recipientChallenges: [],
@@ -1202,6 +1203,58 @@ export const EnvelopeEditorSettingsDialog = ({
                               </FormItem>
                             )}
                           />
+
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <FormField
+                              control={form.control}
+                              name="kbaMaxAttempts"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    <Trans>Max attempts</Trans>
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={20}
+                                      value={Number.isFinite(field.value) ? String(field.value) : ''}
+                                      onChange={(e) => {
+                                        const next = Number.parseInt(e.target.value, 10);
+                                        field.onChange(Number.isFinite(next) ? next : 1);
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="kbaLockoutMinutes"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    <Trans>Lockout (minutes)</Trans>
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={1440}
+                                      value={Number.isFinite(field.value) ? String(field.value) : ''}
+                                      onChange={(e) => {
+                                        const next = Number.parseInt(e.target.value, 10);
+                                        field.onChange(Number.isFinite(next) ? next : 1);
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
 
                           {kbaAnswerType === 'MCQ' && (
                             <FormField
