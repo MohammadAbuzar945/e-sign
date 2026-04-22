@@ -976,7 +976,7 @@ export const DocumentPreferencesForm = ({
                 />
 
                 {showKbaTuningFields && (
-                  <div className="space-y-4 rounded-lg border border-dashed bg-muted/30 p-4">
+                  <div className="space-y-4 rounded-lg border p-4">
                     <FormField
                       control={form.control}
                       name="kbaMode"
