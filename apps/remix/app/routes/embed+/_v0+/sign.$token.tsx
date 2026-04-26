@@ -86,6 +86,7 @@ async function handleV1Loader({ params, request }: Route.LoaderArgs) {
     match(accesssAuth)
       .with(DocumentAccessAuth.ACCOUNT, () => user && user.email === recipient.email)
       .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => true) // Allow without account requirement
+      .with(DocumentAccessAuth.KBA, () => true) // KBA is validated in the signing gate
       .exhaustive(),
   );
 
@@ -228,6 +229,7 @@ async function handleV2Loader({ params, request }: Route.LoaderArgs) {
     match(accesssAuth)
       .with(DocumentAccessAuth.ACCOUNT, () => user && user.email === recipient.email)
       .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => true)
+      .with(DocumentAccessAuth.KBA, () => true) // KBA is validated in the signing gate
       .exhaustive(),
   );
 
