@@ -65,6 +65,7 @@
     "inngest-cli": "^1.16.1",
     "lint-staged": "^16.2.7",
     "nanoid": "^5.1.6",
+    "next": "^15.5.12",
     "nodemailer": "^7.0.10",
     "pdfjs-dist": "5.4.296",
     "pino": "^9.14.0",
