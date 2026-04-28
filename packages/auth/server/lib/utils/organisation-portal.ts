@@ -49,7 +49,7 @@ export const getOrganisationAuthenticationPortalOptions = async (
   const { organisationClaim, organisationAuthenticationPortal } = organisation;
 
   if (
-    !organisationClaim?.flags.authenticationPortal ||
+    !organisationClaim?.flags?.authenticationPortal ||
     !organisationAuthenticationPortal?.enabled
   ) {
     throw new AppError(AppErrorCode.NOT_SETUP, {
