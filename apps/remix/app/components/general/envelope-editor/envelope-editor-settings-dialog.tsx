@@ -88,6 +88,7 @@ import {
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { MultiSelectCombobox } from '@documenso/ui/primitives/multi-select-combobox';
+import { PasswordInput } from '@documenso/ui/primitives/password-input';
 import {
   Select,
   SelectContent,
@@ -353,6 +354,11 @@ const tabs = [
 
 type TAddSettingsFormSchema = z.infer<typeof ZAddSettingsFormSchema>;
 
+type TKbaAnswerCache = {
+  answer?: string;
+  recipientAnswers: Record<number, string>;
+};
+
 type EnvelopeEditorSettingsDialogProps = {
   trigger?: React.ReactNode;
 } & Omit<DialogPrimitive.DialogProps, 'children'>;
@@ -371,6 +377,10 @@ export const EnvelopeEditorSettingsDialog = ({
 
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<EnvelopeEditorSettingsTabType>('general');
+  const [lastSavedKbaAnswers, setLastSavedKbaAnswers] = useState<TKbaAnswerCache>({
+    answer: undefined,
+    recipientAnswers: {},
+  });
 
   const { documentAuthOption } = extractDocumentAuthMethods({
     documentAuth: envelope.authOptions,
@@ -433,14 +443,14 @@ export const EnvelopeEditorSettingsDialog = ({
       kbaAnswerType: firstKbaChallenge?.answerType ?? ('STRING' as const),
       kbaApplySameToAllRecipients: (envelopeKbaConfig?.settings?.mode ?? 'PER_ENVELOPE') === 'PER_ENVELOPE',
       kbaQuestion: envelopeKbaConfig?.envelopeChallenge?.question ?? '',
-      kbaAnswer: '',
+      kbaAnswer: lastSavedKbaAnswers.answer ?? '',
       kbaMcqOptions: mcqOptions,
       kbaRecipientChallenges: envelope.recipients.map((recipient) => ({
         recipientId: recipient.id,
         recipientName: recipient.name ?? '',
         recipientEmail: recipient.email,
         question: recipientChallengeById.get(recipient.id)?.question ?? '',
-        answer: '',
+        answer: lastSavedKbaAnswers.recipientAnswers[recipient.id] ?? '',
       })),
       meta: {
         subject: envelope.documentMeta.subject ?? '',
@@ -597,6 +607,22 @@ export const EnvelopeEditorSettingsDialog = ({
                   }
                 : null,
             recipientChallenges: data.kbaMode === 'PER_RECIPIENT' ? recipientChallenges : [],
+          });
+
+          setLastSavedKbaAnswers({
+            answer:
+              data.kbaMode === 'PER_ENVELOPE' || data.kbaApplySameToAllRecipients
+                ? (data.kbaAnswer?.trim() ?? '')
+                : undefined,
+            recipientAnswers:
+              data.kbaMode === 'PER_RECIPIENT' && !data.kbaApplySameToAllRecipients
+                ? Object.fromEntries(
+                    data.kbaRecipientChallenges.map((challenge) => [
+                      challenge.recipientId,
+                      challenge.answer?.trim() ?? '',
+                    ]),
+                  )
+                : {},
           });
         } else {
           await updateEnvelopeKbaMutation.mutateAsync({
@@ -1312,7 +1338,7 @@ export const EnvelopeEditorSettingsDialog = ({
                                     </FormLabel>
 
                                     <FormControl>
-                                      <Input
+                                      <PasswordInput
                                         className="bg-background"
                                         inputMode={
                                           kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined
@@ -1410,7 +1436,7 @@ export const EnvelopeEditorSettingsDialog = ({
                                           <Trans>Common KBA Answer</Trans>
                                         </FormLabel>
                                         <FormControl>
-                                          <Input
+                                          <PasswordInput
                                             className="bg-background"
                                             inputMode={
                                               kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined
@@ -1487,7 +1513,7 @@ export const EnvelopeEditorSettingsDialog = ({
                                           <Trans>KBA Answer</Trans>
                                         </FormLabel>
                                         <FormControl>
-                                          <Input
+                                          <PasswordInput
                                             className="bg-background"
                                             inputMode={
                                               kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined
