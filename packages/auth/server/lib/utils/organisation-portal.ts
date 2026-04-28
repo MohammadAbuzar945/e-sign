@@ -46,9 +46,11 @@ export const getOrganisationAuthenticationPortalOptions = async (
     });
   }
 
+  const { organisationClaim, organisationAuthenticationPortal } = organisation;
+
   if (
-    !organisation.organisationClaim.flags.authenticationPortal ||
-    !organisation.organisationAuthenticationPortal.enabled
+    !organisationClaim?.flags.authenticationPortal ||
+    !organisationAuthenticationPortal?.enabled
   ) {
     throw new AppError(AppErrorCode.NOT_SETUP, {
       message: 'Authentication portal is not enabled for this organisation',
@@ -59,7 +61,7 @@ export const getOrganisationAuthenticationPortalOptions = async (
     clientId,
     clientSecret: encryptedClientSecret,
     wellKnownUrl,
-  } = organisation.organisationAuthenticationPortal;
+  } = organisationAuthenticationPortal;
 
   if (!clientId || !encryptedClientSecret || !wellKnownUrl) {
     throw new AppError(AppErrorCode.NOT_SETUP, {
