@@ -103,28 +103,34 @@ export default function EnvelopeEditor() {
     return 'upload';
   });
 
-  const navigateToStep = (step: EnvelopeEditorStep) => {
-    setCurrentStep(step);
-
-    void flushAutosave();
-
-    if (!isStepLoading && isAutosaving) {
-      setIsStepLoading(true);
+  const navigateToStep = async (step: EnvelopeEditorStep) => {
+    if (step === currentStep) {
+      return;
     }
 
-    // Update URL params: empty for upload, otherwise set the step
-    if (step === 'upload') {
-      setSearchParams((prev) => {
-        const newParams = new URLSearchParams(prev);
-        newParams.delete('step');
-        return newParams;
-      });
-    } else {
-      setSearchParams((prev) => {
-        const newParams = new URLSearchParams(prev);
-        newParams.set('step', step);
-        return newParams;
-      });
+    setIsStepLoading(true);
+
+    try {
+      await flushAutosave();
+
+      setCurrentStep(step);
+
+      // Update URL params: empty for upload, otherwise set the step
+      if (step === 'upload') {
+        setSearchParams((prev) => {
+          const newParams = new URLSearchParams(prev);
+          newParams.delete('step');
+          return newParams;
+        });
+      } else {
+        setSearchParams((prev) => {
+          const newParams = new URLSearchParams(prev);
+          newParams.set('step', step);
+          return newParams;
+        });
+      }
+    } finally {
+      setIsStepLoading(false);
     }
   };
 
@@ -136,7 +142,7 @@ export default function EnvelopeEditor() {
 
     if (foundStep && foundStep.id !== currentStep) {
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      navigateToStep(foundStep.id as EnvelopeEditorStep);
+      void navigateToStep(foundStep.id as EnvelopeEditorStep);
     }
   }, [searchParams]);
 
@@ -193,7 +199,7 @@ export default function EnvelopeEditor() {
                         ? 'border border-green-400 bg-green-50 dark:border-green-500/20 dark:bg-green-500/10'
                         : 'border border-gray-200 hover:bg-gray-50 dark:border-gray-400/20 dark:hover:bg-gray-400/10'
                     }`}
-                    onClick={() => navigateToStep(step.id as EnvelopeEditorStep)}
+                    onClick={() => void navigateToStep(step.id as EnvelopeEditorStep)}
                   >
                     <div className="flex items-center space-x-3">
                       <div

@@ -43,6 +43,7 @@ type EditorFieldsProps = {
 
 type UseEditorFieldsResponse = {
   localFields: TLocalField[];
+  getAllFields: () => TLocalField[];
 
   // Selected field
   selectedField: TLocalField | undefined;
@@ -64,7 +65,7 @@ type UseEditorFieldsResponse = {
   selectedRecipient: Recipient | null;
   setSelectedRecipient: (recipientId: number | null) => void;
 
-  resetForm: (fields?: Field[]) => void;
+  resetForm: (fields?: Field[] | TLocalField[]) => void;
 };
 
 export const useEditorFields = ({
@@ -74,9 +75,18 @@ export const useEditorFields = ({
   const [selectedFieldFormId, setSelectedFieldFormId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(null);
 
-  const generateDefaultValues = (fields?: Field[]) => {
-    const formFields = (fields || envelope.fields).map(
-      (field): TLocalField => ({
+  const generateDefaultValues = (fields?: Field[] | TLocalField[]) => {
+    const normalizedFields = fields ?? envelope.fields;
+
+    const formFields = normalizedFields.map((field): TLocalField => {
+      if ('formId' in field) {
+        return {
+          ...field,
+          fieldMeta: field.fieldMeta ? ZFieldMetaSchema.parse(field.fieldMeta) : undefined,
+        };
+      }
+
+      return {
         id: field.id,
         formId: nanoid(),
         envelopeItemId: field.envelopeItemId,
@@ -88,8 +98,8 @@ export const useEditorFields = ({
         height: Number(field.height),
         recipientId: field.recipientId,
         fieldMeta: field.fieldMeta ? ZFieldMetaSchema.parse(field.fieldMeta) : undefined,
-      }),
-    );
+      };
+    });
 
     return {
       fields: formFields,
@@ -115,6 +125,10 @@ export const useEditorFields = ({
   const triggerFieldsUpdate = () => {
     void handleFieldsUpdate(form.getValues().fields);
   };
+
+  const getAllFields = useCallback((): TLocalField[] => {
+    return form.getValues().fields;
+  }, [form]);
 
   const setSelectedField = (formId: string | null, bypassCheck = false) => {
     if (!formId) {
@@ -285,13 +299,14 @@ export const useEditorFields = ({
     setSelectedRecipientId(foundRecipient?.id ?? null);
   };
 
-  const resetForm = (fields?: Field[]) => {
+  const resetForm = (fields?: Field[] | TLocalField[]) => {
     form.reset(generateDefaultValues(fields));
   };
 
   return {
     // Core state
     localFields,
+    getAllFields,
 
     // Field operations
     addField,

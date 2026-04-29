@@ -100,7 +100,13 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
   const [theme] = useTheme();
 
   return (
-    <html translate="no" lang={lang} data-theme={theme} className={theme ?? ''}>
+    <html
+      translate="no"
+      lang={lang}
+      suppressHydrationWarning
+      data-theme={theme ?? undefined}
+      className={theme ?? ''}
+    >
       <head>
         <meta charSet="utf-8" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
