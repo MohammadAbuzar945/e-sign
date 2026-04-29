@@ -170,6 +170,10 @@ export const EnvelopeEditorProvider = ({
         fields: prev.fields.filter((field) => recipientIds.has(field.recipientId)),
       }));
 
+      editorRecipients.resetForm({
+        recipients,
+      });
+
       // Keep unsaved local edits and only drop fields for removed recipients.
       editorFields.resetForm(
         editorFields.getAllFields().filter((field) => recipientIds.has(field.recipientId)),
@@ -342,7 +346,9 @@ export const EnvelopeEditorProvider = ({
   }, [envelope.type, envelope.id]);
 
   const flushAutosave = async (): Promise<void> => {
-    await Promise.all([setFieldsAsync(), setRecipientsAsync(), setEnvelopeAsync()]);
+    await setRecipientsAsync();
+    await setFieldsAsync();
+    await setEnvelopeAsync();
   };
 
   return (

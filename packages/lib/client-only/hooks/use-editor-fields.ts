@@ -122,8 +122,8 @@ export const useEditorFields = ({
     keyName: 'react-hook-form-id',
   });
 
-  const triggerFieldsUpdate = () => {
-    void handleFieldsUpdate(form.getValues().fields);
+  const triggerFieldsUpdate = (fields = form.getValues().fields) => {
+    void handleFieldsUpdate(fields);
   };
 
   const getAllFields = useCallback((): TLocalField[] => {
@@ -161,26 +161,32 @@ export const useEditorFields = ({
         ...restrictFieldPosValues(fieldData),
       };
 
+      const nextFields = [...form.getValues().fields, field];
+
       append(field);
-      triggerFieldsUpdate();
+      triggerFieldsUpdate(nextFields);
       setSelectedField(field.formId, true);
       return field;
     },
-    [append, triggerFieldsUpdate, setSelectedField],
+    [append, form, triggerFieldsUpdate, setSelectedField],
   );
 
   const removeFieldsByFormId = useCallback(
     (formIds: string[]) => {
+      const currentFields = form.getValues().fields;
       const indexes = formIds
-        .map((formId) => localFields.findIndex((field) => field.formId === formId))
+        .map((formId) => currentFields.findIndex((field) => field.formId === formId))
         .filter((index) => index !== -1);
 
       if (indexes.length > 0) {
+        const formIdSet = new Set(formIds);
+        const nextFields = currentFields.filter((field) => !formIdSet.has(field.formId));
+
         remove(indexes);
-        triggerFieldsUpdate();
+        triggerFieldsUpdate(nextFields);
       }
     },
-    [localFields, remove, triggerFieldsUpdate],
+    [form, remove, triggerFieldsUpdate],
   );
 
   const setFieldId = (formId: string, id: number) => {
@@ -198,22 +204,29 @@ export const useEditorFields = ({
 
   const updateFieldByFormId = useCallback(
     (formId: string, updates: Partial<TLocalField>) => {
-      const index = localFields.findIndex((field) => field.formId === formId);
+      const currentFields = form.getValues().fields;
+      const index = currentFields.findIndex((field) => field.formId === formId);
 
       if (index !== -1) {
         const updatedField = {
-          ...localFields[index],
+          ...currentFields[index],
           ...updates,
         };
 
-        update(index, {
+        const restrictedField = {
           ...updatedField,
           ...restrictFieldPosValues(updatedField),
-        });
-        triggerFieldsUpdate();
+        };
+
+        const nextFields = currentFields.map((field, fieldIndex) =>
+          fieldIndex === index ? restrictedField : field,
+        );
+
+        update(index, restrictedField);
+        triggerFieldsUpdate(nextFields);
       }
     },
-    [localFields, update, triggerFieldsUpdate],
+    [form, update, triggerFieldsUpdate],
   );
 
   const duplicateField = useCallback(
@@ -227,11 +240,13 @@ export const useEditorFields = ({
         positionY: field.positionY + 3,
       };
 
+      const nextFields = [...form.getValues().fields, newField];
+
       append(newField);
-      triggerFieldsUpdate();
+      triggerFieldsUpdate(nextFields);
       return newField;
     },
-    [append, triggerFieldsUpdate],
+    [append, form, triggerFieldsUpdate],
   );
 
   const duplicateFieldToAllPages = useCallback(
@@ -253,14 +268,17 @@ export const useEditorFields = ({
           page: pageNumber,
         };
 
-        append(newField);
         newFields.push(newField);
       });
 
-      triggerFieldsUpdate();
+      if (newFields.length > 0) {
+        append(newFields);
+      }
+
+      triggerFieldsUpdate([...form.getValues().fields, ...newFields]);
       return newFields;
     },
-    [append, triggerFieldsUpdate],
+    [append, form, triggerFieldsUpdate],
   );
 
   const getFieldByFormId = useCallback(
