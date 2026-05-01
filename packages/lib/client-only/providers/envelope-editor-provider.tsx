@@ -176,16 +176,16 @@ export const EnvelopeEditorProvider = ({
       setEnvelope((prev) => ({
         ...prev,
         recipients,
-        fields: prev.fields.filter((field) =>
-          recipients.some((recipient) => recipient.id === field.recipientId),
-        ),
+        fields: prev.fields.filter((field) => recipientIds.has(field.recipientId)),
       }));
 
-      // Reset the local fields to ensure deleted recipient fields are removed.
+      editorRecipients.resetForm({
+        recipients,
+      });
+
+      // Keep unsaved local edits and only drop fields for removed recipients.
       editorFields.resetForm(
-        envelope.fields.filter((field) =>
-          recipients.some((recipient) => recipient.id === field.recipientId),
-        ),
+        editorFields.getAllFields().filter((field) => recipientIds.has(field.recipientId)),
       );
 
       setAutosaveError(false);

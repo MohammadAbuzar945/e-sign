@@ -55,6 +55,9 @@ export const updateOrganisationSettingsRoute = authenticatedProcedure
 
       // AI features settings.
       aiFeaturesEnabled,
+
+      // KBA defaults.
+      kbaSettings,
     } = data;
 
     if (Object.values(data).length === 0) {
@@ -168,6 +171,10 @@ export const updateOrganisationSettingsRoute = authenticatedProcedure
 
             // AI features settings.
             aiFeaturesEnabled,
+
+            // KBA defaults.
+            kbaSettings:
+              kbaSettings === undefined ? undefined : (kbaSettings as Prisma.InputJsonValue),
           },
         },
       },

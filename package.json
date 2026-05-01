@@ -39,7 +39,8 @@
     "make:version": "npm version --workspace @documenso/remix --include-workspace-root --no-git-tag-version -m \"v%s\"",
     "translate": "npm run translate:extract && npm run translate:compile",
     "translate:extract": "lingui extract --clean",
-    "translate:compile": "lingui compile"
+    "translate:compile": "lingui compile",
+    "openapi:merge-nomia": "node scripts/merge-nomia-openapi.mjs"
   },
   "packageManager": "npm@10.7.0",
   "engines": {
@@ -65,6 +66,7 @@
     "inngest-cli": "^1.16.1",
     "lint-staged": "^16.2.7",
     "nanoid": "^5.1.6",
+    "next": "^15.5.12",
     "nodemailer": "^7.0.10",
     "pdfjs-dist": "5.4.296",
     "pino": "^9.14.0",

@@ -15,6 +15,7 @@ import { prisma } from '@documenso/prisma';
 
 import { EmbedDirectTemplateClientPage } from '~/components/embed/embed-direct-template-client-page';
 import { EmbedSignDocumentV2ClientPage } from '~/components/embed/embed-document-signing-page-v2';
+import { DirectTemplateKbaAccessGate } from '~/components/general/direct-template/direct-template-kba-access-gate';
 import { DocumentSigningAuthProvider } from '~/components/general/document-signing/document-signing-auth-provider';
 import { DocumentSigningProvider } from '~/components/general/document-signing/document-signing-provider';
 import { DocumentSigningRecipientProvider } from '~/components/general/document-signing/document-signing-recipient-provider';
@@ -69,6 +70,7 @@ async function handleV1Loader({ params, request }: Route.LoaderArgs) {
     match(auth)
       .with(DocumentAccessAuth.ACCOUNT, () => !!user)
       .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => false) // Not supported for direct links
+      .with(DocumentAccessAuth.KBA, () => true)
       .exhaustive(),
   );
 
@@ -181,6 +183,7 @@ async function handleV2Loader({ params, request }: Route.LoaderArgs) {
     match(accesssAuth)
       .with(DocumentAccessAuth.ACCOUNT, () => user && user.email === recipient.email)
       .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => false) // Not supported for direct links
+      .with(DocumentAccessAuth.KBA, () => true)
       .exhaustive(),
   );
 
@@ -280,19 +283,21 @@ const EmbedDirectTemplatePageV1 = ({
         recipient={recipient}
         user={user}
       >
-        <DocumentSigningRecipientProvider recipient={recipient}>
-          <EmbedDirectTemplateClientPage
-            token={token}
-            envelopeId={template.envelopeId}
-            updatedAt={template.updatedAt}
-            envelopeItems={template.envelopeItems}
-            recipient={recipient}
-            fields={fields}
-            metadata={template.templateMeta}
-            hidePoweredBy={hidePoweredBy}
-            allowWhiteLabelling={allowEmbedSigningWhitelabel}
-          />
-        </DocumentSigningRecipientProvider>
+        <DirectTemplateKbaAccessGate token={token}>
+          <DocumentSigningRecipientProvider recipient={recipient}>
+            <EmbedDirectTemplateClientPage
+              token={token}
+              envelopeId={template.envelopeId}
+              updatedAt={template.updatedAt}
+              envelopeItems={template.envelopeItems}
+              recipient={recipient}
+              fields={fields}
+              metadata={template.templateMeta}
+              hidePoweredBy={hidePoweredBy}
+              allowWhiteLabelling={allowEmbedSigningWhitelabel}
+            />
+          </DocumentSigningRecipientProvider>
+        </DirectTemplateKbaAccessGate>
       </DocumentSigningAuthProvider>
     </DocumentSigningProvider>
   );
@@ -320,17 +325,14 @@ const EmbedDirectTemplatePageV2 = ({
         user={user}
         isDirectTemplate={true}
       >
-        <EnvelopeRenderProvider
-          version="current"
-          envelope={envelope}
-          envelopeItems={envelope.envelopeItems}
-          token={recipient.token}
-        >
-          <EmbedSignDocumentV2ClientPage
-            hidePoweredBy={hidePoweredBy}
-            allowWhitelabelling={allowEmbedSigningWhitelabel}
-          />
-        </EnvelopeRenderProvider>
+        <DirectTemplateKbaAccessGate token={token}>
+          <EnvelopeRenderProvider envelope={envelope} token={recipient.token}>
+            <EmbedSignDocumentV2ClientPage
+              hidePoweredBy={hidePoweredBy}
+              allowWhitelabelling={allowEmbedSigningWhitelabel}
+            />
+          </EnvelopeRenderProvider>
+        </DirectTemplateKbaAccessGate>
       </DocumentSigningAuthProvider>
     </EnvelopeSigningProvider>
   );

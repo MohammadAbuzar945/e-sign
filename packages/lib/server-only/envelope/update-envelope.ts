@@ -10,7 +10,11 @@ import { prisma } from '@documenso/prisma';
 
 import { TEAM_DOCUMENT_VISIBILITY_MAP } from '../../constants/teams';
 import { AppError, AppErrorCode } from '../../errors/app-error';
-import type { TDocumentAccessAuthTypes, TDocumentActionAuthTypes } from '../../types/document-auth';
+import type {
+  TDocumentAccessAuthTypes,
+  TDocumentActionAuthTypes,
+} from '../../types/document-auth';
+import { ZDocumentAuthOptionsSchema } from '../../types/document-auth';
 import {
   ZWebhookDocumentSchema,
   mapEnvelopeToWebhookDocumentPayload,
@@ -33,6 +37,8 @@ export type UpdateEnvelopeOptions = {
     includeQrCodeInCertificate?: boolean | null;
     globalAccessAuth?: TDocumentAccessAuthTypes[];
     globalActionAuth?: TDocumentActionAuthTypes[];
+    /** Persisted on `authOptions` JSON when the user opts out of team default KBA in document access. */
+    kbaAccessExplicitlyDisabled?: boolean;
     publicTitle?: string;
     publicDescription?: string;
     templateType?: TemplateType;
@@ -111,6 +117,8 @@ export const updateEnvelope = async ({
     documentAuth: envelope.authOptions,
   });
 
+  const existingAuthOptions = ZDocumentAuthOptionsSchema.parse(envelope.authOptions);
+
   const documentGlobalAccessAuth = documentAuthOption?.globalAccessAuth ?? null;
   const documentGlobalActionAuth = documentAuthOption?.globalActionAuth ?? null;
 
@@ -119,6 +127,11 @@ export const updateEnvelope = async ({
     data?.globalAccessAuth === undefined ? documentGlobalAccessAuth : data.globalAccessAuth;
   const newGlobalActionAuth =
     data?.globalActionAuth === undefined ? documentGlobalActionAuth : data.globalActionAuth;
+
+  const newKbaAccessExplicitlyDisabled =
+    data?.kbaAccessExplicitlyDisabled !== undefined
+      ? data.kbaAccessExplicitlyDisabled
+      : Boolean(existingAuthOptions.kbaAccessExplicitlyDisabled);
 
   // Check if user has permission to set the global action auth.
   if (newGlobalActionAuth.length > 0 && !envelope.team.organisation.organisationClaim.flags.cfr21) {
@@ -130,6 +143,7 @@ export const updateEnvelope = async ({
   const authOptions = createDocumentAuthOptions({
     globalAccessAuth: newGlobalAccessAuth,
     globalActionAuth: newGlobalActionAuth,
+    kbaAccessExplicitlyDisabled: newKbaAccessExplicitlyDisabled ? true : undefined,
   });
 
   const emailId = meta.emailId;

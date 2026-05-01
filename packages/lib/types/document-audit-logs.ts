@@ -54,6 +54,11 @@ export const ZDocumentAuditLogTypeSchema = z.enum([
   'DOCUMENT_ACCESS_AUTH_2FA_REQUESTED', // When ACCESS AUTH 2FA is requested.
   'DOCUMENT_ACCESS_AUTH_2FA_VALIDATED', // When ACCESS AUTH 2FA is successfully validated.
   'DOCUMENT_ACCESS_AUTH_2FA_FAILED', // When ACCESS AUTH 2FA validation fails.
+  'DOCUMENT_KBA_CONFIG_UPDATED', // When KBA settings/challenges are configured.
+  'DOCUMENT_ACCESS_AUTH_KBA_CHALLENGE_VIEWED', // When recipient opens KBA challenge.
+  'DOCUMENT_ACCESS_AUTH_KBA_VALIDATED', // When recipient successfully validates KBA.
+  'DOCUMENT_ACCESS_AUTH_KBA_FAILED', // When recipient fails KBA validation.
+  'DOCUMENT_ACCESS_AUTH_KBA_LOCKED', // When recipient is locked due to KBA failed attempts.
 ]);
 
 export const ZDocumentAuditLogEmailTypeSchema = z.enum([
@@ -603,6 +608,69 @@ export const ZDocumentAuditLogEventDocumentRecipientFailed2FAEmailSchema = z.obj
   }),
 });
 
+export const ZDocumentAuditLogEventDocumentKbaConfigUpdatedSchema = z.object({
+  type: z.literal(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_KBA_CONFIG_UPDATED),
+  data: z.object({
+    mode: z.enum(['PER_ENVELOPE', 'PER_RECIPIENT']),
+    isEnabled: z.boolean(),
+    maxAttempts: z.number().int(),
+    lockoutMinutes: z.number().int(),
+    envelopeChallengeAnswerType: z.enum(['STRING', 'NUMERIC', 'MCQ']).nullable(),
+    recipientChallengeAnswerTypes: z.array(
+      z.object({
+        recipientId: z.number(),
+        answerType: z.enum(['STRING', 'NUMERIC', 'MCQ']),
+      }),
+    ),
+  }),
+});
+
+export const ZDocumentAuditLogEventDocumentKbaChallengeViewedSchema = z.object({
+  type: z.literal(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_CHALLENGE_VIEWED),
+  data: z.object({
+    recipientEmail: z.string(),
+    recipientName: z.string(),
+    recipientId: z.number(),
+    answerType: z.enum(['STRING', 'NUMERIC', 'MCQ']),
+    mode: z.enum(['PER_ENVELOPE', 'PER_RECIPIENT']),
+  }),
+});
+
+export const ZDocumentAuditLogEventDocumentKbaValidatedSchema = z.object({
+  type: z.literal(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_VALIDATED),
+  data: z.object({
+    recipientEmail: z.string(),
+    recipientName: z.string(),
+    recipientId: z.number(),
+    answerType: z.enum(['STRING', 'NUMERIC', 'MCQ']),
+    mode: z.enum(['PER_ENVELOPE', 'PER_RECIPIENT']),
+    attemptsRemaining: z.number().int(),
+  }),
+});
+
+export const ZDocumentAuditLogEventDocumentKbaFailedSchema = z.object({
+  type: z.literal(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_FAILED),
+  data: z.object({
+    recipientEmail: z.string(),
+    recipientName: z.string(),
+    recipientId: z.number(),
+    answerType: z.enum(['STRING', 'NUMERIC', 'MCQ']),
+    mode: z.enum(['PER_ENVELOPE', 'PER_RECIPIENT']),
+    attemptsRemaining: z.number().int(),
+  }),
+});
+
+export const ZDocumentAuditLogEventDocumentKbaLockedSchema = z.object({
+  type: z.literal(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_LOCKED),
+  data: z.object({
+    recipientEmail: z.string(),
+    recipientName: z.string(),
+    recipientId: z.number(),
+    answerType: z.enum(['STRING', 'NUMERIC', 'MCQ']),
+    mode: z.enum(['PER_ENVELOPE', 'PER_RECIPIENT']),
+  }),
+});
+
 /**
  * Event: Document sent.
  */
@@ -776,6 +844,11 @@ export const ZDocumentAuditLogSchema = ZDocumentAuditLogBaseSchema.and(
     ZDocumentAuditLogEventDocumentRecipientRequested2FAEmailSchema,
     ZDocumentAuditLogEventDocumentRecipientValidated2FAEmailSchema,
     ZDocumentAuditLogEventDocumentRecipientFailed2FAEmailSchema,
+    ZDocumentAuditLogEventDocumentKbaConfigUpdatedSchema,
+    ZDocumentAuditLogEventDocumentKbaChallengeViewedSchema,
+    ZDocumentAuditLogEventDocumentKbaValidatedSchema,
+    ZDocumentAuditLogEventDocumentKbaFailedSchema,
+    ZDocumentAuditLogEventDocumentKbaLockedSchema,
     ZDocumentAuditLogEventDocumentSentSchema,
     ZDocumentAuditLogEventDocumentTitleUpdatedSchema,
     ZDocumentAuditLogEventDocumentExternalIdUpdatedSchema,

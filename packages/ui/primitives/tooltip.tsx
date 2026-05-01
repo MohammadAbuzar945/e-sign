@@ -8,7 +8,24 @@ const TooltipProvider = TooltipPrimitive.Provider;
 
 const Tooltip = TooltipPrimitive.Root;
 
-const TooltipTrigger = TooltipPrimitive.Trigger;
+/**
+ * Radix renders a native &lt;button&gt; by default. Inside a &lt;form&gt;, a button without
+ * {@link HTMLButtonElement.type} behaves as {@link HTMLButtonElement.type} === "submit", so
+ * clicking an info tooltip was submitting the form. Default to `button` unless `asChild` is used.
+ */
+const TooltipTrigger = React.forwardRef<
+  React.ElementRef<typeof TooltipPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Trigger>
+>(({ type, asChild, ...props }, ref) => (
+  <TooltipPrimitive.Trigger
+    ref={ref}
+    asChild={asChild}
+    type={asChild ? undefined : (type ?? 'button')}
+    {...props}
+  />
+));
+
+TooltipTrigger.displayName = TooltipPrimitive.Trigger.displayName;
 
 const TooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,

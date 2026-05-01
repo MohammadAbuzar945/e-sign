@@ -15,6 +15,7 @@ import {
   TEAM_MEMBER_ROLE_HIERARCHY,
   TEAM_MEMBER_ROLE_PERMISSIONS_MAP,
 } from '../constants/teams';
+import { normalizeStoredKbaSettings } from './kba-settings';
 import type { TEAM_MEMBER_ROLE_MAP } from '../constants/teams-translations';
 
 /**
@@ -220,6 +221,7 @@ export const generateDefaultTeamSettings = (): Omit<TeamGlobalSettings, 'id' | '
     envelopeExpirationPeriod: null,
 
     aiFeaturesEnabled: null,
+    kbaSettings: null,
   };
 };
 
@@ -239,6 +241,10 @@ export const extractDerivedTeamSettings = (
 
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   for (const key of Object.keys(derivedSettings) as (keyof typeof derivedSettings)[]) {
+    if (key === 'kbaSettings') {
+      continue;
+    }
+
     const teamValue = teamSettings[key];
 
     if (teamValue !== null) {
@@ -247,5 +253,13 @@ export const extractDerivedTeamSettings = (
     }
   }
 
-  return derivedSettings;
+  const mergedKba =
+    teamSettings.kbaSettings !== null && teamSettings.kbaSettings !== undefined
+      ? teamSettings.kbaSettings
+      : derivedSettings.kbaSettings;
+
+  return {
+    ...derivedSettings,
+    kbaSettings: normalizeStoredKbaSettings(mergedKba),
+  };
 };

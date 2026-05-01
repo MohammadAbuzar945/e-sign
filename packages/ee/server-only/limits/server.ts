@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
+import { ZClaimFlagsSchema } from '@documenso/lib/types/subscription';
 import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
 import { prisma } from '@documenso/prisma';
 
@@ -97,6 +98,8 @@ export const getServerLimits = async ({
     console.error('Organisation found but missing organisationClaim. Organisation ID:', organisation.id);
     throw new Error(ERROR_CODES.USER_FETCH_FAILED);
   }
+
+  const claimFlags = ZClaimFlagsSchema.parse(organisation.organisationClaim.flags);
 
   const subscription = await getCurrentSubscriptionByOrganisationId({
     organisationId: organisation.id,
@@ -196,7 +199,7 @@ export const getServerLimits = async ({
 
   // Allow unlimited documents for users with an unlimited documents claim.
   // This also allows "free" claim users without subscriptions if they have this flag.
-  if (organisation.organisationClaim.flags.unlimitedDocuments) {
+  if (claimFlags.unlimitedDocuments) {
     return {
       quota: {
         ...quota,

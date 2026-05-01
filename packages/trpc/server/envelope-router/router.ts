@@ -24,6 +24,7 @@ import { findEnvelopeAuditLogsRoute } from './find-envelope-audit-logs';
 import { findEnvelopesRoute } from './find-envelopes';
 import { getEditorEnvelopeRoute } from './get-editor-envelope';
 import { getEnvelopeRoute } from './get-envelope';
+import { getEnvelopeKbaRoute } from './get-envelope-kba';
 import { getEnvelopeItemsRoute } from './get-envelope-items';
 import { getEnvelopeItemsByTokenRoute } from './get-envelope-items-by-token';
 import { getEnvelopesByIdsRoute } from './get-envelopes-by-ids';
@@ -34,6 +35,7 @@ import { setEnvelopeRecipientsRoute } from './set-envelope-recipients';
 import { signEnvelopeFieldRoute } from './sign-envelope-field';
 import { signingStatusEnvelopeRoute } from './signing-status-envelope';
 import { updateEnvelopeRoute } from './update-envelope';
+import { updateEnvelopeKbaRoute } from './update-envelope-kba';
 import { updateEnvelopeItemsRoute } from './update-envelope-items';
 import { useEnvelopeRoute } from './use-envelope';
 
@@ -85,10 +87,12 @@ export const envelopeRouter = router({
     get: getEditorEnvelopeRoute,
   },
   get: getEnvelopeRoute,
+  getKba: getEnvelopeKbaRoute,
   getMany: getEnvelopesByIdsRoute,
   create: createEnvelopeRoute,
   use: useEnvelopeRoute,
   update: updateEnvelopeRoute,
+  updateKba: updateEnvelopeKbaRoute,
   delete: deleteEnvelopeRoute,
   duplicate: duplicateEnvelopeRoute,
   distribute: distributeEnvelopeRoute,

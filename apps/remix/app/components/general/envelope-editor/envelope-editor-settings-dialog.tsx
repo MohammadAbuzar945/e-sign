@@ -35,8 +35,10 @@ import { DEFAULT_DOCUMENT_TIME_ZONE, TIME_ZONES } from '@documenso/lib/constants
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError } from '@documenso/lib/errors/app-error';
 import {
+  DocumentAccessAuth,
   ZDocumentAccessAuthTypesSchema,
   ZDocumentActionAuthTypesSchema,
+  ZDocumentAuthOptionsSchema,
 } from '@documenso/lib/types/document-auth';
 import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';
 import {
@@ -45,6 +47,7 @@ import {
   ZDocumentMetaTimezoneSchema,
 } from '@documenso/lib/types/document-meta';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
+import { normalizeStoredKbaSettings } from '@documenso/lib/utils/kba-settings';
 import { isValidRedirectUrl } from '@documenso/lib/utils/is-valid-redirect-url';
 import {
   DocumentSignatureType,
@@ -88,6 +91,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -95,6 +99,7 @@ import {
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { MultiSelectCombobox } from '@documenso/ui/primitives/multi-select-combobox';
+import { PasswordInput } from '@documenso/ui/primitives/password-input';
 import {
   Select,
   SelectContent,
@@ -112,6 +117,25 @@ const DOCUMENT_DISTRIBUTION_METHOD_SETTINGS_OPTIONS = Object.values(
   DOCUMENT_DISTRIBUTION_METHODS,
 ).filter(({ value }) => value !== DocumentDistributionMethod.NONE);
 
+const ZKbaAnswerTypeSchema = z.enum(['STRING', 'NUMERIC', 'MCQ']);
+const ZKbaModeSchema = z.enum(['PER_ENVELOPE', 'PER_RECIPIENT']);
+
+const parseMcqOptions = (optionsInput?: string) => {
+  if (!optionsInput) {
+    return [];
+  }
+
+  return optionsInput
+    .split(',')
+    .map((option) => option.trim())
+    .filter((option) => option.length > 0)
+    .map((label) => ({
+      key: label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      label,
+    }))
+    .filter((option) => option.key.length > 0);
+};
+
 export const ZAddSettingsFormSchema = z.object({
   templateType: z.nativeEnum(TemplateType).optional(),
   externalId: z.string().optional(),
@@ -119,10 +143,35 @@ export const ZAddSettingsFormSchema = z.object({
   includeQrCodeInCertificate: z.boolean().nullish(),
   globalAccessAuth: z
     .array(z.union([ZDocumentAccessAuthTypesSchema, z.literal('-1')]))
-    .transform((val) => (val.length === 1 && val[0] === '-1' ? [] : val))
+    .transform((val) => {
+      if (val.includes('-1')) {
+        return val.filter((entry) => entry !== '-1');
+      }
+
+      return val;
+    })
     .optional()
-    .default([]),
+    .default(['-1']),
   globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional().default([]),
+  kbaMode: ZKbaModeSchema.default('PER_ENVELOPE'),
+  kbaMaxAttempts: z.number().int().min(1).max(20).default(5),
+  kbaLockoutMinutes: z.number().int().min(1).max(1440).default(15),
+  kbaAnswerType: ZKbaAnswerTypeSchema.default('STRING'),
+  kbaApplySameToAllRecipients: z.boolean().default(true),
+  kbaQuestion: z.string().optional(),
+  kbaAnswer: z.string().optional(),
+  kbaMcqOptions: z.string().optional(),
+  kbaRecipientChallenges: z
+    .array(
+      z.object({
+        recipientId: z.number(),
+        recipientName: z.string(),
+        recipientEmail: z.string(),
+        question: z.string().optional(),
+        answer: z.string().optional(),
+      }),
+    )
+    .default([]),
   meta: z.object({
     subject: z.string(),
     message: z.string(),
@@ -151,7 +200,144 @@ export const ZAddSettingsFormSchema = z.object({
     }),
     envelopeExpirationPeriod: ZEnvelopeExpirationPeriod.nullish(),
   }),
-});
+})
+  .superRefine((value, ctx) => {
+    const requiresKba = value.globalAccessAuth.includes(DocumentAccessAuth.KBA);
+
+    if (!requiresKba) {
+      return;
+    }
+
+    if (value.kbaMode === 'PER_ENVELOPE') {
+      if (!value.kbaQuestion?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: msg`Please enter a security question before saving.`.id,
+          path: ['kbaQuestion'],
+        });
+      }
+
+      if (!value.kbaAnswer?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: msg`Please enter the expected answer before saving.`.id,
+          path: ['kbaAnswer'],
+        });
+      }
+    }
+
+    if (value.kbaMode === 'PER_RECIPIENT') {
+      if (value.kbaApplySameToAllRecipients) {
+        if (!value.kbaQuestion?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: msg`Please enter a security question before saving.`.id,
+            path: ['kbaQuestion'],
+          });
+        }
+
+        if (!value.kbaAnswer?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: msg`Please enter the expected answer before saving.`.id,
+            path: ['kbaAnswer'],
+          });
+        }
+      } else {
+        value.kbaRecipientChallenges.forEach((challenge, index) => {
+          if (!challenge.question?.trim()) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: msg`Please enter a security question for this recipient.`.id,
+              path: ['kbaRecipientChallenges', index, 'question'],
+            });
+          }
+
+          if (!challenge.answer?.trim()) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: msg`Please enter the expected answer for this recipient.`.id,
+              path: ['kbaRecipientChallenges', index, 'answer'],
+            });
+          }
+        });
+      }
+    }
+
+    if (value.kbaAnswerType === 'NUMERIC') {
+      const addNumericFormatIssue = (answer: string | undefined, path: (string | number)[]) => {
+        const trimmed = answer?.trim() ?? '';
+
+        if (!trimmed) {
+          return;
+        }
+
+        if (!/^\d+$/.test(trimmed)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: msg`Only digits (0-9) are allowed for a numeric answer.`.id,
+            path,
+          });
+        }
+      };
+
+      if (value.kbaMode === 'PER_ENVELOPE') {
+        addNumericFormatIssue(value.kbaAnswer, ['kbaAnswer']);
+      }
+
+      if (value.kbaMode === 'PER_RECIPIENT') {
+        if (value.kbaApplySameToAllRecipients) {
+          addNumericFormatIssue(value.kbaAnswer, ['kbaAnswer']);
+        } else {
+          value.kbaRecipientChallenges.forEach((challenge, index) => {
+            addNumericFormatIssue(challenge.answer, ['kbaRecipientChallenges', index, 'answer']);
+          });
+        }
+      }
+    }
+
+    if (value.kbaAnswerType === 'MCQ') {
+      const parsedOptions = parseMcqOptions(value.kbaMcqOptions);
+
+      if (parsedOptions.length < 2) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: msg`Please provide at least 2 MCQ options`.id,
+          path: ['kbaMcqOptions'],
+        });
+      }
+
+      if (value.kbaMode === 'PER_RECIPIENT' && !value.kbaApplySameToAllRecipients) {
+        value.kbaRecipientChallenges.forEach((challenge, index) => {
+          const normalizedAnswer = challenge.answer?.trim().toLowerCase();
+          const hasMatchingOption = parsedOptions.some(
+            (option) => option.label.toLowerCase() === normalizedAnswer,
+          );
+
+          if (parsedOptions.length > 0 && normalizedAnswer && !hasMatchingOption) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: msg`Correct answer must match one of the MCQ options exactly`.id,
+              path: ['kbaRecipientChallenges', index, 'answer'],
+            });
+          }
+        });
+      } else {
+        const normalizedAnswer = value.kbaAnswer?.trim().toLowerCase();
+        const hasMatchingOption = parsedOptions.some(
+          (option) => option.label.toLowerCase() === normalizedAnswer,
+        );
+
+        if (parsedOptions.length > 0 && normalizedAnswer && !hasMatchingOption) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: msg`Correct answer must match one of the MCQ options exactly`.id,
+            path: ['kbaAnswer'],
+          });
+        }
+      }
+    }
+  });
 
 type EnvelopeEditorSettingsTabType = 'general' | 'email' | 'security';
 
@@ -178,6 +364,11 @@ const tabs = [
 
 type TAddSettingsFormSchema = z.infer<typeof ZAddSettingsFormSchema>;
 
+type TKbaAnswerCache = {
+  answer?: string;
+  recipientAnswers: Record<number, string>;
+};
+
 type EnvelopeEditorSettingsDialogProps = {
   trigger?: React.ReactNode;
 } & Omit<DialogPrimitive.DialogProps, 'children'>;
@@ -199,12 +390,40 @@ export const EnvelopeEditorSettingsDialog = ({
 
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<EnvelopeEditorSettingsTabType>('general');
+  const [lastSavedKbaAnswers, setLastSavedKbaAnswers] = useState<TKbaAnswerCache>({
+    answer: undefined,
+    recipientAnswers: {},
+  });
 
   const { documentAuthOption } = extractDocumentAuthMethods({
     documentAuth: envelope.authOptions,
   });
 
+  const { data: envelopeKbaConfig, isLoading: isLoadingEnvelopeKbaConfig } =
+    trpc.envelope.getKba.useQuery(
+      {
+        envelopeId: envelope.id,
+      },
+      {
+        enabled: open,
+      },
+    );
+
+  const { data: teamForKbaDefaults } = trpc.team.get.useQuery({
+    teamReference: team.id,
+  });
+
   const createDefaultValues = () => {
+    const firstKbaChallenge =
+      envelopeKbaConfig?.envelopeChallenge ?? envelopeKbaConfig?.recipientChallenges.at(0);
+    const recipientChallengeById = new Map(
+      (envelopeKbaConfig?.recipientChallenges ?? []).map((challenge) => [
+        challenge.recipientId,
+        challenge,
+      ]),
+    );
+    const mcqOptions = firstKbaChallenge?.mcqOptions?.map((option) => option.label).join(', ') ?? '';
+
     const resolvedDistributionMethod =
       envelope.documentMeta.distributionMethod === DocumentDistributionMethod.NONE
         ? DocumentDistributionMethod.EMAIL
@@ -212,13 +431,50 @@ export const EnvelopeEditorSettingsDialog = ({
     const resolvedTemplateType =
       envelope.templateType === TemplateType.PUBLIC ? TemplateType.PUBLIC : TemplateType.PRIVATE;
 
+    const authParsed = ZDocumentAuthOptionsSchema.parse(envelope.authOptions ?? {});
+    const teamDerivedKba = normalizeStoredKbaSettings(
+      teamForKbaDefaults?.derivedSettings?.kbaSettings,
+    );
+    const storedGlobalAccessAuth = [...(documentAuthOption?.globalAccessAuth || [])];
+    let globalAccessAuthForForm = [...storedGlobalAccessAuth];
+    if (
+      teamDerivedKba.isEnabled &&
+      !authParsed.kbaAccessExplicitlyDisabled &&
+      !globalAccessAuthForForm.includes(DocumentAccessAuth.KBA)
+    ) {
+      globalAccessAuthForForm = [...globalAccessAuthForForm, DocumentAccessAuth.KBA];
+    }
+
     return {
       templateType: resolvedTemplateType,
       externalId: envelope.externalId || '',
       visibility: envelope.visibility || '',
       includeQrCodeInCertificate: envelope.includeQrCodeInCertificate ?? null,
-      globalAccessAuth: documentAuthOption?.globalAccessAuth || [],
+      globalAccessAuth: globalAccessAuthForForm,
       globalActionAuth: documentAuthOption?.globalActionAuth || [],
+      kbaMode: envelopeKbaConfig?.settings?.mode ?? ('PER_ENVELOPE' as const),
+      kbaMaxAttempts: envelopeKbaConfig?.settings?.maxAttempts ?? teamDerivedKba.maxAttempts,
+      kbaLockoutMinutes:
+        envelopeKbaConfig?.settings?.lockoutMinutes ?? teamDerivedKba.lockoutMinutes,
+      kbaAnswerType: firstKbaChallenge?.answerType ?? ('STRING' as const),
+      kbaApplySameToAllRecipients: (envelopeKbaConfig?.settings?.mode ?? 'PER_ENVELOPE') === 'PER_ENVELOPE',
+      kbaQuestion: envelopeKbaConfig?.envelopeChallenge?.question ?? '',
+      kbaAnswer:
+        lastSavedKbaAnswers.answer ??
+        envelopeKbaConfig?.envelopeChallenge?.answer ??
+        envelopeKbaConfig?.recipientChallenges.at(0)?.answer ??
+        '',
+      kbaMcqOptions: mcqOptions,
+      kbaRecipientChallenges: envelope.recipients.map((recipient) => ({
+        recipientId: recipient.id,
+        recipientName: recipient.name ?? '',
+        recipientEmail: recipient.email,
+        question: recipientChallengeById.get(recipient.id)?.question ?? '',
+        answer:
+          lastSavedKbaAnswers.recipientAnswers[recipient.id] ??
+          recipientChallengeById.get(recipient.id)?.answer ??
+          '',
+      })),
       meta: {
         subject: envelope.documentMeta.subject ?? '',
         message: envelope.documentMeta.message ?? '',
@@ -267,6 +523,11 @@ export const EnvelopeEditorSettingsDialog = ({
   const emails = emailData?.data || organisationEmails || [];
 
   const canUpdateVisibility = canAccessTeamDocument(team.currentTeamRole, envelope.visibility);
+  const requiresKba = form.watch('globalAccessAuth').includes(DocumentAccessAuth.KBA);
+  const kbaMode = form.watch('kbaMode');
+  const kbaAnswerType = form.watch('kbaAnswerType');
+  const kbaApplySameToAllRecipients = form.watch('kbaApplySameToAllRecipients');
+  const updateEnvelopeKbaMutation = trpc.envelope.updateKba.useMutation();
 
   const onFormSubmit = async (data: TAddSettingsFormSchema) => {
     const {
@@ -288,6 +549,14 @@ export const EnvelopeEditorSettingsDialog = ({
       .array(ZDocumentAccessAuthTypesSchema)
       .safeParse(data.globalAccessAuth);
 
+    const teamKbaDefaultEnabled = normalizeStoredKbaSettings(
+      teamForKbaDefaults?.derivedSettings?.kbaSettings,
+    ).isEnabled;
+    const kbaAccessExplicitlyDisabled =
+      teamKbaDefaultEnabled &&
+      parsedGlobalAccessAuth.success &&
+      !parsedGlobalAccessAuth.data.includes(DocumentAccessAuth.KBA);
+
     try {
       await updateEnvelopeAsync({
         data: {
@@ -297,6 +566,11 @@ export const EnvelopeEditorSettingsDialog = ({
           includeQrCodeInCertificate: data.includeQrCodeInCertificate,
           globalAccessAuth: parsedGlobalAccessAuth.success ? parsedGlobalAccessAuth.data : [],
           globalActionAuth: data.globalActionAuth ?? [],
+          ...(teamKbaDefaultEnabled
+            ? {
+                kbaAccessExplicitlyDisabled,
+              }
+            : {}),
         },
         meta: {
           timezone,
@@ -315,6 +589,91 @@ export const EnvelopeEditorSettingsDialog = ({
           envelopeExpirationPeriod,
         },
       });
+
+      if (parsedGlobalAccessAuth.success) {
+        const accessAuth = parsedGlobalAccessAuth.data;
+
+        if (accessAuth.includes(DocumentAccessAuth.KBA)) {
+          const parsedOptions = parseMcqOptions(data.kbaMcqOptions);
+          const mcqAnswerOption = parsedOptions.find(
+            (option) => option.label.toLowerCase() === data.kbaAnswer?.trim().toLowerCase(),
+          );
+          const recipientChallenges = data.kbaRecipientChallenges.map((challenge) => {
+            const effectiveQuestion = data.kbaApplySameToAllRecipients
+              ? (data.kbaQuestion?.trim() ?? '')
+              : (challenge.question?.trim() ?? '');
+            const effectiveAnswer = data.kbaApplySameToAllRecipients
+              ? (data.kbaAnswer?.trim() ?? '')
+              : (challenge.answer?.trim() ?? '');
+
+            const recipientMcqAnswerOption = parsedOptions.find(
+              (option) => option.label.toLowerCase() === effectiveAnswer.toLowerCase(),
+            );
+
+            return {
+              recipientId: challenge.recipientId,
+              answerType: data.kbaAnswerType,
+              question: effectiveQuestion,
+              answer:
+                data.kbaAnswerType === 'MCQ'
+                  ? (recipientMcqAnswerOption?.key ?? '')
+                  : effectiveAnswer,
+              mcqOptions: data.kbaAnswerType === 'MCQ' ? parsedOptions : undefined,
+            };
+          });
+
+          await updateEnvelopeKbaMutation.mutateAsync({
+            envelopeId: envelope.id,
+            settings: {
+              mode: data.kbaMode,
+              isEnabled: true,
+              maxAttempts: data.kbaMaxAttempts,
+              lockoutMinutes: data.kbaLockoutMinutes,
+            },
+            envelopeChallenge:
+              data.kbaMode === 'PER_ENVELOPE'
+                ? {
+                    answerType: data.kbaAnswerType,
+                    question: data.kbaQuestion?.trim() ?? '',
+                    answer:
+                      data.kbaAnswerType === 'MCQ'
+                        ? (mcqAnswerOption?.key ?? '')
+                        : (data.kbaAnswer?.trim() ?? ''),
+                    mcqOptions: data.kbaAnswerType === 'MCQ' ? parsedOptions : undefined,
+                  }
+                : null,
+            recipientChallenges: data.kbaMode === 'PER_RECIPIENT' ? recipientChallenges : [],
+          });
+
+          setLastSavedKbaAnswers({
+            answer:
+              data.kbaMode === 'PER_ENVELOPE' || data.kbaApplySameToAllRecipients
+                ? (data.kbaAnswer?.trim() ?? '')
+                : undefined,
+            recipientAnswers:
+              data.kbaMode === 'PER_RECIPIENT' && !data.kbaApplySameToAllRecipients
+                ? Object.fromEntries(
+                    data.kbaRecipientChallenges.map((challenge) => [
+                      challenge.recipientId,
+                      challenge.answer?.trim() ?? '',
+                    ]),
+                  )
+                : {},
+          });
+        } else {
+          await updateEnvelopeKbaMutation.mutateAsync({
+            envelopeId: envelope.id,
+            settings: {
+              mode: 'PER_ENVELOPE',
+              isEnabled: false,
+              maxAttempts: data.kbaMaxAttempts,
+              lockoutMinutes: data.kbaLockoutMinutes,
+            },
+            envelopeChallenge: null,
+            recipientChallenges: [],
+          });
+        }
+      }
 
       setOpen(false);
 
@@ -355,9 +714,13 @@ export const EnvelopeEditorSettingsDialog = ({
   ]);
 
   useEffect(() => {
+    if (!open || isLoadingEnvelopeKbaConfig) {
+      return;
+    }
+
     form.reset(createDefaultValues());
     setActiveTab('general');
-  }, [open, form]);
+  }, [open, isLoadingEnvelopeKbaConfig, envelopeKbaConfig, teamForKbaDefaults, form]);
 
   const selectedTab = tabs.find((tab) => tab.id === activeTab);
 
@@ -935,6 +1298,407 @@ export const EnvelopeEditorSettingsDialog = ({
                           </FormItem>
                         )}
                       />
+
+                      {requiresKba && (
+                        <>
+                          <FormField
+                            control={form.control}
+                            name="kbaMode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>
+                                  <Trans>KBA Mode</Trans>
+                                </FormLabel>
+
+                                <FormControl>
+                                  <Select
+                                    value={field.value}
+                                    onValueChange={(value) => field.onChange(value)}
+                                  >
+                                    <SelectTrigger className="bg-background">
+                                      <SelectValue />
+                                    </SelectTrigger>
+
+                                    <SelectContent>
+                                      <SelectItem value="PER_ENVELOPE">
+                                        <Trans>Per Envelope</Trans>
+                                      </SelectItem>
+                                      <SelectItem value="PER_RECIPIENT">
+                                        <Trans>Per Recipient</Trans>
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="kbaAnswerType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>
+                                  <Trans>KBA Answer Type</Trans>
+                                </FormLabel>
+
+                                <FormControl>
+                                  <Select
+                                    value={field.value}
+                                    onValueChange={(value) => field.onChange(value)}
+                                  >
+                                    <SelectTrigger className="bg-background">
+                                      <SelectValue />
+                                    </SelectTrigger>
+
+                                    <SelectContent>
+                                      <SelectItem value="STRING">
+                                        <Trans>Text</Trans>
+                                      </SelectItem>
+                                      <SelectItem value="NUMERIC">
+                                        <Trans>Numeric</Trans>
+                                      </SelectItem>
+                                      <SelectItem value="MCQ">
+                                        <Trans>MCQ</Trans>
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <FormField
+                              control={form.control}
+                              name="kbaMaxAttempts"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    <Trans>Max attempts</Trans>
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={20}
+                                      value={Number.isFinite(field.value) ? String(field.value) : ''}
+                                      onChange={(e) => {
+                                        const next = Number.parseInt(e.target.value, 10);
+                                        field.onChange(Number.isFinite(next) ? next : 1);
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="kbaLockoutMinutes"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    <Trans>Lockout (minutes)</Trans>
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={1440}
+                                      value={Number.isFinite(field.value) ? String(field.value) : ''}
+                                      onChange={(e) => {
+                                        const next = Number.parseInt(e.target.value, 10);
+                                        field.onChange(Number.isFinite(next) ? next : 1);
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {kbaAnswerType === 'MCQ' && (
+                            <FormField
+                              control={form.control}
+                              name="kbaMcqOptions"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    <Trans>MCQ Options</Trans>
+                                  </FormLabel>
+
+                                  <FormControl>
+                                    <Input
+                                      className="bg-background"
+                                      placeholder={t`e.g. Red, Blue, Green`}
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+
+                          {kbaMode === 'PER_ENVELOPE' ? (
+                            <>
+                              <FormField
+                                control={form.control}
+                                name="kbaQuestion"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>
+                                      <Trans>KBA Question</Trans>
+                                    </FormLabel>
+
+                                    <FormControl>
+                                      <Input
+                                        className="bg-background"
+                                        placeholder={t`e.g. What is your employee code?`}
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="kbaAnswer"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>
+                                      <Trans>KBA Answer</Trans>
+                                    </FormLabel>
+
+                                    <FormControl>
+                                      <PasswordInput
+                                        className="bg-background"
+                                        inputMode={
+                                          kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined
+                                        }
+                                        placeholder={
+                                          kbaAnswerType === 'NUMERIC'
+                                            ? t`Digits only (e.g. 1234)`
+                                            : kbaAnswerType === 'MCQ'
+                                              ? t`Enter the correct option exactly`
+                                              : t`Enter the expected answer`
+                                        }
+                                        name={field.name}
+                                        ref={field.ref}
+                                        value={field.value ?? ''}
+                                        onBlur={field.onBlur}
+                                        onChange={
+                                          kbaAnswerType === 'NUMERIC'
+                                            ? (e) =>
+                                                field.onChange(e.target.value.replace(/\D/g, ''))
+                                            : field.onChange
+                                        }
+                                      />
+                                    </FormControl>
+                                    {kbaAnswerType === 'NUMERIC' ? (
+                                      <FormDescription>
+                                        <Trans>Only numbers are allowed—letters and symbols are removed.</Trans>
+                                      </FormDescription>
+                                    ) : null}
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </>
+                          ) : (
+                            <div className="space-y-3">
+                              <FormField
+                                control={form.control}
+                                name="kbaApplySameToAllRecipients"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>
+                                      <Trans>Use same question and answer for all recipients</Trans>
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Select
+                                        value={field.value ? 'yes' : 'no'}
+                                        onValueChange={(value) => field.onChange(value === 'yes')}
+                                      >
+                                        <SelectTrigger className="bg-background">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="yes">
+                                            <Trans>Yes</Trans>
+                                          </SelectItem>
+                                          <SelectItem value="no">
+                                            <Trans>No (configure each recipient separately)</Trans>
+                                          </SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              {kbaApplySameToAllRecipients && (
+                                <>
+                                  <FormField
+                                    control={form.control}
+                                    name="kbaQuestion"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>
+                                          <Trans>Common KBA Question</Trans>
+                                        </FormLabel>
+                                        <FormControl>
+                                          <Input
+                                            className="bg-background"
+                                            placeholder={t`e.g. What is your employee code?`}
+                                            {...field}
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+
+                                  <FormField
+                                    control={form.control}
+                                    name="kbaAnswer"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>
+                                          <Trans>Common KBA Answer</Trans>
+                                        </FormLabel>
+                                        <FormControl>
+                                          <PasswordInput
+                                            className="bg-background"
+                                            inputMode={
+                                              kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined
+                                            }
+                                            placeholder={
+                                              kbaAnswerType === 'NUMERIC'
+                                                ? t`Digits only (e.g. 1234)`
+                                                : kbaAnswerType === 'MCQ'
+                                                  ? t`Enter the correct option exactly`
+                                                  : t`Enter the expected answer`
+                                            }
+                                            name={field.name}
+                                            ref={field.ref}
+                                            value={field.value ?? ''}
+                                            onBlur={field.onBlur}
+                                            onChange={
+                                              kbaAnswerType === 'NUMERIC'
+                                                ? (e) =>
+                                                    field.onChange(
+                                                      e.target.value.replace(/\D/g, ''),
+                                                    )
+                                                : field.onChange
+                                            }
+                                          />
+                                        </FormControl>
+                                        {kbaAnswerType === 'NUMERIC' ? (
+                                          <FormDescription>
+                                            <Trans>
+                                              Only numbers are allowed—letters and symbols are
+                                              removed.
+                                            </Trans>
+                                          </FormDescription>
+                                        ) : null}
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </>
+                              )}
+
+                              {envelope.recipients.map((recipient, index) => (
+                                <div key={recipient.id} className="space-y-3 rounded-md border p-3">
+                                  <p className="text-sm font-bold">
+                                    {recipient.name ? `${recipient.name} (${recipient.email})` : recipient.email}
+                                  </p>
+
+                                  <FormField
+                                    control={form.control}
+                                    name={`kbaRecipientChallenges.${index}.question`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>
+                                          <Trans>KBA Question</Trans>
+                                        </FormLabel>
+                                        <FormControl>
+                                          <Input
+                                            className="bg-background"
+                                            placeholder={t`e.g. What is your employee code?`}
+                                            disabled={kbaApplySameToAllRecipients}
+                                            {...field}
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+
+                                  <FormField
+                                    control={form.control}
+                                    name={`kbaRecipientChallenges.${index}.answer`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>
+                                          <Trans>KBA Answer</Trans>
+                                        </FormLabel>
+                                        <FormControl>
+                                          <PasswordInput
+                                            className="bg-background"
+                                            inputMode={
+                                              kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined
+                                            }
+                                            placeholder={
+                                              kbaAnswerType === 'NUMERIC'
+                                                ? t`Digits only (e.g. 1234)`
+                                                : kbaAnswerType === 'MCQ'
+                                                  ? t`Enter the correct option exactly`
+                                                  : t`Enter the expected answer`
+                                            }
+                                            disabled={kbaApplySameToAllRecipients}
+                                            name={field.name}
+                                            ref={field.ref}
+                                            value={field.value ?? ''}
+                                            onBlur={field.onBlur}
+                                            onChange={
+                                              kbaAnswerType === 'NUMERIC'
+                                                ? (e) =>
+                                                    field.onChange(
+                                                      e.target.value.replace(/\D/g, ''),
+                                                    )
+                                                : field.onChange
+                                            }
+                                          />
+                                        </FormControl>
+                                        {kbaAnswerType === 'NUMERIC' &&
+                                        !kbaApplySameToAllRecipients ? (
+                                          <FormDescription>
+                                            <Trans>
+                                              Only numbers are allowed—letters and symbols are
+                                              removed.
+                                            </Trans>
+                                          </FormDescription>
+                                        ) : null}
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
 
                       <FormField
                         control={form.control}

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ZEnvelopeExpirationPeriod } from '@documenso/lib/constants/envelope-expiration';
 import { SUPPORTED_LANGUAGE_CODES } from '@documenso/lib/constants/i18n';
 import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';
+import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';
 import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';
 import {
   ZDocumentMetaDateFormatSchema,
@@ -44,6 +45,9 @@ export const ZUpdateOrganisationSettingsRequestSchema = z.object({
 
     // AI features settings.
     aiFeaturesEnabled: z.boolean().optional(),
+
+    // KBA defaults for documents (teams inherit unless they override).
+    kbaSettings: ZDocumentKbaSettingsSchema.optional(),
   }),
 });
 

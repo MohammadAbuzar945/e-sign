@@ -16,6 +16,8 @@ import {
 } from '../constants/organisations';
 import { DEFAULT_DOCUMENT_EMAIL_SETTINGS } from '../types/document-email';
 
+import { getDefaultOrganisationKbaSettingsJson } from './kba-settings';
+
 export const isPersonalLayout = (organisations: Pick<Organisation, 'type'>[]) => {
   return false;
 };
@@ -144,5 +146,6 @@ export const generateDefaultOrganisationSettings = (): Omit<
     envelopeExpirationPeriod: DEFAULT_ENVELOPE_EXPIRATION_PERIOD,
 
     aiFeaturesEnabled: false,
+    kbaSettings: getDefaultOrganisationKbaSettingsJson(),
   };
 };

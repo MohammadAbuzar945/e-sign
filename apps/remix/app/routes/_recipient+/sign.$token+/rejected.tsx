@@ -1,14 +1,16 @@
 import { Trans } from '@lingui/react/macro';
-import { DocumentStatus, FieldType } from '@prisma/client';
+import { DocumentStatus, FieldType, SigningStatus } from '@prisma/client';
 import { DownloadIcon, XCircle } from 'lucide-react';
 import { Link } from 'react-router';
+import { match } from 'ts-pattern';
 
 import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
 import { getDocumentAndSenderByToken } from '@documenso/lib/server-only/document/get-document-by-token';
-import { isRecipientAuthorized } from '@documenso/lib/server-only/document/is-recipient-authorized';
 import { getFieldsForToken } from '@documenso/lib/server-only/field/get-fields-for-token';
 import { getRecipientByToken } from '@documenso/lib/server-only/recipient/get-recipient-by-token';
+import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
+import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
@@ -48,12 +50,24 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw new Response('Not Found', { status: 404 });
   }
 
-  const isDocumentAccessValid = await isRecipientAuthorized({
-    type: 'ACCESS',
-    documentAuthOptions: document.authOptions,
-    recipient,
-    userId: user?.id,
+  const { derivedRecipientAccessAuth } = extractDocumentAuthMethods({
+    documentAuth: document.authOptions,
+    recipientAuth: recipient.authOptions,
   });
+
+  // After rejection, the signing token is sufficient to show the confirmation (same idea as
+  // `/complete` not re-requiring KBA). ACCOUNT access still applies until the recipient has
+  // actually rejected, so the page cannot be used to leak envelope details before rejection.
+  const isDocumentAccessValid =
+    recipient.signingStatus === SigningStatus.REJECTED
+      ? true
+      : derivedRecipientAccessAuth.every((accessAuth) =>
+          match(accessAuth)
+            .with(DocumentAccessAuth.ACCOUNT, () => user && user.email === recipient.email)
+            .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => true)
+            .with(DocumentAccessAuth.KBA, () => true)
+            .exhaustive(),
+        );
 
   const recipientReference =
     recipient.name ||

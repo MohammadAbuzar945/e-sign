@@ -408,6 +408,8 @@ model Envelope {
 
   envelopeItems EnvelopeItem[]
   recipients    Recipient[]
+  kbaPolicy     EnvelopeKbaPolicy?
+  kbaChallenges KbaChallenge[]
   fields        Field[]
   shareLinks    DocumentShareLink[]
   auditLogs     DocumentAuditLog[]
@@ -618,6 +620,8 @@ model Recipient {
   signingStatus        SigningStatus @default(NOT_SIGNED)
   sendStatus           SendStatus    @default(NOT_SENT)
   envelope             Envelope      @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+  kbaChallenges     KbaChallenge[]
+  kbaAttempts       KbaAttempt[]
   fields               Field[]
   signatures           Signature[]
 
@@ -631,6 +635,77 @@ model Recipient {
   @@index([email, signingStatus, envelopeId, role], map: "Recipient_email_signingStatus_envelopeId_role_idx")
   @@index([email(ops: raw("gin_trgm_ops"))], map: "Recipient_email_trgm_idx", type: Gin)
   @@index([name(ops: raw("gin_trgm_ops"))], map: "Recipient_name_trgm_idx", type: Gin)
+}
+
+enum KbaMode {
+  PER_ENVELOPE
+  PER_RECIPIENT
+}
+
+enum KbaScopeType {
+  ENVELOPE
+  RECIPIENT
+}
+
+enum KbaAnswerType {
+  STRING
+  NUMERIC
+  MCQ
+}
+
+model EnvelopeKbaPolicy {
+  id             String   @id @default(cuid())
+  envelopeId     String   @unique
+  mode           KbaMode  @default(PER_ENVELOPE)
+  isEnabled      Boolean  @default(false)
+  maxAttempts    Int      @default(5)
+  lockoutMinutes Int      @default(15)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  envelope Envelope @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+}
+
+model KbaChallenge {
+  id                  String        @id @default(cuid())
+  scopeType           KbaScopeType
+  answerType          KbaAnswerType
+  question            String
+  answerHash          String
+  mcqOptions          Json?
+  mcqCorrectOptionKey String?
+  isActive            Boolean       @default(true)
+  version             Int           @default(1)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  envelopeId String?
+  envelope   Envelope? @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+
+  recipientId Int?
+  recipient   Recipient? @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  attempts KbaAttempt[]
+
+  @@index([envelopeId])
+  @@index([recipientId])
+  @@index([scopeType, isActive])
+}
+
+model KbaAttempt {
+  id         String   @id @default(cuid())
+  challengeId String
+  recipientId Int
+  success    Boolean
+  ipAddress  String?
+  userAgent  String?
+  attemptedAt DateTime @default(now())
+
+  challenge KbaChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  recipient Recipient    @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId, attemptedAt])
+  @@index([recipientId, attemptedAt])
 }
 
 enum FieldType {
@@ -850,7 +925,7 @@ enum OrganisationMemberInviteStatus {
   DECLINED
 }
 
-/// @zod.import(["import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';", "import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';", "import { ZEnvelopeExpirationPeriod as ZEnvelopeExpirationPeriodSchema } from '@documenso/lib/constants/envelope-expiration';"])
+/// @zod.import(["import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';", "import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';", "import { ZEnvelopeExpirationPeriod as ZEnvelopeExpirationPeriodSchema } from '@documenso/lib/constants/envelope-expiration';", "import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';"])
 model OrganisationGlobalSettings {
   id           String        @id
   organisation Organisation?
@@ -887,9 +962,12 @@ model OrganisationGlobalSettings {
 
   // AI features settings.
   aiFeaturesEnabled Boolean @default(false)
+
+  /// Default KBA policy values for documents. Teams inherit this until they override.
+  kbaSettings Json? /// [DocumentKbaSettings] @zod.custom.use(ZDocumentKbaSettingsSchema)
 }
 
-/// @zod.import(["import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';", "import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';", "import { ZEnvelopeExpirationPeriod as ZEnvelopeExpirationPeriodSchema } from '@documenso/lib/constants/envelope-expiration';"])
+/// @zod.import(["import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';", "import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';", "import { ZEnvelopeExpirationPeriod as ZEnvelopeExpirationPeriodSchema } from '@documenso/lib/constants/envelope-expiration';", "import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';"])
 model TeamGlobalSettings {
   id   String @id
   team Team?
@@ -927,6 +1005,9 @@ model TeamGlobalSettings {
 
   // AI features settings.
   aiFeaturesEnabled Boolean?
+
+  /// When null, inherit merged KBA defaults from the organisation.
+  kbaSettings Json? /// [DocumentKbaSettings] @zod.custom.use(ZDocumentKbaSettingsSchema)
 }
 
 model Team {

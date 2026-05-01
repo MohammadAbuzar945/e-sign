@@ -57,7 +57,12 @@ export const DocumentGlobalAuthAccessSelect = ({
   );
 
   const handleChange = (options: Option[]) => {
-    const values = options.map((option) => option.value);
+    let values = options.map((option) => option.value);
+
+    if (values.some((v) => v !== '-1')) {
+      values = values.filter((v) => v !== '-1');
+    }
+
     onValueChange?.(values);
   };
 
@@ -109,6 +114,12 @@ export const DocumentGlobalAuthAccessTooltip = () => (
           <Trans>
             <strong>No restrictions</strong> - The document can be accessed directly by the URL sent
             to the recipient
+          </Trans>
+        </li>
+        <li>
+          <Trans>
+            <strong>Require KBA</strong> — Question before access; configure in the fields below
+            when selected.
           </Trans>
         </li>
       </ul>

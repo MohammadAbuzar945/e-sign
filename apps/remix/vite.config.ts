@@ -64,7 +64,13 @@ export default defineConfig({
     ],
   },
   optimizeDeps: {
-    entries: ['./app/**/*', '../../packages/ui/**/*', '../../packages/lib/**/*'],
+    entries: [
+      './app/**/*',
+      '../../packages/ui/**/*',
+      '../../packages/lib/client-only/**/*',
+      '../../packages/lib/server-only/**/*',
+      '../../packages/lib/universal/**/*',
+    ],
     include: ['prop-types', 'file-selector', 'attr-accept'],
     exclude: [
       'node_modules',

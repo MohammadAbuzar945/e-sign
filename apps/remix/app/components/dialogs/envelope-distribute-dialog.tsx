@@ -3,7 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLingui } from '@lingui/react/macro';
 import { Trans } from '@lingui/react/macro';
-import { DocumentDistributionMethod, DocumentStatus, EnvelopeType } from '@prisma/client';
+import {
+  DocumentDistributionMethod,
+  DocumentStatus,
+  EnvelopeType,
+  RecipientRole,
+} from '@prisma/client';
 import { AnimatePresence, motion } from 'framer-motion';
 import { InfoIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -14,6 +19,7 @@ import * as z from 'zod';
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
+import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { getRecipientsWithMissingFields } from '@documenso/lib/utils/recipients';
 import { zEmail } from '@documenso/lib/utils/zod';
@@ -93,6 +99,10 @@ export const EnvelopeDistributeDialog = ({
 
   const { mutateAsync: distributeEnvelope } = trpcReact.envelope.distribute.useMutation();
 
+  const { data: kbaConfig } = trpcReact.envelope.getKba.useQuery({
+    envelopeId: envelope.id,
+  });
+
   const form = useForm<TEnvelopeDistributeFormSchema>({
     defaultValues: {
       meta: {
@@ -159,6 +169,43 @@ export const EnvelopeDistributeDialog = ({
     });
   }, [recipientsWithIndex, envelope.authOptions]);
 
+  const isKbaSendBlocked = useMemo(() => {
+    const auth = extractDocumentAuthMethods({
+      documentAuth: envelope.authOptions,
+    });
+
+    if (!auth.documentAuthOption.globalAccessAuth.includes(DocumentAccessAuth.KBA)) {
+      return false;
+    }
+
+    if (!kbaConfig?.settings?.isEnabled) {
+      return true;
+    }
+
+    if (kbaConfig.settings.mode === 'PER_ENVELOPE') {
+      const challenge = kbaConfig.envelopeChallenge;
+
+      return (
+        !challenge?.question?.trim() ||
+        challenge.isAnswerConfigured !== true
+      );
+    }
+
+    const recipientsNeedingChallenges = envelope.recipients.filter(
+      (recipient) => recipient.role !== RecipientRole.CC,
+    );
+
+    for (const recipient of recipientsNeedingChallenges) {
+      const challenge = kbaConfig.recipientChallenges.find((c) => c.recipientId === recipient.id);
+
+      if (!challenge?.question?.trim() || challenge.isAnswerConfigured !== true) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [envelope.authOptions, envelope.recipients, kbaConfig]);
+
   const invalidEnvelopeCode = useMemo(() => {
     if (recipientsMissingSignatureFields.length > 0) {
       return 'MISSING_SIGNATURES';
@@ -172,8 +219,17 @@ export const EnvelopeDistributeDialog = ({
       return 'MISSING_REQUIRED_EMAIL';
     }
 
+    if (isKbaSendBlocked) {
+      return 'KBA_INCOMPLETE';
+    }
+
     return null;
-  }, [envelope.recipients, recipientsMissingRequiredEmail, recipientsMissingSignatureFields]);
+  }, [
+    envelope.recipients,
+    isKbaSendBlocked,
+    recipientsMissingRequiredEmail,
+    recipientsMissingSignatureFields,
+  ]);
 
   const onFormSubmit = async ({ meta }: TEnvelopeDistributeFormSchema) => {
     try {
@@ -478,6 +534,15 @@ export const EnvelopeDistributeDialog = ({
                         </li>
                       ))}
                     </ul>
+                  </AlertDescription>
+                ))
+                .with('KBA_INCOMPLETE', () => (
+                  <AlertDescription>
+                    <Trans>
+                      Security question (KBA) is turned on for this document, but the question,
+                      answer, or multiple-choice options are not saved yet. Open Document Settings,
+                      go to Security, finish KBA setup, then try sending again.
+                    </Trans>
                   </AlertDescription>
                 ))
                 .exhaustive()}

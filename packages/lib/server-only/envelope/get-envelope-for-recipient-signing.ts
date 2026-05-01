@@ -11,9 +11,14 @@ import UserSchema from '@documenso/prisma/generated/zod/modelSchema/UserSchema';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { TDocumentAuthMethods } from '../../types/document-auth';
+import { DocumentAccessAuth } from '../../types/document-auth';
 import { ZEnvelopeFieldSchema, ZFieldSchema } from '../../types/field';
 import { ZRecipientLiteSchema } from '../../types/recipient';
 import { isRecipientExpired } from '../../utils/recipients';
+import {
+  extractDocumentAuthMethods,
+  stripKbaFromAuthJsonWhenPolicyInactive,
+} from '../../utils/document-auth';
 import { isRecipientAuthorized } from '../document/is-recipient-authorized';
 import { getTeamSettings } from '../team/get-team-settings';
 
@@ -211,6 +216,11 @@ export const getEnvelopeForRecipientSigning = async ({
           },
         },
       },
+      kbaPolicy: {
+        select: {
+          isEnabled: true,
+        },
+      },
     },
   });
 
@@ -228,13 +238,48 @@ export const getEnvelopeForRecipientSigning = async ({
     });
   }
 
-  const documentAccessValid = await isRecipientAuthorized({
-    type: 'ACCESS',
-    documentAuthOptions: envelope.authOptions,
-    recipient,
-    userId,
-    authOptions: accessAuth,
+  const kbaPolicyIsActive = envelope.kbaPolicy?.isEnabled === true;
+
+  const { documentAuth: signingDocumentAuth, recipientAuth: signingRecipientAuth } =
+    stripKbaFromAuthJsonWhenPolicyInactive({
+      documentAuth: envelope.authOptions,
+      recipientAuth: recipient.authOptions,
+      kbaPolicyIsActive,
+    });
+
+  const { derivedRecipientAccessAuth } = extractDocumentAuthMethods({
+    documentAuth: signingDocumentAuth,
+    recipientAuth: signingRecipientAuth,
   });
+
+  const envelopeForSigningResponse = {
+    ...envelope,
+    authOptions: signingDocumentAuth,
+    recipients: envelope.recipients.map((r) =>
+      r.id === recipient.id ? { ...r, authOptions: signingRecipientAuth } : r,
+    ),
+  };
+
+  // For link-open flow, defer KBA check to the frontend KBA gate if no answer payload is provided.
+  // Account auth still remains enforced at this stage.
+  const shouldDeferKbaCheck =
+    !accessAuth && derivedRecipientAccessAuth.includes(DocumentAccessAuth.KBA);
+
+  const documentAccessValid = shouldDeferKbaCheck
+    ? derivedRecipientAccessAuth.every((authType) => {
+        if (authType === DocumentAccessAuth.ACCOUNT) {
+          return Boolean(userId);
+        }
+
+        return true;
+      })
+    : await isRecipientAuthorized({
+        type: 'ACCESS',
+        documentAuthOptions: envelope.authOptions,
+        recipient,
+        userId,
+        authOptions: accessAuth,
+      });
 
   if (!documentAccessValid) {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {
@@ -287,8 +332,8 @@ export const getEnvelopeForRecipientSigning = async ({
       };
 
   return ZEnvelopeForSigningResponse.parse({
-    envelope,
-    recipient,
+    envelope: envelopeForSigningResponse,
+    recipient: envelopeForSigningResponse.recipients.find((r) => r.token === token) ?? recipient,
     recipientSignature,
     isRecipientsTurn,
     isCompleted:

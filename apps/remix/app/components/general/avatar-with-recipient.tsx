@@ -1,6 +1,8 @@
 import type { Recipient } from '@prisma/client';
 import { DocumentStatus } from '@prisma/client';
 
+import { useLingui } from '@lingui/react';
+
 import { getRecipientType } from '@documenso/lib/client-only/recipient-type';
 import { RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-roles';
 import { recipientAbbreviation } from '@documenso/lib/utils/recipient-formatter';
@@ -13,6 +15,7 @@ export type AvatarWithRecipientProps = {
 };
 
 export function AvatarWithRecipient({ recipient, documentStatus }: AvatarWithRecipientProps) {
+  const { _ } = useLingui();
   const signingToken = documentStatus === DocumentStatus.PENDING ? recipient.token : null;
 
   return (
@@ -27,7 +30,7 @@ export function AvatarWithRecipient({ recipient, documentStatus }: AvatarWithRec
       <div className="text-sm text-muted-foreground">
         <p>{recipient.email || recipient.name}</p>
         <p className="text-xs text-muted-foreground/70">
-          {RECIPIENT_ROLES_DESCRIPTION[recipient.role].roleName.toString()}
+          {_(RECIPIENT_ROLES_DESCRIPTION[recipient.role].roleName)}
         </p>
       </div>
     </div>

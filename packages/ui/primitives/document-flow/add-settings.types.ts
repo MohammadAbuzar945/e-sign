@@ -26,9 +26,15 @@ export const ZAddSettingsFormSchema = z.object({
   includeQrCodeInCertificate: z.boolean().nullish(),
   globalAccessAuth: z
     .array(z.union([ZDocumentAccessAuthTypesSchema, z.literal('-1')]))
-    .transform((val) => (val.length === 1 && val[0] === '-1' ? [] : val))
+    .transform((val) => {
+      if (val.includes('-1')) {
+        return val.filter((entry) => entry !== '-1');
+      }
+
+      return val;
+    })
     .optional()
-    .default([]),
+    .default(['-1']),
   globalActionAuth: z.array(ZDocumentActionAuthTypesSchema),
   meta: z.object({
     timezone: ZDocumentMetaTimezoneSchema.optional().default(DEFAULT_DOCUMENT_TIME_ZONE),

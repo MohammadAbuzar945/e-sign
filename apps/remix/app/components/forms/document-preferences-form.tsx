@@ -4,6 +4,8 @@ import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import type { TeamGlobalSettings } from '@prisma/client';
 import { DocumentVisibility, OrganisationType, type RecipientRole } from '@prisma/client';
+import type { ChangeEvent } from 'react';
+import { InfoIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -24,18 +26,24 @@ import { TIME_ZONES } from '@documenso/lib/constants/time-zones';
 import type { TDefaultRecipients } from '@documenso/lib/types/default-recipients';
 import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';
 import {
+  ZDocumentKbaModeSchema,
+  type TDocumentKbaSettings,
+} from '@documenso/lib/types/document-auth';
+import {
   type TDocumentMetaDateFormat,
   ZDocumentMetaTimezoneSchema,
 } from '@documenso/lib/types/document-meta';
+import { normalizeStoredKbaSettings } from '@documenso/lib/utils/kba-settings';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import { recipientAbbreviation } from '@documenso/lib/utils/recipient-formatter';
 import { extractTeamSignatureSettings } from '@documenso/lib/utils/teams';
 import { DocumentSignatureSettingsTooltip } from '@documenso/ui/components/document/document-signature-settings-tooltip';
 import { ExpirationPeriodPicker } from '@documenso/ui/components/document/expiration-period-picker';
 import { RecipientRoleSelect } from '@documenso/ui/components/recipient/recipient-role-select';
-import { Alert } from '@documenso/ui/primitives/alert';
+import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Button } from '@documenso/ui/primitives/button';
+import { Switch } from '@documenso/ui/primitives/switch';
 import { Combobox } from '@documenso/ui/primitives/combobox';
 import {
   Form,
@@ -54,6 +62,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@documenso/ui/primitives/select';
+import { Input } from '@documenso/ui/primitives/input';
 
 import { useOptionalCurrentTeam } from '~/providers/team';
 
@@ -77,6 +86,11 @@ export type TDocumentPreferencesFormSchema = {
   delegateDocumentOwnership: boolean | null;
   aiFeaturesEnabled: boolean | null;
   envelopeExpirationPeriod: TEnvelopeExpirationPeriod | null;
+  kbaInheritOrganisationKbaDefaults: boolean;
+  kbaMode: TDocumentKbaSettings['mode'];
+  kbaIsEnabled: boolean;
+  kbaMaxAttempts: number;
+  kbaLockoutMinutes: number;
 };
 
 type SettingsSubset = Pick<
@@ -96,11 +110,18 @@ type SettingsSubset = Pick<
   | 'delegateDocumentOwnership'
   | 'aiFeaturesEnabled'
   | 'envelopeExpirationPeriod'
->;
+> & {
+  /** Organisation/team stored JSON; null on team means inherit organisation defaults. */
+  kbaSettings?: unknown | null;
+};
 
 export type DocumentPreferencesFormProps = {
   settings: SettingsSubset;
   canInherit: boolean;
+  /**
+   * Effective KBA defaults when the team has not overridden (`kbaSettings` is null on the team).
+   */
+  effectiveKbaSettings?: TDocumentKbaSettings;
   isAiFeaturesConfigured?: boolean;
   onFormSubmit: (data: TDocumentPreferencesFormSchema) => Promise<void>;
 };
@@ -109,6 +130,7 @@ export const DocumentPreferencesForm = ({
   settings,
   onFormSubmit,
   canInherit,
+  effectiveKbaSettings,
   isAiFeaturesConfigured = false,
 }: DocumentPreferencesFormProps) => {
   const { _ } = useLingui();
@@ -137,7 +159,18 @@ export const DocumentPreferencesForm = ({
     delegateDocumentOwnership: z.boolean().nullable(),
     aiFeaturesEnabled: z.boolean().nullable(),
     envelopeExpirationPeriod: ZEnvelopeExpirationPeriod.nullable(),
+    kbaInheritOrganisationKbaDefaults: z.boolean(),
+    kbaMode: ZDocumentKbaModeSchema,
+    kbaIsEnabled: z.boolean(),
+    kbaMaxAttempts: z.number().int().min(1).max(20),
+    kbaLockoutMinutes: z.number().int().min(1).max(1440),
   });
+
+  const resolvedEffectiveKba =
+    effectiveKbaSettings ?? normalizeStoredKbaSettings(settings.kbaSettings);
+  const displayKba = normalizeStoredKbaSettings(
+    canInherit && settings.kbaSettings === null ? resolvedEffectiveKba : settings.kbaSettings,
+  );
 
   const form = useForm<TDocumentPreferencesFormSchema>({
     defaultValues: {
@@ -159,9 +192,20 @@ export const DocumentPreferencesForm = ({
       delegateDocumentOwnership: settings.delegateDocumentOwnership,
       aiFeaturesEnabled: settings.aiFeaturesEnabled,
       envelopeExpirationPeriod: settings.envelopeExpirationPeriod ?? null,
+      kbaInheritOrganisationKbaDefaults: canInherit ? settings.kbaSettings === null : false,
+      kbaMode: displayKba.mode,
+      kbaIsEnabled: displayKba.isEnabled,
+      kbaMaxAttempts: displayKba.maxAttempts,
+      kbaLockoutMinutes: displayKba.lockoutMinutes,
     },
     resolver: zodResolver(ZDocumentPreferencesFormSchema),
   });
+
+  const kbaInheritOrganisationKbaDefaults = form.watch('kbaInheritOrganisationKbaDefaults');
+  const kbaIsEnabled = form.watch('kbaIsEnabled');
+  const showTeamKbaOverrideFields = canInherit && !kbaInheritOrganisationKbaDefaults;
+  const showKbaTuningFields =
+    kbaIsEnabled && (!canInherit || showTeamKbaOverrideFields);
 
   return (
     <Form {...form}>
@@ -812,6 +856,247 @@ export const DocumentPreferencesForm = ({
               )}
             />
           )}
+
+          <div className="border-t pt-6">
+            <h3 className="mb-4 text-lg font-medium">
+              <Trans>Knowledge-based authentication (KBA)</Trans>
+            </h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              {canInherit ? (
+                <Trans>Optional question before access. Documents can override.</Trans>
+              ) : (
+                <Trans>Default for teams that inherit. Documents can override.</Trans>
+              )}
+            </p>
+
+            {canInherit && (
+              <FormField
+                control={form.control}
+                name="kbaInheritOrganisationKbaDefaults"
+                render={({ field }) => (
+                  <FormItem className="mb-6 flex-1">
+                    <FormLabel>
+                      <Trans>Team KBA defaults</Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value ? '-1' : '0'}
+                        onValueChange={(value) => {
+                          const inherit = value === '-1';
+                          field.onChange(inherit);
+                          if (inherit) {
+                            const next = normalizeStoredKbaSettings(resolvedEffectiveKba);
+                            form.setValue('kbaMode', next.mode);
+                            form.setValue('kbaIsEnabled', next.isEnabled);
+                            form.setValue('kbaMaxAttempts', next.maxAttempts);
+                            form.setValue('kbaLockoutMinutes', next.lockoutMinutes);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="bg-background text-muted-foreground">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="-1">
+                            <Trans>Inherit from organisation</Trans>
+                          </SelectItem>
+                          <SelectItem value="0">
+                            <Trans>Override organisation settings</Trans>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {canInherit && kbaInheritOrganisationKbaDefaults && (
+              <Alert variant="neutral" className="mb-6 [&>svg]:text-muted-foreground">
+                <InfoIcon className="h-5 w-5" aria-hidden />
+                <div className="min-w-0 space-y-3">
+                  <div>
+                    <AlertTitle>
+                      <Trans>Organisation KBA defaults</Trans>
+                    </AlertTitle>
+                    <AlertDescription className="mt-1 text-sm text-muted-foreground">
+                      <Trans>
+                        This team follows your organisation&apos;s document preferences. Values
+                        below are read-only here; choose &quot;Override organisation settings&quot;
+                        to set KBA only for this team.
+                      </Trans>
+                    </AlertDescription>
+                  </div>
+
+                  <div className="rounded-md border bg-background/60 p-3 text-sm">
+                    {resolvedEffectiveKba.isEnabled ? (
+                      <div className="space-y-3">
+                        <p className="font-medium text-foreground">
+                          <Trans>
+                            KBA is on for new documents — signers may be asked a question before
+                            they can open the file.
+                          </Trans>
+                        </p>
+                        <dl className="space-y-2.5 border-t border-border/60 pt-3">
+                          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                            <dt className="font-medium text-foreground">
+                              <Trans>Challenge scope</Trans>
+                            </dt>
+                            <dd className="max-w-md text-muted-foreground sm:text-right">
+                              {resolvedEffectiveKba.mode === 'PER_ENVELOPE' ? (
+                                <Trans>One question shared by everyone on the document</Trans>
+                              ) : (
+                                <Trans>Each signer gets their own question</Trans>
+                              )}
+                            </dd>
+                          </div>
+                          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                            <dt className="font-medium text-foreground">
+                              <Trans>Wrong answers before lockout</Trans>
+                            </dt>
+                            <dd className="tabular-nums text-muted-foreground sm:text-right">
+                              {resolvedEffectiveKba.maxAttempts}
+                            </dd>
+                          </div>
+                          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                            <dt className="font-medium text-foreground">
+                              <Trans>Lockout length</Trans>
+                            </dt>
+                            <dd className="tabular-nums text-muted-foreground sm:text-right">
+                              <Trans>{resolvedEffectiveKba.lockoutMinutes} minutes</Trans>
+                            </dd>
+                          </div>
+                        </dl>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="font-medium text-foreground">
+                          <Trans>KBA off at organisation level</Trans>
+                        </p>
+                        <p className="text-muted-foreground">
+                          <Trans>
+                            New documents do not get KBA by default from the organisation. If this
+                            team should use KBA anyway, switch to &quot;Override organisation
+                            settings&quot; and turn it on for the team.
+                          </Trans>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Alert>
+            )}
+
+            {(!canInherit || showTeamKbaOverrideFields) && (
+              <div className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="kbaIsEnabled"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between gap-4 rounded-lg border p-4">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <FormLabel className="text-base">
+                          <Trans>Enable KBA by default</Trans>
+                        </FormLabel>
+                        <FormDescription>
+                          <Trans>Default for new documents when on.</Trans>
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          className="shrink-0"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {showKbaTuningFields && (
+                  <div className="space-y-4 rounded-lg border p-4">
+                    <FormField
+                      control={form.control}
+                      name="kbaMode"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>
+                            <Trans>Default KBA scope</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <SelectTrigger className="bg-background text-muted-foreground">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="PER_ENVELOPE">
+                                  <Trans>One challenge for the whole document</Trans>
+                                </SelectItem>
+                                <SelectItem value="PER_RECIPIENT">
+                                  <Trans>Separate challenge per recipient</Trans>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="kbaMaxAttempts"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>
+                            <Trans>Max attempts</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={20}
+                              value={Number.isFinite(field.value) ? String(field.value) : ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                const next = Number.parseInt(e.target.value, 10);
+                                field.onChange(Number.isFinite(next) ? next : 1);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="kbaLockoutMinutes"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>
+                            <Trans>Lockout (minutes)</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={1440}
+                              value={Number.isFinite(field.value) ? String(field.value) : ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                const next = Number.parseInt(e.target.value, 10);
+                                field.onChange(Number.isFinite(next) ? next : 1);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-row justify-end space-x-4">
             <Button type="submit" loading={form.formState.isSubmitting}>
