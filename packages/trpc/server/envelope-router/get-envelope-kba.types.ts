@@ -28,6 +28,7 @@ export const ZGetEnvelopeKbaResponseSchema = z.object({
     .object({
       answerType: z.enum(['STRING', 'NUMERIC', 'MCQ']),
       question: z.string(),
+      answer: z.string(),
       mcqOptions: z.array(
         z.object({
           key: z.string(),
@@ -42,6 +43,7 @@ export const ZGetEnvelopeKbaResponseSchema = z.object({
       recipientId: z.number(),
       answerType: z.enum(['STRING', 'NUMERIC', 'MCQ']),
       question: z.string(),
+      answer: z.string(),
       mcqOptions: z.array(
         z.object({
           key: z.string(),

@@ -443,14 +443,21 @@ export const EnvelopeEditorSettingsDialog = ({
       kbaAnswerType: firstKbaChallenge?.answerType ?? ('STRING' as const),
       kbaApplySameToAllRecipients: (envelopeKbaConfig?.settings?.mode ?? 'PER_ENVELOPE') === 'PER_ENVELOPE',
       kbaQuestion: envelopeKbaConfig?.envelopeChallenge?.question ?? '',
-      kbaAnswer: lastSavedKbaAnswers.answer ?? '',
+      kbaAnswer:
+        lastSavedKbaAnswers.answer ??
+        envelopeKbaConfig?.envelopeChallenge?.answer ??
+        envelopeKbaConfig?.recipientChallenges.at(0)?.answer ??
+        '',
       kbaMcqOptions: mcqOptions,
       kbaRecipientChallenges: envelope.recipients.map((recipient) => ({
         recipientId: recipient.id,
         recipientName: recipient.name ?? '',
         recipientEmail: recipient.email,
         question: recipientChallengeById.get(recipient.id)?.question ?? '',
-        answer: lastSavedKbaAnswers.recipientAnswers[recipient.id] ?? '',
+        answer:
+          lastSavedKbaAnswers.recipientAnswers[recipient.id] ??
+          recipientChallengeById.get(recipient.id)?.answer ??
+          '',
       })),
       meta: {
         subject: envelope.documentMeta.subject ?? '',

@@ -12,6 +12,7 @@ type EnvelopeKbaOption = {
 type EnvelopeKbaChallenge = {
   answerType: 'STRING' | 'NUMERIC' | 'MCQ';
   question: string;
+  answer: string;
   mcqOptions: EnvelopeKbaOption[];
   isAnswerConfigured: boolean;
 };
@@ -55,6 +56,10 @@ const parseMcqOptions = (input: unknown): EnvelopeKbaOption[] => {
       };
     })
     .filter((option): option is EnvelopeKbaOption => option !== null);
+};
+
+const resolveDisplayableAnswer = (storedAnswer: string) => {
+  return storedAnswer.startsWith('$2') ? '' : storedAnswer;
 };
 
 export const getEnvelopeKba = async ({
@@ -124,6 +129,7 @@ export const getEnvelopeKba = async ({
       ? {
           answerType: envelopeChallenge.answerType,
           question: envelopeChallenge.question,
+          answer: resolveDisplayableAnswer(envelopeChallenge.answerHash),
           mcqOptions: parseMcqOptions(envelopeChallenge.mcqOptions),
           isAnswerConfigured: isPersistedKbaChallengeCompleteForSend(envelopeChallenge),
         }
@@ -132,6 +138,7 @@ export const getEnvelopeKba = async ({
       recipientId: challenge.recipientId as number,
       answerType: challenge.answerType,
       question: challenge.question,
+      answer: resolveDisplayableAnswer(challenge.answerHash),
       mcqOptions: parseMcqOptions(challenge.mcqOptions),
       isAnswerConfigured: isPersistedKbaChallengeCompleteForSend(challenge),
     })),

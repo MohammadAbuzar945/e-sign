@@ -5,7 +5,7 @@ import type {
   KbaScopeType,
   Recipient,
 } from '@prisma/client';
-import { compare, hash } from '@node-rs/bcrypt';
+import { compare } from '@node-rs/bcrypt';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type {
@@ -13,8 +13,6 @@ import type {
   TDocumentKbaChallengeInput,
   TDocumentKbaOption,
 } from '../../types/document-auth';
-
-const KBA_HASH_ROUNDS = 10;
 
 type KbaChallengeSummary = Pick<
   KbaChallenge,
@@ -48,13 +46,15 @@ export const normalizeKbaAnswer = (answerType: TDocumentKbaAnswerType, answer: s
   return trimmedAnswer;
 };
 
+/**
+ * For legacy compatibility this keeps the old name, but now returns normalized
+ * answer text so it can be displayed/unmasked in the editor.
+ */
 export const hashKbaChallengeAnswer = async ({
   answerType,
   answer,
 }: Pick<TDocumentKbaChallengeInput, 'answerType' | 'answer'>) => {
-  const normalizedAnswer = normalizeKbaAnswer(answerType, answer);
-
-  return await hash(normalizedAnswer, KBA_HASH_ROUNDS);
+  return normalizeKbaAnswer(answerType, answer);
 };
 
 export const mapKbaAnswerTypeToPrisma = (answerType: TDocumentKbaAnswerType): KbaAnswerType => {
@@ -167,7 +167,10 @@ export const verifyKbaAttempt = async ({
   }
 
   const normalizedAnswer = normalizeKbaAnswer(challenge.answerType, answer);
-  const isValid = await compare(normalizedAnswer, challenge.answerHash);
+  const isLegacyBcryptHash = challenge.answerHash.startsWith('$2');
+  const isValid = isLegacyBcryptHash
+    ? await compare(normalizedAnswer, challenge.answerHash)
+    : normalizedAnswer === challenge.answerHash;
 
   return {
     isValid,
