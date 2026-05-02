@@ -183,6 +183,7 @@ export default function SigningCertificate({ loaderData }: Route.ComponentProps)
       authLevel = match(accessAuthMethod)
         .with('ACCOUNT', () => _(msg`Account Authentication`))
         .with('TWO_FACTOR_AUTH', () => _(msg`Two-Factor Authentication`))
+        .with('KBA', () => _(msg`KBA Authentication`))
         .with(undefined, () => _(msg`Email`))
         .exhaustive();
     }

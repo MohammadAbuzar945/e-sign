@@ -84,35 +84,36 @@ export function usePageRenderer(renderFunction: RenderFunction) {
       const cancellable = page.render(renderContext);
       const runningTask = cancellable;
 
-      cancellable.promise.catch(() => {
-        // Intentionally empty
-      });
+      void (async () => {
+        try {
+          await cancellable.promise;
 
-      void cancellable.promise.then(() => {
-        stage.current = new Konva.Stage({
-          container: kContainer,
-          width: scaledViewport.width,
-          height: scaledViewport.height,
-          scale: {
-            x: scale,
-            y: scale,
-          },
-        });
+          stage.current = new Konva.Stage({
+            container: kContainer,
+            width: scaledViewport.width,
+            height: scaledViewport.height,
+            scale: {
+              x: scale,
+              y: scale,
+            },
+          });
 
-        // Create the main layer for interactive elements.
-        pageLayer.current = new Konva.Layer();
+          // Create the main layer for interactive elements.
+          pageLayer.current = new Konva.Layer();
 
-        stage.current.add(pageLayer.current);
+          stage.current.add(pageLayer.current);
 
-        renderFunction({
-          stage: stage.current,
-          pageLayer: pageLayer.current,
-        });
+          renderFunction({
+            stage: stage.current,
+            pageLayer: pageLayer.current,
+          });
 
-        void document.fonts.ready.then(function () {
+          await document.fonts.ready;
           pageLayer.current?.batchDraw();
-        });
-      });
+        } catch {
+          // Rendering can be canceled during rapid page/step switches.
+        }
+      })();
 
       return () => {
         runningTask.cancel();

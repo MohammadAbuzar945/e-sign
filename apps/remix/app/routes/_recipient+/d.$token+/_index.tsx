@@ -16,6 +16,7 @@ import { prisma } from '@documenso/prisma';
 import { Header as AuthenticatedHeader } from '~/components/general/app-header';
 import { DirectTemplatePageView } from '~/components/general/direct-template/direct-template-page';
 import { DirectTemplateAuthPageView } from '~/components/general/direct-template/direct-template-signing-auth-page';
+import { DirectTemplateKbaAccessGate } from '~/components/general/direct-template/direct-template-kba-access-gate';
 import { DocumentSigningAuthPageView } from '~/components/general/document-signing/document-signing-auth-page';
 import { DocumentSigningAuthProvider } from '~/components/general/document-signing/document-signing-auth-provider';
 import { DocumentSigningPageViewV2 } from '~/components/general/document-signing/document-signing-page-view-v2';
@@ -59,6 +60,7 @@ const handleV1Loader = async ({ params, request }: Route.LoaderArgs) => {
     match(auth)
       .with(DocumentAccessAuth.ACCOUNT, () => Boolean(session.user))
       .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => true)
+      .with(DocumentAccessAuth.KBA, () => true)
       .exhaustive(),
   );
 
@@ -187,31 +189,33 @@ const DirectSigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV
         isDirectTemplate={true}
         user={user}
       >
-        <>
-          {sessionData?.user && <AuthenticatedHeader />}
+        <DirectTemplateKbaAccessGate token={template.directLink.token}>
+          <>
+            {sessionData?.user && <AuthenticatedHeader />}
 
-          <div className="mx-auto -mt-4 w-full max-w-screen-xl px-4 md:px-8">
-            <h1
-              className="mt-4 block max-w-[20rem] truncate text-2xl font-semibold md:max-w-[30rem] md:text-3xl"
-              title={template.title}
-            >
-              {template.title}
-            </h1>
+            <div className="mx-auto -mt-4 w-full max-w-screen-xl px-4 md:px-8">
+              <h1
+                className="mt-4 block max-w-[20rem] truncate text-2xl font-semibold md:max-w-[30rem] md:text-3xl"
+                title={template.title}
+              >
+                {template.title}
+              </h1>
 
-            <div className="text-muted-foreground mb-8 mt-2.5 flex items-center gap-x-2">
-              <UsersIcon className="h-4 w-4" />
-              <p className="text-muted-foreground/80">
-                <Plural value={template.recipients.length} one="# recipient" other="# recipients" />
-              </p>
+              <div className="text-muted-foreground mb-8 mt-2.5 flex items-center gap-x-2">
+                <UsersIcon className="h-4 w-4" />
+                <p className="text-muted-foreground/80">
+                  <Plural value={template.recipients.length} one="# recipient" other="# recipients" />
+                </p>
+              </div>
+
+              <DirectTemplatePageView
+                directTemplateRecipient={directTemplateRecipient}
+                directTemplateToken={template.directLink.token}
+                template={template}
+              />
             </div>
-
-            <DirectTemplatePageView
-              directTemplateRecipient={directTemplateRecipient}
-              directTemplateToken={template.directLink.token}
-              template={template}
-            />
-          </div>
-        </>
+          </>
+        </DirectTemplateKbaAccessGate>
       </DocumentSigningAuthProvider>
     </DocumentSigningProvider>
   );
@@ -246,9 +250,11 @@ const DirectSigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV
         recipient={recipient}
         user={user}
       >
-        <EnvelopeRenderProvider envelope={envelope} token={recipient.token}>
-          <DocumentSigningPageViewV2 />
-        </EnvelopeRenderProvider>
+        <DirectTemplateKbaAccessGate token={recipient.directToken || ''}>
+          <EnvelopeRenderProvider envelope={envelope} token={recipient.token}>
+            <DocumentSigningPageViewV2 />
+          </EnvelopeRenderProvider>
+        </DirectTemplateKbaAccessGate>
       </DocumentSigningAuthProvider>
     </EnvelopeSigningProvider>
   );

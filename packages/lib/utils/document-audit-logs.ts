@@ -507,6 +507,56 @@ export const formatDocumentAuditLogAction = (
         identified: result,
       };
     })
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_KBA_CONFIG_UPDATED }, () => ({
+      anonymous: msg({
+        message: `KBA settings updated`,
+        context: `Audit log format`,
+      }),
+      identified: msg`${prefix} updated KBA settings`,
+    }))
+    .with(
+      { type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_CHALLENGE_VIEWED },
+      ({ data }) => {
+        const userName = prefix || i18n._(msg`Recipient`);
+
+        const result = msg`${userName} opened the KBA challenge`;
+
+        return {
+          anonymous: result,
+          identified: result,
+        };
+      },
+    )
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_VALIDATED }, ({ data }) => {
+      const userName = prefix || i18n._(msg`Recipient`);
+
+      const result = msg`${userName} successfully passed KBA verification`;
+
+      return {
+        anonymous: result,
+        identified: result,
+      };
+    })
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_FAILED }, ({ data }) => {
+      const userName = prefix || i18n._(msg`Recipient`);
+
+      const result = msg`${userName} failed KBA verification`;
+
+      return {
+        anonymous: result,
+        identified: result,
+      };
+    })
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_LOCKED }, ({ data }) => {
+      const userName = prefix || i18n._(msg`Recipient`);
+
+      const result = msg`${userName} was temporarily locked from KBA verification`;
+
+      return {
+        anonymous: result,
+        identified: result,
+      };
+    })
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_SENT }, ({ data }) => ({
       anonymous: data.isResending ? msg`Email resent` : msg`Email sent`,
       identified: data.isResending

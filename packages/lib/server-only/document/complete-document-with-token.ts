@@ -155,7 +155,8 @@ export const completeDocumentWithToken = async ({
     });
   }
 
-  // Check ACCESS AUTH 2FA validation during document completion
+  // Check ACCESS AUTH 2FA validation during document completion.
+  // KBA is validated at document link access time.
   const { derivedRecipientAccessAuth } = extractDocumentAuthMethods({
     documentAuth: envelope.authOptions,
     recipientAuth: recipient.authOptions,

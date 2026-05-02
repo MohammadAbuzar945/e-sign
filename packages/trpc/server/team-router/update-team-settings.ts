@@ -58,6 +58,9 @@ export const updateTeamSettingsRoute = authenticatedProcedure
       defaultRecipients,
       // AI features settings.
       aiFeaturesEnabled,
+
+      // KBA defaults (null = inherit from organisation).
+      kbaSettings,
     } = data;
 
     if (Object.values(data).length === 0) {
@@ -173,7 +176,16 @@ export const updateTeamSettingsRoute = authenticatedProcedure
 
             // AI features settings.
             aiFeaturesEnabled,
-          },
+
+            // KBA defaults (null / DbNull = inherit organisation). Cast for Prisma client versions
+            // where generated XOR input has not yet picked up `kbaSettings`.
+            ...(kbaSettings !== undefined
+              ? {
+                  kbaSettings:
+                    kbaSettings === null ? Prisma.DbNull : (kbaSettings as Prisma.InputJsonValue),
+                }
+              : {}),
+          } as unknown as Prisma.TeamGlobalSettingsUncheckedUpdateWithoutTeamInput,
         },
       },
     });

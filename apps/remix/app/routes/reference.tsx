@@ -95,6 +95,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
     
     const apiSpec = (await response.json()) as Record<string, unknown>;
+    const { patchOpenApiMultipartFileParts } = await import(
+      '@documenso/trpc/server/open-api-multipart-file-patch'
+    );
+    patchOpenApiMultipartFileParts(apiSpec);
     const filteredSpec = filterDeprecatedEndpoints(apiSpec);
     
     return {

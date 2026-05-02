@@ -3,6 +3,7 @@ import { EnvelopeType } from '@prisma/client';
 import { prisma } from '@documenso/prisma';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
+import { ZFieldMetaNotOptionalSchema } from '../../types/field-meta';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { mapSecondaryIdToTemplateId } from '../../utils/envelope';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
@@ -11,6 +12,35 @@ export type GetTemplateByIdOptions = {
   id: EnvelopeIdOptions;
   userId: number;
   teamId: number;
+};
+
+const normalizeFieldMeta = (fieldMeta: unknown) => {
+  if (!fieldMeta) {
+    return null;
+  }
+
+  const parsedFieldMeta =
+    typeof fieldMeta === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(fieldMeta) as unknown;
+          } catch {
+            return null;
+          }
+        })()
+      : fieldMeta;
+
+  if (!parsedFieldMeta) {
+    return null;
+  }
+
+  const result = ZFieldMetaNotOptionalSchema.safeParse(parsedFieldMeta);
+
+  if (!result.success) {
+    return null;
+  }
+
+  return result.data;
 };
 
 export const getTemplateById = async ({ id, userId, teamId }: GetTemplateByIdOptions) => {
@@ -80,6 +110,7 @@ export const getTemplateById = async ({ id, userId, teamId }: GetTemplateByIdOpt
     },
     fields: envelope.fields.map((field) => ({
       ...field,
+      fieldMeta: normalizeFieldMeta(field.fieldMeta),
       documentId: null,
       templateId: legacyTemplateId,
     })),

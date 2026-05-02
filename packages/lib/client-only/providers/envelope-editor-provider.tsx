@@ -162,19 +162,21 @@ export const EnvelopeEditorProvider = ({
 
   const envelopeRecipientSetMutationQuery = trpc.envelope.recipient.set.useMutation({
     onSuccess: ({ data: recipients }) => {
+      const recipientIds = new Set(recipients.map((recipient) => recipient.id));
+
       setEnvelope((prev) => ({
         ...prev,
         recipients,
-        fields: prev.fields.filter((field) =>
-          recipients.some((recipient) => recipient.id === field.recipientId),
-        ),
+        fields: prev.fields.filter((field) => recipientIds.has(field.recipientId)),
       }));
 
-      // Reset the local fields to ensure deleted recipient fields are removed.
+      editorRecipients.resetForm({
+        recipients,
+      });
+
+      // Keep unsaved local edits and only drop fields for removed recipients.
       editorFields.resetForm(
-        envelope.fields.filter((field) =>
-          recipients.some((recipient) => recipient.id === field.recipientId),
-        ),
+        editorFields.getAllFields().filter((field) => recipientIds.has(field.recipientId)),
       );
 
       setAutosaveError(false);
@@ -344,7 +346,9 @@ export const EnvelopeEditorProvider = ({
   }, [envelope.type, envelope.id]);
 
   const flushAutosave = async (): Promise<void> => {
-    await Promise.all([setFieldsAsync(), setRecipientsAsync(), setEnvelopeAsync()]);
+    await setRecipientsAsync();
+    await setFieldsAsync();
+    await setEnvelopeAsync();
   };
 
   return (

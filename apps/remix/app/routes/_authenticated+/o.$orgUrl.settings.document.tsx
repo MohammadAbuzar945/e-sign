@@ -6,6 +6,7 @@ import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/org
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { IS_AI_FEATURES_CONFIGURED } from '@documenso/lib/constants/app';
 import { DocumentSignatureType } from '@documenso/lib/constants/document';
+import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import { useToast } from '@documenso/ui/primitives/use-toast';
@@ -61,6 +62,10 @@ export default function OrganisationSettingsDocumentPage() {
         defaultRecipients,
         delegateDocumentOwnership,
         aiFeaturesEnabled,
+        kbaMode,
+        kbaIsEnabled,
+        kbaMaxAttempts,
+        kbaLockoutMinutes,
       } = data;
 
       if (
@@ -93,6 +98,12 @@ export default function OrganisationSettingsDocumentPage() {
           drawSignatureEnabled: signatureTypes.includes(DocumentSignatureType.DRAW),
           delegateDocumentOwnership: delegateDocumentOwnership,
           aiFeaturesEnabled,
+          kbaSettings: ZDocumentKbaSettingsSchema.parse({
+            mode: kbaMode,
+            isEnabled: kbaIsEnabled,
+            maxAttempts: kbaMaxAttempts,
+            lockoutMinutes: kbaLockoutMinutes,
+          }),
         },
       });
 

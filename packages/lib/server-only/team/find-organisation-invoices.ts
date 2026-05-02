@@ -2,6 +2,7 @@ import { getInvoices } from '@documenso/ee/server-only/stripe/get-invoices';
 import { TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
+import { buildTeamWhereQuery } from '../../utils/teams';
 
 export interface FindTeamInvoicesOptions {
   userId: number;
@@ -9,27 +10,29 @@ export interface FindTeamInvoicesOptions {
 }
 
 export const findOrganisationInvoices = async ({ userId, teamId }: FindTeamInvoicesOptions) => {
-  const team = await prisma.team.findUniqueOrThrow({
-    where: {
-      id: teamId,
-      members: {
-        some: {
-          userId,
-          role: {
-            in: TEAM_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_TEAM'],
-          },
+  const team = await prisma.team.findFirst({
+    where: buildTeamWhereQuery({
+      teamId,
+      userId,
+      roles: TEAM_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_TEAM'],
+    }),
+    select: {
+      id: true,
+      organisation: {
+        select: {
+          customerId: true,
         },
       },
     },
   });
 
-  if (!team.customerId) {
+  if (!team || !team.organisation.customerId) {
     throw new AppError(AppErrorCode.NOT_FOUND, {
       message: 'Team has no customer ID.',
     });
   }
 
-  const results = await getInvoices({ customerId: team.customerId });
+  const results = await getInvoices({ customerId: team.organisation.customerId });
 
   if (!results) {
     return null;

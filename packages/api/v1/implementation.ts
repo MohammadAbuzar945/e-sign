@@ -850,7 +850,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
           },
           data: {
             formValues: body.formValues,
-            authOptions: body.authOptions,
+            authOptions: body.authOptions ? { ...body.authOptions } : undefined,
           },
         });
       }
@@ -928,7 +928,9 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
             id: envelope.id,
           },
           data: {
-            authOptions: body.authOptions,
+            authOptions: {
+              ...body.authOptions,
+            },
           },
         });
       }

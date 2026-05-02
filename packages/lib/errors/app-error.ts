@@ -18,6 +18,8 @@ export enum AppErrorCode {
   'SCHEMA_FAILED' = 'SCHEMA_FAILED',
   'TOO_MANY_REQUESTS' = 'TOO_MANY_REQUESTS',
   'TWO_FACTOR_AUTH_FAILED' = 'TWO_FACTOR_AUTH_FAILED',
+  'KBA_AUTH_FAILED' = 'KBA_AUTH_FAILED',
+  'KBA_AUTH_LOCKED' = 'KBA_AUTH_LOCKED',
 }
 
 export const genericErrorCodeToTrpcErrorCodeMap: Record<string, { code: string; status: number }> =
@@ -34,6 +36,8 @@ export const genericErrorCodeToTrpcErrorCodeMap: Record<string, { code: string; 
     [AppErrorCode.SCHEMA_FAILED]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
     [AppErrorCode.TOO_MANY_REQUESTS]: { code: 'TOO_MANY_REQUESTS', status: 429 },
     [AppErrorCode.TWO_FACTOR_AUTH_FAILED]: { code: 'UNAUTHORIZED', status: 401 },
+    [AppErrorCode.KBA_AUTH_FAILED]: { code: 'UNAUTHORIZED', status: 401 },
+    [AppErrorCode.KBA_AUTH_LOCKED]: { code: 'UNAUTHORIZED', status: 401 },
   };
 
 export const ZAppErrorJsonSchema = z.object({

@@ -24,9 +24,15 @@ export const ZAddTemplateSettingsFormSchema = z.object({
   visibility: z.nativeEnum(DocumentVisibility).optional(),
   globalAccessAuth: z
     .array(z.union([ZDocumentAccessAuthTypesSchema, z.literal('-1')]))
-    .transform((val) => (val.length === 1 && val[0] === '-1' ? [] : val))
+    .transform((val) => {
+      if (val.includes('-1')) {
+        return val.filter((entry) => entry !== '-1');
+      }
+
+      return val;
+    })
     .optional()
-    .default([]),
+    .default(['-1']),
   globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional().default([]),
   meta: z.object({
     subject: z.string(),

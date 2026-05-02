@@ -5,6 +5,7 @@ import { prisma } from '@documenso/prisma';
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { TDocumentAuthMethods } from '../../types/document-auth';
 import { mapSecondaryIdToDocumentId } from '../../utils/envelope';
+import { stripKbaFromAuthJsonWhenPolicyInactive } from '../../utils/document-auth';
 import { isRecipientAuthorized } from './is-recipient-authorized';
 
 export interface GetDocumentAndSenderByTokenOptions {
@@ -112,6 +113,11 @@ export const getDocumentAndSenderByToken = async ({
           },
         },
       },
+      kbaPolicy: {
+        select: {
+          isEnabled: true,
+        },
+      },
     },
   });
 
@@ -148,8 +154,24 @@ export const getDocumentAndSenderByToken = async ({
 
   const legacyDocumentId = mapSecondaryIdToDocumentId(result.secondaryId);
 
+  const kbaPolicyIsActive = result.kbaPolicy?.isEnabled === true;
+
+  const { documentAuth: signingDocumentAuth, recipientAuth: signingRecipientAuth } =
+    stripKbaFromAuthJsonWhenPolicyInactive({
+      documentAuth: result.authOptions,
+      recipientAuth: recipient.authOptions,
+      kbaPolicyIsActive,
+    });
+
   return {
     ...result,
+    authOptions: signingDocumentAuth,
+    recipients: [
+      {
+        ...recipient,
+        authOptions: signingRecipientAuth,
+      },
+    ],
     user: {
       id: result.user.id,
       email: result.user.email,
