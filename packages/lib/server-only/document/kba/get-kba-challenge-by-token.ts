@@ -61,6 +61,12 @@ export const getKbaChallengeByToken = async ({ token }: GetKbaChallengeByTokenOp
 
   const [recipient] = envelope.recipients;
 
+  if (!recipient) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'Recipient not found',
+    });
+  }
+
   const { derivedRecipientAccessAuth } = extractDocumentAuthMethods({
     documentAuth: envelope.authOptions,
     recipientAuth: recipient.authOptions,
