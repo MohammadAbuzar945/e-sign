@@ -364,7 +364,7 @@ export const createEnvelope = async ({
 
   const { processedExternalId, fromNomia } = processExternalId(externalId);
 
-  const createdEnvelopeId = await prisma.$transaction(async (tx) => {
+  const createdEnvelope = await prisma.$transaction(async (tx) => {
     const envelope = await tx.envelope.create({
       data: {
         id: prefixedId('envelope'),

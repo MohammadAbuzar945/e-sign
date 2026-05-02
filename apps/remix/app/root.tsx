@@ -174,6 +174,7 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
         {/* Cleanup: remove stray "$" text nodes injected between streaming markers.
             IMPORTANT: run only after hydration (window.load) to avoid hydration mismatches. */}
         <script
+          nonce={nonce(cspNonce)}
           dangerouslySetInnerHTML={{
             __html: `(() => {
   try {

@@ -7,8 +7,7 @@ import { Bird } from 'lucide-react';
 import { parseAsStringLiteral, useQueryState } from 'nuqs';
 import { useParams, useSearchParams } from 'react-router';
 
-import { useSessionStorage } from '@documenso/lib/client-only/hooks/use-session-storage';
-import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+
 import { FolderType } from '@documenso/lib/types/folder-type';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
 import { formatDocumentsPath, formatTemplatesPath } from '@documenso/lib/utils/teams';

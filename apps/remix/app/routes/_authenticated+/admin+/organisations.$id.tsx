@@ -337,7 +337,7 @@ export default function OrganisationGroupSettingsPage({
         </Accordion>
       </div>
 
-      <SettingsHeader
+      {/* <SettingsHeader
         title={t`Manage subscription`}
         subtitle={t`Manage the ${organisation.name} organisation subscription`}
         className="mt-16"

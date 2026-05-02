@@ -123,7 +123,7 @@ export const completeDocumentWithToken = async ({
     }
   }
 
-  const fields = await prisma.field.findMany({
+  let fields = await prisma.field.findMany({
     where: {
       envelopeId: envelope.id,
       recipientId: recipient.id,
@@ -222,46 +222,10 @@ export const completeDocumentWithToken = async ({
     });
   }
 
-  let fields = await prisma.field.findMany({
-    where: {
-      envelopeId: envelope.id,
-      recipientId: recipient.id,
-    },
-  });
-
   // This should be scoped to the current recipient.
   const uninsertedDateFields = fields.filter(
     (field) => field.type === FieldType.DATE && !field.inserted,
   );
-
-  let recipientName = recipient.name;
-  let recipientEmail = recipient.email;
-
-  // Only trim the name if it's been derived.
-  if (!recipientName) {
-    recipientName = (
-      recipientOverride?.name ||
-      fields.find((field) => field.type === FieldType.NAME)?.customText ||
-      ''
-    ).trim();
-  }
-
-  // Only trim the email if it's been derived.
-  if (!recipient.email) {
-    recipientEmail = (
-      recipientOverride?.email ||
-      fields.find((field) => field.type === FieldType.EMAIL)?.customText ||
-      ''
-    )
-      .trim()
-      .toLowerCase();
-  }
-
-  if (!recipientEmail) {
-    throw new AppError(AppErrorCode.INVALID_BODY, {
-      message: 'Recipient email is required',
-    });
-  }
 
   // Auto-insert all un-inserted date fields for V2 envelopes at completion time.
   if (envelope.internalVersion === 2 && uninsertedDateFields.length > 0) {

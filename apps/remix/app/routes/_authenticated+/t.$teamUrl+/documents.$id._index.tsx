@@ -54,7 +54,6 @@ export default function DocumentPage({ params }: Route.ComponentProps) {
     isLoading: isLoadingEnvelope,
     isError: isErrorEnvelope,
   } = trpc.envelope.get.useQuery(
-    
     {
       envelopeId: params.id,
     },
@@ -65,25 +64,19 @@ export default function DocumentPage({ params }: Route.ComponentProps) {
 
   const { data: fieldSignatures } = trpc.envelope.field.getSignatures.useQuery(
     {
-        envelopeId: params.id,
+      envelopeId: params.id,
     },
     {
       ...DO_NOT_INVALIDATE_QUERY_ON_MUTATION,
       enabled:
-        envelope && envelope.internalVersion === 2 && envelope.status === DocumentStatus.PENDING,
-      },
-    {
+        envelope != null &&
+        envelope.internalVersion === 2 &&
+        envelope.status === DocumentStatus.PENDING,
       ...(team?.id != null && { context: { teamId: String(team.id) } }),
       // Refetch every 3 seconds when document is pending to catch status changes
-      refetchInterval: (query) => {
-        const envelope = query.state.data;
-        if (envelope && envelope.status === DocumentStatus.PENDING) {
-          return 3000;
-        }
-        return false;
-      },
+      refetchInterval: () =>
+        envelope?.status === DocumentStatus.PENDING ? 3000 : false,
     },
-  ,
   );
 
   if (isLoadingEnvelope) {

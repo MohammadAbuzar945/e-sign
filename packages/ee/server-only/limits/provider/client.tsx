@@ -49,7 +49,8 @@ export const LimitsProvider = ({
       return;
     }
 
-    const newLimits = await getLimits({ teamId });
+    try {
+      const newLimits = await getLimits({ teamId });
 
       setLimits((oldLimits) => {
         if (isDeepEqual(oldLimits, newLimits)) {
@@ -63,7 +64,7 @@ export const LimitsProvider = ({
       // This prevents showing incorrect default values (e.g., 5 envelopes) when API fails
       console.error('Error fetching limits, keeping current values:', err);
     }
-  }, [teamId]);
+  }, [disableLimitsFetch, teamId]);
 
   useEffect(() => {
     void refreshLimits();

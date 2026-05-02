@@ -21,7 +21,10 @@ export type EnvelopePdfViewerProps = {
 export const EnvelopePdfViewer = ({
   errorMessage,
   className,
-  ...props
+  scrollParentRef,
+  customPageRenderer,
+  onDocumentLoad,
+  ...htmlProps
 }: EnvelopePdfViewerProps) => {
   const { t } = useLingui();
 
@@ -31,7 +34,7 @@ export const EnvelopePdfViewer = ({
 
   if (renderError || !currentEnvelopeItem) {
     return (
-      <div ref={$el} className={cn('h-full w-full max-w-[800px]', className)} {...props}>
+      <div ref={$el} className={cn('h-full w-full max-w-[800px]', className)} {...htmlProps}>
         {renderError ? (
           <Alert variant="destructive" className="mb-4 max-w-[800px]">
             <AlertTitle>
@@ -55,9 +58,12 @@ export const EnvelopePdfViewer = ({
   return (
     <PDFViewerLazy
       key={`${currentEnvelopeItem.envelopeId}-${currentEnvelopeItem.id}`}
-      {...props}
+      {...htmlProps}
       className={cn('h-full w-full max-w-[800px]', className)}
       data={currentEnvelopeItem.data}
+      scrollParentRef={scrollParentRef}
+      customPageRenderer={customPageRenderer}
+      onDocumentLoad={onDocumentLoad}
     />
   );
 };

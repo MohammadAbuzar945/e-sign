@@ -547,7 +547,7 @@ export const createDocumentFromTemplate = async ({
   const finalExternalId = externalId || template.externalId;
   const { processedExternalId, fromNomia } = processExternalId(finalExternalId || undefined);
 
-  return await prisma.$transaction(async (tx) => {
+ const {envelope, createdEnvelope} = await prisma.$transaction(async (tx) => {
     const envelope = await tx.envelope.create({
       data: {
         id: prefixedId('envelope'),
@@ -576,7 +576,7 @@ export const createDocumentFromTemplate = async ({
         useLegacyFieldInsertion: template.useLegacyFieldInsertion ?? false,
         documentMetaId: documentMeta.id,
         formValues: formValues ?? undefined,
-        formValues: formValues ?? undefined,
+        
         recipients: {
           createMany: {
             data: allFinalRecipients.map((recipient) => {
@@ -781,11 +781,7 @@ export const createDocumentFromTemplate = async ({
     if (!createdEnvelope) {
       throw new Error('Document not found');
     }
-
-    return { envelope, createdEnvelope };
-  });
-
-  // Trigger webhook outside the transaction to avoid holding the connection
+      // Trigger webhook outside the transaction to avoid holding the connection
   // open during network I/O.
   await Promise.allSettled([
     triggerWebhook({
@@ -801,6 +797,8 @@ export const createDocumentFromTemplate = async ({
       teamId,
     }),
   ]);
+    return { envelope, createdEnvelope };
+  });
 
   return envelope;
 };

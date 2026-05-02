@@ -45,6 +45,7 @@ type EnvelopeRenderItem = {
   title: string;
   order: number;
   envelopeId: string;
+  documentDataId: string;
 
   /**
    * The PDF data to render.
@@ -173,6 +174,46 @@ export const EnvelopeRenderProvider = ({
 }: EnvelopeRenderProviderProps) => {
   const [renderError, setRenderError] = useState<boolean>(false);
 
+  const [refetchedPdfByItemId, setRefetchedPdfByItemId] = useState<
+    Record<string, { documentDataId: string; data: Uint8Array }>
+  >({});
+
+  const loadEnvelopeItemPdfFile = useCallback(
+    async (item: EnvelopeRenderProviderProps['envelopeItems'][number], options?: { force?: boolean }) => {
+      if (!options?.force) {
+        return;
+      }
+
+      const url = getDocumentDataUrl({
+        envelopeId: envelope.id,
+        envelopeItemId: item.id,
+        documentDataId: item.documentDataId,
+        version,
+        token,
+        presignToken,
+      });
+
+      try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`Failed to refresh PDF (${response.status})`);
+        }
+
+        const data = new Uint8Array(await response.arrayBuffer());
+
+        setRefetchedPdfByItemId((prev) => ({
+          ...prev,
+          [item.id]: { documentDataId: item.documentDataId, data },
+        }));
+      } catch (error) {
+        console.error(error);
+        setRenderError(true);
+      }
+    },
+    [envelope.id, presignToken, token, version],
+  );
+
   const envelopeItems = useMemo(
     () =>
       [...envelopeItemsFromProps]
@@ -187,14 +228,17 @@ export const EnvelopeRenderProvider = ({
             presignToken,
           });
 
-          const data = item.data || pdfUrl;
+          const refetched = refetchedPdfByItemId[item.id];
+          const useRefetch = refetched && refetched.documentDataId === item.documentDataId;
+
+          const data = useRefetch ? refetched.data : (item.data ?? pdfUrl);
 
           return {
             ...item,
             data,
           };
         }),
-    [envelopeItemsFromProps, envelope.id, token, version, presignToken],
+    [envelope.id, envelopeItemsFromProps, presignToken, refetchedPdfByItemId, token, version],
   );
 
   const [currentItemId, setCurrentItemId] = useState<string | null>(envelopeItems[0]?.id ?? null);
