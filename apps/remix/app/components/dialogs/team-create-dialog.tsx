@@ -171,7 +171,11 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
   };
 
   const mapTextToUrl = (text: string) => {
-    return text.toLowerCase().replace(/\s+/g, '-');
+    return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, '-');
   };
 
   const dialogState = useMemo(() => {
@@ -300,7 +304,7 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
                         <Input className="bg-background" {...field} />
                       </FormControl>
                       {!form.formState.errors.teamUrl && (
-                        <span className="text-foreground/50 text-xs font-normal">
+                        <span className="text-xs font-normal text-foreground/50">
                           {field.value ? (
                             `${NEXT_PUBLIC_WEBAPP_URL()}/t/${organisation.id.slice(-5)}-${field.value}`
                           ) : (
@@ -335,7 +339,7 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
                           />
 
                           <label
-                            className="text-muted-foreground ml-2 text-sm"
+                            className="ml-2 text-sm text-muted-foreground"
                             htmlFor="inherit-members"
                           >
                             <Trans>Allow all organisation members to access this team</Trans>

@@ -174,6 +174,13 @@ enum WebhookTriggerEvents {
   DOCUMENT_COMPLETED
   DOCUMENT_REJECTED
   DOCUMENT_CANCELLED
+  RECIPIENT_EXPIRED
+  DOCUMENT_RECIPIENT_COMPLETED
+  DOCUMENT_REMINDER_SENT
+  TEMPLATE_CREATED
+  TEMPLATE_UPDATED
+  TEMPLATE_DELETED
+  TEMPLATE_USED
 }
 
 model Webhook {
@@ -464,7 +471,7 @@ model EnvelopeItem {
 
 model DocumentAuditLog {
   id         String   @id @default(cuid())
-  envelopeId String
+  envelopeId String?
   createdAt  DateTime @default(now())
   type       String
   data       Json
@@ -476,7 +483,7 @@ model DocumentAuditLog {
   userAgent String?
   ipAddress String?
 
-  envelope Envelope @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+  envelope Envelope? @relation(fields: [envelopeId], references: [id], onDelete: SetNull)
 
   @@index([envelopeId])
 }
@@ -524,7 +531,7 @@ enum DocumentDistributionMethod {
   NONE
 }
 
-/// @zod.import(["import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';"])
+/// @zod.import(["import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';", "import { ZEnvelopeExpirationPeriod as ZEnvelopeExpirationPeriodSchema } from '@documenso/lib/constants/envelope-expiration';", "import { ZEnvelopeReminderSettings as ZEnvelopeReminderSettingsSchema } from '@documenso/lib/constants/envelope-reminder';"])
 model DocumentMeta {
   id                     String               @id @default(cuid())
   subject                String?
@@ -545,6 +552,10 @@ model DocumentMeta {
   emailSettings Json? /// [DocumentEmailSettings] @zod.custom.use(ZDocumentEmailSettingsSchema)
   emailReplyTo  String?
   emailId       String?
+
+  envelopeExpirationPeriod Json? /// [EnvelopeExpirationPeriod] @zod.custom.use(ZEnvelopeExpirationPeriodSchema)
+
+  reminderSettings Json? /// [EnvelopeReminderSettings] @zod.custom.use(ZEnvelopeReminderSettingsSchema)
 
   envelope Envelope?
 }
@@ -593,31 +604,43 @@ enum RecipientRole {
 
 /// @zod.import(["import { ZRecipientAuthOptionsSchema } from '@documenso/lib/types/document-auth';"])
 model Recipient {
-  id                Int           @id @default(autoincrement())
-  envelopeId        String
-  email             String        @db.VarChar(255)
-  name              String        @default("") @db.VarChar(255)
-  token             String
-  documentDeletedAt DateTime?
-  expired           DateTime?
-  signedAt          DateTime?
-  authOptions       Json? /// [RecipientAuthOptions] @zod.custom.use(ZRecipientAuthOptionsSchema)
-  signingOrder      Int? /// @zod.number.describe("The order in which the recipient should sign the document. Only works if the document is set to sequential signing.")
-  rejectionReason   String?
-  role              RecipientRole @default(SIGNER)
-  readStatus        ReadStatus    @default(NOT_OPENED)
-  signingStatus     SigningStatus @default(NOT_SIGNED)
-  sendStatus        SendStatus    @default(NOT_SENT)
-  envelope          Envelope      @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+  id                   Int           @id @default(autoincrement())
+  envelopeId           String
+  email                String        @db.VarChar(255)
+  name                 String        @default("") @db.VarChar(255)
+  token                String
+  documentDeletedAt    DateTime?
+  expired              DateTime? // deprecated Not in use. To be removed in a future migration.
+  expiresAt            DateTime?
+  expirationNotifiedAt DateTime?
+  sentAt               DateTime?
+  signedAt             DateTime?
+  lastReminderSentAt   DateTime?
+  nextReminderAt       DateTime?
+  authOptions          Json? /// [RecipientAuthOptions] @zod.custom.use(ZRecipientAuthOptionsSchema)
+  signingOrder         Int? /// @zod.number.describe("The order in which the recipient should sign the document. Only works if the document is set to sequential signing.")
+  rejectionReason      String?
+  role                 RecipientRole @default(SIGNER)
+  readStatus           ReadStatus    @default(NOT_OPENED)
+  signingStatus        SigningStatus @default(NOT_SIGNED)
+  sendStatus           SendStatus    @default(NOT_SENT)
+  envelope             Envelope      @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
   kbaChallenges     KbaChallenge[]
   kbaAttempts       KbaAttempt[]
-  fields            Field[]
-  signatures        Signature[]
+  fields               Field[]
+  signatures           Signature[]
 
   @@index([token])
   @@index([email])
   @@index([envelopeId])
   @@index([signedAt])
+  @@index([expiresAt])
+  @@index([email, documentDeletedAt, envelopeId], map: "Recipient_email_documentDeletedAt_envelopeId_idx")
+  @@index([email, envelopeId], map: "Recipient_email_envelopeId_idx")
+  @@index([email, signingStatus, envelopeId, role], map: "Recipient_email_signingStatus_envelopeId_role_idx")
+  @@index([nextReminderAt])
+  @@index([email(ops: raw("gin_trgm_ops"))], map: "Recipient_email_trgm_idx", type: Gin)
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "Recipient_name_trgm_idx", type: Gin)
 }
 
 enum KbaMode {
@@ -908,7 +931,7 @@ enum OrganisationMemberInviteStatus {
   DECLINED
 }
 
-/// @zod.import(["import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';", "import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';", "import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';"])
+/// @zod.import(["import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';", "import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';", "import { ZEnvelopeExpirationPeriod as ZEnvelopeExpirationPeriodSchema } from '@documenso/lib/constants/envelope-expiration';", "import { ZEnvelopeReminderSettings as ZEnvelopeReminderSettingsSchema } from '@documenso/lib/constants/envelope-reminder';", "import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';"])
 model OrganisationGlobalSettings {
   id           String        @id
   organisation Organisation?
@@ -941,6 +964,10 @@ model OrganisationGlobalSettings {
   brandingUrl            String  @default("")
   brandingCompanyDetails String  @default("")
 
+  envelopeExpirationPeriod Json? /// [EnvelopeExpirationPeriod] @zod.custom.use(ZEnvelopeExpirationPeriodSchema)
+
+  reminderSettings Json? /// [EnvelopeReminderSettings] @zod.custom.use(ZEnvelopeReminderSettingsSchema)
+
   // AI features settings.
   aiFeaturesEnabled Boolean @default(false)
 
@@ -948,7 +975,7 @@ model OrganisationGlobalSettings {
   kbaSettings Json? /// [DocumentKbaSettings] @zod.custom.use(ZDocumentKbaSettingsSchema)
 }
 
-/// @zod.import(["import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';", "import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';", "import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';"])
+/// @zod.import(["import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';", "import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';", "import { ZEnvelopeExpirationPeriod as ZEnvelopeExpirationPeriodSchema } from '@documenso/lib/constants/envelope-expiration';", "import { ZEnvelopeReminderSettings as ZEnvelopeReminderSettingsSchema } from '@documenso/lib/constants/envelope-reminder';", "import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';"])
 model TeamGlobalSettings {
   id   String @id
   team Team?
@@ -981,6 +1008,10 @@ model TeamGlobalSettings {
   brandingLogo           String?
   brandingUrl            String?
   brandingCompanyDetails String?
+
+  envelopeExpirationPeriod Json? /// [EnvelopeExpirationPeriod] @zod.custom.use(ZEnvelopeExpirationPeriodSchema)
+
+  reminderSettings Json? /// [EnvelopeReminderSettings] @zod.custom.use(ZEnvelopeReminderSettingsSchema)
 
   // AI features settings.
   aiFeaturesEnabled Boolean?
@@ -1044,6 +1075,7 @@ model TeamEmailVerification {
 enum TemplateType {
   PUBLIC
   PRIVATE
+  ORGANISATION
 }
 
 model TemplateDirectLink {
@@ -1138,10 +1170,11 @@ model EmailDomain {
 
   status EmailDomainStatus @default(PENDING)
 
-  selector   String @unique
-  domain     String @unique
-  publicKey  String
-  privateKey String
+  selector       String    @unique
+  domain         String    @unique
+  publicKey      String
+  privateKey     String
+  lastVerifiedAt DateTime?
 
   organisationId String
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
@@ -1204,4 +1237,16 @@ model UserCredits {
   @@index([organisationId])
   @@index([organisationId, isActive])
   @@index([isActive])
+}
+
+model RateLimit {
+  key    String
+  action String
+  bucket DateTime
+  count  Int      @default(1)
+
+  createdAt DateTime @default(now())
+
+  @@id([key, action, bucket])
+  @@index([createdAt])
 }

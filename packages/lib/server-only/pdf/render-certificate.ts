@@ -9,7 +9,6 @@ import { DateTime } from 'luxon';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Canvas } from 'skia-canvas';
-import { FontLibrary } from 'skia-canvas';
 import { Image as SkiaImage } from 'skia-canvas';
 import { UAParser } from 'ua-parser-js';
 import { renderSVG } from 'uqr';
@@ -22,6 +21,7 @@ import {
 } from '../../constants/recipient-roles';
 import type { TDocumentAuditLogBaseSchema } from '../../types/document-audit-logs';
 import { svgToPng } from '../../utils/images/svg-to-png';
+import { ensureFontLibrary } from './helpers';
 
 type ColumnWidths = [number, number, number];
 
@@ -49,6 +49,7 @@ export type CertificateRecipient = {
 
 type GenerateCertificateOptions = {
   recipients: CertificateRecipient[];
+  envelopeId: string;
   qrToken: string | null;
   includeQrCodeInCertificate: boolean;
   hidePoweredBy: boolean;
@@ -79,6 +80,7 @@ const getDevice = (userAgent?: string | null): string => {
 const textMutedForegroundLight = '#929DAE';
 const textForeground = '#000';
 const textMutedForeground = '#64748B';
+const textRejectedRed = '#dc2626';
 const textBase = 10;
 const textSm = 9;
 const textXs = 8;
@@ -88,7 +90,7 @@ const columnWidthPercentages = [30, 30, 40];
 const rowPadding = 12;
 const tableHeaderHeight = 38;
 const pageTopMargin = 72;
-const pageBottomMargin = 12;
+const pageBottomMargin = 24;
 const contentMaxWidth = 768;
 
 const titleFontSize = 18;
@@ -98,6 +100,8 @@ type RenderLabelAndTextOptions = {
   text: string;
   width: number;
   y?: number;
+  labelFill?: string;
+  valueFill?: string;
 };
 
 const renderLabelAndText = (options: RenderLabelAndTextOptions) => {
@@ -107,13 +111,16 @@ const renderLabelAndText = (options: RenderLabelAndTextOptions) => {
     y,
   });
 
+  const labelFill = options.labelFill ?? textMutedForeground;
+  const valueFill = options.valueFill ?? textMutedForeground;
+
   const label = new Konva.Text({
     x: 0,
     y: 0,
     text: `${options.label}: `,
     fontStyle: fontMedium,
     fontFamily: 'Inter',
-    fill: textMutedForeground,
+    fill: labelFill,
     fontSize: textSm,
   });
 
@@ -125,7 +132,7 @@ const renderLabelAndText = (options: RenderLabelAndTextOptions) => {
     width: width - label.width(),
     fontFamily: 'Inter',
     text: options.text,
-    fill: textMutedForeground,
+    fill: valueFill,
     wrap: 'char',
     fontSize: textSm,
   });
@@ -270,6 +277,8 @@ const renderColumnTwo = (options: RenderColumnOptions) => {
 
   const columnWidth = width - columnPadding;
 
+  const isRejected = Boolean(recipient.logs.rejected);
+
   if (recipient.signatureField?.secondaryId) {
     // Signature container with primary color border
     const signatureContainer = new Konva.Group({ x: 0, y: 0 });
@@ -314,7 +323,10 @@ const renderColumnTwo = (options: RenderColumnOptions) => {
       signatureContainer.add(typedSig);
     }
 
-    column.add(signatureContainer);
+    // Do not add the signature container for rejected recipients.
+    if (!isRejected) {
+      column.add(signatureContainer);
+    }
 
     const signatureHeight = Math.max(signatureContainer.getClientRect().height, minSignatureHeight);
 
@@ -343,7 +355,7 @@ const renderColumnTwo = (options: RenderColumnOptions) => {
     // Signature ID
     const sigIdLabel = new Konva.Text({
       x: 0,
-      y: signatureHeight + 10,
+      y: isRejected ? 0 : signatureHeight + 10,
       text: `${i18n._(msg`Signature ID`)}:`,
       fill: textMutedForeground,
       width: columnWidth,
@@ -377,9 +389,11 @@ const renderColumnTwo = (options: RenderColumnOptions) => {
     column.add(naText);
   }
 
+  const relevantLog = isRejected ? recipient.logs.rejected : recipient.logs.completed;
+
   const ipLabelAndText = renderLabelAndText({
     label: i18n._(msg`IP Address`),
-    text: recipient.logs.completed?.ipAddress ?? i18n._(msg`Unknown`),
+    text: relevantLog?.ipAddress ?? i18n._(msg`Unknown`),
     width,
     y: column.getClientRect().height + 6,
   });
@@ -387,7 +401,7 @@ const renderColumnTwo = (options: RenderColumnOptions) => {
 
   const deviceLabelAndText = renderLabelAndText({
     label: i18n._(msg`Device`),
-    text: getDevice(recipient.logs.completed?.userAgent),
+    text: getDevice(relevantLog?.userAgent),
     width,
     y: column.getClientRect().height + 6,
   });
@@ -401,7 +415,14 @@ const renderColumnThree = (options: RenderColumnOptions) => {
 
   const column = new Konva.Group();
 
-  const itemsToRender = [
+  type DetailItem = {
+    label: string;
+    value: string;
+    labelFill?: string;
+    valueFill?: string;
+  };
+
+  const itemsToRender: DetailItem[] = [
     {
       label: i18n._(msg`Sent`),
       value: recipient.logs.emailed
@@ -430,6 +451,8 @@ const renderColumnThree = (options: RenderColumnOptions) => {
       value: DateTime.fromJSDate(recipient.logs.rejected.createdAt)
         .setLocale(APP_I18N_OPTIONS.defaultLocale)
         .toFormat('yyyy-MM-dd hh:mm:ss a (ZZZZ)'),
+      labelFill: textRejectedRed,
+      valueFill: textRejectedRed,
     });
   } else {
     itemsToRender.push({
@@ -460,6 +483,8 @@ const renderColumnThree = (options: RenderColumnOptions) => {
       text: item.value,
       width,
       y: column.getClientRect().height + (index === 0 ? 0 : 8),
+      labelFill: item.labelFill,
+      valueFill: item.valueFill,
     });
     column.add(labelAndText);
   }
@@ -715,6 +740,7 @@ const renderTables = (options: RenderTablesOptions) => {
 
 export async function renderCertificate({
   recipients,
+  envelopeId,
   qrToken,
   includeQrCodeInCertificate,
   hidePoweredBy,
@@ -723,13 +749,7 @@ export async function renderCertificate({
   pageWidth,
   pageHeight,
 }: GenerateCertificateOptions) {
-  const fontPath = path.join(process.cwd(), 'public/fonts');
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  FontLibrary.use({
-    ['Caveat']: [path.join(fontPath, 'caveat.ttf')],
-    ['Inter']: [path.join(fontPath, 'inter-variablefont_opsz,wght.ttf')],
-  });
+  ensureFontLibrary();
 
   const minimumMargin = 10;
 
@@ -812,6 +832,16 @@ export async function renderCertificate({
       }
     }
 
+    const footerText = new Konva.Text({
+      x: margin,
+      y: pageHeight - textXs - 10,
+      text: `${i18n._(msg`Envelope ID`)}: ${envelopeId}`,
+      fontFamily: 'Inter',
+      fontSize: textXs,
+      fill: textMutedForegroundLight,
+    });
+    page.add(footerText);
+
     page.add(group);
     stage.add(page);
 
@@ -829,6 +859,16 @@ export async function renderCertificate({
       x: margin,
       y: pageTopMargin / 2, // Less padding since there's nothing else on this page.
     } satisfies Partial<Konva.GroupConfig>);
+
+    const overflowFooterText = new Konva.Text({
+      x: margin,
+      y: pageHeight - textXs - 10,
+      text: `${i18n._(msg`Envelope ID`)}: ${envelopeId}`,
+      fontFamily: 'Inter',
+      fontSize: textXs,
+      fill: textMutedForegroundLight,
+    });
+    page.add(overflowFooterText);
 
     page.add(brandingGroup);
     stage.add(page);

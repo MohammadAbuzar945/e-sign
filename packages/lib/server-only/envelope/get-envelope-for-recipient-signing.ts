@@ -18,6 +18,7 @@ import {
   extractDocumentAuthMethods,
   stripKbaFromAuthJsonWhenPolicyInactive,
 } from '../../utils/document-auth';
+import { isRecipientExpired } from '../../utils/recipients';
 import { isRecipientAuthorized } from '../document/is-recipient-authorized';
 import { getTeamSettings } from '../team/get-team-settings';
 
@@ -61,7 +62,9 @@ export const ZEnvelopeForSigningResponse = z.object({
       email: true,
       name: true,
       documentDeletedAt: true,
-      expired: true,
+      expired: true, //!: deprecated Not in use. To be removed in a future migration.
+      expiresAt: true,
+      expirationNotifiedAt: true,
       signedAt: true,
       authOptions: true,
       signingOrder: true,
@@ -82,6 +85,7 @@ export const ZEnvelopeForSigningResponse = z.object({
       id: true,
       title: true,
       order: true,
+      documentDataId: true,
     }).array(),
 
     team: TeamSchema.pick({
@@ -107,7 +111,8 @@ export const ZEnvelopeForSigningResponse = z.object({
     email: true,
     name: true,
     documentDeletedAt: true,
-    expired: true,
+    expiresAt: true,
+    expirationNotifiedAt: true,
     signedAt: true,
     authOptions: true,
     token: true,
@@ -131,6 +136,7 @@ export const ZEnvelopeForSigningResponse = z.object({
 
   isCompleted: z.boolean(),
   isRejected: z.boolean(),
+  isExpired: z.boolean(),
   isRecipientsTurn: z.boolean(),
 
   sender: z.object({
@@ -336,6 +342,7 @@ export const getEnvelopeForRecipientSigning = async ({
     isRejected:
       recipient.signingStatus === SigningStatus.REJECTED ||
       envelope.status === DocumentStatus.REJECTED,
+    isExpired: isRecipientExpired(recipient),
     sender,
     settings: {
       includeSenderDetails: settings.includeSenderDetails,

@@ -1,16 +1,16 @@
-import type { Recipient } from '@prisma/client';
 import { DocumentStatus } from '@prisma/client';
 
 import { useLingui } from '@lingui/react';
 
 import { getRecipientType } from '@documenso/lib/client-only/recipient-type';
 import { RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-roles';
+import type { TRecipientLite } from '@documenso/lib/types/recipient';
 import { recipientAbbreviation } from '@documenso/lib/utils/recipient-formatter';
 
 import { StackAvatar } from './stack-avatar';
 
 export type AvatarWithRecipientProps = {
-  recipient: Recipient;
+  recipient: TRecipientLite;
   documentStatus: DocumentStatus;
 };
 

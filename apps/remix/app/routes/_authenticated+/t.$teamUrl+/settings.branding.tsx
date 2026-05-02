@@ -1,3 +1,4 @@
+import { msg } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { Loader } from 'lucide-react';
 
@@ -16,7 +17,7 @@ import { useCurrentTeam } from '~/providers/team';
 import { appMetaTags } from '~/utils/meta';
 
 export function meta() {
-  return appMetaTags('Branding Preferences');
+  return appMetaTags(msg`Branding Preferences`);
 }
 
 export default function TeamsSettingsPage() {
@@ -36,12 +37,13 @@ export default function TeamsSettingsPage() {
     try {
       const { brandingEnabled, brandingLogo, brandingUrl, brandingCompanyDetails } = data;
 
-      let uploadedBrandingLogo = teamWithSettings?.teamSettings?.brandingLogo;
+      let uploadedBrandingLogo: string | undefined = undefined;
 
       if (brandingLogo) {
         uploadedBrandingLogo = JSON.stringify(await putFile(brandingLogo));
       }
 
+      // Empty the branding logo if the user unsets it.
       if (brandingLogo === null) {
         uploadedBrandingLogo = '';
       }
@@ -50,7 +52,7 @@ export default function TeamsSettingsPage() {
         teamId: team.id,
         data: {
           brandingEnabled,
-          brandingLogo: uploadedBrandingLogo || null,
+          brandingLogo: uploadedBrandingLogo,
           brandingUrl: brandingUrl || null,
           brandingCompanyDetails: brandingCompanyDetails || null,
         },
@@ -72,7 +74,7 @@ export default function TeamsSettingsPage() {
   if (isLoadingTeam || !teamWithSettings) {
     return (
       <div className="flex items-center justify-center rounded-lg py-32">
-        <Loader className="text-muted-foreground h-6 w-6 animate-spin" />
+        <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }

@@ -42,3 +42,20 @@ export const deletedAccountServiceAccount = async () => {
 
   return serviceAccount;
 };
+
+export const migrateDeletedAccountServiceAccount = async () => {
+  if (deletedServiceAccountEmail() !== LEGACY_DELETED_ACCOUNT_EMAIL) {
+    console.log(
+      `Migrating deleted account service account to new email: ${deletedServiceAccountEmail()}`,
+    );
+
+    await prisma.user.updateMany({
+      where: {
+        email: LEGACY_DELETED_ACCOUNT_EMAIL,
+      },
+      data: {
+        email: deletedServiceAccountEmail(),
+      },
+    });
+  }
+};

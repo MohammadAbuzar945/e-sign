@@ -9,6 +9,7 @@ import { validateTextField } from '@documenso/lib/advanced-fields-validation/val
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import {
   FIELD_META_DEFAULT_VALUES,
+  FIELD_META_DEFAULT_VALUES,
   type TFieldMetaSchema as FieldMeta,
   ZCheckboxFieldMeta,
   ZDropdownFieldMeta,
@@ -140,9 +141,9 @@ export const setFieldsForDocument = async ({
   const preparedFields = linkedFields.map((field) => {
     const fieldSignerEmail = field._recipient.email.toLowerCase();
 
-    const parsedFieldMeta = field.fieldMeta
-      ? ZFieldMetaSchema.parse(field.fieldMeta)
-      : FIELD_META_DEFAULT_VALUES[field.type];
+        const parsedFieldMeta = field.fieldMeta
+          ? ZFieldMetaSchema.parse(field.fieldMeta)
+          : FIELD_META_DEFAULT_VALUES[field.type];
 
     // Meta parsing/validation is CPU-only; keep it out of the interactive transaction
     // to avoid Prisma's 10s timeout.

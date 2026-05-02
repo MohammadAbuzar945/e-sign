@@ -217,6 +217,11 @@ export const generateDefaultTeamSettings = (): Omit<TeamGlobalSettings, 'id' | '
     // emailReplyToName: null,
 
     defaultRecipients: null,
+
+    envelopeExpirationPeriod: null,
+
+    reminderSettings: null,
+
     aiFeaturesEnabled: null,
     kbaSettings: null,
   };

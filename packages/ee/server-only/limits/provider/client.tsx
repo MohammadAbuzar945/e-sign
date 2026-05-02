@@ -22,6 +22,12 @@ export const useLimits = () => {
 
 export type LimitsProviderProps = {
   initialValue?: TLimitsResponseSchema;
+
+  /**
+   * Bypass limits for embed authoring. This is just client side bypass since
+   * all embeds should be paid plans.
+   */
+  disableLimitsFetch?: boolean;
   teamId: number;
   children?: React.ReactNode;
 };
@@ -32,14 +38,18 @@ export const LimitsProvider = ({
     remaining: FREE_PLAN_LIMITS,
     maximumEnvelopeItemCount: DEFAULT_MINIMUM_ENVELOPE_ITEM_COUNT,
   },
+  disableLimitsFetch,
   teamId,
   children,
 }: LimitsProviderProps) => {
   const [limits, setLimits] = useState(() => initialValue);
 
   const refreshLimits = useCallback(async () => {
-    try {
-      const newLimits = await getLimits({ teamId });
+    if (disableLimitsFetch) {
+      return;
+    }
+
+    const newLimits = await getLimits({ teamId });
 
       setLimits((oldLimits) => {
         if (isDeepEqual(oldLimits, newLimits)) {
@@ -60,6 +70,10 @@ export const LimitsProvider = ({
   }, [refreshLimits]);
 
   useEffect(() => {
+    if (disableLimitsFetch) {
+      return;
+    }
+
     const onFocus = () => {
       void refreshLimits();
     };

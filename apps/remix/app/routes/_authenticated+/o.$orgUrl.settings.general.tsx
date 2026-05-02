@@ -14,7 +14,7 @@ import { SettingsHeader } from '~/components/general/settings-header';
 import { appMetaTags } from '~/utils/meta';
 
 export function meta() {
-  return appMetaTags('Settings');
+  return appMetaTags(msg`Settings`);
 }
 
 export default function OrganisationSettingsGeneral() {

@@ -1,7 +1,5 @@
 import { findDocuments } from '@documenso/lib/server-only/document/find-documents';
-import type { GetStatsInput } from '@documenso/lib/server-only/document/get-stats';
 import { getStats } from '@documenso/lib/server-only/document/get-stats';
-import { getTeamById } from '@documenso/lib/server-only/team/get-team';
 import { mapEnvelopesToDocumentMany } from '@documenso/lib/utils/document';
 import { ExtendedDocumentStatus } from '@documenso/prisma/types/extended-document-status';
 
@@ -73,14 +71,7 @@ export const findDocumentsInternalRoute = authenticatedProcedure
         teamId: team.id,
         teamEmail: team.teamEmail?.email,
         senderIds,
-        currentTeamMemberRole: team.currentTeamRole,
-        currentUserEmail: user.email,
-        userId: user.id,
-      };
-    }
-
-    const [stats, documents] = await Promise.all([
-      getStats(getStatOptions),
+      }),
       findDocuments({
         userId: user.id,
         teamId,

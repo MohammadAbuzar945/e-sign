@@ -317,7 +317,7 @@ export const createEnvelopeFields = async ({
       continue;
     }
 
-    const newDocumentData = await putPdfFileServerSide({
+    const { documentData: newDocumentData } = await putPdfFileServerSide({
       name: 'document.pdf',
       type: 'application/pdf',
       arrayBuffer: async () => Promise.resolve(Buffer.from(modifiedPdfBytes)),

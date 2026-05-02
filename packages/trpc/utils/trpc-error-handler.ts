@@ -26,6 +26,7 @@ export const handleTrpcRouterError = (
   const errorLogger = (ctx?.logger || logger).child({
     status: 'error',
     appError: AppError.toJSON(appError),
+    path,
   });
 
   // Only fully log the error on certain conditions since some errors are expected.

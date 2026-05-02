@@ -23,7 +23,7 @@ import { GenericErrorLayout } from '~/components/general/generic-error-layout';
 import { appMetaTags } from '~/utils/meta';
 
 export function meta() {
-  return appMetaTags('Organisation Settings');
+  return appMetaTags(msg`Organisation Settings`);
 }
 
 export default function SettingsLayout() {

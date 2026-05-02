@@ -2,8 +2,11 @@ import { syncMemberCountWithStripeSeatPlan } from '@documenso/ee/server-only/str
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
-import { validateIfSubscriptionIsRequired } from '@documenso/lib/utils/billing';
-import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
+import { getMemberOrganisationRole } from '@documenso/lib/server-only/team/get-member-roles';
+import {
+  buildOrganisationWhereQuery,
+  isOrganisationRoleWithinUserHierarchy,
+} from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
 
 import { authenticatedProcedure } from '../trpc';
@@ -52,6 +55,41 @@ export const deleteOrganisationMemberInvitesRoute = authenticatedProcedure
       throw new AppError(AppErrorCode.NOT_FOUND);
     }
 
+    const currentOrganisationMemberRole = await getMemberOrganisationRole({
+      organisationId: organisation.id,
+      reference: {
+        type: 'User',
+        id: userId,
+      },
+    });
+
+    const invitesToDelete = await prisma.organisationMemberInvite.findMany({
+      where: {
+        id: {
+          in: invitationIds,
+        },
+        organisationId: organisation.id,
+      },
+      select: {
+        id: true,
+        organisationRole: true,
+      },
+    });
+
+    const hasUnauthorizedRoleAccess = invitesToDelete.some(
+      (invite) =>
+        !isOrganisationRoleWithinUserHierarchy(
+          currentOrganisationMemberRole,
+          invite.organisationRole,
+        ),
+    );
+
+    if (hasUnauthorizedRoleAccess) {
+      throw new AppError(AppErrorCode.UNAUTHORIZED, {
+        message: 'User does not have permission to delete invitations for higher roles',
+      });
+    }
+
     const { organisationClaim } = organisation;
 
     const currentSubscription = await getCurrentSubscriptionByOrganisationId({
@@ -64,9 +102,11 @@ export const deleteOrganisationMemberInvitesRoute = authenticatedProcedure
     const numberOfCurrentInvites = organisation.invites.length;
     const totalMemberCountWithInvites = numberOfCurrentMembers + numberOfCurrentInvites - 1;
 
-    if (subscription) {
+    // Removing pending invites is a reducing operation, so we don't gate it on
+    // the subscription being present. Sync Stripe only when one exists.
+    if (organisation.subscription) {
       await syncMemberCountWithStripeSeatPlan(
-        subscription,
+        organisation.subscription,
         organisationClaim,
         totalMemberCountWithInvites,
       );

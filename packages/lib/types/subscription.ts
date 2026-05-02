@@ -29,9 +29,13 @@ export const ZClaimFlagsSchema = z.object({
 
   cfr21: z.boolean().optional(),
 
+  hipaa: z.boolean().optional(),
+
   authenticationPortal: z.boolean().optional(),
 
   allowLegacyEnvelopes: z.boolean().optional(),
+
+  signingReminders: z.boolean().optional(),
 });
 
 export type TClaimFlags = z.infer<typeof ZClaimFlagsSchema>;
@@ -85,6 +89,11 @@ export const SUBSCRIPTION_CLAIM_FEATURE_FLAGS: Record<
     label: '21 CFR',
     isEnterprise: true,
   },
+  hipaa: {
+    key: 'hipaa',
+    label: 'HIPAA',
+    isEnterprise: true,
+  },
   authenticationPortal: {
     key: 'authenticationPortal',
     label: 'Authentication portal',
@@ -93,6 +102,10 @@ export const SUBSCRIPTION_CLAIM_FEATURE_FLAGS: Record<
   allowLegacyEnvelopes: {
     key: 'allowLegacyEnvelopes',
     label: 'Allow Legacy Envelopes',
+  },
+  signingReminders: {
+    key: 'signingReminders',
+    label: 'Signing reminders',
   },
 };
 
@@ -132,6 +145,7 @@ export const internalClaims: InternalClaims = {
     locked: true,
     flags: {
       unlimitedDocuments: true,
+      signingReminders: true,
     },
   },
   [INTERNAL_CLAIM_ID.TEAM]: {
@@ -145,6 +159,7 @@ export const internalClaims: InternalClaims = {
       unlimitedDocuments: true,
       allowCustomBranding: true,
       embedSigning: true,
+      signingReminders: true,
     },
   },
   [INTERNAL_CLAIM_ID.PLATFORM]: {
@@ -163,6 +178,7 @@ export const internalClaims: InternalClaims = {
       embedAuthoringWhiteLabel: true,
       embedSigning: false,
       embedSigningWhiteLabel: true,
+      signingReminders: true,
     },
   },
   [INTERNAL_CLAIM_ID.ENTERPRISE]: {
@@ -183,6 +199,7 @@ export const internalClaims: InternalClaims = {
       embedSigningWhiteLabel: true,
       cfr21: true,
       authenticationPortal: true,
+      signingReminders: true,
     },
   },
   [INTERNAL_CLAIM_ID.EARLY_ADOPTER]: {
@@ -198,6 +215,7 @@ export const internalClaims: InternalClaims = {
       hidePoweredBy: true,
       embedSigning: true,
       embedSigningWhiteLabel: true,
+      signingReminders: true,
     },
   },
 } as const;

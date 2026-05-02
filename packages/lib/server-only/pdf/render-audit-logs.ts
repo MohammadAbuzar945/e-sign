@@ -9,7 +9,6 @@ import { DateTime } from 'luxon';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Canvas } from 'skia-canvas';
-import { FontLibrary } from 'skia-canvas';
 import { Image as SkiaImage } from 'skia-canvas';
 import { match } from 'ts-pattern';
 import { P } from 'ts-pattern';
@@ -21,6 +20,7 @@ import { RECIPIENT_ROLES_DESCRIPTION } from '../../constants/recipient-roles';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '../../types/document-audit-logs';
 import type { TDocumentAuditLog } from '../../types/document-audit-logs';
 import { formatDocumentAuditLogAction } from '../../utils/document-audit-logs';
+import { ensureFontLibrary } from './helpers';
 
 export type AuditLogRecipient = {
   id: number;
@@ -30,7 +30,7 @@ export type AuditLogRecipient = {
 };
 
 type GenerateAuditLogsOptions = {
-  envelope: Envelope & {
+  envelope: Omit<Envelope, 'completedAt'> & {
     documentMeta: DocumentMeta;
   };
   envelopeItems: string[];
@@ -57,7 +57,7 @@ const textXs = 8;
 const fontMedium = '500';
 
 const pageTopMargin = 60;
-const pageBottomMargin = 15;
+const pageBottomMargin = 27;
 const contentMaxWidth = 768;
 const rowPadding = 10;
 const titleFontSize = 18;
@@ -168,7 +168,7 @@ const renderVerticalLabelAndText = (options: RenderVerticalLabelAndTextOptions) 
 };
 
 type RenderOverviewCardOptions = {
-  envelope: Envelope & {
+  envelope: Omit<Envelope, 'completedAt'> & {
     documentMeta: DocumentMeta;
   };
   envelopeItems: string[];
@@ -575,13 +575,7 @@ export async function renderAuditLogs({
   i18n,
   hidePoweredBy,
 }: GenerateAuditLogsOptions) {
-  const fontPath = path.join(process.cwd(), 'public/fonts');
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  FontLibrary.use({
-    ['Caveat']: [path.join(fontPath, 'caveat.ttf')],
-    ['Inter']: [path.join(fontPath, 'inter-variablefont_opsz,wght.ttf')],
-  });
+  ensureFontLibrary();
 
   const minimumMargin = 10;
 
@@ -601,7 +595,7 @@ export async function renderAuditLogs({
 
   const groupedRows = groupRowsIntoPages({
     auditLogs,
-    maxHeight: pageHeight,
+    maxHeight: pageHeight - pageBottomMargin,
     contentWidth,
     i18n,
     overviewCard,
@@ -627,6 +621,16 @@ export async function renderAuditLogs({
   for (const [index, pageGroup] of pageGroups.entries()) {
     stage.destroyChildren();
     const page = new Konva.Layer();
+
+    const footerText = new Konva.Text({
+      x: margin,
+      y: pageHeight - textXs - 10,
+      text: `${i18n._(msg`Envelope ID`)}: ${envelope.id}`,
+      fontFamily: 'Inter',
+      fontSize: textXs,
+      fill: textMutedForegroundLight,
+    });
+    page.add(footerText);
 
     page.add(pageGroup);
 
@@ -662,6 +666,16 @@ export async function renderAuditLogs({
       x: pageWidth - brandingRect.width - margin,
       y: pageTopMargin,
     } satisfies Partial<Konva.GroupConfig>);
+
+    const overflowFooterText = new Konva.Text({
+      x: margin,
+      y: pageHeight - textXs - 10,
+      text: `${i18n._(msg`Envelope ID`)}: ${envelope.id}`,
+      fontFamily: 'Inter',
+      fontSize: textXs,
+      fill: textMutedForegroundLight,
+    });
+    page.add(overflowFooterText);
 
     page.add(brandingGroup);
     stage.add(page);

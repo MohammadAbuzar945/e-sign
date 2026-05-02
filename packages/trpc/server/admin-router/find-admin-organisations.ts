@@ -130,14 +130,16 @@ export const findAdminOrganisations = async ({
       ? excludeHiddenOwnerFilter
       : { AND: [excludeHiddenOwnerFilter, whereClause] };
 
+  const orderBy: Prisma.OrganisationOrderByWithRelationInput[] = query
+    ? [{ subscription: { status: 'asc' } }, { name: 'asc' }]
+    : [{ createdAt: 'desc' }];
+
   const [data, count] = await Promise.all([
     prisma.organisation.findMany({
       where: whereClause,
       skip: Math.max(page - 1, 0) * perPage,
       take: perPage,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy,
       select: {
         id: true,
         createdAt: true,

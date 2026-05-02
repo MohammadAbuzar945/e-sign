@@ -25,6 +25,7 @@ import {
 } from '../../types/field-meta';
 import type { RequestMetadata } from '../../universal/extract-request-metadata';
 import { createDocumentAuditLogData } from '../../utils/document-audit-logs';
+import { assertRecipientNotExpired } from '../../utils/recipients';
 import { validateFieldAuth } from '../document/validate-field-auth';
 
 export type SignFieldWithTokenOptions = {
@@ -77,6 +78,7 @@ export const signFieldWithToken = async ({
               signingOrder: {
                 gte: recipient.signingOrder ?? 0,
               },
+              envelopeId: recipient.envelopeId,
             }),
       },
     },
@@ -107,6 +109,8 @@ export const signFieldWithToken = async ({
   if (envelope.status !== DocumentStatus.PENDING) {
     throw new Error(`Document ${envelope.id} must be pending for signing`);
   }
+
+  assertRecipientNotExpired(recipient);
 
   if (
     recipient.signingStatus === SigningStatus.SIGNED ||
