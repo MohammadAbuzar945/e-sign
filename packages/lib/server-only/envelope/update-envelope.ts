@@ -16,6 +16,7 @@ import type {
   TDocumentActionAuthTypes,
 } from '../../types/document-auth';
 import { ZDocumentAuthOptionsSchema } from '../../types/document-auth';
+import { ZClaimFlagsSchema } from '../../types/subscription';
 import { createDocumentAuthOptions, extractDocumentAuthMethods } from '../../utils/document-auth';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { buildTeamWhereQuery, canAccessTeamDocument } from '../../utils/teams';
@@ -130,7 +131,13 @@ export const updateEnvelope = async ({
       : Boolean(existingAuthOptions.kbaAccessExplicitlyDisabled);
 
   // Check if user has permission to set the global action auth.
-  if (newGlobalActionAuth.length > 0 && !envelope.team.organisation.organisationClaim.flags.cfr21) {
+  const organisationClaimFlags = ZClaimFlagsSchema.safeParse(
+    envelope.team.organisation.organisationClaim.flags,
+  );
+  const hasCfr21 =
+    organisationClaimFlags.success && Boolean(organisationClaimFlags.data.cfr21);
+
+  if (newGlobalActionAuth.length > 0 && !hasCfr21) {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {
       message: 'You do not have permission to set the action auth',
     });
