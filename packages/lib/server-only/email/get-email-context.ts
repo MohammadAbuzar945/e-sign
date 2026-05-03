@@ -17,6 +17,7 @@ import {
 
 import { DOCUMENSO_INTERNAL_EMAIL } from '../../constants/email';
 import { AppError, AppErrorCode } from '../../errors/app-error';
+import { ZClaimFlagsSchema } from '../../types/subscription';
 import {
   organisationGlobalSettingsToBranding,
   teamGlobalSettingsToBranding,
@@ -167,7 +168,7 @@ const handleOrganisationEmailContext = async (organisationId: string) => {
     branding: organisationGlobalSettingsToBranding(
       organisation.organisationGlobalSettings,
       organisation.id,
-      claims.flags?.hidePoweredBy ?? false,
+      parseClaimFlags(claims.flags)?.hidePoweredBy ?? false,
     ),
     settings: organisation.organisationGlobalSettings,
     claims,
@@ -218,12 +219,17 @@ const handleTeamEmailContext = async (teamId: number) => {
     branding: teamGlobalSettingsToBranding(
       teamSettings,
       teamId,
-      claims.flags?.hidePoweredBy ?? false,
+      parseClaimFlags(claims.flags)?.hidePoweredBy ?? false,
     ),
     settings: teamSettings,
     claims,
     organisationType: organisation.type,
   };
+};
+
+const parseClaimFlags = (flags: OrganisationClaim['flags']) => {
+  const parsed = ZClaimFlagsSchema.safeParse(flags);
+  return parsed.success ? parsed.data : null;
 };
 
 const getAllowedEmails = (
@@ -232,7 +238,7 @@ const getAllowedEmails = (
     organisationClaim: OrganisationClaim;
   },
 ) => {
-  if (!organisation.organisationClaim.flags.emailDomains) {
+  if (!parseClaimFlags(organisation.organisationClaim.flags)?.emailDomains) {
     return [];
   }
 
