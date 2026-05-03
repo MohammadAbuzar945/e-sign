@@ -167,7 +167,7 @@ const handleOrganisationEmailContext = async (organisationId: string) => {
     branding: organisationGlobalSettingsToBranding(
       organisation.organisationGlobalSettings,
       organisation.id,
-      claims.flags.hidePoweredBy ?? false,
+      claims.flags?.hidePoweredBy ?? false,
     ),
     settings: organisation.organisationGlobalSettings,
     claims,
@@ -218,7 +218,7 @@ const handleTeamEmailContext = async (teamId: number) => {
     branding: teamGlobalSettingsToBranding(
       teamSettings,
       teamId,
-      claims.flags.hidePoweredBy ?? false,
+      claims.flags?.hidePoweredBy ?? false,
     ),
     settings: teamSettings,
     claims,
