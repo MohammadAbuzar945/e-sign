@@ -12,9 +12,11 @@ export enum AppErrorCode {
   'RECIPIENT_EXPIRED' = 'RECIPIENT_EXPIRED',
   'LIMIT_EXCEEDED' = 'LIMIT_EXCEEDED',
   'NOT_FOUND' = 'NOT_FOUND',
+  'NOT_IMPLEMENTED' = 'NOT_IMPLEMENTED',
   'NOT_SETUP' = 'NOT_SETUP',
   'INVALID_CAPTCHA' = 'INVALID_CAPTCHA',
   'UNAUTHORIZED' = 'UNAUTHORIZED',
+  'FORBIDDEN' = 'FORBIDDEN',
   'UNKNOWN_ERROR' = 'UNKNOWN_ERROR',
   'RETRY_EXCEPTION' = 'RETRY_EXCEPTION',
   'SCHEMA_FAILED' = 'SCHEMA_FAILED',
@@ -23,6 +25,10 @@ export enum AppErrorCode {
   'KBA_AUTH_FAILED' = 'KBA_AUTH_FAILED',
   'KBA_AUTH_LOCKED' = 'KBA_AUTH_LOCKED',
   'WEBHOOK_INVALID_REQUEST' = 'WEBHOOK_INVALID_REQUEST',
+  'ENVELOPE_DRAFT' = 'ENVELOPE_DRAFT',
+  'ENVELOPE_COMPLETED' = 'ENVELOPE_COMPLETED',
+  'ENVELOPE_REJECTED' = 'ENVELOPE_REJECTED',
+  'ENVELOPE_LEGACY' = 'ENVELOPE_LEGACY',
 }
 
 export const genericErrorCodeToTrpcErrorCodeMap: Record<string, { code: string; status: number }> =
@@ -34,13 +40,19 @@ export const genericErrorCodeToTrpcErrorCodeMap: Record<string, { code: string; 
     [AppErrorCode.INVALID_REQUEST]: { code: 'BAD_REQUEST', status: 400 },
     [AppErrorCode.INVALID_CAPTCHA]: { code: 'BAD_REQUEST', status: 400 },
     [AppErrorCode.NOT_FOUND]: { code: 'NOT_FOUND', status: 404 },
+    [AppErrorCode.NOT_IMPLEMENTED]: { code: 'INTERNAL_SERVER_ERROR', status: 501 },
     [AppErrorCode.NOT_SETUP]: { code: 'BAD_REQUEST', status: 400 },
     [AppErrorCode.UNAUTHORIZED]: { code: 'UNAUTHORIZED', status: 401 },
+    [AppErrorCode.FORBIDDEN]: { code: 'FORBIDDEN', status: 403 },
     [AppErrorCode.UNKNOWN_ERROR]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
     [AppErrorCode.RETRY_EXCEPTION]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
     [AppErrorCode.SCHEMA_FAILED]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
     [AppErrorCode.TOO_MANY_REQUESTS]: { code: 'TOO_MANY_REQUESTS', status: 429 },
     [AppErrorCode.TWO_FACTOR_AUTH_FAILED]: { code: 'UNAUTHORIZED', status: 401 },
+    [AppErrorCode.ENVELOPE_DRAFT]: { code: 'BAD_REQUEST', status: 400 },
+    [AppErrorCode.ENVELOPE_COMPLETED]: { code: 'BAD_REQUEST', status: 400 },
+    [AppErrorCode.ENVELOPE_REJECTED]: { code: 'BAD_REQUEST', status: 400 },
+    [AppErrorCode.ENVELOPE_LEGACY]: { code: 'BAD_REQUEST', status: 400 },
     [AppErrorCode.KBA_AUTH_FAILED]: { code: 'UNAUTHORIZED', status: 401 },
     [AppErrorCode.KBA_AUTH_LOCKED]: { code: 'UNAUTHORIZED', status: 401 },
   };
@@ -220,15 +232,25 @@ export class AppError extends Error {
   }
 
   static toRestAPIError(err: unknown): {
-    status: 400 | 401 | 404 | 500;
+    status: 400 | 401 | 403 | 404 | 500 | 501;
     body: { message: string };
   } {
     const error = AppError.parseError(err);
 
     const status = match(error.code)
-      .with(AppErrorCode.INVALID_BODY, AppErrorCode.INVALID_REQUEST, () => 400 as const)
+      .with(
+        AppErrorCode.INVALID_BODY,
+        AppErrorCode.INVALID_REQUEST,
+        AppErrorCode.ENVELOPE_DRAFT,
+        AppErrorCode.ENVELOPE_COMPLETED,
+        AppErrorCode.ENVELOPE_REJECTED,
+        AppErrorCode.ENVELOPE_LEGACY,
+        () => 400 as const,
+      )
       .with(AppErrorCode.UNAUTHORIZED, () => 401 as const)
+      .with(AppErrorCode.FORBIDDEN, () => 403 as const)
       .with(AppErrorCode.NOT_FOUND, () => 404 as const)
+      .with(AppErrorCode.NOT_IMPLEMENTED, () => 501 as const)
       .otherwise(() => 500 as const);
 
     return {

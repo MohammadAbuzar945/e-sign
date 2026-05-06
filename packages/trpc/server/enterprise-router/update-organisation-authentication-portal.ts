@@ -64,6 +64,7 @@ export const updateOrganisationAuthenticationPortalRoute = authenticatedProcedur
       wellKnownUrl,
       autoProvisionUsers,
       allowedDomains,
+      allowPersonalOrganisations,
     } = data;
 
     if (
@@ -107,6 +108,7 @@ export const updateOrganisationAuthenticationPortalRoute = authenticatedProcedur
         wellKnownUrl,
         autoProvisionUsers,
         allowedDomains,
+        allowPersonalOrganisations,
       },
     });
   });
