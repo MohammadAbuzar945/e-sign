@@ -251,6 +251,8 @@ export const run = async ({
 
     const needsCertificate = settings.includeSigningCertificate;
     const needsAuditLog = settings.includeAuditLog;
+    const includeQrCodeInCertificate =
+      envelope.includeQrCodeInCertificate ?? settings.includeQrCodeInCertificate ?? true;
 
     const newDocumentData: Array<{ oldDocumentDataId: string; newDocumentDataId: string }> = [];
 
@@ -266,7 +268,7 @@ export const run = async ({
       let certificateDoc: PDF | null = null;
       let auditLogDoc: PDF | null = null;
 
-      if (needsCertificate || needsAuditLog) {
+      if ((needsCertificate || needsAuditLog) && !isRejected && !isResealing) {
         const pdfDoc = await PDF.load(pdfData);
 
         const { width: pageWidth, height: pageHeight } = getLastPageDimensions(pdfDoc);
@@ -288,6 +290,7 @@ export const run = async ({
           recipients: envelope.recipients,
           fields,
           language: envelope.documentMeta.language,
+          includeQrCodeInCertificate,
           envelopeOwner: {
             email: envelope.user.email,
             name: envelope.user.name || '',

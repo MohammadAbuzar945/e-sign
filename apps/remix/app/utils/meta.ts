@@ -6,10 +6,11 @@ import { env } from '@documenso/lib/utils/env';
 export const appMetaTags = (title?: MessageDescriptor) => {
   const description =
     'An intuitive, affordable app with pay-as-you-go pricing bundles and unlimited seats. Premium e-sign without the premium price tag. Fully AATL compliant.';
+  const translatedTitle = title ? i18n._(title) : null;
 
   return [
     {
-      title: title ? `${title} - Nomia Signatures` : 'Nomia Signatures',
+      title: translatedTitle ? `${translatedTitle} - Nomia Signatures` : 'Nomia Signatures',
     },
     {
       name: 'description',
