@@ -27,7 +27,7 @@ export const triggerTestWebhook = async ({
     throw new Error(`Webhook does not support event: ${event}`);
   }
 
-  const samplePayload = generateSampleWebhookPayload(event, webhook.webhookUrl);
+  const samplePayload = generateSampleWebhookPayload(event);
 
   try {
     await triggerWebhook({
