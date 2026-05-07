@@ -95,13 +95,19 @@ export const generateSampleWebhookPayload = (
     ],
   };
 
+  const stripLegacyRecipient = <TPayload extends { Recipient?: unknown }>(payload: TPayload) => {
+    const { Recipient: _legacyRecipient, ...sanitizedPayload } = payload;
+
+    return sanitizedPayload;
+  };
+
   if (event === WebhookTriggerEvents.DOCUMENT_CREATED) {
     return {
       event,
-      payload: {
+      payload: stripLegacyRecipient({
         ...basePayload,
         status: DocumentStatus.DRAFT,
-      },
+      }),
       createdAt: now.toISOString(),
       webhookEndpoint: webhookUrl,
     };
@@ -110,7 +116,7 @@ export const generateSampleWebhookPayload = (
   if (event === WebhookTriggerEvents.DOCUMENT_SENT) {
     return {
       event,
-      payload: {
+      payload: stripLegacyRecipient({
         ...basePayload,
         status: DocumentStatus.PENDING,
         recipients: [
@@ -148,7 +154,7 @@ export const generateSampleWebhookPayload = (
             signingStatus: SigningStatus.NOT_SIGNED,
           },
         ],
-      },
+      }),
       createdAt: now.toISOString(),
       webhookEndpoint: webhookUrl,
     };
@@ -157,7 +163,7 @@ export const generateSampleWebhookPayload = (
   if (event === WebhookTriggerEvents.DOCUMENT_OPENED) {
     return {
       event,
-      payload: {
+      payload: stripLegacyRecipient({
         ...basePayload,
         status: DocumentStatus.PENDING,
         recipients: [
@@ -194,7 +200,7 @@ export const generateSampleWebhookPayload = (
             signingStatus: SigningStatus.NOT_SIGNED,
           },
         ],
-      },
+      }),
       createdAt: now.toISOString(),
       webhookEndpoint: webhookUrl,
     };
@@ -203,7 +209,7 @@ export const generateSampleWebhookPayload = (
   if (event === WebhookTriggerEvents.DOCUMENT_SIGNED) {
     return {
       event,
-      payload: {
+      payload: stripLegacyRecipient({
         ...basePayload,
         status: DocumentStatus.COMPLETED,
         completedAt: now,
@@ -250,7 +256,7 @@ export const generateSampleWebhookPayload = (
             rejectionReason: null,
           },
         ],
-      },
+      }),
       createdAt: now.toISOString(),
       webhookEndpoint: webhookUrl,
     };
@@ -259,7 +265,7 @@ export const generateSampleWebhookPayload = (
   if (event === WebhookTriggerEvents.DOCUMENT_COMPLETED) {
     return {
       event,
-      payload: {
+      payload: stripLegacyRecipient({
         ...basePayload,
         status: DocumentStatus.COMPLETED,
         completedAt: now,
@@ -351,7 +357,7 @@ export const generateSampleWebhookPayload = (
             sendStatus: SendStatus.SENT,
           },
         ],
-      },
+      }),
       createdAt: now.toISOString(),
       webhookEndpoint: webhookUrl,
     };
@@ -360,7 +366,7 @@ export const generateSampleWebhookPayload = (
   if (event === WebhookTriggerEvents.DOCUMENT_REJECTED) {
     return {
       event,
-      payload: {
+      payload: stripLegacyRecipient({
         ...basePayload,
         status: DocumentStatus.PENDING,
         recipients: [
@@ -397,7 +403,7 @@ export const generateSampleWebhookPayload = (
             signingOrder: 1,
           },
         ],
-      },
+      }),
       createdAt: now.toISOString(),
       webhookEndpoint: webhookUrl,
     };
@@ -406,7 +412,7 @@ export const generateSampleWebhookPayload = (
   if (event === WebhookTriggerEvents.DOCUMENT_CANCELLED) {
     return {
       event,
-      payload: {
+      payload: stripLegacyRecipient({
         ...basePayload,
         id: 7,
         externalId: null,
@@ -476,7 +482,7 @@ export const generateSampleWebhookPayload = (
             sendStatus: SendStatus.SENT,
           },
         ],
-      },
+      }),
       createdAt: now.toISOString(),
       webhookEndpoint: webhookUrl,
     };
