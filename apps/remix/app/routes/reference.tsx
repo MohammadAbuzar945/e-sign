@@ -1,9 +1,10 @@
-import { useLoaderData } from 'react-router';
+import { useLoaderData, useRouteLoaderData } from 'react-router';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 
 import { BrandingLogo } from '~/components/general/branding-logo';
 import { appMetaTags } from '~/utils/meta';
+import { nonce } from '~/utils/nonce';
 
 import type { LoaderFunctionArgs } from 'react-router';
 
@@ -112,6 +113,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export default function ReferencePage() {
   const { apiSpec, apiSpecUrl } = useLoaderData<typeof loader>();
+  const rootData = useRouteLoaderData('root') as { nonce?: string } | undefined;
 
   return (
     <div className="h-[calc(100vh-4rem)] overflow-hidden">
@@ -131,7 +133,7 @@ export default function ReferencePage() {
 
         {/* Swagger UI */}
         <div className="flex-1 overflow-auto">
-          <style>{`
+          <style nonce={nonce(rootData?.nonce)}>{`
             .swagger-ui .filter-container {
               display: block !important;
               padding: 10px 0 !important;
