@@ -35,9 +35,7 @@ export const deletedAccountServiceAccount = async () => {
   });
 
   if (!serviceAccount) {
-    throw new Error(
-      'Deleted account service account not found, have you ran the appropriate migrations?',
-    );
+    throw new Error('Deleted account service account not found, have you ran the appropriate migrations?');
   }
 
   return serviceAccount;

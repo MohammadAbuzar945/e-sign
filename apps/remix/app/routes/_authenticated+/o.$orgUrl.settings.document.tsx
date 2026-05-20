@@ -1,8 +1,3 @@
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react/macro';
-import { Loader } from 'lucide-react';
-import { useLoaderData } from 'react-router';
-
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { IS_AI_FEATURES_CONFIGURED } from '@documenso/lib/constants/app';
@@ -11,6 +6,10 @@ import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react/macro';
+import { Loader } from 'lucide-react';
+import { useLoaderData } from 'react-router';
 
 import {
   DocumentPreferencesForm,
@@ -40,13 +39,11 @@ export default function OrganisationSettingsDocumentPage() {
 
   const isPersonalLayoutMode = isPersonalLayout(organisations);
 
-  const { data: organisationWithSettings, isLoading: isLoadingOrganisation } =
-    trpc.organisation.get.useQuery({
-      organisationReference: organisation.url,
-    });
+  const { data: organisationWithSettings, isLoading: isLoadingOrganisation } = trpc.organisation.get.useQuery({
+    organisationReference: organisation.url,
+  });
 
-  const { mutateAsync: updateOrganisationSettings } =
-    trpc.organisation.settings.update.useMutation();
+  const { mutateAsync: updateOrganisationSettings } = trpc.organisation.settings.update.useMutation();
 
   const onDocumentPreferencesFormSubmit = async (data: TDocumentPreferencesFormSchema) => {
     try {

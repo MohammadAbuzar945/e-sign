@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { Popover, PopoverContent } from '@documenso/ui/primitives/popover';
 
 import { Trans } from '@lingui/react/macro';
 import { PopoverAnchor } from '@radix-ui/react-popover';
-
-import { Popover, PopoverContent } from '@documenso/ui/primitives/popover';
+import type React from 'react';
+import { useRef, useState } from 'react';
 
 import { Command, CommandGroup, CommandItem } from '../../primitives/command';
 import { Input } from '../../primitives/input';

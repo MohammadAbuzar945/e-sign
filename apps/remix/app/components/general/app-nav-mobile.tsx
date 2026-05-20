@@ -11,6 +11,10 @@ import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import { Sheet, SheetContent } from '@documenso/ui/primitives/sheet';
 import { ThemeSwitcher } from '@documenso/ui/primitives/theme-switcher';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { ReadStatus } from '@prisma/client';
+import { useMemo } from 'react';
+import { Link } from 'react-router';
 
 import { BrandingLogo } from '~/components/general/branding-logo';
 import { useOptionalCurrentTeam } from '~/providers/team';
@@ -91,13 +95,13 @@ export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps
           {menuNavigationLinks.map(({ href, text }) => (
             <Link
               key={href}
-              className="flex items-center gap-2 text-2xl font-semibold text-foreground hover:text-foreground/80"
+              className="flex items-center gap-2 font-semibold text-2xl text-foreground hover:text-foreground/80"
               to={href}
               onClick={() => handleMenuItemClick()}
             >
               {text}
               {href === '/inbox' && unreadCountData && unreadCountData.count > 0 && (
-                <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
+                <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary px-1.5 font-semibold text-primary-foreground text-xs">
                   {unreadCountData.count > 99 ? '99+' : unreadCountData.count}
                 </span>
               )}
@@ -105,7 +109,7 @@ export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps
           ))}
 
           <button
-            className="text-2xl font-semibold text-foreground hover:text-foreground/80"
+            className="font-semibold text-2xl text-foreground hover:text-foreground/80"
             onClick={async () => authClient.signOut()}
           >
             <Trans>Sign Out</Trans>

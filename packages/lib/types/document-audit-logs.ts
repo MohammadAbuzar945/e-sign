@@ -84,13 +84,7 @@ export const ZDocumentMetaDiffTypeSchema = z.enum([
 ]);
 
 export const ZFieldDiffTypeSchema = z.enum(['DIMENSION', 'POSITION']);
-export const ZRecipientDiffTypeSchema = z.enum([
-  'NAME',
-  'ROLE',
-  'EMAIL',
-  'ACCESS_AUTH',
-  'ACTION_AUTH',
-]);
+export const ZRecipientDiffTypeSchema = z.enum(['NAME', 'ROLE', 'EMAIL', 'ACCESS_AUTH', 'ACTION_AUTH']);
 
 export const DOCUMENT_AUDIT_LOG_TYPE = ZDocumentAuditLogTypeSchema.Enum;
 export const DOCUMENT_EMAIL_TYPE = ZDocumentAuditLogEmailTypeSchema.Enum;
@@ -144,10 +138,7 @@ export const ZDocumentAuditLogDocumentMetaSchema = z.union([
   }),
 ]);
 
-export const ZDocumentAuditLogFieldDiffSchema = z.union([
-  ZFieldDiffDimensionSchema,
-  ZFieldDiffPositionSchema,
-]);
+export const ZDocumentAuditLogFieldDiffSchema = z.union([ZFieldDiffDimensionSchema, ZFieldDiffPositionSchema]);
 
 export const ZGenericFromToSchema = z.object({
   from: z.union([z.string(), z.array(z.string())]).nullable(),
@@ -361,11 +352,7 @@ export const ZDocumentAuditLogEventDocumentFieldInsertedSchema = z.object({
         });
 
         // Replace legacy 'NONE' field security type with undefined.
-        if (
-          typeof input === 'object' &&
-          input !== null &&
-          JSON.stringify(input) === legacyNoneSecurityType
-        ) {
+        if (typeof input === 'object' && input !== null && JSON.stringify(input) === legacyNoneSecurityType) {
           return undefined;
         }
 
@@ -465,11 +452,7 @@ export const ZDocumentAuditLogEventDocumentFieldPrefilledSchema = z.object({
         });
 
         // Replace legacy 'NONE' field security type with undefined.
-        if (
-          typeof input === 'object' &&
-          input !== null &&
-          JSON.stringify(input) === legacyNoneSecurityType
-        ) {
+        if (typeof input === 'object' && input !== null && JSON.stringify(input) === legacyNoneSecurityType) {
           return undefined;
         }
 
@@ -868,17 +851,10 @@ export type TDocumentAuditLogType = z.infer<typeof ZDocumentAuditLogTypeSchema>;
 
 export type TDocumentAuditLogFieldDiffSchema = z.infer<typeof ZDocumentAuditLogFieldDiffSchema>;
 
-export type TDocumentAuditLogDocumentMetaDiffSchema = z.infer<
-  typeof ZDocumentAuditLogDocumentMetaSchema
->;
+export type TDocumentAuditLogDocumentMetaDiffSchema = z.infer<typeof ZDocumentAuditLogDocumentMetaSchema>;
 
-export type TDocumentAuditLogRecipientDiffSchema = z.infer<
-  typeof ZDocumentAuditLogRecipientDiffSchema
->;
+export type TDocumentAuditLogRecipientDiffSchema = z.infer<typeof ZDocumentAuditLogRecipientDiffSchema>;
 
-export type DocumentAuditLogByType<T = TDocumentAuditLog['type']> = Extract<
-  TDocumentAuditLog,
-  { type: T }
->;
+export type DocumentAuditLogByType<T = TDocumentAuditLog['type']> = Extract<TDocumentAuditLog, { type: T }>;
 
 export type TDocumentAuditLogBaseSchema = z.infer<typeof ZDocumentAuditLogBaseSchema>;

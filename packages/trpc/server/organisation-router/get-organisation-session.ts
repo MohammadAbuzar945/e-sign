@@ -2,11 +2,7 @@ import { TeamMemberRole } from '@prisma/client';
 
 import { getHighestOrganisationRoleInGroup } from '@documenso/lib/utils/organisations';
 import { getCurrentSubscriptionsByOrganisationIds } from '@documenso/lib/server-only/subscription/get-current-subscriptions-by-organisation-ids';
-import {
-  buildTeamWhereQuery,
-  extractDerivedTeamSettings,
-  getHighestTeamRoleInGroup,
-} from '@documenso/lib/utils/teams';
+import { buildTeamWhereQuery, extractDerivedTeamSettings, getHighestTeamRoleInGroup } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 
@@ -110,10 +106,7 @@ export const getOrganisationSession = async ({
       subscription: subscriptionsByOrganisationId[organisation.id] ?? null,
       credits: creditsByOrganisationId[organisation.id] ?? 0,
       teams: organisation.teams.map((team) => {
-        const derivedSettings = extractDerivedTeamSettings(
-          organisationGlobalSettings,
-          team.teamGlobalSettings,
-        );
+        const derivedSettings = extractDerivedTeamSettings(organisationGlobalSettings, team.teamGlobalSettings);
 
         const isOrganisationOwner = organisation.ownerUserId === userId;
             const isTeamMember = team.teamGroups.length > 0;

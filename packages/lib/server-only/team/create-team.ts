@@ -1,13 +1,7 @@
-import {
-  OrganisationGroupType,
-  OrganisationMemberRole,
-  Prisma,
-  TeamMemberRole,
-} from '@prisma/client';
-import { match } from 'ts-pattern';
-
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
+import { OrganisationGroupType, OrganisationMemberRole, Prisma, TeamMemberRole } from '@prisma/client';
+import { match } from 'ts-pattern';
 
 import {
   LOWEST_ORGANISATION_ROLE,

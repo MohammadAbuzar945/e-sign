@@ -1,13 +1,3 @@
-import { useMemo, useState } from 'react';
-
-import { msg, plural } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { EnvelopeType } from '@prisma/client';
-import { ErrorCode as DropzoneErrorCode, type FileRejection } from 'react-dropzone';
-import { useNavigate } from 'react-router';
-import { match } from 'ts-pattern';
-
 import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
@@ -19,13 +9,15 @@ import type { TCreateEnvelopePayload } from '@documenso/trpc/server/envelope-rou
 import { buildDropzoneRejectionDescription } from '@documenso/ui/lib/handle-dropzone-rejection';
 import { cn } from '@documenso/ui/lib/utils';
 import { DocumentUploadButton } from '@documenso/ui/primitives/document-upload-button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@documenso/ui/primitives/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg, plural } from '@lingui/core/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { EnvelopeType } from '@prisma/client';
+import { useMemo, useState } from 'react';
+import { ErrorCode as DropzoneErrorCode, type FileRejection } from 'react-dropzone';
+import { useNavigate } from 'react-router';
+import { match } from 'ts-pattern';
 
 import { useCurrentTeam } from '~/providers/team';
 
@@ -48,9 +40,7 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
   const navigate = useNavigate();
   const organisation = useCurrentOrganisation();
 
-  const userTimezone = TIME_ZONES.find(
-    (timezone) => timezone === Intl.DateTimeFormat().resolvedOptions().timeZone,
-  );
+  const userTimezone = TIME_ZONES.find((timezone) => timezone === Intl.DateTimeFormat().resolvedOptions().timeZone);
 
   const { quota, remaining, refreshLimits, maximumEnvelopeItemCount } = useLimits();
 
@@ -117,10 +107,7 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
 
       void refreshLimits();
 
-      const pathPrefix =
-        type === EnvelopeType.DOCUMENT
-          ? formatDocumentsPath(team.url)
-          : formatTemplatesPath(team.url);
+      const pathPrefix = type === EnvelopeType.DOCUMENT ? formatDocumentsPath(team.url) : formatTemplatesPath(team.url);
 
       const aiQueryParam = team.preferences.aiFeaturesEnabled ? '?ai=false' : '';
 
@@ -143,11 +130,17 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
         .with('INVALID_DOCUMENT_FILE', () => t`You cannot upload encrypted PDFs.`)
         .with(
           AppErrorCode.LIMIT_EXCEEDED,
-          () => t`You have reached your document limit. Please upgrade your plan.`,
+          () => t`You have reached your document limit for this month. Please upgrade your plan.`,
+        )
+        .with('ENVELOPE_ITEM_LIMIT_EXCEEDED', () => t`You have reached the limit of the number of files per envelope.`)
+        .with('UNSUPPORTED_FILE_TYPE', () => t`This file type isn't supported. Please upload a PDF or Word document.`)
+        .with(
+          'CONVERSION_SERVICE_UNAVAILABLE',
+          () => t`Document conversion is temporarily unavailable. Please try again shortly or upload a PDF.`,
         )
         .with(
-          'ENVELOPE_ITEM_LIMIT_EXCEEDED',
-          () => t`You have reached the limit of the number of files per envelope.`,
+          'CONVERSION_FAILED',
+          () => t`We couldn't convert this file. Please check it's a valid Word document or upload a PDF instead.`,
         )
         .otherwise(() => t`An error occurred while uploading your document.`);
 

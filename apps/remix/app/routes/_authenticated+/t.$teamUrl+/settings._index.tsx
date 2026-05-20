@@ -1,7 +1,3 @@
-import { Trans } from '@lingui/react/macro';
-import { CheckCircle2, Clock } from 'lucide-react';
-import { P, match } from 'ts-pattern';
-
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { getTeamWithEmail } from '@documenso/lib/server-only/team/get-team-email-by-email';
@@ -11,6 +7,9 @@ import { canExecuteTeamAction } from '@documenso/lib/utils/teams';
 import { OrganisationType } from '@documenso/prisma/generated/types';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
+import { Trans } from '@lingui/react/macro';
+import { CheckCircle2, Clock } from 'lucide-react';
+import { match, P } from 'ts-pattern';
 
 import { TeamDeleteDialog } from '~/components/dialogs/team-delete-dialog';
 import { TeamEmailAddDialog } from '~/components/dialogs/team-email-add-dialog';
@@ -69,34 +68,29 @@ export default function TeamsSettingsPage({ loaderData }: Route.ComponentProps) 
 
             <AlertDescription className="mr-2">
               <Trans>
-                You can view documents associated with this email and use this identity when sending
-                documents.
+                You can view documents associated with this email and use this identity when sending documents.
               </Trans>
             </AlertDescription>
 
-            <hr className="border-border/50 mt-2" />
+            <hr className="mt-2 border-border/50" />
 
             <div className="flex flex-row items-center justify-between pt-4">
               <AvatarWithText
                 avatarClass="h-12 w-12"
                 avatarSrc={formatAvatarUrl(team.avatarImageId)}
-                avatarFallback={extractInitials(
-                  (team.teamEmail?.name || team.emailVerification?.name) ?? '',
-                )}
+                avatarFallback={extractInitials((team.teamEmail?.name || team.emailVerification?.name) ?? '')}
                 primaryText={
-                  <span className="text-foreground/80 text-sm font-semibold">
+                  <span className="font-semibold text-foreground/80 text-sm">
                     {team.teamEmail?.name || team.emailVerification?.name}
                   </span>
                 }
                 secondaryText={
-                  <span className="text-sm">
-                    {team.teamEmail?.email || team.emailVerification?.email}
-                  </span>
+                  <span className="text-sm">{team.teamEmail?.email || team.emailVerification?.email}</span>
                 }
               />
 
               <div className="flex flex-row items-center pr-2">
-                <div className="text-muted-foreground mr-4 flex flex-row items-center text-sm xl:mr-8">
+                <div className="mr-4 flex flex-row items-center text-muted-foreground text-sm xl:mr-8">
                   {match({
                     teamEmail: team.teamEmail,
                     emailVerification: team.emailVerification,
@@ -110,8 +104,7 @@ export default function TeamsSettingsPage({ loaderData }: Route.ComponentProps) 
                     .with(
                       {
                         emailVerification: P.when(
-                          (emailVerification) =>
-                            emailVerification && emailVerification?.expiresAt < new Date(),
+                          (emailVerification) => emailVerification && emailVerification?.expiresAt < new Date(),
                         ),
                       },
                       () => (
@@ -137,17 +130,14 @@ export default function TeamsSettingsPage({ loaderData }: Route.ComponentProps) 
         )}
 
         {!team.teamEmail && !team.emailVerification && (
-          <Alert
-            className="flex flex-col justify-between p-6 sm:flex-row sm:items-center"
-            variant="neutral"
-          >
+          <Alert className="flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
             <div className="mb-4 sm:mb-0">
               <AlertTitle>
                 <Trans>Team email</Trans>
               </AlertTitle>
 
               <AlertDescription className="mr-2">
-                <ul className="text-muted-foreground mt-0.5 list-inside list-disc text-sm">
+                <ul className="mt-0.5 list-inside list-disc text-muted-foreground text-sm">
                   {/* Feature not available yet. */}
                   {/* <li>Display this name and email when sending documents</li> */}
                   {/* <li>View documents associated with this email</li> */}
@@ -164,10 +154,7 @@ export default function TeamsSettingsPage({ loaderData }: Route.ComponentProps) 
         )}
 
         {canExecuteTeamAction('MANAGE_TEAM', currentTeam.currentTeamRole) && (
-          <Alert
-            className="flex flex-col justify-between p-6 sm:flex-row sm:items-center"
-            variant="neutral"
-          >
+          <Alert className="flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
             <div className="mb-4 sm:mb-0">
               <AlertTitle>
                 <Trans>Delete team</Trans>
@@ -175,8 +162,7 @@ export default function TeamsSettingsPage({ loaderData }: Route.ComponentProps) 
 
               <AlertDescription className="mr-2">
                 <Trans>
-                  This team, and any associated data excluding billing invoices will be permanently
-                  deleted.
+                  This team, and any associated data excluding billing invoices will be permanently deleted.
                 </Trans>
               </AlertDescription>
             </div>

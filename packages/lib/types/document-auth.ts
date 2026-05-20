@@ -84,12 +84,7 @@ export const ZDocumentActionAuthSchema = z.discriminatedUnion('type', [
   ZDocumentAuthPasswordSchema,
 ]);
 export const ZDocumentActionAuthTypesSchema = z
-  .enum([
-    DocumentAuth.ACCOUNT,
-    DocumentAuth.PASSKEY,
-    DocumentAuth.TWO_FACTOR_AUTH,
-    DocumentAuth.PASSWORD,
-  ])
+  .enum([DocumentAuth.ACCOUNT, DocumentAuth.PASSKEY, DocumentAuth.TWO_FACTOR_AUTH, DocumentAuth.PASSWORD])
   .describe(
     'The type of authentication required for the recipient to sign the document. This field is restricted to Enterprise plan users only.',
   );

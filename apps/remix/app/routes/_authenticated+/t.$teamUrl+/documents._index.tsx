@@ -24,6 +24,12 @@ import { ZFindDocumentsInternalRequestSchema } from '@documenso/trpc/server/docu
 import { Avatar, AvatarFallback, AvatarImage } from '@documenso/ui/primitives/avatar';
 import type { RowSelectionState } from '@documenso/ui/primitives/data-table';
 import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
+import { msg } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { EnvelopeType, FolderType, OrganisationType } from '@prisma/client';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router';
+import { z } from 'zod';
 
 import { DocumentMoveToFolderDialog } from '~/components/dialogs/document-move-to-folder-dialog';
 import { EnvelopesBulkDeleteDialog } from '~/components/dialogs/envelopes-bulk-delete-dialog';
@@ -73,10 +79,7 @@ export default function DocumentsPage() {
   const [isMovingDocument, setIsMovingDocument] = useState(false);
   const [documentToMove, setDocumentToMove] = useState<number | null>(null);
 
-  const [rowSelection, setRowSelection] = useSessionStorage<RowSelectionState>(
-    'documents-bulk-selection',
-    {},
-  );
+  const [rowSelection, setRowSelection] = useSessionStorage<RowSelectionState>('documents-bulk-selection', {});
   const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
 
@@ -183,14 +186,12 @@ export default function DocumentsPage() {
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-8">
           <div className="flex flex-row items-center">
-            <Avatar className="mr-3 h-12 w-12 border-2 border-solid border-white dark:border-border">
+            <Avatar className="mr-3 h-12 w-12 border-2 border-white border-solid dark:border-border">
               {team.avatarImageId && <AvatarImage src={formatAvatarUrl(team.avatarImageId)} />}
-              <AvatarFallback className="text-xs text-muted-foreground">
-                {team.name.slice(0, 1)}
-              </AvatarFallback>
+              <AvatarFallback className="text-muted-foreground text-xs">{team.name.slice(0, 1)}</AvatarFallback>
             </Avatar>
 
-            <h2 className="text-4xl font-semibold">
+            <h2 className="font-semibold text-4xl">
               <Trans>Documents</Trans>
             </h2>
           </div>

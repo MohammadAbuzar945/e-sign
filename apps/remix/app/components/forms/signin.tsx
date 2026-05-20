@@ -1,5 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-
+import { authClient } from '@documenso/auth/client';
+import { AuthenticationErrorCode } from '@documenso/auth/server/lib/errors/error-codes';
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { env } from '@documenso/lib/utils/env';
+import { zEmail } from '@documenso/lib/utils/zod';
+import { trpc } from '@documenso/trpc/react';
+import { ZCurrentPasswordSchema } from '@documenso/trpc/server/auth-router/schema';
+import { cn } from '@documenso/ui/lib/utils';
+import { Button } from '@documenso/ui/primitives/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@documenso/ui/primitives/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import { Input } from '@documenso/ui/primitives/input';
+import { PasswordInput } from '@documenso/ui/primitives/password-input';
+import { PinInput, PinInputGroup, PinInputSlot } from '@documenso/ui/primitives/pin-input';
+import { useToast } from '@documenso/ui/primitives/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { MessageDescriptor } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
@@ -13,35 +26,6 @@ import { FcGoogle } from 'react-icons/fc';
 import { Link, useNavigate } from 'react-router';
 import { match } from 'ts-pattern';
 import { z } from 'zod';
-
-import { authClient } from '@documenso/auth/client';
-import { AuthenticationErrorCode } from '@documenso/auth/server/lib/errors/error-codes';
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { env } from '@documenso/lib/utils/env';
-import { zEmail } from '@documenso/lib/utils/zod';
-import { trpc } from '@documenso/trpc/react';
-import { ZCurrentPasswordSchema } from '@documenso/trpc/server/auth-router/schema';
-import { cn } from '@documenso/ui/lib/utils';
-import { Button } from '@documenso/ui/primitives/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@documenso/ui/primitives/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@documenso/ui/primitives/form/form';
-import { Input } from '@documenso/ui/primitives/input';
-import { PasswordInput } from '@documenso/ui/primitives/password-input';
-import { PinInput, PinInputGroup, PinInputSlot } from '@documenso/ui/primitives/pin-input';
-import { useToast } from '@documenso/ui/primitives/use-toast';
 
 const CommonErrorMessages: Record<string, MessageDescriptor> = {
   [AuthenticationErrorCode.AccountDisabled]: msg`This account has been disabled. Please contact support.`,
@@ -92,20 +76,16 @@ export const SignInForm = ({
 
   const navigate = useNavigate();
 
-  const [isTwoFactorAuthenticationDialogOpen, setIsTwoFactorAuthenticationDialogOpen] =
-    useState(false);
+  const [isTwoFactorAuthenticationDialogOpen, setIsTwoFactorAuthenticationDialogOpen] = useState(false);
   const [isEmbeddedRedirect, setIsEmbeddedRedirect] = useState(false);
 
-  const [twoFactorAuthenticationMethod, setTwoFactorAuthenticationMethod] = useState<
-    'totp' | 'backup'
-  >('totp');
+  const [twoFactorAuthenticationMethod, setTwoFactorAuthenticationMethod] = useState<'totp' | 'backup'>('totp');
 
   const hasSocialAuthEnabled = isGoogleSSOEnabled || isMicrosoftSSOEnabled || isOIDCSSOEnabled;
 
   const turnstileSiteKey = env('NEXT_PUBLIC_TURNSTILE_SITE_KEY');
   const turnstileRef = useRef<TurnstileInstance>(null);
   const twoFactorTurnstileRef = useRef<TurnstileInstance>(null);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const redirectPath = useMemo(() => {
     // Handle SSR
@@ -122,6 +102,8 @@ export const SignInForm = ({
 
     return url.toString();
   }, [returnTo]);
+
+  const { mutateAsync: createPasskeySigninOptions } = trpc.auth.passkey.createSigninOptions.useMutation();
 
   const form = useForm<TSignInFormSchema>({
     values: {
@@ -156,14 +138,84 @@ export const SignInForm = ({
     setTwoFactorAuthenticationMethod(method);
   };
 
-  const onFormSubmit = async ({ email, password, totpCode, backupCode }: TSignInFormSchema) => {
+  const onSignInWithPasskey = async () => {
+    if (!browserSupportsWebAuthn()) {
+      toast({
+        title: _(msg`Not supported`),
+        description: _(msg`Passkeys are not supported on this browser`),
+        duration: 10000,
+        variant: 'destructive',
+      });
+
+      return;
+    }
+
     try {
+      setIsPasskeyLoading(true);
+
+      const { options, sessionId } = await createPasskeySigninOptions();
+
+      const credential = await startAuthentication({ optionsJSON: options });
+
+      await authClient.passkey.signIn({
+        credential: JSON.stringify(credential),
+        csrfToken: sessionId,
+        redirectPath,
+      });
+    } catch (err) {
+      setIsPasskeyLoading(false);
+
+      // Error from library.
+      if (err instanceof Error && err.name === 'NotAllowedError') {
+        return;
+      }
+
+      const error = AppError.parseError(err);
+
+      const errorMessage = match(error.code)
+        .with(
+          AuthenticationErrorCode.NotSetup,
+          () =>
+            msg`This passkey is not configured for this application. Please login and add one in the user settings.`,
+        )
+        .with(AuthenticationErrorCode.SessionExpired, () => msg`This session has expired. Please try again.`)
+        .otherwise(() => handleFallbackErrorMessages(error.code));
+
+      toast({
+        title: _(msg`Something went wrong`),
+        description: _(errorMessage),
+        duration: 10000,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const onFormSubmit = async ({ email, password, totpCode, backupCode }: TSignInFormSchema) => {
+    const $turnstile = isTwoFactorAuthenticationDialogOpen ? twoFactorTurnstileRef.current : turnstileRef.current;
+
+    try {
+      let token: string | undefined;
+
+      if (turnstileSiteKey) {
+        token = await $turnstile?.getResponsePromise(3000).catch((_err) => undefined);
+
+        if (!token) {
+          toast({
+            title: _(msg`Human verification required`),
+            description: _(msg`Please complete the CAPTCHA challenge before signing in.`),
+            variant: 'destructive',
+          });
+
+          return;
+        }
+      }
+
       await authClient.emailPassword.signIn({
         email,
         password,
         totpCode,
         backupCode,
-        captchaToken: captchaToken ?? undefined,
+        captchaToken: token ?? undefined,
         redirectPath,
       });
     } catch (err) {
@@ -174,10 +226,6 @@ export const SignInForm = ({
       if (error.code === 'TWO_FACTOR_MISSING_CREDENTIALS') {
         setIsTwoFactorAuthenticationDialogOpen(true);
 
-        // Turnstile tokens are single-use. Clear the consumed one so the
-        // dialog's fresh widget mounts cleanly and the dialog can't be
-        // submitted with the stale token before a new one is issued.
-        setCaptchaToken(null);
         return;
       }
 
@@ -186,27 +234,19 @@ export const SignInForm = ({
 
         toast({
           title: _(msg`Unable to sign in`),
-          description: _(
-            msg`This account has not been verified. Please verify your account before signing in.`,
-          ),
+          description: _(msg`This account has not been verified. Please verify your account before signing in.`),
         });
 
         return;
       }
 
       const errorMessage = match(error.code)
-        .with(
-          AuthenticationErrorCode.InvalidCredentials,
-          () => msg`The email or password provided is incorrect.`,
-        )
+        .with(AuthenticationErrorCode.InvalidCredentials, () => msg`The email or password provided is incorrect.`)
         .with(
           AuthenticationErrorCode.InvalidTwoFactorCode,
           () => msg`The two-factor authentication code provided is incorrect.`,
         )
-        .with(
-          AppErrorCode.INVALID_CAPTCHA,
-          () => msg`We were unable to verify that you're human. Please try again.`,
-        )
+        .with(AppErrorCode.INVALID_CAPTCHA, () => msg`We were unable to verify that you're human. Please try again.`)
         .otherwise(() => handleFallbackErrorMessages(error.code));
 
       toast({
@@ -215,8 +255,7 @@ export const SignInForm = ({
         variant: 'destructive',
       });
 
-      turnstileRef.current?.reset();
-      setCaptchaToken(null);
+      $turnstile?.reset();
     }
   };
 
@@ -228,9 +267,7 @@ export const SignInForm = ({
     } catch (err) {
       toast({
         title: _(msg`An unknown error occurred`),
-        description: _(
-          msg`We encountered an unknown error while attempting to sign you In. Please try again later.`,
-        ),
+        description: _(msg`We encountered an unknown error while attempting to sign you In. Please try again later.`),
         variant: 'destructive',
       });
     }
@@ -244,9 +281,7 @@ export const SignInForm = ({
     } catch (err) {
       toast({
         title: _(msg`An unknown error occurred`),
-        description: _(
-          msg`We encountered an unknown error while attempting to sign you In. Please try again later.`,
-        ),
+        description: _(msg`We encountered an unknown error while attempting to sign you In. Please try again later.`),
         variant: 'destructive',
       });
     }
@@ -260,9 +295,7 @@ export const SignInForm = ({
     } catch (err) {
       toast({
         title: _(msg`An unknown error occurred`),
-        description: _(
-          msg`We encountered an unknown error while attempting to sign you In. Please try again later.`,
-        ),
+        description: _(msg`We encountered an unknown error while attempting to sign you In. Please try again later.`),
         variant: 'destructive',
       });
     }
@@ -284,14 +317,8 @@ export const SignInForm = ({
 
   return (
     <Form {...form}>
-      <form
-        className={cn('flex w-full flex-col gap-y-4', className)}
-        onSubmit={form.handleSubmit(onFormSubmit)}
-      >
-        <fieldset
-          className="flex w-full flex-col gap-y-4"
-          disabled={isSubmitting}
-        >
+      <form className={cn('flex w-full flex-col gap-y-4', className)} onSubmit={form.handleSubmit(onFormSubmit)}>
+        <fieldset className="flex w-full flex-col gap-y-4" disabled={isSubmitting}>
           <FormField
             control={form.control}
             name="email"
@@ -326,10 +353,7 @@ export const SignInForm = ({
                 <FormMessage />
 
                 <p className="mt-2 text-right">
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-muted-foreground duration-200 hover:opacity-70"
-                  >
+                  <Link to="/forgot-password" className="text-muted-foreground text-sm duration-200 hover:opacity-70">
                     <Trans>Forgot your password?</Trans>
                   </Link>
                 </p>
@@ -341,8 +365,6 @@ export const SignInForm = ({
             <Turnstile
               ref={turnstileRef}
               siteKey={turnstileSiteKey}
-              onSuccess={setCaptchaToken}
-              onExpire={() => setCaptchaToken(null)}
               options={{
                 size: 'flexible',
                 appearance: 'interaction-only',
@@ -350,12 +372,7 @@ export const SignInForm = ({
             />
           )}
 
-          <Button
-            type="submit"
-            size="lg"
-            loading={isSubmitting}
-            className="dark:bg-documenso dark:hover:opacity-90"
-          >
+          <Button type="submit" size="lg" loading={isSubmitting} className="dark:bg-documenso dark:hover:opacity-90">
             {isSubmitting ? <Trans>Signing in...</Trans> : <Trans>Sign In</Trans>}
           </Button>
 
@@ -394,11 +411,7 @@ export const SignInForm = ({
                   disabled={isSubmitting}
                   onClick={onSignInWithMicrosoftClick}
                 >
-                  <img
-                    className="mr-2 h-4 w-4"
-                    alt="Microsoft Logo"
-                    src={'/static/microsoft.svg'}
-                  />
+                  <img className="mr-2 h-4 w-4" alt="Microsoft Logo" src={'/static/microsoft.svg'} />
                   Microsoft
                 </Button>
               )}
@@ -418,13 +431,23 @@ export const SignInForm = ({
               )}
             </>
           )}
+
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            disabled={isSubmitting}
+            loading={isPasskeyLoading}
+            className="border bg-background text-muted-foreground"
+            onClick={onSignInWithPasskey}
+          >
+            {!isPasskeyLoading && <KeyRoundIcon className="mr-1 -ml-1 h-5 w-5" />}
+            <Trans>Passkey</Trans>
+          </Button>
         </fieldset>
       </form>
 
-      <Dialog
-        open={isTwoFactorAuthenticationDialogOpen}
-        onOpenChange={onCloseTwoFactorAuthenticationDialog}
-      >
+      <Dialog open={isTwoFactorAuthenticationDialogOpen} onOpenChange={onCloseTwoFactorAuthenticationDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -481,8 +504,6 @@ export const SignInForm = ({
                   <Turnstile
                     ref={twoFactorTurnstileRef}
                     siteKey={turnstileSiteKey}
-                    onSuccess={setCaptchaToken}
-                    onExpire={() => setCaptchaToken(null)}
                     options={{
                       size: 'flexible',
                       appearance: 'interaction-only',
@@ -492,11 +513,7 @@ export const SignInForm = ({
               )}
 
               <DialogFooter className="mt-4">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={onToggleTwoFactorAuthenticationMethodClick}
-                >
+                <Button type="button" variant="secondary" onClick={onToggleTwoFactorAuthenticationMethodClick}>
                   {twoFactorAuthenticationMethod === 'totp' ? (
                     <Trans>Use Backup Code</Trans>
                   ) : (
@@ -504,11 +521,7 @@ export const SignInForm = ({
                   )}
                 </Button>
 
-                <Button
-                  type="submit"
-                  loading={isSubmitting}
-                  disabled={Boolean(turnstileSiteKey) && !captchaToken}
-                >
+                <Button type="submit" loading={isSubmitting}>
                   {isSubmitting ? <Trans>Signing in...</Trans> : <Trans>Sign In</Trans>}
                 </Button>
               </DialogFooter>

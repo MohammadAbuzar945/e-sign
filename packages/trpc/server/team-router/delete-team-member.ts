@@ -8,12 +8,10 @@ import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/l
 import { prisma } from '@documenso/prisma';
 
 import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
+import { OrganisationGroupType } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
-import {
-  ZDeleteTeamMemberRequestSchema,
-  ZDeleteTeamMemberResponseSchema,
-} from './delete-team-member.types';
+import { ZDeleteTeamMemberRequestSchema, ZDeleteTeamMemberResponseSchema } from './delete-team-member.types';
 
 export const deleteTeamMemberRoute = authenticatedProcedure
   // .meta(deleteTeamMemberMeta)
@@ -134,6 +132,23 @@ export const deleteTeamMemberRoute = authenticatedProcedure
     if (!isTeamRoleWithinUserHierarchy(currentUserTeamRole, currentMemberToDeleteTeamRole)) {
       throw new AppError(AppErrorCode.UNAUTHORIZED, {
         message: 'Cannot remove a member with a higher role',
+      });
+    }
+
+    const teamGroupToRemoveMemberFrom = team.teamGroups[0];
+
+    // Sanity check.
+    // This means that the member was inherited (which means they should not be deleted directly)
+    // or it means that they are not part of any team groups relating to this?
+    if (team.teamGroups.length !== 1) {
+      console.error('Member must have 1 one internal team group. This should not happen.');
+
+      // Todo: Logging.
+    }
+
+    if (team.teamGroups.length === 0) {
+      throw new AppError(AppErrorCode.UNKNOWN_ERROR, {
+        message: 'Team has no internal team groups',
       });
     }
 

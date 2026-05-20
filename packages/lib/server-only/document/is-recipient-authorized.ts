@@ -1,9 +1,10 @@
+import { prisma } from '@documenso/prisma';
 import type { Envelope, Recipient } from '@prisma/client';
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import { match } from 'ts-pattern';
 
-import { prisma } from '@documenso/prisma';
+
 
 import { validateTwoFactorTokenFromEmail } from '../2fa/email/validate-2fa-token-from-email';
 import { verifyTwoFactorAuthenticationToken } from '../2fa/verify-2fa-token';
@@ -15,6 +16,7 @@ import { DocumentAuth } from '../../types/document-auth';
 import type { TAuthenticationResponseJSONSchema } from '../../types/webauthn';
 import { getAuthenticatorOptions } from '../../utils/authenticator';
 import { extractDocumentAuthMethods } from '../../utils/document-auth';
+
 
 type IsRecipientAuthorizedOptions = {
   // !: Probably find a better name than 'ACCESS_2FA' if requirements change.
@@ -72,10 +74,7 @@ export const isRecipientAuthorized = async ({
     .exhaustive();
 
   // Early true return when auth is not required.
-  if (
-    authMethods.length === 0 ||
-    authMethods.some((method) => method === DocumentAuth.EXPLICIT_NONE)
-  ) {
+  if (authMethods.length === 0 || authMethods.some((method) => method === DocumentAuth.EXPLICIT_NONE)) {
     return true;
   }
 

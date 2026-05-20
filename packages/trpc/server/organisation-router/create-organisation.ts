@@ -6,12 +6,10 @@ import { createOrganisation } from '@documenso/lib/server-only/organisation/crea
 import { INTERNAL_CLAIM_ID, internalClaims } from '@documenso/lib/types/subscription';
 import { isAdmin } from '@documenso/lib/utils/is-admin';
 import { prisma } from '@documenso/prisma';
+import { OrganisationType } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
-import {
-  ZCreateOrganisationRequestSchema,
-  ZCreateOrganisationResponseSchema,
-} from './create-organisation.types';
+import { ZCreateOrganisationRequestSchema, ZCreateOrganisationResponseSchema } from './create-organisation.types';
 
 export const createOrganisationRoute = authenticatedProcedure
   // .meta(createOrganisationMeta)

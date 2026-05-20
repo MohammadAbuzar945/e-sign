@@ -1,5 +1,9 @@
-import { useMemo, useRef, useState } from 'react';
-
+import { useCurrentEnvelopeRender } from '@documenso/lib/client-only/providers/envelope-render-provider';
+import { PDF_VIEWER_ERROR_MESSAGES } from '@documenso/lib/constants/pdf-viewer-i18n';
+import { mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
+import { cn } from '@documenso/ui/lib/utils';
+import { Button } from '@documenso/ui/primitives/button';
+import { Separator } from '@documenso/ui/primitives/separator';
 import { Plural, Trans, useLingui } from '@lingui/react/macro';
 import { EnvelopeType, RecipientRole } from '@prisma/client';
 import { motion } from 'framer-motion';
@@ -11,15 +15,9 @@ import {
   PanelLeftOpenIcon,
   PaperclipIcon,
 } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
-
-import { useCurrentEnvelopeRender } from '@documenso/lib/client-only/providers/envelope-render-provider';
-import { PDF_VIEWER_ERROR_MESSAGES } from '@documenso/lib/constants/pdf-viewer-i18n';
-import { mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
-import { cn } from '@documenso/ui/lib/utils';
-import { Button } from '@documenso/ui/primitives/button';
-import { Separator } from '@documenso/ui/primitives/separator';
 
 import { EnvelopeDownloadDialog } from '~/components/dialogs/envelope-download-dialog';
 import { SignFieldCheckboxDialog } from '~/components/dialogs/sign-field-checkbox-dialog';
@@ -102,7 +100,7 @@ export const DocumentSigningPageViewV2 = () => {
         {/* Left Section - Step Navigation */}
         <div
           className={cn(
-            'embed--DocumentWidgetContainer hidden flex-shrink-0 flex-col border-r border-border bg-background transition-[width] duration-300 lg:flex',
+            'embed--DocumentWidgetContainer hidden flex-shrink-0 flex-col border-border border-r bg-background transition-[width] duration-300 lg:flex',
             isSidebarCollapsed ? 'w-12' : 'w-80',
           )}
         >
@@ -119,14 +117,9 @@ export const DocumentSigningPageViewV2 = () => {
             </div>
           )}
 
-          <div
-            className={cn(
-              'flex flex-1 flex-col overflow-hidden py-4',
-              isSidebarCollapsed && 'invisible w-0',
-            )}
-          >
+          <div className={cn('flex flex-1 flex-col overflow-hidden py-4', isSidebarCollapsed && 'invisible w-0')}>
             <div className="px-4">
-              <h3 className="flex items-end justify-between text-sm font-semibold text-foreground">
+              <h3 className="flex items-end justify-between font-semibold text-foreground text-sm">
                 {match(recipient.role)
                   .with(RecipientRole.VIEWER, () => <Trans>View Document</Trans>)
                   .with(RecipientRole.SIGNER, () => <Trans>Sign Document</Trans>)
@@ -135,7 +128,7 @@ export const DocumentSigningPageViewV2 = () => {
                   .otherwise(() => null)}
 
                 <div className="ml-2 flex items-center gap-1">
-                  <span className="rounded border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground">
+                  <span className="rounded border bg-muted/50 px-2 py-0.5 text-muted-foreground text-xs">
                     <Plural
                       value={recipientFieldsRemaining.length}
                       one="1 Field Remaining"
@@ -175,7 +168,7 @@ export const DocumentSigningPageViewV2 = () => {
             {/* Quick Actions. */}
             {!isDirectTemplate && (
               <div className="embed--Actions space-y-3 px-4">
-                <h4 className="text-sm font-semibold text-foreground">
+                <h4 className="font-semibold text-foreground text-sm">
                   <Trans>Actions</Trans>
                 </h4>
 
@@ -219,11 +212,7 @@ export const DocumentSigningPageViewV2 = () => {
                         }))
                     }
                     trigger={
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start hover:text-destructive"
-                      >
+                      <Button variant="ghost" size="sm" className="w-full justify-start hover:text-destructive">
                         <BanIcon className="mr-2 h-4 w-4" />
                         <Trans>Reject Document</Trans>
                       </Button>
@@ -249,10 +238,7 @@ export const DocumentSigningPageViewV2 = () => {
           </div>
         </div>
 
-        <div
-          className="embed--DocumentContainer min-w-0 flex-1 overflow-y-auto"
-          ref={scrollableContainerRef}
-        >
+        <div className="embed--DocumentContainer min-w-0 flex-1 overflow-y-auto" ref={scrollableContainerRef}>
           <div className="flex flex-col">
             {/* Horizontal envelope item selector */}
             {envelopeItems.length > 1 && (
@@ -266,9 +252,7 @@ export const DocumentSigningPageViewV2 = () => {
                       <Plural
                         one="1 Field"
                         other="# Fields"
-                        value={
-                          remainingFields.filter((field) => field.envelopeItemId === doc.id).length
-                        }
+                        value={remainingFields.filter((field) => field.envelopeItemId === doc.id).length}
                       />
                     }
                     isSelected={currentEnvelopeItem?.id === doc.id}
@@ -289,7 +273,7 @@ export const DocumentSigningPageViewV2 = () => {
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center py-32">
-                  <p className="text-sm text-foreground">
+                  <p className="text-foreground text-sm">
                     <Trans>No document selected</Trans>
                   </p>
                 </div>
@@ -304,7 +288,8 @@ export const DocumentSigningPageViewV2 = () => {
                 <a
                   href="https://documenso.com"
                   target="_blank"
-                  className="fixed bottom-0 right-0 z-40 hidden cursor-pointer rounded-tl bg-primary px-2 py-1 text-xs font-medium text-primary-foreground opacity-60 hover:opacity-100 lg:block"
+                  className="fixed right-0 bottom-0 z-40 hidden cursor-pointer rounded-tl bg-primary px-2 py-1 font-medium text-primary-foreground text-xs opacity-60 hover:opacity-100 lg:block"
+                  rel="noopener"
                 >
                   <span>
                     <Trans>Powered by</Trans>

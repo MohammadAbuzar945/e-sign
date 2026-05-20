@@ -1,8 +1,7 @@
-import { DocumentStatus, EnvelopeType } from '@prisma/client';
-
 import type { DateRange } from '@documenso/lib/types/search-params';
 import { ADMIN_HIDDEN_USER_EMAILS } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
 import { kyselyPrisma, sql } from '@documenso/prisma';
+import { DocumentStatus, EnvelopeType } from '@prisma/client';
 
 export type OrganisationInsights = {
   id: number;
@@ -180,9 +179,7 @@ export async function getOrganisationInsights({
       'o.createdAt as createdAt',
       'o.customerId as customerId',
       sql<string>`COALESCE(o.name, 'Unknown')`.as('name'),
-      sql<string>`CASE WHEN s.status IS NOT NULL THEN s.status ELSE NULL END`.as(
-        'subscriptionStatus',
-      ),
+      sql<string>`CASE WHEN s.status IS NOT NULL THEN s.status ELSE NULL END`.as('subscriptionStatus'),
       eb
         .selectFrom('Team as t')
         .whereRef('t.organisationId', '=', 'o.id')

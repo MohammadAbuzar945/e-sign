@@ -1,6 +1,3 @@
-import { data } from 'react-router';
-import { match } from 'ts-pattern';
-
 import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
 import { EnvelopeRenderProvider } from '@documenso/lib/client-only/providers/envelope-render-provider';
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
@@ -12,6 +9,8 @@ import { getTemplateByDirectLinkToken } from '@documenso/lib/server-only/templat
 import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { prisma } from '@documenso/prisma';
+import { data } from 'react-router';
+import { match } from 'ts-pattern';
 
 import { EmbedDirectTemplateClientPage } from '~/components/embed/embed-direct-template-client-page';
 import { EmbedSignDocumentV2ClientPage } from '~/components/embed/embed-document-signing-page-v2';
@@ -88,9 +87,7 @@ async function handleV1Loader({ params, request }: Route.LoaderArgs) {
 
   const { directTemplateRecipientId } = template.directLink;
 
-  const recipient = template.recipients.find(
-    (recipient) => recipient.id === directTemplateRecipientId,
-  );
+  const recipient = template.recipients.find((recipient) => recipient.id === directTemplateRecipientId);
 
   if (!recipient) {
     throw new Response('Not found', { status: 404 });
@@ -261,13 +258,8 @@ export default function EmbedDirectTemplatePage() {
   return <EmbedDirectTemplatePageV2 data={payload} />;
 }
 
-const EmbedDirectTemplatePageV1 = ({
-  data,
-}: {
-  data: Awaited<ReturnType<typeof handleV1Loader>>;
-}) => {
-  const { token, user, template, recipient, fields, hidePoweredBy, allowEmbedSigningWhitelabel } =
-    data;
+const EmbedDirectTemplatePageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV1Loader>> }) => {
+  const { token, user, template, recipient, fields, hidePoweredBy, allowEmbedSigningWhitelabel } = data;
 
   return (
     <DocumentSigningProvider
@@ -278,11 +270,7 @@ const EmbedDirectTemplatePageV1 = ({
       uploadSignatureEnabled={template.templateMeta?.uploadSignatureEnabled}
       drawSignatureEnabled={template.templateMeta?.drawSignatureEnabled}
     >
-      <DocumentSigningAuthProvider
-        documentAuthOptions={template.authOptions}
-        recipient={recipient}
-        user={user}
-      >
+      <DocumentSigningAuthProvider documentAuthOptions={template.authOptions} recipient={recipient} user={user}>
         <DirectTemplateKbaAccessGate token={token}>
           <DocumentSigningRecipientProvider recipient={recipient}>
             <EmbedDirectTemplateClientPage
@@ -303,11 +291,7 @@ const EmbedDirectTemplatePageV1 = ({
   );
 };
 
-const EmbedDirectTemplatePageV2 = ({
-  data,
-}: {
-  data: Awaited<ReturnType<typeof handleV2Loader>>;
-}) => {
+const EmbedDirectTemplatePageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV2Loader>> }) => {
   const { token, user, envelopeForSigning, hidePoweredBy, allowEmbedSigningWhitelabel } = data;
 
   const { envelope, recipient } = envelopeForSigning;

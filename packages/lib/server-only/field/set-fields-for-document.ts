@@ -1,6 +1,3 @@
-import { EnvelopeType, type Field, FieldType } from '@prisma/client';
-import { isDeepEqual } from 'remeda';
-
 import { validateCheckboxField } from '@documenso/lib/advanced-fields-validation/validate-checkbox';
 import { validateDropdownField } from '@documenso/lib/advanced-fields-validation/validate-dropdown';
 import { validateNumberField } from '@documenso/lib/advanced-fields-validation/validate-number';
@@ -18,11 +15,10 @@ import {
   ZTextFieldMeta,
 } from '@documenso/lib/types/field-meta';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
-import {
-  createDocumentAuditLogData,
-  diffFieldChanges,
-} from '@documenso/lib/utils/document-audit-logs';
+import { createDocumentAuditLogData, diffFieldChanges } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType, type Field, FieldType } from '@prisma/client';
+import { isDeepEqual } from 'remeda';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
@@ -93,9 +89,7 @@ export const setFieldsForDocument = async ({
     const recipient = envelope.recipients.find((recipient) => recipient.id === field.recipientId);
 
     // Check whether the field is being attached to an allowed envelope item.
-    const foundEnvelopeItem = envelope.envelopeItems.find(
-      (envelopeItem) => envelopeItem.id === field.envelopeItemId,
-    );
+    const foundEnvelopeItem = envelope.envelopeItems.find((envelopeItem) => envelopeItem.id === field.envelopeItemId);
 
     if (!foundEnvelopeItem) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -111,22 +105,16 @@ export const setFieldsForDocument = async ({
     }
 
     // Check whether the existing field can be modified.
-    if (
-      existing &&
-      hasFieldBeenChanged(existing, field) &&
-      !canRecipientFieldsBeModified(recipient, existingFields)
-    ) {
+    if (existing && hasFieldBeenChanged(existing, field) && !canRecipientFieldsBeModified(recipient, existingFields)) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message:
-          'Cannot modify a field where the recipient has already interacted with the document',
+        message: 'Cannot modify a field where the recipient has already interacted with the document',
       });
     }
 
     // Prevent creating new fields when recipient has interacted with the document.
     if (!existing && !canRecipientFieldsBeModified(recipient, existingFields)) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message:
-          'Cannot modify a field where the recipient has already interacted with the document',
+        message: 'Cannot modify a field where the recipient has already interacted with the document',
       });
     }
 
@@ -163,6 +151,7 @@ export const setFieldsForDocument = async ({
         numberFieldParsedMeta,
         false,
       );
+          const errors = validateNumberField(String(numberFieldParsedMeta.value || ''), numberFieldParsedMeta, false);
 
       if (errors.length > 0) {
         throw new Error(errors.join(', '));

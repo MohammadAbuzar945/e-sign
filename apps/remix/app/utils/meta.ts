@@ -1,7 +1,6 @@
-import { type MessageDescriptor, i18n } from '@lingui/core';
-
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { env } from '@documenso/lib/utils/env';
+import { i18n, type MessageDescriptor } from '@lingui/core';
 
 export const appMetaTags = (title?: MessageDescriptor) => {
   const description =

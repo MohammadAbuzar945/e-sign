@@ -1,9 +1,8 @@
-import { TeamMemberRole } from '@prisma/client';
-import { z } from 'zod';
-
 import { URL_PATTERN, ZNameSchema } from '@documenso/lib/constants/auth';
 import { PROTECTED_TEAM_URLS } from '@documenso/lib/constants/teams';
 import { zEmail } from '@documenso/lib/utils/zod';
+import { TeamMemberRole } from '@prisma/client';
+import { z } from 'zod';
 
 /**
  * Restrict team URLs schema.
@@ -80,13 +79,9 @@ export const ZResendTeamEmailVerificationMutationSchema = z.object({
   teamId: z.number(),
 });
 
-export type TCreateTeamEmailVerificationMutationSchema = z.infer<
-  typeof ZCreateTeamEmailVerificationMutationSchema
->;
+export type TCreateTeamEmailVerificationMutationSchema = z.infer<typeof ZCreateTeamEmailVerificationMutationSchema>;
 
 export type TDeleteTeamEmailMutationSchema = z.infer<typeof ZDeleteTeamEmailMutationSchema>;
 export type TGetTeamMembersQuerySchema = z.infer<typeof ZGetTeamMembersQuerySchema>;
 export type TUpdateTeamEmailMutationSchema = z.infer<typeof ZUpdateTeamEmailMutationSchema>;
-export type TResendTeamEmailVerificationMutationSchema = z.infer<
-  typeof ZResendTeamEmailVerificationMutationSchema
->;
+export type TResendTeamEmailVerificationMutationSchema = z.infer<typeof ZResendTeamEmailVerificationMutationSchema>;

@@ -1,9 +1,8 @@
-import { Prisma } from '@prisma/client';
-
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { getCurrentSubscriptionsByOrganisationIds } from '@documenso/lib/server-only/subscription/get-current-subscriptions-by-organisation-ids';
 import { ADMIN_HIDDEN_USER_EMAILS } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
 import { prisma } from '@documenso/prisma';
+import { Prisma } from '@prisma/client';
 
 import { adminProcedure } from '../trpc';
 import {

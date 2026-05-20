@@ -1,10 +1,9 @@
-import { EnvelopeType } from '@prisma/client';
-
 import { PDF_SIZE_A4_72PPI } from '@documenso/lib/constants/pdf';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getEnvelopeById } from '@documenso/lib/server-only/envelope/get-envelope-by-id';
 import { generateAuditLogPdf } from '@documenso/lib/server-only/pdf/generate-audit-log-pdf';
 import { getTeamSettings } from '@documenso/lib/server-only/team/get-team-settings';
+import { EnvelopeType } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
 import {

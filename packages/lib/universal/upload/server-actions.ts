@@ -7,8 +7,9 @@ import {
 import { Storage } from '@google-cloud/storage';
 import slugify from '@sindresorhus/slugify';
 import path from 'node:path';
-
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { env } from '@documenso/lib/utils/env';
+import slugify from '@sindresorhus/slugify';
 
 import { ONE_HOUR, ONE_SECOND } from '../../constants/time';
 import { alphaid } from '../id';
@@ -195,8 +196,7 @@ const getS3Client = () => {
     throw new Error('Invalid upload transport');
   }
 
-  const hasCredentials =
-    env('NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID') && env('NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY');
+  const hasCredentials = env('NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID') && env('NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY');
 
   return new S3Client({
     endpoint: env('NEXT_PRIVATE_UPLOAD_ENDPOINT') || undefined,

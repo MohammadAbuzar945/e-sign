@@ -2,7 +2,9 @@ import { router } from '../trpc';
 import { createAdminOrganisationRoute } from './create-admin-organisation';
 import { createStripeCustomerRoute } from './create-stripe-customer';
 import { createSubscriptionClaimRoute } from './create-subscription-claim';
+import { createUserRoute } from './create-user';
 import { deleteDocumentRoute } from './delete-document';
+import { deleteOrganisationRoute } from './delete-organisation';
 import { deleteAdminOrganisationMemberRoute } from './delete-organisation-member';
 import { deleteSubscriptionClaimRoute } from './delete-subscription-claim';
 import { deleteAdminTeamMemberRoute } from './delete-team-member';
@@ -43,6 +45,7 @@ export const adminRouter = router({
     create: createAdminOrganisationRoute,
     update: updateAdminOrganisationRoute,
     updateCredits: updateAdminOrganisationCreditsRoute,
+    delete: deleteOrganisationRoute,
     swapSubscription: swapOrganisationSubscriptionRoute,
   },
   organisationMember: {
@@ -64,6 +67,7 @@ export const adminRouter = router({
   },
   user: {
     get: getUserRoute,
+    create: createUserRoute,
     update: updateUserRoute,
     delete: deleteUserRoute,
     enable: enableUserRoute,
