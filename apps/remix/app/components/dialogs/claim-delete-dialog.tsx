@@ -1,3 +1,7 @@
+import { useState } from 'react';
+
+import { Trans, useLingui } from '@lingui/react/macro';
+
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
@@ -11,8 +15,6 @@ import {
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { useState } from 'react';
 
 export type ClaimDeleteDialogProps = {
   claimId: string;
@@ -21,7 +23,12 @@ export type ClaimDeleteDialogProps = {
   trigger: React.ReactNode;
 };
 
-export const ClaimDeleteDialog = ({ claimId, claimName, claimLocked, trigger }: ClaimDeleteDialogProps) => {
+export const ClaimDeleteDialog = ({
+  claimId,
+  claimName,
+  claimLocked,
+  trigger,
+}: ClaimDeleteDialogProps) => {
   const { t } = useLingui();
   const { toast } = useToast();
 

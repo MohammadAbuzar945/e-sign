@@ -1,3 +1,10 @@
+import { useState } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { useRevalidator } from 'react-router';
+
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
@@ -13,11 +20,6 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@documenso/ui/
 import { Input } from '@documenso/ui/primitives/input';
 import { Label } from '@documenso/ui/primitives/label';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { useState } from 'react';
-import { useRevalidator } from 'react-router';
 
 import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 import { DocumentSigningFieldContainer } from './document-signing-field-container';
@@ -35,12 +37,17 @@ export type DocumentSigningNameFieldProps = {
   onUnsignField?: (value: TRemovedSignedFieldWithTokenMutationSchema) => Promise<void> | void;
 };
 
-export const DocumentSigningNameField = ({ field, onSignField, onUnsignField }: DocumentSigningNameFieldProps) => {
+export const DocumentSigningNameField = ({
+  field,
+  onSignField,
+  onUnsignField,
+}: DocumentSigningNameFieldProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
 
-  const { fullName: providedFullName, setFullName: setProvidedFullName } = useRequiredDocumentSigningContext();
+  const { fullName: providedFullName, setFullName: setProvidedFullName } =
+    useRequiredDocumentSigningContext();
 
   const { recipient, isAssistantMode } = useDocumentSigningRecipientContext();
 
@@ -49,8 +56,10 @@ export const DocumentSigningNameField = ({ field, onSignField, onUnsignField }: 
   const { mutateAsync: signFieldWithToken, isPending: isSignFieldWithTokenLoading } =
     trpc.field.signFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
-  const { mutateAsync: removeSignedFieldWithToken, isPending: isRemoveSignedFieldWithTokenLoading } =
-    trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
+  const {
+    mutateAsync: removeSignedFieldWithToken,
+    isPending: isRemoveSignedFieldWithTokenLoading,
+  } = trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
   const isLoading = isSignFieldWithTokenLoading || isRemoveSignedFieldWithTokenLoading;
 
@@ -153,7 +162,13 @@ export const DocumentSigningNameField = ({ field, onSignField, onUnsignField }: 
   };
 
   return (
-    <DocumentSigningFieldContainer field={field} onPreSign={onPreSign} onSign={onSign} onRemove={onRemove} type="Name">
+    <DocumentSigningFieldContainer
+      field={field}
+      onPreSign={onPreSign}
+      onSign={onSign}
+      onRemove={onRemove}
+      type="Name"
+    >
       {isLoading && <DocumentSigningFieldsLoader />}
 
       {!field.inserted && (
@@ -206,7 +221,12 @@ export const DocumentSigningNameField = ({ field, onSignField, onUnsignField }: 
                 <Trans>Cancel</Trans>
               </Button>
 
-              <Button type="button" className="flex-1" disabled={!localFullName} onClick={() => onDialogSignClick()}>
+              <Button
+                type="button"
+                className="flex-1"
+                disabled={!localFullName}
+                onClick={() => onDialogSignClick()}
+              >
                 <Trans>Sign</Trans>
               </Button>
             </div>

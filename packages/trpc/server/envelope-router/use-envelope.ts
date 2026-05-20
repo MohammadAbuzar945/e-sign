@@ -1,3 +1,5 @@
+import { EnvelopeType } from '@prisma/client';
+
 import { getServerLimits } from '@documenso/ee/server-only/limits/server';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { sendDocument } from '@documenso/lib/server-only/document/send-document';
@@ -5,10 +7,13 @@ import { getEnvelopeById } from '@documenso/lib/server-only/envelope/get-envelop
 import { createDocumentFromTemplate } from '@documenso/lib/server-only/template/create-document-from-template';
 import { putNormalizedPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
 import { formatSigningLink } from '@documenso/lib/utils/recipients';
-import { EnvelopeType } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
-import { useEnvelopeMeta, ZUseEnvelopeRequestSchema, ZUseEnvelopeResponseSchema } from './use-envelope.types';
+import {
+  ZUseEnvelopeRequestSchema,
+  ZUseEnvelopeResponseSchema,
+  useEnvelopeMeta,
+} from './use-envelope.types';
 
 export const useEnvelopeRoute = authenticatedProcedure
   .meta(useEnvelopeMeta)
@@ -67,7 +72,9 @@ export const useEnvelopeRoute = authenticatedProcedure
     const filesToUpload = files.filter(
       (file, index) =>
         payload.customDocumentData &&
-        payload.customDocumentData.some((mapping) => mapping.identifier === file.name || mapping.identifier === index),
+        payload.customDocumentData.some(
+          (mapping) => mapping.identifier === file.name || mapping.identifier === index,
+        ),
     );
 
     // Process uploaded files and create document data for them
@@ -91,7 +98,9 @@ export const useEnvelopeRoute = authenticatedProcedure
 
       // Find the uploaded file by identifier
       if (typeof mapping.identifier === 'string') {
-        documentDataId = uploadedFiles.find((file) => file.name === mapping.identifier)?.documentDataId;
+        documentDataId = uploadedFiles.find(
+          (file) => file.name === mapping.identifier,
+        )?.documentDataId;
       }
 
       if (typeof mapping.identifier === 'number') {
@@ -109,7 +118,9 @@ export const useEnvelopeRoute = authenticatedProcedure
       }
 
       // Verify that the envelopeItemId exists in the template
-      const envelopeItem = envelope.envelopeItems.find((item) => item.id === mapping.envelopeItemId);
+      const envelopeItem = envelope.envelopeItems.find(
+        (item) => item.id === mapping.envelopeItemId,
+      );
 
       if (!envelopeItem) {
         throw new AppError(AppErrorCode.NOT_FOUND, {

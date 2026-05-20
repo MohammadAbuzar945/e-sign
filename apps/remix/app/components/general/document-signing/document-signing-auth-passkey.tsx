@@ -1,11 +1,5 @@
-import { AppError } from '@documenso/lib/errors/app-error';
-import { DocumentAuth, type TRecipientActionAuth } from '@documenso/lib/types/document-auth';
-import { trpc } from '@documenso/trpc/react';
-import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
-import { Button } from '@documenso/ui/primitives/button';
-import { DialogFooter } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
+import { useEffect, useState } from 'react';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
@@ -13,10 +7,31 @@ import { Trans } from '@lingui/react/macro';
 import { RecipientRole } from '@prisma/client';
 import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
 import { Loader } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { match } from 'ts-pattern';
 import { z } from 'zod';
+
+import { AppError } from '@documenso/lib/errors/app-error';
+import { DocumentAuth, type TRecipientActionAuth } from '@documenso/lib/types/document-auth';
+import { trpc } from '@documenso/trpc/react';
+import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
+import { Button } from '@documenso/ui/primitives/button';
+import { DialogFooter } from '@documenso/ui/primitives/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 
 import { PasskeyCreateDialog } from '~/components/dialogs/passkey-create-dialog';
 
@@ -114,36 +129,58 @@ export const DocumentSigningAuthPasskey = ({
           <AlertDescription>
             {match({ role: recipient.role, actionTarget })
               .with({ role: RecipientRole.SIGNER, actionTarget: 'FIELD' }, () => (
-                <Trans>Your browser does not support passkeys, which is required to sign this field.</Trans>
+                <Trans>
+                  Your browser does not support passkeys, which is required to sign this field.
+                </Trans>
               ))
               .with({ role: RecipientRole.SIGNER, actionTarget: 'DOCUMENT' }, () => (
-                <Trans>Your browser does not support passkeys, which is required to sign this document.</Trans>
+                <Trans>
+                  Your browser does not support passkeys, which is required to sign this document.
+                </Trans>
               ))
               .with({ role: RecipientRole.APPROVER, actionTarget: 'FIELD' }, () => (
-                <Trans>Your browser does not support passkeys, which is required to approve this field.</Trans>
+                <Trans>
+                  Your browser does not support passkeys, which is required to approve this field.
+                </Trans>
               ))
               .with({ role: RecipientRole.APPROVER, actionTarget: 'DOCUMENT' }, () => (
-                <Trans>Your browser does not support passkeys, which is required to approve this document.</Trans>
+                <Trans>
+                  Your browser does not support passkeys, which is required to approve this
+                  document.
+                </Trans>
               ))
               .with({ role: RecipientRole.VIEWER, actionTarget: 'FIELD' }, () => (
-                <Trans>Your browser does not support passkeys, which is required to view this field.</Trans>
+                <Trans>
+                  Your browser does not support passkeys, which is required to view this field.
+                </Trans>
               ))
               .with({ role: RecipientRole.VIEWER, actionTarget: 'DOCUMENT' }, () => (
                 <Trans>
-                  Your browser does not support passkeys, which is required to mark this document as viewed.
+                  Your browser does not support passkeys, which is required to mark this document as
+                  viewed.
                 </Trans>
               ))
               .with({ role: RecipientRole.CC, actionTarget: 'FIELD' }, () => (
-                <Trans>Your browser does not support passkeys, which is required to view this field.</Trans>
+                <Trans>
+                  Your browser does not support passkeys, which is required to view this field.
+                </Trans>
               ))
               .with({ role: RecipientRole.CC, actionTarget: 'DOCUMENT' }, () => (
-                <Trans>Your browser does not support passkeys, which is required to view this document.</Trans>
+                <Trans>
+                  Your browser does not support passkeys, which is required to view this document.
+                </Trans>
               ))
               .with({ role: RecipientRole.ASSISTANT, actionTarget: 'FIELD' }, () => (
-                <Trans>Your browser does not support passkeys, which is required to assist with this field.</Trans>
+                <Trans>
+                  Your browser does not support passkeys, which is required to assist with this
+                  field.
+                </Trans>
               ))
               .with({ role: RecipientRole.ASSISTANT, actionTarget: 'DOCUMENT' }, () => (
-                <Trans>Your browser does not support passkeys, which is required to assist with this document.</Trans>
+                <Trans>
+                  Your browser does not support passkeys, which is required to assist with this
+                  document.
+                </Trans>
               ))
               .exhaustive()}
           </AlertDescription>
@@ -263,7 +300,10 @@ export const DocumentSigningAuthPasskey = ({
                   <FormControl>
                     <Select {...field} onValueChange={field.onChange}>
                       <SelectTrigger className="bg-background text-muted-foreground">
-                        <SelectValue data-testid="documentAccessSelectValue" placeholder={_(msg`Select passkey`)} />
+                        <SelectValue
+                          data-testid="documentAccessSelectValue"
+                          placeholder={_(msg`Select passkey`)}
+                        />
                       </SelectTrigger>
 
                       <SelectContent position="popper">
@@ -287,7 +327,9 @@ export const DocumentSigningAuthPasskey = ({
                   <Trans>Unauthorized</Trans>
                 </AlertTitle>
                 <AlertDescription>
-                  <Trans>We were unable to verify your details. Please try again or contact support</Trans>
+                  <Trans>
+                    We were unable to verify your details. Please try again or contact support
+                  </Trans>
                 </AlertDescription>
               </Alert>
             )}

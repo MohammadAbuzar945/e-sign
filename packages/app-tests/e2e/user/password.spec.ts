@@ -1,6 +1,7 @@
+import { type Page, expect, test } from '@playwright/test';
+
 import { prisma } from '@documenso/prisma';
 import { seedUser } from '@documenso/prisma/seed/users';
-import { expect, type Page, test } from '@playwright/test';
 
 import { apiSignin, apiSignout, checkSessionValid } from '../fixtures/authentication';
 
@@ -48,7 +49,9 @@ test('[USER] can reset password via forgot password', async ({ page }: { page: P
   await expect(page.getByLabel('Repeat Password')).toHaveValue(oldPassword);
 
   await page.getByRole('button', { name: 'Reset Password' }).click();
-  await expect(page.locator('body')).toContainText('Your new password cannot be the same as your old password.');
+  await expect(page.locator('body')).toContainText(
+    'Your new password cannot be the same as your old password.',
+  );
 
   // Assert password reset.
   await page.getByLabel('Password', { exact: true }).fill(newPassword);
@@ -168,7 +171,11 @@ test('[USER] password reset invalidates all sessions', async ({ page }: { page: 
   expect(await checkSessionValid(page)).toBe(true);
 });
 
-test('[USER] password update invalidates other sessions but keeps current', async ({ page }: { page: Page }) => {
+test('[USER] password update invalidates other sessions but keeps current', async ({
+  page,
+}: {
+  page: Page;
+}) => {
   const oldPassword = 'Test123!';
   const newPassword = 'Test124!';
 

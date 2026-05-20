@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from 'react';
-import { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
-import { HexColorInput, HexColorPicker, setNonce } from 'react-colorful';
+import { HexColorInput, HexColorPicker } from 'react-colorful';
 
 import { cn } from '../lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
@@ -11,7 +11,6 @@ export type ColorPickerProps = {
   value: string;
   defaultValue?: string;
   onChange: (color: string) => void;
-  nonce?: string;
 } & HTMLAttributes<HTMLDivElement>;
 
 export const ColorPicker = ({
@@ -20,7 +19,6 @@ export const ColorPicker = ({
   value,
   defaultValue = '#000000',
   onChange,
-  nonce,
   ...props
 }: ColorPickerProps) => {
   const [color, setColor] = useState(value || defaultValue);
@@ -41,19 +39,13 @@ export const ColorPicker = ({
     onChange(inputColor);
   };
 
-  useEffect(() => {
-    if (nonce) {
-      setNonce(nonce);
-    }
-  }, [nonce]);
-
   return (
     <Popover>
       <PopoverTrigger>
         <button
           type="button"
           disabled={disabled}
-          className="h-12 w-12 rounded-md border bg-background p-1 disabled:pointer-events-none disabled:opacity-50"
+          className="bg-background h-12 w-12 rounded-md border p-1 disabled:pointer-events-none disabled:opacity-50"
         >
           <div className="h-full w-full rounded-sm" style={{ backgroundColor: color }} />
         </button>
@@ -61,11 +53,13 @@ export const ColorPicker = ({
 
       <PopoverContent className="w-auto">
         <HexColorPicker
-          className={cn(className, 'w-full aria-disabled:pointer-events-none aria-disabled:opacity-50')}
+          className={cn(
+            className,
+            'w-full aria-disabled:pointer-events-none aria-disabled:opacity-50',
+          )}
           color={color}
           onChange={onColorChange}
           aria-disabled={disabled}
-          nonce={nonce}
           {...props}
         />
 
@@ -81,7 +75,6 @@ export const ColorPicker = ({
             }
           }}
           disabled={disabled}
-          nonce={nonce}
         />
       </PopoverContent>
     </Popover>

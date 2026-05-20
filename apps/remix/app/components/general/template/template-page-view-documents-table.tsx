@@ -1,3 +1,15 @@
+import { useMemo } from 'react';
+
+import type { MessageDescriptor } from '@lingui/core';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { DocumentSource, DocumentStatus as DocumentStatusEnum } from '@prisma/client';
+import { InfoIcon } from 'lucide-react';
+import { DateTime } from 'luxon';
+import { useSearchParams } from 'react-router';
+import { z } from 'zod';
+
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { trpc } from '@documenso/trpc/react';
@@ -8,16 +20,6 @@ import { SelectItem } from '@documenso/ui/primitives/select';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
-import type { MessageDescriptor } from '@lingui/core';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { DocumentSource, DocumentStatus as DocumentStatusEnum } from '@prisma/client';
-import { InfoIcon } from 'lucide-react';
-import { DateTime } from 'luxon';
-import { useMemo } from 'react';
-import { useSearchParams } from 'react-router';
-import { z } from 'zod';
 
 import { SearchParamSelector } from '~/components/forms/search-param-selector';
 import { DocumentSearch } from '~/components/general/document/document-search';
@@ -51,7 +53,9 @@ type TemplatePageViewDocumentsTableProps = {
   templateId: number;
 };
 
-export const TemplatePageViewDocumentsTable = ({ templateId }: TemplatePageViewDocumentsTableProps) => {
+export const TemplatePageViewDocumentsTable = ({
+  templateId,
+}: TemplatePageViewDocumentsTableProps) => {
   const { _, i18n } = useLingui();
 
   const [searchParams] = useSearchParams();
@@ -59,7 +63,9 @@ export const TemplatePageViewDocumentsTable = ({ templateId }: TemplatePageViewD
 
   const team = useCurrentTeam();
 
-  const parsedSearchParams = ZDocumentSearchParamsSchema.parse(Object.fromEntries(searchParams ?? []));
+  const parsedSearchParams = ZDocumentSearchParamsSchema.parse(
+    Object.fromEntries(searchParams ?? []),
+  );
 
   const { data, isLoading, isLoadingError } = trpc.document.find.useQuery(
     {
@@ -94,7 +100,8 @@ export const TemplatePageViewDocumentsTable = ({ templateId }: TemplatePageViewD
       {
         header: _(msg`Created`),
         accessorKey: 'createdAt',
-        cell: ({ row }) => i18n.date(row.original.createdAt, { ...DateTime.DATETIME_SHORT, hourCycle: 'h12' }),
+        cell: ({ row }) =>
+          i18n.date(row.original.createdAt, { ...DateTime.DATETIME_SHORT, hourCycle: 'h12' }),
       },
       {
         header: _(msg`Title`),
@@ -105,7 +112,10 @@ export const TemplatePageViewDocumentsTable = ({ templateId }: TemplatePageViewD
         header: _(msg`Recipient`),
         accessorKey: 'recipient',
         cell: ({ row }) => (
-          <StackAvatarsWithTooltip recipients={row.original.recipients} documentStatus={row.original.status} />
+          <StackAvatarsWithTooltip
+            recipients={row.original.recipients}
+            documentStatus={row.original.status}
+          />
         ),
       },
       {
@@ -123,15 +133,17 @@ export const TemplatePageViewDocumentsTable = ({ templateId }: TemplatePageViewD
                 <InfoIcon className="mx-2 h-4 w-4" />
               </TooltipTrigger>
 
-              <TooltipContent className="!p-0 max-w-md space-y-2 text-foreground">
-                <ul className="space-y-0.5 divide-y text-muted-foreground [&>li]:p-4">
+              <TooltipContent className="text-foreground max-w-md space-y-2 !p-0">
+                <ul className="text-muted-foreground space-y-0.5 divide-y [&>li]:p-4">
                   <li>
                     <h2 className="mb-2 flex flex-row items-center font-semibold">
                       <Trans>Template</Trans>
                     </h2>
 
                     <p>
-                      <Trans>This document was created by you or a team member using the template above.</Trans>
+                      <Trans>
+                        This document was created by you or a team member using the template above.
+                      </Trans>
                     </p>
                   </li>
 
@@ -151,7 +163,9 @@ export const TemplatePageViewDocumentsTable = ({ templateId }: TemplatePageViewD
         ),
         accessorKey: 'type',
         cell: ({ row }) => (
-          <div className="flex flex-row items-center">{_(DOCUMENT_SOURCE_LABELS[row.original.source])}</div>
+          <div className="flex flex-row items-center">
+            {_(DOCUMENT_SOURCE_LABELS[row.original.source])}
+          </div>
         ),
       },
       {
@@ -175,7 +189,9 @@ export const TemplatePageViewDocumentsTable = ({ templateId }: TemplatePageViewD
 
         <SearchParamSelector
           paramKey="status"
-          isValueValid={(value) => [...DocumentStatusEnum.COMPLETED].includes(value as unknown as string)}
+          isValueValid={(value) =>
+            [...DocumentStatusEnum.COMPLETED].includes(value as unknown as string)
+          }
         >
           <SelectItem value="all">
             <Trans>Any Status</Trans>
@@ -193,7 +209,9 @@ export const TemplatePageViewDocumentsTable = ({ templateId }: TemplatePageViewD
 
         <SearchParamSelector
           paramKey="source"
-          isValueValid={(value) => [...DocumentSource.TEMPLATE].includes(value as unknown as string)}
+          isValueValid={(value) =>
+            [...DocumentSource.TEMPLATE].includes(value as unknown as string)
+          }
         >
           <SelectItem value="all">
             <Trans>Any Source</Trans>

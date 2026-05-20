@@ -1,12 +1,5 @@
-import { mailer } from '@documenso/email/mailer';
-import { DocumentInviteEmailTemplate } from '@documenso/email/templates/document-invite';
-import { resolveExpiresAt } from '@documenso/lib/constants/envelope-expiration';
-import { RECIPIENT_ROLE_TO_EMAIL_TYPE, RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-roles';
-import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
-import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
-import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
-import { renderCustomEmailTemplate } from '@documenso/lib/utils/render-custom-email-template';
-import { prisma } from '@documenso/prisma';
+import { createElement } from 'react';
+
 import { msg } from '@lingui/core/macro';
 import {
   DocumentStatus,
@@ -16,12 +9,27 @@ import {
   SigningStatus,
   WebhookTriggerEvents,
 } from '@prisma/client';
-import { createElement } from 'react';
+
+import { mailer } from '@documenso/email/mailer';
+import { DocumentInviteEmailTemplate } from '@documenso/email/templates/document-invite';
+import { resolveExpiresAt } from '@documenso/lib/constants/envelope-expiration';
+import {
+  RECIPIENT_ROLES_DESCRIPTION,
+  RECIPIENT_ROLE_TO_EMAIL_TYPE,
+} from '@documenso/lib/constants/recipient-roles';
+import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
+import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
+import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
+import { renderCustomEmailTemplate } from '@documenso/lib/utils/render-custom-email-template';
+import { prisma } from '@documenso/prisma';
 
 import { getI18nInstance } from '../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
 import { extractDerivedDocumentEmailSettings } from '../../types/document-email';
-import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../types/webhook-payload';
+import {
+  ZWebhookDocumentSchema,
+  mapEnvelopeToWebhookDocumentPayload,
+} from '../../types/webhook-payload';
 import { isDocumentCompleted } from '../../utils/document';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { isRecipientEmailValidForSending } from '../../utils/recipients';
@@ -38,7 +46,13 @@ export type ResendDocumentOptions = {
   requestMetadata: ApiRequestMetadata;
 };
 
-export const resendDocument = async ({ id, userId, recipients, teamId, requestMetadata }: ResendDocumentOptions) => {
+export const resendDocument = async ({
+  id,
+  userId,
+  recipients,
+  teamId,
+  requestMetadata,
+}: ResendDocumentOptions) => {
   const user = await prisma.user.findFirstOrThrow({
     where: {
       id: userId,
@@ -120,14 +134,15 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
     return envelope;
   }
 
-  const { branding, emailLanguage, organisationType, senderEmail, replyToEmail } = await getEmailContext({
-    emailType: 'RECIPIENT',
-    source: {
-      type: 'team',
-      teamId: envelope.teamId,
-    },
-    meta: envelope.documentMeta,
-  });
+  const { branding, emailLanguage, organisationType, senderEmail, replyToEmail } =
+    await getEmailContext({
+      emailType: 'RECIPIENT',
+      source: {
+        type: 'team',
+        teamId: envelope.teamId,
+      },
+      meta: envelope.documentMeta,
+    });
 
   await Promise.all(
     recipientsToRemind.map(async (recipient) => {
@@ -142,7 +157,9 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
       const { email, name } = recipient;
       const selfSigner = email === user.email;
 
-      const recipientActionVerb = i18n._(RECIPIENT_ROLES_DESCRIPTION[recipient.role].actionVerb).toLowerCase();
+      const recipientActionVerb = i18n
+        ._(RECIPIENT_ROLES_DESCRIPTION[recipient.role].actionVerb)
+        .toLowerCase();
 
       let emailMessage = envelope.documentMeta.message || '';
       let emailSubject = i18n._(msg`Reminder: Please ${recipientActionVerb} this document`);
@@ -155,7 +172,9 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
       }
 
       if (organisationType === OrganisationType.ORGANISATION) {
-        emailSubject = i18n._(msg`Reminder: ${envelope.team.name} invited you to ${recipientActionVerb} a document`);
+        emailSubject = i18n._(
+          msg`Reminder: ${envelope.team.name} invited you to ${recipientActionVerb} a document`,
+        );
         emailMessage =
           envelope.documentMeta.message ||
           i18n._(
@@ -210,7 +229,10 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
         from: senderEmail,
         replyTo: replyToEmail,
         subject: envelope.documentMeta.subject
-          ? renderCustomEmailTemplate(i18n._(msg`Reminder: ${envelope.documentMeta.subject}`), customEmailTemplate)
+          ? renderCustomEmailTemplate(
+              i18n._(msg`Reminder: ${envelope.documentMeta.subject}`),
+              customEmailTemplate,
+            )
           : emailSubject,
         html,
         text,

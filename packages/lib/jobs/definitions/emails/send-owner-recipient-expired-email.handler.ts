@@ -1,8 +1,10 @@
+import { createElement } from 'react';
+
+import { msg } from '@lingui/core/macro';
+
 import { mailer } from '@documenso/email/mailer';
 import { RecipientExpiredTemplate } from '@documenso/email/templates/recipient-expired';
 import { prisma } from '@documenso/prisma';
-import { msg } from '@lingui/core/macro';
-import { createElement } from 'react';
 
 import { getI18nInstance } from '../../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../../constants/app';
@@ -13,7 +15,13 @@ import { formatDocumentsPath } from '../../../utils/teams';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSendOwnerRecipientExpiredEmailJobDefinition } from './send-owner-recipient-expired-email';
 
-export const run = async ({ payload, io }: { payload: TSendOwnerRecipientExpiredEmailJobDefinition; io: JobRunIO }) => {
+export const run = async ({
+  payload,
+  io,
+}: {
+  payload: TSendOwnerRecipientExpiredEmailJobDefinition;
+  io: JobRunIO;
+}) => {
   const { recipientId, envelopeId } = payload;
 
   const envelope = await prisma.envelope.findFirst({
@@ -99,7 +107,9 @@ export const run = async ({ payload, io }: { payload: TSendOwnerRecipientExpired
         address: documentOwner.email,
       },
       from: senderEmail,
-      subject: i18n._(msg`Signing window expired for "${recipient.name || recipient.email}" on "${envelope.title}"`),
+      subject: i18n._(
+        msg`Signing window expired for "${recipient.name || recipient.email}" on "${envelope.title}"`,
+      ),
       html,
       text,
     });

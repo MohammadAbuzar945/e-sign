@@ -1,3 +1,10 @@
+import { useState } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import type { TeamEmail } from '@prisma/client';
+
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
@@ -11,11 +18,6 @@ import {
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import type { TeamEmail } from '@prisma/client';
-import { useState } from 'react';
 
 export type TeamEmailUsageProps = {
   teamEmail: TeamEmail & { team: { name: string; url: string } };
@@ -27,25 +29,26 @@ export const TeamEmailUsage = ({ teamEmail }: TeamEmailUsageProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
 
-  const { mutateAsync: deleteTeamEmail, isPending: isDeletingTeamEmail } = trpc.team.email.delete.useMutation({
-    onSuccess: () => {
-      toast({
-        title: _(msg`Success`),
-        description: _(msg`You have successfully revoked access.`),
-        duration: 5000,
-      });
-    },
-    onError: () => {
-      toast({
-        title: _(msg`Something went wrong`),
-        description: _(
-          msg`We encountered an unknown error while attempting to revoke access. Please try again or contact support.`,
-        ),
-        variant: 'destructive',
-        duration: 10000,
-      });
-    },
-  });
+  const { mutateAsync: deleteTeamEmail, isPending: isDeletingTeamEmail } =
+    trpc.team.email.delete.useMutation({
+      onSuccess: () => {
+        toast({
+          title: _(msg`Success`),
+          description: _(msg`You have successfully revoked access.`),
+          duration: 5000,
+        });
+      },
+      onError: () => {
+        toast({
+          title: _(msg`Something went wrong`),
+          description: _(
+            msg`We encountered an unknown error while attempting to revoke access. Please try again or contact support.`,
+          ),
+          variant: 'destructive',
+          duration: 10000,
+        });
+      },
+    });
 
   return (
     <Alert variant="neutral" className="flex flex-row items-center justify-between p-6">
@@ -56,8 +59,8 @@ export const TeamEmailUsage = ({ teamEmail }: TeamEmailUsageProps) => {
         <AlertDescription>
           <p>
             <Trans>
-              Your email is currently being used by team <span className="font-semibold">{teamEmail.team.name}</span> (
-              {teamEmail.team.url}
+              Your email is currently being used by team{' '}
+              <span className="font-semibold">{teamEmail.team.name}</span> ({teamEmail.team.url}
               ).
             </Trans>
           </p>
@@ -92,8 +95,9 @@ export const TeamEmailUsage = ({ teamEmail }: TeamEmailUsageProps) => {
 
             <DialogDescription className="mt-4">
               <Trans>
-                You are about to revoke access for team <span className="font-semibold">{teamEmail.team.name}</span> (
-                {teamEmail.team.url}) to use your email.
+                You are about to revoke access for team{' '}
+                <span className="font-semibold">{teamEmail.team.name}</span> ({teamEmail.team.url})
+                to use your email.
               </Trans>
             </DialogDescription>
           </DialogHeader>

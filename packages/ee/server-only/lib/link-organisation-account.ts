@@ -1,3 +1,5 @@
+import { UserSecurityAuditLogType } from '@prisma/client';
+
 import { getOrganisationAuthenticationPortalOptions } from '@documenso/auth/server/lib/utils/organisation-portal';
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import {
@@ -9,14 +11,16 @@ import { addUserToOrganisation } from '@documenso/lib/server-only/organisation/a
 import { ZOrganisationAccountLinkMetadataSchema } from '@documenso/lib/types/organisation';
 import type { RequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { prisma } from '@documenso/prisma';
-import { UserSecurityAuditLogType } from '@prisma/client';
 
 export interface LinkOrganisationAccountOptions {
   token: string;
   requestMeta: RequestMetadata;
 }
 
-export const linkOrganisationAccount = async ({ token, requestMeta }: LinkOrganisationAccountOptions) => {
+export const linkOrganisationAccount = async ({
+  token,
+  requestMeta,
+}: LinkOrganisationAccountOptions) => {
   if (!IS_BILLING_ENABLED()) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'Billing is not enabled',
@@ -61,7 +65,9 @@ export const linkOrganisationAccount = async ({ token, requestMeta }: LinkOrgani
     });
   }
 
-  const tokenMetadata = ZOrganisationAccountLinkMetadataSchema.safeParse(verificationToken.metadata);
+  const tokenMetadata = ZOrganisationAccountLinkMetadataSchema.safeParse(
+    verificationToken.metadata,
+  );
 
   if (!tokenMetadata.success) {
     console.error('Invalid token metadata', tokenMetadata.error);
@@ -88,7 +94,9 @@ export const linkOrganisationAccount = async ({ token, requestMeta }: LinkOrgani
   const oauthConfig = tokenMetadata.data.oauthConfig;
 
   const userAlreadyLinked = user.accounts.find(
-    (account) => account.provider === clientOptions.id && account.providerAccountId === oauthConfig.providerAccountId,
+    (account) =>
+      account.provider === clientOptions.id &&
+      account.providerAccountId === oauthConfig.providerAccountId,
   );
 
   if (organisationMember && userAlreadyLinked) {

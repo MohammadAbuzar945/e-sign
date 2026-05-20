@@ -1,12 +1,16 @@
-import { unsafe_useEffectOnce } from '@documenso/lib/client-only/hooks/use-effect-once';
-import { SIGNATURE_CANVAS_DPI, SIGNATURE_MIN_COVERAGE_THRESHOLD } from '@documenso/lib/constants/signatures';
+import type { MouseEvent, PointerEvent, RefObject, TouchEvent } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { Trans } from '@lingui/react/macro';
 import { Undo2 } from 'lucide-react';
 import type { StrokeOptions } from 'perfect-freehand';
 import { getStroke } from 'perfect-freehand';
-import type { MouseEvent, PointerEvent, RefObject, TouchEvent } from 'react';
-import { useMemo, useRef, useState } from 'react';
+
+import { unsafe_useEffectOnce } from '@documenso/lib/client-only/hooks/use-effect-once';
+import {
+  SIGNATURE_CANVAS_DPI,
+  SIGNATURE_MIN_COVERAGE_THRESHOLD,
+} from '@documenso/lib/constants/signatures';
 
 import { cn } from '../../lib/utils';
 import { getSvgPathFromStroke } from './helper';
@@ -30,9 +34,7 @@ const checkSignatureValidity = (element: RefObject<HTMLCanvasElement>) => {
   const totalPixels = data.length / 4;
 
   for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] > 0) {
-      filledPixels++;
-    }
+    if (data[i + 3] > 0) filledPixels++;
   }
 
   const filledPercentage = filledPixels / totalPixels;
@@ -47,7 +49,12 @@ export type SignaturePadDrawProps = {
   onChange: (_signatureDataUrl: string) => void;
 };
 
-export const SignaturePadDraw = ({ className, value, onChange, ...props }: SignaturePadDrawProps) => {
+export const SignaturePadDraw = ({
+  className,
+  value,
+  onChange,
+  ...props
+}: SignaturePadDrawProps) => {
   const $el = useRef<HTMLCanvasElement>(null);
 
   const $imageData = useRef<ImageData | null>(null);
@@ -112,12 +119,16 @@ export const SignaturePadDraw = ({ className, value, onChange, ...props }: Signa
           ctx.fillStyle = selectedColor;
 
           lines.forEach((line) => {
-            const pathData = new Path2D(getSvgPathFromStroke(getStroke(line, perfectFreehandOptions)));
+            const pathData = new Path2D(
+              getSvgPathFromStroke(getStroke(line, perfectFreehandOptions)),
+            );
 
             ctx.fill(pathData);
           });
 
-          const pathData = new Path2D(getSvgPathFromStroke(getStroke([...currentLine, point], perfectFreehandOptions)));
+          const pathData = new Path2D(
+            getSvgPathFromStroke(getStroke([...currentLine, point], perfectFreehandOptions)),
+          );
           ctx.fill(pathData);
         }
       }
@@ -152,7 +163,9 @@ export const SignaturePadDraw = ({ className, value, onChange, ...props }: Signa
         ctx.fillStyle = selectedColor;
 
         newLines.forEach((line) => {
-          const pathData = new Path2D(getSvgPathFromStroke(getStroke(line, perfectFreehandOptions)));
+          const pathData = new Path2D(
+            getSvgPathFromStroke(getStroke(line, perfectFreehandOptions)),
+          );
           ctx.fill(pathData);
         });
 
@@ -278,7 +291,7 @@ export const SignaturePadDraw = ({ className, value, onChange, ...props }: Signa
 
       <SignaturePadColorPicker selectedColor={selectedColor} setSelectedColor={setSelectedColor} />
 
-      <div className="absolute right-3 bottom-3 flex gap-2">
+      <div className="absolute bottom-3 right-3 flex gap-2">
         <button
           type="button"
           className="rounded-full p-0 text-[0.688rem] text-muted-foreground/60 ring-offset-background hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -290,7 +303,7 @@ export const SignaturePadDraw = ({ className, value, onChange, ...props }: Signa
 
       {isSignatureValid === false && (
         <div className="absolute bottom-4 left-4 flex gap-2">
-          <span className="text-destructive text-xs">
+          <span className="text-xs text-destructive">
             <Trans>Signature is too small</Trans>
           </span>
         </div>

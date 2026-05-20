@@ -6,6 +6,8 @@ type IsTwoFactorAuthenticationEnabledOptions = {
   user: User;
 };
 
-export const isTwoFactorAuthenticationEnabled = ({ user }: IsTwoFactorAuthenticationEnabledOptions) => {
+export const isTwoFactorAuthenticationEnabled = ({
+  user,
+}: IsTwoFactorAuthenticationEnabledOptions) => {
   return user.twoFactorEnabled && typeof DOCUMENSO_ENCRYPTION_KEY === 'string';
 };

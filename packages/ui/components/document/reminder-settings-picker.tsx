@@ -1,3 +1,5 @@
+import { Plural, Trans } from '@lingui/react/macro';
+
 import type {
   TEnvelopeReminderDurationPeriod,
   TEnvelopeReminderPeriod,
@@ -5,8 +7,13 @@ import type {
 } from '@documenso/lib/constants/envelope-reminder';
 import { Input } from '@documenso/ui/primitives/input';
 import { Label } from '@documenso/ui/primitives/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
-import { Plural, Trans } from '@lingui/react/macro';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 
 type ReminderMode = 'enabled' | 'disabled' | 'inherit';
 
@@ -30,7 +37,9 @@ const getPeriodAmount = (period: TEnvelopeReminderPeriod | undefined): number =>
   return 1;
 };
 
-const getPeriodUnit = (period: TEnvelopeReminderPeriod | undefined): TEnvelopeReminderDurationPeriod['unit'] => {
+const getPeriodUnit = (
+  period: TEnvelopeReminderPeriod | undefined,
+): TEnvelopeReminderDurationPeriod['unit'] => {
   if (period && 'unit' in period) {
     return period.unit;
   }
@@ -78,7 +87,9 @@ export const ReminderSettingsPicker = ({
     });
   };
 
-  const updateSendAfter = (updates: Partial<{ amount: number; unit: TEnvelopeReminderDurationPeriod['unit'] }>) => {
+  const updateSendAfter = (
+    updates: Partial<{ amount: number; unit: TEnvelopeReminderDurationPeriod['unit'] }>,
+  ) => {
     const newAmount = Math.max(1, Math.floor(updates.amount ?? sendAfterAmount));
     const newUnit = updates.unit ?? sendAfterUnit;
 
@@ -88,7 +99,9 @@ export const ReminderSettingsPicker = ({
     });
   };
 
-  const updateRepeatEvery = (updates: Partial<{ amount: number; unit: TEnvelopeReminderDurationPeriod['unit'] }>) => {
+  const updateRepeatEvery = (
+    updates: Partial<{ amount: number; unit: TEnvelopeReminderDurationPeriod['unit'] }>,
+  ) => {
     const newAmount = Math.max(1, Math.floor(updates.amount ?? repeatEveryAmount));
     const newUnit = updates.unit ?? repeatEveryUnit;
 
@@ -138,7 +151,7 @@ export const ReminderSettingsPicker = ({
       {mode === 'enabled' && (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label className="text-muted-foreground text-sm">
+            <Label className="text-sm text-muted-foreground">
               <Trans>Send first reminder after</Trans>
             </Label>
 
@@ -168,7 +181,7 @@ export const ReminderSettingsPicker = ({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label className="text-muted-foreground text-sm">
+            <Label className="text-sm text-muted-foreground">
               <Trans>Then repeat every</Trans>
             </Label>
 

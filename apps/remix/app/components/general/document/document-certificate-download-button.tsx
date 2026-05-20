@@ -1,3 +1,9 @@
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import type { DocumentStatus } from '@prisma/client';
+import { DownloadIcon } from 'lucide-react';
+
 import { downloadFile } from '@documenso/lib/client-only/download-file';
 import { base64 } from '@documenso/lib/universal/base64';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
@@ -5,11 +11,6 @@ import { trpc } from '@documenso/trpc/react';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import type { DocumentStatus } from '@prisma/client';
-import { DownloadIcon } from 'lucide-react';
 
 export type DocumentCertificateDownloadButtonProps = {
   className?: string;
@@ -25,7 +26,8 @@ export const DocumentCertificateDownloadButton = ({
   const { toast } = useToast();
   const { _ } = useLingui();
 
-  const { mutateAsync: downloadCertificate, isPending } = trpc.document.downloadCertificate.useMutation();
+  const { mutateAsync: downloadCertificate, isPending } =
+    trpc.document.downloadCertificate.useMutation();
 
   const onDownloadCertificatesClick = async () => {
     try {
@@ -43,7 +45,9 @@ export const DocumentCertificateDownloadButton = ({
 
       toast({
         title: _(msg`Something went wrong`),
-        description: _(msg`Sorry, we were unable to download the certificate. Please try again later.`),
+        description: _(
+          msg`Sorry, we were unable to download the certificate. Please try again later.`,
+        ),
         variant: 'destructive',
       });
     }

@@ -1,6 +1,11 @@
-import type { ORGANISATION_MEMBER_ROLE_MAP } from '@documenso/lib/constants/organisations-translations';
 import type { Organisation, OrganisationGlobalSettings, Prisma } from '@prisma/client';
-import { DocumentVisibility, type OrganisationGroup, type OrganisationMemberRole } from '@prisma/client';
+import {
+  DocumentVisibility,
+  type OrganisationGroup,
+  type OrganisationMemberRole,
+} from '@prisma/client';
+
+import type { ORGANISATION_MEMBER_ROLE_MAP } from '@documenso/lib/constants/organisations-translations';
 
 import { DEFAULT_DOCUMENT_DATE_FORMAT } from '../constants/date-formats';
 import { DEFAULT_ENVELOPE_EXPIRATION_PERIOD } from '../constants/envelope-expiration';
@@ -52,7 +57,8 @@ export const getHighestOrganisationRoleInGroup = (
 
   groups.forEach((group) => {
     const currentRolePriority = ORGANISATION_MEMBER_ROLE_HIERARCHY[group.organisationRole].length;
-    const highestOrganisationRolePriority = ORGANISATION_MEMBER_ROLE_HIERARCHY[highestOrganisationRole].length;
+    const highestOrganisationRolePriority =
+      ORGANISATION_MEMBER_ROLE_HIERARCHY[highestOrganisationRole].length;
 
     if (currentRolePriority > highestOrganisationRolePriority) {
       highestOrganisationRole = group.organisationRole;
@@ -104,7 +110,10 @@ export const buildOrganisationWhereQuery = ({
   };
 };
 
-export const generateDefaultOrganisationSettings = (): Omit<OrganisationGlobalSettings, 'id' | 'organisation'> => {
+export const generateDefaultOrganisationSettings = (): Omit<
+  OrganisationGlobalSettings,
+  'id' | 'organisation'
+> => {
   return {
     documentVisibility: DocumentVisibility.EVERYONE,
     documentLanguage: 'en',
@@ -124,8 +133,6 @@ export const generateDefaultOrganisationSettings = (): Omit<OrganisationGlobalSe
     brandingLogo: '',
     brandingUrl: '',
     brandingCompanyDetails: '',
-    brandingColors: null,
-    brandingCss: '',
 
     emailId: null,
     emailReplyTo: null,

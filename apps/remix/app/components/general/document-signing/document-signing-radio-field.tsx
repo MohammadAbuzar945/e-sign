@@ -1,3 +1,9 @@
+import { useEffect, useState } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { useRevalidator } from 'react-router';
+
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
@@ -11,10 +17,6 @@ import type {
 import { Label } from '@documenso/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@documenso/ui/primitives/radio-group';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { useEffect, useState } from 'react';
-import { useRevalidator } from 'react-router';
 
 import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 import { DocumentSigningFieldContainer } from './document-signing-field-container';
@@ -27,7 +29,11 @@ export type DocumentSigningRadioFieldProps = {
   onUnsignField?: (value: TRemovedSignedFieldWithTokenMutationSchema) => Promise<void> | void;
 };
 
-export const DocumentSigningRadioField = ({ field, onSignField, onUnsignField }: DocumentSigningRadioFieldProps) => {
+export const DocumentSigningRadioField = ({
+  field,
+  onSignField,
+  onUnsignField,
+}: DocumentSigningRadioFieldProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
@@ -50,8 +56,10 @@ export const DocumentSigningRadioField = ({ field, onSignField, onUnsignField }:
   const { mutateAsync: signFieldWithToken, isPending: isSignFieldWithTokenLoading } =
     trpc.field.signFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
-  const { mutateAsync: removeSignedFieldWithToken, isPending: isRemoveSignedFieldWithTokenLoading } =
-    trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
+  const {
+    mutateAsync: removeSignedFieldWithToken,
+    isPending: isRemoveSignedFieldWithTokenLoading,
+  } = trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
   const isLoading = isSignFieldWithTokenLoading || isRemoveSignedFieldWithTokenLoading;
   const shouldAutoSignField =
@@ -146,7 +154,10 @@ export const DocumentSigningRadioField = ({ field, onSignField, onUnsignField }:
       {isLoading && <DocumentSigningFieldsLoader />}
 
       {!field.inserted && (
-        <RadioGroup onValueChange={(value) => handleSelectItem(value)} className="z-10 my-0.5 gap-y-1">
+        <RadioGroup
+          onValueChange={(value) => handleSelectItem(value)}
+          className="z-10 my-0.5 gap-y-1"
+        >
           {values?.map((item, index) => (
             <div key={index} className="flex items-center">
               <RadioGroupItem
@@ -157,7 +168,10 @@ export const DocumentSigningRadioField = ({ field, onSignField, onUnsignField }:
                 disabled={isReadOnly}
               />
               {!item.value.includes('empty-value-') && item.value && (
-                <Label htmlFor={`option-${field.id}-${item.id}`} className="ml-1.5 font-normal text-foreground text-xs">
+                <Label
+                  htmlFor={`option-${field.id}-${item.id}`}
+                  className="text-foreground ml-1.5 text-xs font-normal"
+                >
                   {item.value}
                 </Label>
               )}
@@ -178,7 +192,10 @@ export const DocumentSigningRadioField = ({ field, onSignField, onUnsignField }:
                 disabled={isReadOnly}
               />
               {!item.value.includes('empty-value-') && item.value && (
-                <Label htmlFor={`option-${field.id}-${item.id}`} className="ml-1.5 font-normal text-foreground text-xs">
+                <Label
+                  htmlFor={`option-${field.id}-${item.id}`}
+                  className="text-foreground ml-1.5 text-xs font-normal"
+                >
                   {item.value}
                 </Label>
               )}

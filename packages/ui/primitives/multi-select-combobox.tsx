@@ -1,4 +1,4 @@
-import { AnimateGenericFadeInOut } from '@documenso/ui/components/animate/animate-generic-fade-in-out';
+import * as React from 'react';
 
 import type { MessageDescriptor } from '@lingui/core';
 import { t } from '@lingui/core/macro';
@@ -6,7 +6,8 @@ import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { AnimatePresence } from 'framer-motion';
 import { Check, ChevronsUpDown, Loader, XIcon } from 'lucide-react';
-import * as React from 'react';
+
+import { AnimateGenericFadeInOut } from '@documenso/ui/components/animate/animate-generic-fade-in-out';
 
 import { cn } from '../lib/utils';
 import { Button } from './button';
@@ -119,7 +120,7 @@ export function MultiSelectCombobox<T = OptionValue>({
             <AnimatePresence>
               {loading ? (
                 <div className="flex items-center justify-center">
-                  <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <Loader className="h-5 w-5 animate-spin text-gray-500 dark:text-gray-100" />
                 </div>
               ) : (
                 <AnimateGenericFadeInOut className="flex w-full justify-between">
@@ -140,12 +141,12 @@ export function MultiSelectCombobox<T = OptionValue>({
 
         {/* This is placed outside the trigger since we can't have nested buttons. */}
         {showClearButton && !loading && (
-          <div className="absolute top-0 right-8 bottom-0 flex items-center justify-center">
+          <div className="absolute bottom-0 right-8 top-0 flex items-center justify-center">
             <button
-              className="flex h-4 w-4 items-center justify-center rounded-full bg-muted-foreground/20"
+              className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-300 dark:bg-neutral-700"
               onClick={() => onChange([])}
             >
-              <XIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <XIcon className="text-muted-foreground h-3.5 w-3.5" />
             </button>
           </div>
         )}
@@ -161,7 +162,10 @@ export function MultiSelectCombobox<T = OptionValue>({
             {options.map((option, i) => (
               <CommandItem key={i} onSelect={() => handleSelect(option.value)}>
                 <Check
-                  className={cn('mr-2 h-4 w-4', selectedValues.includes(option.value) ? 'opacity-100' : 'opacity-0')}
+                  className={cn(
+                    'mr-2 h-4 w-4',
+                    selectedValues.includes(option.value) ? 'opacity-100' : 'opacity-0',
+                  )}
                 />
                 {option.label}
               </CommandItem>

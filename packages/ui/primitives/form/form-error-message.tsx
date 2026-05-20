@@ -38,7 +38,7 @@ export const FormErrorMessage = ({ error, className }: FormErrorMessageProps) =>
             opacity: 0,
             y: 10,
           }}
-          className={cn('text-destructive text-xs', className)}
+          className={cn('text-xs text-red-500', className)}
         >
           {errorMessage}
         </motion.p>

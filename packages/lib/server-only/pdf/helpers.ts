@@ -1,9 +1,10 @@
-import path from 'node:path';
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import type { Recipient } from '@prisma/client';
 import { FieldType } from '@prisma/client';
+import type { Recipient } from '@prisma/client';
+import path from 'node:path';
 import { FontLibrary } from 'skia-canvas';
 import { match } from 'ts-pattern';
+
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 
 /**
  * Ensure all required fonts are registered in the skia-canvas FontLibrary.

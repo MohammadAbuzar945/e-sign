@@ -1,7 +1,8 @@
-import { ZDetectedRecipientSchema } from '@documenso/lib/server-only/ai/envelope/detect-recipients/schema';
 import { z } from 'zod';
 
-import type { TDetectRecipientsRequest } from './detect-recipients.types';
+import { ZDetectedRecipientSchema } from '@documenso/lib/server-only/ai/envelope/detect-recipients/schema';
+
+import { type TDetectRecipientsRequest } from './detect-recipients.types';
 
 export type { TDetectRecipientsRequest };
 

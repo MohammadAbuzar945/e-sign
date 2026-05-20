@@ -1,6 +1,7 @@
-import { ZOrganisationNameSchema } from '@documenso/trpc/server/organisation-router/create-organisation.types';
 import type { SubscriptionClaim } from '@prisma/client';
 import { z } from 'zod';
+
+import { ZOrganisationNameSchema } from '@documenso/trpc/server/organisation-router/create-organisation.types';
 
 /**
  * README:
@@ -222,4 +223,6 @@ export const ZStripeOrganisationCreateMetadataSchema = z.object({
   userId: z.number(),
 });
 
-export type StripeOrganisationCreateMetadata = z.infer<typeof ZStripeOrganisationCreateMetadataSchema>;
+export type StripeOrganisationCreateMetadata = z.infer<
+  typeof ZStripeOrganisationCreateMetadataSchema
+>;

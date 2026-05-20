@@ -24,16 +24,18 @@ export const profileRouter = router({
       });
     }),
 
-  updateProfile: authenticatedProcedure.input(ZUpdateProfileMutationSchema).mutation(async ({ input, ctx }) => {
-    const { name, signature } = input;
+  updateProfile: authenticatedProcedure
+    .input(ZUpdateProfileMutationSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { name, signature } = input;
 
-    await updateProfile({
-      userId: ctx.user.id,
-      name,
-      signature,
-      requestMetadata: ctx.metadata.requestMetadata,
-    });
-  }),
+      await updateProfile({
+        userId: ctx.user.id,
+        name,
+        signature,
+        requestMetadata: ctx.metadata.requestMetadata,
+      });
+    }),
 
   deleteAccount: authenticatedProcedure.mutation(async ({ ctx }) => {
     await deleteUser({
@@ -41,41 +43,43 @@ export const profileRouter = router({
     });
   }),
 
-  setProfileImage: authenticatedProcedure.input(ZSetProfileImageMutationSchema).mutation(async ({ input, ctx }) => {
-    const { bytes, teamId, organisationId } = input;
+  setProfileImage: authenticatedProcedure
+    .input(ZSetProfileImageMutationSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { bytes, teamId, organisationId } = input;
 
-    ctx.logger.info({
-      input: {
-        teamId,
-        organisationId,
-      },
-    });
+      ctx.logger.info({
+        input: {
+          teamId,
+          organisationId,
+        },
+      });
 
-    let target: SetAvatarImageOptions['target'] = {
-      type: 'user',
-    };
-
-    if (teamId) {
-      target = {
-        type: 'team',
-        teamId,
+      let target: SetAvatarImageOptions['target'] = {
+        type: 'user',
       };
-    }
 
-    if (organisationId) {
-      target = {
-        type: 'organisation',
-        organisationId,
-      };
-    }
+      if (teamId) {
+        target = {
+          type: 'team',
+          teamId,
+        };
+      }
 
-    return await setAvatarImage({
-      userId: ctx.user.id,
-      target,
-      bytes,
-      requestMetadata: ctx.metadata,
-    });
-  }),
+      if (organisationId) {
+        target = {
+          type: 'organisation',
+          organisationId,
+        };
+      }
+
+      return await setAvatarImage({
+        userId: ctx.user.id,
+        target,
+        bytes,
+        requestMetadata: ctx.metadata,
+      });
+    }),
 
   submitSupportTicket: authenticatedProcedure
     .input(ZSubmitSupportTicketMutationSchema)

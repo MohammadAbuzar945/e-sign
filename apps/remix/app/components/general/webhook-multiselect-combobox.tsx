@@ -1,9 +1,10 @@
-import { toFriendlyWebhookEventName } from '@documenso/lib/universal/webhook/to-friendly-webhook-event-name';
-import { MultiSelect, type Option } from '@documenso/ui/primitives/multiselect';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { WebhookTriggerEvents } from '@prisma/client';
+
+import { toFriendlyWebhookEventName } from '@documenso/lib/universal/webhook/to-friendly-webhook-event-name';
+import { MultiSelect, type Option } from '@documenso/ui/primitives/multiselect';
 
 type WebhookMultiSelectComboboxProps = {
   listValues: string[];
@@ -15,7 +16,10 @@ const triggerEvents = Object.values(WebhookTriggerEvents).map((event) => ({
   label: toFriendlyWebhookEventName(event),
 }));
 
-export const WebhookMultiSelectCombobox = ({ listValues, onChange }: WebhookMultiSelectComboboxProps) => {
+export const WebhookMultiSelectCombobox = ({
+  listValues,
+  onChange,
+}: WebhookMultiSelectComboboxProps) => {
   const { _ } = useLingui();
 
   const value = listValues.map((event) => ({

@@ -1,5 +1,3 @@
-import backgroundPattern from '@documenso/assets/images/background-pattern.png';
-import { Button } from '@documenso/ui/primitives/button';
 import type { MessageDescriptor } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
@@ -7,6 +5,9 @@ import { Trans } from '@lingui/react/macro';
 import { motion } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
+
+import backgroundPattern from '@documenso/assets/images/background-pattern.png';
+import { Button } from '@documenso/ui/primitives/button';
 
 type ErrorCodeMap = Record<
   number,
@@ -55,7 +56,8 @@ export const GenericErrorLayout = ({
   const navigate = useNavigate();
   const { _ } = useLingui();
 
-  const { subHeading, heading, message } = errorCodeMap[errorCode || 500] ?? defaultErrorCodeMap[500];
+  const { subHeading, heading, message } =
+    errorCodeMap[errorCode || 500] ?? defaultErrorCodeMap[500];
 
   return (
     <div className="fixed inset-0 z-0 flex h-screen w-screen items-center justify-center">
@@ -68,7 +70,7 @@ export const GenericErrorLayout = ({
           <img
             src={backgroundPattern}
             alt="background pattern"
-            className="-mt-[15vh] -ml-[50vw] h-full scale-100 object-cover md:scale-100 lg:scale-[100%] dark:contrast-[70%] dark:invert dark:sepia"
+            className="-ml-[50vw] -mt-[15vh] h-full scale-100 object-cover md:scale-100 lg:scale-[100%] dark:contrast-[70%] dark:invert dark:sepia"
             style={{
               mask: 'radial-gradient(rgba(255, 255, 255, 1) 0%, transparent 80%)',
               WebkitMask: 'radial-gradient(rgba(255, 255, 255, 1) 0%, transparent 80%)',
@@ -79,11 +81,11 @@ export const GenericErrorLayout = ({
 
       <div className="inset-0 mx-auto flex h-full flex-grow items-center justify-center px-6 py-32">
         <div>
-          <p className="font-semibold text-muted-foreground">{_(subHeading)}</p>
+          <p className="text-muted-foreground font-semibold">{_(subHeading)}</p>
 
-          <h1 className="mt-3 font-bold text-2xl md:text-3xl">{_(heading)}</h1>
+          <h1 className="mt-3 text-2xl font-bold md:text-3xl">{_(heading)}</h1>
 
-          <p className="mt-4 text-muted-foreground text-sm">{_(message)}</p>
+          <p className="text-muted-foreground mt-4 text-sm">{_(message)}</p>
 
           <div className="mt-6 flex gap-x-2.5 gap-y-4 md:items-center">
             {secondaryButton ||

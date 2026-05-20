@@ -1,11 +1,21 @@
+import { expect, test } from '@playwright/test';
+import {
+  DocumentSigningOrder,
+  DocumentStatus,
+  FieldType,
+  RecipientRole,
+  SigningStatus,
+} from '@prisma/client';
+import { DateTime } from 'luxon';
 import path from 'node:path';
+
 import { PDF_VIEWER_PAGE_SELECTOR } from '@documenso/lib/constants/pdf-viewer';
 import { prisma } from '@documenso/prisma';
-import { seedBlankDocument, seedPendingDocumentWithFullFields } from '@documenso/prisma/seed/documents';
+import {
+  seedBlankDocument,
+  seedPendingDocumentWithFullFields,
+} from '@documenso/prisma/seed/documents';
 import { seedUser } from '@documenso/prisma/seed/users';
-import { expect, test } from '@playwright/test';
-import { DocumentSigningOrder, DocumentStatus, FieldType, RecipientRole, SigningStatus } from '@prisma/client';
-import { DateTime } from 'luxon';
 
 import { apiSignin } from '../fixtures/authentication';
 import { signSignaturePad } from '../fixtures/signature';
@@ -111,7 +121,9 @@ test('[DOCUMENT_FLOW]: should be able to create a document', async ({ page }) =>
   await expect(page.getByRole('link', { name: documentTitle })).toBeVisible();
 });
 
-test('[DOCUMENT_FLOW]: should be able to create a document with multiple recipients', async ({ page }) => {
+test('[DOCUMENT_FLOW]: should be able to create a document with multiple recipients', async ({
+  page,
+}) => {
   const { user, team } = await seedUser();
   const document = await seedBlankDocument(user, team.id);
 
@@ -292,7 +304,9 @@ test('[DOCUMENT_FLOW]: should be able to create a document with multiple recipie
   await expect(page.getByRole('link', { name: 'Test Title' })).toBeVisible();
 });
 
-test('[DOCUMENT_FLOW]: should not be able to create a document without signatures', async ({ page }) => {
+test('[DOCUMENT_FLOW]: should not be able to create a document without signatures', async ({
+  page,
+}) => {
   const { user, team } = await seedUser();
   const document = await seedBlankDocument(user, team.id);
 
@@ -323,7 +337,9 @@ test('[DOCUMENT_FLOW]: should not be able to create a document without signature
   await expect(page.getByRole('heading', { name: 'Add Fields' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  await expect(page.getByRole('dialog').getByText('No signature field found').first()).toBeVisible();
+  await expect(
+    page.getByRole('dialog').getByText('No signature field found').first(),
+  ).toBeVisible();
 });
 
 test('[DOCUMENT_FLOW]: should be able to approve a document', async ({ page }) => {
@@ -366,8 +382,12 @@ test('[DOCUMENT_FLOW]: should be able to approve a document', async ({ page }) =
       await expect(page.locator(`#field-${field.id}`)).toHaveAttribute('data-inserted', 'true');
     }
 
-    await page.getByRole('button', { name: role === RecipientRole.SIGNER ? 'Complete' : 'Approve' }).click();
-    await page.getByRole('button', { name: role === RecipientRole.SIGNER ? 'Sign' : 'Approve' }).click();
+    await page
+      .getByRole('button', { name: role === RecipientRole.SIGNER ? 'Complete' : 'Approve' })
+      .click();
+    await page
+      .getByRole('button', { name: role === RecipientRole.SIGNER ? 'Sign' : 'Approve' })
+      .click();
     await page.waitForURL(`${signUrl}/complete`);
   }
 });
@@ -440,7 +460,10 @@ test('[DOCUMENT_FLOW]: should be able to create, send with redirect url, sign a 
 
   await page.getByRole('button', { name: 'Approve' }).click();
   await expect(
-    page.getByRole('dialog').getByText('You are about to complete approving the following document').first(),
+    page
+      .getByRole('dialog')
+      .getByText('You are about to complete approving the following document')
+      .first(),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Approve' }).click();
 
@@ -583,7 +606,9 @@ test('[DOCUMENT_FLOW]: should be able to create and sign a document with 3 recip
   expect(createdDocument?.recipients.length).toBe(3);
 
   for (let i = 0; i < 3; i++) {
-    const recipient = createdDocument?.recipients.find((r) => r.email === `user${i + 1}@example.com`);
+    const recipient = createdDocument?.recipients.find(
+      (r) => r.email === `user${i + 1}@example.com`,
+    );
     expect(recipient).not.toBeNull();
 
     const fields = await prisma.field.findMany({
@@ -628,7 +653,9 @@ test('[DOCUMENT_FLOW]: should be able to create and sign a document with 3 recip
   expect(finalDocument?.status).toBe(DocumentStatus.COMPLETED);
 });
 
-test('[DOCUMENT_FLOW]: should prevent out-of-order signing in sequential mode', async ({ page }) => {
+test('[DOCUMENT_FLOW]: should prevent out-of-order signing in sequential mode', async ({
+  page,
+}) => {
   const { user, team } = await seedUser();
 
   const { document, recipients } = await seedPendingDocumentWithFullFields({

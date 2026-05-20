@@ -1,3 +1,13 @@
+import { useMemo, useState } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { EmailDomainStatus } from '@prisma/client';
+import { CheckCircle2Icon, ClockIcon, Loader } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router';
+import { match } from 'ts-pattern';
+
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { trpc } from '@documenso/trpc/react';
@@ -7,15 +17,13 @@ import type { DataTableColumnDef } from '@documenso/ui/primitives/data-table';
 import { DataTable } from '@documenso/ui/primitives/data-table';
 import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
 import { Input } from '@documenso/ui/primitives/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { EmailDomainStatus } from '@prisma/client';
-import { CheckCircle2Icon, ClockIcon, Loader } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
-import { match } from 'ts-pattern';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 
 export default function AdminEmailDomainsPage() {
   const { _, i18n } = useLingui();
@@ -30,19 +38,21 @@ export default function AdminEmailDomainsPage() {
   const perPage = searchParams?.get?.('perPage') ? Number(searchParams.get('perPage')) : undefined;
   const statusParam = searchParams?.get?.('status') ?? 'ALL';
 
-  const statusFilter = statusParam === 'PENDING' || statusParam === 'ACTIVE' ? statusParam : undefined;
+  const statusFilter =
+    statusParam === 'PENDING' || statusParam === 'ACTIVE' ? statusParam : undefined;
 
-  const { data: findEmailDomainsData, isPending: isFindEmailDomainsLoading } = trpc.admin.emailDomain.find.useQuery(
-    {
-      query: debouncedTerm,
-      page: page || 1,
-      perPage: perPage || 20,
-      status: statusFilter,
-    },
-    {
-      placeholderData: (previousData) => previousData,
-    },
-  );
+  const { data: findEmailDomainsData, isPending: isFindEmailDomainsLoading } =
+    trpc.admin.emailDomain.find.useQuery(
+      {
+        query: debouncedTerm,
+        page: page || 1,
+        perPage: perPage || 20,
+        status: statusFilter,
+      },
+      {
+        placeholderData: (previousData) => previousData,
+      },
+    );
 
   const results = findEmailDomainsData ?? {
     data: [],
@@ -69,7 +79,10 @@ export default function AdminEmailDomainsPage() {
         header: _(msg`Organisation`),
         accessorKey: 'organisation',
         cell: ({ row }) => (
-          <Link to={`/admin/organisations/${row.original.organisation.id}`} className="hover:underline">
+          <Link
+            to={`/admin/organisations/${row.original.organisation.id}`}
+            className="hover:underline"
+          >
             {row.original.organisation.name}
           </Link>
         ),
@@ -106,7 +119,8 @@ export default function AdminEmailDomainsPage() {
       {
         header: _(msg`Last Verified`),
         accessorKey: 'lastVerifiedAt',
-        cell: ({ row }) => (row.original.lastVerifiedAt ? i18n.date(row.original.lastVerifiedAt) : '-'),
+        cell: ({ row }) =>
+          row.original.lastVerifiedAt ? i18n.date(row.original.lastVerifiedAt) : '-',
       },
       {
         header: _(msg`Actions`),
@@ -137,7 +151,7 @@ export default function AdminEmailDomainsPage() {
 
   return (
     <div>
-      <h2 className="font-semibold text-4xl">
+      <h2 className="text-4xl font-semibold">
         <Trans>Email Domains</Trans>
       </h2>
 

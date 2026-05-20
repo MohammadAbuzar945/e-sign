@@ -1,4 +1,13 @@
-import { convertToLocalSystemFormat, DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { Loader } from 'lucide-react';
+import { useRevalidator } from 'react-router';
+
+import {
+  DEFAULT_DOCUMENT_DATE_FORMAT,
+  convertToLocalSystemFormat,
+} from '@documenso/lib/constants/date-formats';
 import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
@@ -12,11 +21,6 @@ import type {
 } from '@documenso/trpc/server/field-router/schema';
 import { cn } from '@documenso/ui/lib/utils';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { Loader } from 'lucide-react';
-import { useRevalidator } from 'react-router';
 
 import { DocumentSigningFieldContainer } from './document-signing-field-container';
 import { useDocumentSigningRecipientContext } from './document-signing-recipient-provider';
@@ -45,8 +49,10 @@ export const DocumentSigningDateField = ({
   const { mutateAsync: signFieldWithToken, isPending: isSignFieldWithTokenLoading } =
     trpc.field.signFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
-  const { mutateAsync: removeSignedFieldWithToken, isPending: isRemoveSignedFieldWithTokenLoading } =
-    trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
+  const {
+    mutateAsync: removeSignedFieldWithToken,
+    isPending: isRemoveSignedFieldWithTokenLoading,
+  } = trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
   const isLoading = isSignFieldWithTokenLoading || isRemoveSignedFieldWithTokenLoading;
 
@@ -130,13 +136,13 @@ export const DocumentSigningDateField = ({
       tooltipText={isDifferentTime ? tooltipText : undefined}
     >
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background">
-          <Loader className="h-5 w-5 animate-spin text-primary md:h-8 md:w-8" />
+        <div className="bg-background absolute inset-0 flex items-center justify-center rounded-md">
+          <Loader className="text-primary h-5 w-5 animate-spin md:h-8 md:w-8" />
         </div>
       )}
 
       {!field.inserted && (
-        <p className="text-[clamp(0.425rem,25cqw,0.825rem)] text-foreground duration-200 group-hover:text-primary group-hover:text-recipient-green">
+        <p className="group-hover:text-primary text-foreground group-hover:text-recipient-green text-[clamp(0.425rem,25cqw,0.825rem)] duration-200">
           <Trans>Date</Trans>
         </p>
       )}
@@ -145,7 +151,7 @@ export const DocumentSigningDateField = ({
         <div className="flex h-full w-full items-center">
           <p
             className={cn(
-              'w-full whitespace-nowrap text-left text-[clamp(0.425rem,25cqw,0.825rem)] text-foreground duration-200',
+              'text-foreground w-full whitespace-nowrap text-left text-[clamp(0.425rem,25cqw,0.825rem)] duration-200',
               {
                 '!text-center': parsedFieldMeta?.textAlign === 'center',
                 '!text-right': parsedFieldMeta?.textAlign === 'right',

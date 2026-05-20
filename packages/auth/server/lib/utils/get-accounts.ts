@@ -1,5 +1,6 @@
-import { prisma } from '@documenso/prisma';
 import type { Context } from 'hono';
+
+import { prisma } from '@documenso/prisma';
 
 import { getSession } from './get-session';
 

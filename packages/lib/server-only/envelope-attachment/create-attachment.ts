@@ -1,6 +1,7 @@
+import { DocumentStatus } from '@prisma/client';
+
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
-import { DocumentStatus } from '@prisma/client';
 
 import { buildTeamWhereQuery } from '../../utils/teams';
 
@@ -14,7 +15,12 @@ export type CreateAttachmentOptions = {
   };
 };
 
-export const createAttachment = async ({ envelopeId, teamId, userId, data }: CreateAttachmentOptions) => {
+export const createAttachment = async ({
+  envelopeId,
+  teamId,
+  userId,
+  data,
+}: CreateAttachmentOptions) => {
   const envelope = await prisma.envelope.findFirst({
     where: {
       id: envelopeId,

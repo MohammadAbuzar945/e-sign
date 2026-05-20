@@ -9,7 +9,11 @@ type CreateFolderOptions = {
   createFolderOptions?: Partial<Prisma.FolderUncheckedCreateInput>;
 };
 
-export const seedBlankFolder = async (user: User, teamId: number, options: CreateFolderOptions = {}) => {
+export const seedBlankFolder = async (
+  user: User,
+  teamId: number,
+  options: CreateFolderOptions = {},
+) => {
   return await prisma.folder.create({
     data: {
       name: 'My folder',

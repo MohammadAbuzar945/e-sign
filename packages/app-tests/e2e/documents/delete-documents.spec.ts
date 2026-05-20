@@ -1,6 +1,11 @@
-import { seedCompletedDocument, seedDraftDocument, seedPendingDocument } from '@documenso/prisma/seed/documents';
-import { seedUser } from '@documenso/prisma/seed/users';
 import { expect, test } from '@playwright/test';
+
+import {
+  seedCompletedDocument,
+  seedDraftDocument,
+  seedPendingDocument,
+} from '@documenso/prisma/seed/documents';
+import { seedUser } from '@documenso/prisma/seed/users';
 
 import { apiSignin, apiSignout } from '../fixtures/authentication';
 import { checkDocumentTabCount } from '../fixtures/documents';
@@ -67,7 +72,9 @@ test('[DOCUMENTS]: seeded documents should be visible', async ({ page }) => {
   }
 });
 
-test('[DOCUMENTS]: deleting a completed document should not remove it from recipients', async ({ page }) => {
+test('[DOCUMENTS]: deleting a completed document should not remove it from recipients', async ({
+  page,
+}) => {
   const { sender, recipients } = await seedDeleteDocumentsTestRequirements();
 
   await apiSignin({
@@ -109,7 +116,9 @@ test('[DOCUMENTS]: deleting a completed document should not remove it from recip
   }
 });
 
-test('[DOCUMENTS]: deleting a pending document should remove it from recipients', async ({ page }) => {
+test('[DOCUMENTS]: deleting a pending document should remove it from recipients', async ({
+  page,
+}) => {
   const { sender, pendingDocument } = await seedDeleteDocumentsTestRequirements();
 
   await apiSignin({
@@ -214,7 +223,9 @@ test('[DOCUMENTS]: deleting pending documents should permanently remove it', asy
   await checkDocumentTabCount(page, 'All', 2);
 });
 
-test('[DOCUMENTS]: deleting completed documents as an owner should hide it from only the owner', async ({ page }) => {
+test('[DOCUMENTS]: deleting completed documents as an owner should hide it from only the owner', async ({
+  page,
+}) => {
   const { sender, recipients } = await seedDeleteDocumentsTestRequirements();
 
   await apiSignin({
@@ -262,7 +273,9 @@ test('[DOCUMENTS]: deleting completed documents as an owner should hide it from 
   await checkDocumentTabCount(page, 'All', 2);
 });
 
-test('[DOCUMENTS]: deleting documents as a recipient should only hide it for them', async ({ page }) => {
+test('[DOCUMENTS]: deleting documents as a recipient should only hide it for them', async ({
+  page,
+}) => {
   const { sender, recipients } = await seedDeleteDocumentsTestRequirements();
   const recipientA = recipients[0];
   const recipientB = recipients[1];

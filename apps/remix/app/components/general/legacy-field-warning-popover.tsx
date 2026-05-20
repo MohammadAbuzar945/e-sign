@@ -1,12 +1,13 @@
-import { trpc } from '@documenso/trpc/react';
-import { Button } from '@documenso/ui/primitives/button';
-import { PopoverHover } from '@documenso/ui/primitives/popover';
-import { useToast } from '@documenso/ui/primitives/use-toast';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { AlertCircle } from 'lucide-react';
 import { useRevalidator } from 'react-router';
+
+import { trpc } from '@documenso/trpc/react';
+import { Button } from '@documenso/ui/primitives/button';
+import { PopoverHover } from '@documenso/ui/primitives/popover';
+import { useToast } from '@documenso/ui/primitives/use-toast';
 
 export type LegacyFieldWarningPopoverProps = {
   type?: 'document' | 'template';
@@ -24,8 +25,10 @@ export const LegacyFieldWarningPopover = ({
 
   const revalidator = useRevalidator();
 
-  const { mutateAsync: updateTemplate, isPending: isUpdatingTemplate } = trpc.template.updateTemplate.useMutation();
-  const { mutateAsync: updateDocument, isPending: isUpdatingDocument } = trpc.document.update.useMutation();
+  const { mutateAsync: updateTemplate, isPending: isUpdatingTemplate } =
+    trpc.template.updateTemplate.useMutation();
+  const { mutateAsync: updateDocument, isPending: isUpdatingDocument } =
+    trpc.document.update.useMutation();
 
   const onUpdateFieldsClick = async () => {
     if (type === 'document') {
@@ -58,7 +61,9 @@ export const LegacyFieldWarningPopover = ({
 
     toast({
       title: _(msg`Fields updated`),
-      description: _(msg`The fields have been updated to the new field insertion method successfully`),
+      description: _(
+        msg`The fields have been updated to the new field insertion method successfully`,
+      ),
     });
   };
 
@@ -81,13 +86,13 @@ export const LegacyFieldWarningPopover = ({
       <p className="text-muted-foreground text-sm">
         {type === 'document' ? (
           <Trans>
-            This document is using legacy field insertion, we recommend using the new field insertion method for more
-            accurate results.
+            This document is using legacy field insertion, we recommend using the new field
+            insertion method for more accurate results.
           </Trans>
         ) : (
           <Trans>
-            This template is using legacy field insertion, we recommend using the new field insertion method for more
-            accurate results.
+            This template is using legacy field insertion, we recommend using the new field
+            insertion method for more accurate results.
           </Trans>
         )}
       </p>

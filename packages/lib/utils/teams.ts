@@ -1,5 +1,12 @@
-import type { TeamGroup, TeamMemberRole } from '@documenso/prisma/generated/types';
-import type { DocumentVisibility, OrganisationGlobalSettings, Prisma, TeamGlobalSettings } from '@prisma/client';
+import type {
+  DocumentVisibility,
+  OrganisationGlobalSettings,
+  Prisma,
+  TeamGlobalSettings,
+} from '@prisma/client';
+
+import type { TeamGroup } from '@documenso/prisma/generated/types';
+import type { TeamMemberRole } from '@documenso/prisma/generated/types';
 
 import { NEXT_PUBLIC_WEBAPP_URL } from '../constants/app';
 import {
@@ -191,8 +198,6 @@ export const generateDefaultTeamSettings = (): Omit<TeamGlobalSettings, 'id' | '
     brandingLogo: null,
     brandingUrl: null,
     brandingCompanyDetails: null,
-    brandingColors: null,
-    brandingCss: null,
 
     emailDocumentSettings: null,
     emailId: null,

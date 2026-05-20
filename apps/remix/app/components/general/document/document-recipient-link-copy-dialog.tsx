@@ -1,3 +1,11 @@
+import { useEffect, useState } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { RecipientRole } from '@prisma/client';
+import { useSearchParams } from 'react-router';
+
 import { useCopyToClipboard } from '@documenso/lib/client-only/hooks/use-copy-to-clipboard';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
@@ -18,19 +26,16 @@ import {
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { RecipientRole } from '@prisma/client';
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
 
 export type DocumentRecipientLinkCopyDialogProps = {
   trigger?: React.ReactNode;
   recipients: TRecipientLite[];
 };
 
-export const DocumentRecipientLinkCopyDialog = ({ trigger, recipients }: DocumentRecipientLinkCopyDialogProps) => {
+export const DocumentRecipientLinkCopyDialog = ({
+  trigger,
+  recipients,
+}: DocumentRecipientLinkCopyDialogProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
 
@@ -77,7 +82,9 @@ export const DocumentRecipientLinkCopyDialog = ({ trigger, recipients }: Documen
           </DialogTitle>
 
           <DialogDescription>
-            <Trans>You can copy and share these links to recipients so they can action the document.</Trans>
+            <Trans>
+              You can copy and share these links to recipients so they can action the document.
+            </Trans>
           </DialogDescription>
         </DialogHeader>
 
@@ -92,9 +99,9 @@ export const DocumentRecipientLinkCopyDialog = ({ trigger, recipients }: Documen
             <li key={recipient.id} className="flex items-center justify-between px-4 py-3 text-sm">
               <AvatarWithText
                 avatarFallback={recipient.email.slice(0, 1).toUpperCase()}
-                primaryText={<p className="text-muted-foreground text-sm">{recipient.email}</p>}
+                primaryText={<p className="text-sm text-muted-foreground">{recipient.email}</p>}
                 secondaryText={
-                  <p className="text-muted-foreground/70 text-xs">
+                  <p className="text-xs text-muted-foreground/70">
                     {_(RECIPIENT_ROLES_DESCRIPTION[recipient.role].roleName)}
                   </p>
                 }

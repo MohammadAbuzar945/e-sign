@@ -1,15 +1,16 @@
+import { type Page, expect, test } from '@playwright/test';
+
 import { nanoid } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
-import { expect, type Page, test } from '@playwright/test';
 
 import {
+  type TEnvelopeEditorSurface,
   addEnvelopeItemPdf,
   getEnvelopeEditorSettingsTrigger,
   openDocumentEnvelopeEditor,
   openEmbeddedEnvelopeEditor,
   openTemplateEnvelopeEditor,
   persistEmbeddedEnvelope,
-  type TEnvelopeEditorSurface,
 } from '../fixtures/envelope-editor';
 import { expectToastTextToBeVisible } from '../fixtures/generic';
 
@@ -66,7 +67,10 @@ const getAttachmentItems = (root: Page) => root.locator('.rounded-md.border.bord
 
 const getAttachmentDeleteButtons = (root: Page) => getAttachmentItems(root).locator('button');
 
-const assertAttachmentVisibleInPopover = async (root: Page, { label, url }: { label: string; url: string }) => {
+const assertAttachmentVisibleInPopover = async (
+  root: Page,
+  { label, url }: { label: string; url: string },
+) => {
   const items = getAttachmentItems(root);
   const matchingItem = items.filter({ hasText: label });
 
@@ -133,7 +137,9 @@ const assertAttachmentsInDatabase = async ({
   }
 };
 
-const runAttachmentFlow = async (surface: TEnvelopeEditorSurface): Promise<AttachmentFlowResult> => {
+const runAttachmentFlow = async (
+  surface: TEnvelopeEditorSurface,
+): Promise<AttachmentFlowResult> => {
   const externalId = `e2e-attachments-${nanoid()}`;
 
   await updateExternalId(surface, externalId);
@@ -199,7 +205,9 @@ const runAttachmentFlow = async (surface: TEnvelopeEditorSurface): Promise<Attac
   };
 };
 
-const runEmbeddedAttachmentFlow = async (surface: TEnvelopeEditorSurface): Promise<AttachmentFlowResult> => {
+const runEmbeddedAttachmentFlow = async (
+  surface: TEnvelopeEditorSurface,
+): Promise<AttachmentFlowResult> => {
   const externalId = `e2e-attachments-${nanoid()}`;
 
   await updateExternalId(surface, externalId);

@@ -1,5 +1,6 @@
-import * as AvatarPrimitive from '@radix-ui/react-avatar';
 import * as React from 'react';
+
+import * as AvatarPrimitive from '@radix-ui/react-avatar';
 
 import { cn } from '../lib/utils';
 
@@ -20,7 +21,11 @@ const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image ref={ref} className={cn('aspect-square h-full w-full', className)} {...props} />
+  <AvatarPrimitive.Image
+    ref={ref}
+    className={cn('aspect-square h-full w-full', className)}
+    {...props}
+  />
 ));
 
 AvatarImage.displayName = AvatarPrimitive.Image.displayName;
@@ -31,7 +36,10 @@ const AvatarFallback = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Fallback
     ref={ref}
-    className={cn('flex h-full w-full items-center justify-center rounded-full bg-muted', className)}
+    className={cn(
+      'bg-muted flex h-full w-full items-center justify-center rounded-full',
+      className,
+    )}
     {...props}
   />
 ));
@@ -61,18 +69,22 @@ const AvatarWithText = ({
   textSectionClassName,
 }: AvatarWithTextProps) => (
   <div className={cn('flex w-full max-w-xs items-center gap-2', className)}>
-    <Avatar className={cn('h-10 w-10 border-2 border-white border-solid dark:border-border', avatarClass)}>
+    <Avatar
+      className={cn('dark:border-border h-10 w-10 border-2 border-solid border-white', avatarClass)}
+    >
       {avatarSrc && <AvatarImage src={avatarSrc} />}
-      <AvatarFallback className="text-gray-400 text-xs">{avatarFallback}</AvatarFallback>
+      <AvatarFallback className="text-xs text-gray-400">{avatarFallback}</AvatarFallback>
     </Avatar>
 
-    <div className={cn('flex flex-col truncate text-left font-normal text-sm', textSectionClassName)}>
-      <span className="truncate text-foreground">{primaryText}</span>
-      <span className="truncate text-muted-foreground text-xs">{secondaryText}</span>
+    <div
+      className={cn('flex flex-col truncate text-left text-sm font-normal', textSectionClassName)}
+    >
+      <span className="text-foreground truncate">{primaryText}</span>
+      <span className="text-muted-foreground truncate text-xs">{secondaryText}</span>
     </div>
 
     {rightSideComponent}
   </div>
 );
 
-export { Avatar, AvatarFallback, AvatarImage, AvatarWithText };
+export { Avatar, AvatarImage, AvatarFallback, AvatarWithText };

@@ -9,7 +9,11 @@ export type GetDocumentWithDetailsByIdOptions = {
   teamId: number;
 };
 
-export const getDocumentWithDetailsById = async ({ id, userId, teamId }: GetDocumentWithDetailsByIdOptions) => {
+export const getDocumentWithDetailsById = async ({
+  id,
+  userId,
+  teamId,
+}: GetDocumentWithDetailsByIdOptions) => {
   const envelope = await getEnvelopeById({
     id,
     type: EnvelopeType.DOCUMENT,

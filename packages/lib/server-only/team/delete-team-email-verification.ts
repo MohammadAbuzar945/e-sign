@@ -8,7 +8,10 @@ export type DeleteTeamEmailVerificationOptions = {
   teamId: number;
 };
 
-export const deleteTeamEmailVerification = async ({ userId, teamId }: DeleteTeamEmailVerificationOptions) => {
+export const deleteTeamEmailVerification = async ({
+  userId,
+  teamId,
+}: DeleteTeamEmailVerificationOptions) => {
   await prisma.team.findFirstOrThrow({
     where: buildTeamWhereQuery({
       teamId,

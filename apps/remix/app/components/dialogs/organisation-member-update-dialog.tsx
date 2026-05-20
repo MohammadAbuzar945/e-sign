@@ -1,3 +1,14 @@
+import { useEffect, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { OrganisationMemberRole } from '@prisma/client';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { ORGANISATION_MEMBER_ROLE_HIERARCHY } from '@documenso/lib/constants/organisations';
 import { ORGANISATION_MEMBER_ROLE_MAP } from '@documenso/lib/constants/organisations-translations';
 import { isOrganisationRoleWithinUserHierarchy } from '@documenso/lib/utils/organisations';
@@ -12,18 +23,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { OrganisationMemberRole } from '@prisma/client';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 export type OrganisationMemberUpdateDialogProps = {
   currentUserOrganisationRole: OrganisationMemberRole;
@@ -98,7 +113,9 @@ export const OrganisationMemberUpdateDialog = ({
 
     form.reset();
 
-    if (!isOrganisationRoleWithinUserHierarchy(currentUserOrganisationRole, organisationMemberRole)) {
+    if (
+      !isOrganisationRoleWithinUserHierarchy(currentUserOrganisationRole, organisationMemberRole)
+    ) {
       setOpen(false);
 
       toast({
@@ -110,7 +127,11 @@ export const OrganisationMemberUpdateDialog = ({
   }, [open, currentUserOrganisationRole, organisationMemberRole, form, toast]);
 
   return (
-    <Dialog {...props} open={open} onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}>
+    <Dialog
+      {...props}
+      open={open}
+      onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}
+    >
       <DialogTrigger onClick={(e) => e.stopPropagation()} asChild>
         {trigger ?? (
           <Button variant="secondary">
@@ -127,7 +148,8 @@ export const OrganisationMemberUpdateDialog = ({
 
           <DialogDescription className="mt-4">
             <Trans>
-              You are currently updating <span className="font-bold">{organisationMemberName}</span>.
+              You are currently updating <span className="font-bold">{organisationMemberName}</span>
+              .
             </Trans>
           </DialogDescription>
         </DialogHeader>
@@ -150,11 +172,13 @@ export const OrganisationMemberUpdateDialog = ({
                         </SelectTrigger>
 
                         <SelectContent className="w-full" position="popper">
-                          {ORGANISATION_MEMBER_ROLE_HIERARCHY[currentUserOrganisationRole].map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {_(ORGANISATION_MEMBER_ROLE_MAP[role]) ?? role}
-                            </SelectItem>
-                          ))}
+                          {ORGANISATION_MEMBER_ROLE_HIERARCHY[currentUserOrganisationRole].map(
+                            (role) => (
+                              <SelectItem key={role} value={role}>
+                                {_(ORGANISATION_MEMBER_ROLE_MAP[role]) ?? role}
+                              </SelectItem>
+                            ),
+                          )}
                         </SelectContent>
                       </Select>
                     </FormControl>

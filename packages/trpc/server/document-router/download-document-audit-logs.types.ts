@@ -9,5 +9,9 @@ export const ZDownloadDocumentAuditLogsResponseSchema = z.object({
   envelopeTitle: z.string(),
 });
 
-export type TDownloadDocumentAuditLogsRequest = z.infer<typeof ZDownloadDocumentAuditLogsRequestSchema>;
-export type TDownloadDocumentAuditLogsResponse = z.infer<typeof ZDownloadDocumentAuditLogsResponseSchema>;
+export type TDownloadDocumentAuditLogsRequest = z.infer<
+  typeof ZDownloadDocumentAuditLogsRequestSchema
+>;
+export type TDownloadDocumentAuditLogsResponse = z.infer<
+  typeof ZDownloadDocumentAuditLogsResponseSchema
+>;

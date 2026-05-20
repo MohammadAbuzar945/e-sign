@@ -40,7 +40,9 @@ export function calculateSnapPositions(
   stage: Konva.Stage,
   excludeId?: string,
 ): { horizontal: SnapPoint[]; vertical: SnapPoint[] } {
-  const fieldGroups = stage.find('.field-group').filter((node): node is Konva.Group => node instanceof Konva.Group);
+  const fieldGroups = stage
+    .find('.field-group')
+    .filter((node): node is Konva.Group => node instanceof Konva.Group);
   const horizontal: SnapPoint[] = [];
   const vertical: SnapPoint[] = [];
 
@@ -69,8 +71,13 @@ export function calculateSnapPositions(
   return { horizontal, vertical };
 }
 
-export function calculateSnapSizes(stage: Konva.Stage, excludeId?: string): { widths: number[]; heights: number[] } {
-  const fieldGroups = stage.find('.field-group').filter((node): node is Konva.Group => node instanceof Konva.Group);
+export function calculateSnapSizes(
+  stage: Konva.Stage,
+  excludeId?: string,
+): { widths: number[]; heights: number[] } {
+  const fieldGroups = stage
+    .find('.field-group')
+    .filter((node): node is Konva.Group => node instanceof Konva.Group);
   const widths: number[] = [];
   const heights: number[] = [];
 

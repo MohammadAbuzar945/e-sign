@@ -1,10 +1,14 @@
+import { Prisma } from '@prisma/client';
+import { OrganisationType } from '@prisma/client';
+import { OrganisationMemberRole } from '@prisma/client';
+
 import { createCustomer } from '@documenso/ee/server-only/stripe/create-customer';
 import { prisma } from '@documenso/prisma';
-import { OrganisationMemberRole, OrganisationType, Prisma } from '@prisma/client';
 
 import { IS_BILLING_ENABLED } from '../../constants/app';
 import { ORGANISATION_INTERNAL_GROUPS } from '../../constants/organisations';
-import { AppError, AppErrorCode } from '../../errors/app-error';
+import { AppErrorCode } from '../../errors/app-error';
+import { AppError } from '../../errors/app-error';
 import type { InternalClaim } from '../../types/subscription';
 import { INTERNAL_CLAIM_ID, internalClaims } from '../../types/subscription';
 import { generateDatabaseId, prefixedId } from '../../universal/id';
@@ -20,7 +24,14 @@ type CreateOrganisationOptions = {
   claim: InternalClaim;
 };
 
-export const createOrganisation = async ({ name, url, type, userId, customerId, claim }: CreateOrganisationOptions) => {
+export const createOrganisation = async ({
+  name,
+  url,
+  type,
+  userId,
+  customerId,
+  claim,
+}: CreateOrganisationOptions) => {
   let customerIdToUse = customerId;
 
   if (!customerId && IS_BILLING_ENABLED()) {
@@ -110,7 +121,9 @@ export const createOrganisation = async ({ name, url, type, userId, customerId, 
         throw err;
       });
 
-    const adminGroup = organisation.groups.find((group) => group.organisationRole === OrganisationMemberRole.ADMIN);
+    const adminGroup = organisation.groups.find(
+      (group) => group.organisationRole === OrganisationMemberRole.ADMIN,
+    );
 
     if (!adminGroup) {
       throw new AppError(AppErrorCode.UNKNOWN_ERROR, {
@@ -186,7 +199,10 @@ export const createPersonalOrganisation = async ({
 
 export const createOrganisationClaimUpsertData = (subscriptionClaim: InternalClaim) => {
   // Done like this to ensure type errors are thrown if items are added.
-  const data: Omit<Prisma.SubscriptionClaimCreateInput, 'id' | 'createdAt' | 'updatedAt' | 'locked' | 'name'> = {
+  const data: Omit<
+    Prisma.SubscriptionClaimCreateInput,
+    'id' | 'createdAt' | 'updatedAt' | 'locked' | 'name'
+  > = {
     flags: {
       ...subscriptionClaim.flags,
     },

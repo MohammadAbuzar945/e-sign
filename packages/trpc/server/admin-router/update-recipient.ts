@@ -1,7 +1,10 @@
 import { updateRecipient } from '@documenso/lib/server-only/admin/update-recipient';
 
 import { adminProcedure } from '../trpc';
-import { ZUpdateRecipientRequestSchema, ZUpdateRecipientResponseSchema } from './update-recipient.types';
+import {
+  ZUpdateRecipientRequestSchema,
+  ZUpdateRecipientResponseSchema,
+} from './update-recipient.types';
 
 export const updateRecipientRoute = adminProcedure
   .input(ZUpdateRecipientRequestSchema)

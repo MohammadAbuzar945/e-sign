@@ -1,8 +1,3 @@
-import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
-import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
-import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
-import { cn } from '@documenso/ui/lib/utils';
-import { Button } from '@documenso/ui/primitives/button';
 import { msg } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
 import {
@@ -16,6 +11,12 @@ import {
 } from 'lucide-react';
 import { FaUsers } from 'react-icons/fa6';
 import { Link, NavLink, Outlet } from 'react-router';
+
+import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
+import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
+import { cn } from '@documenso/ui/lib/utils';
+import { Button } from '@documenso/ui/primitives/button';
 
 import { GenericErrorLayout } from '~/components/general/generic-error-layout';
 import { appMetaTags } from '~/utils/meta';
@@ -134,7 +135,7 @@ export default function SettingsLayout() {
 
   return (
     <div>
-      <h1 className="font-semibold text-4xl">
+      <h1 className="text-4xl font-semibold">
         <Trans>Organisation Settings</Trans>
       </h1>
 

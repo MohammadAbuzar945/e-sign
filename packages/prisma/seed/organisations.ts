@@ -1,7 +1,8 @@
-import { hashSync } from '@documenso/lib/server-only/auth/hash';
-import { addUserToOrganisation } from '@documenso/lib/server-only/organisation/accept-organisation-invitation';
 import type { OrganisationMemberRole, OrganisationType } from '@prisma/client';
 import { OrganisationGroupType, type User } from '@prisma/client';
+
+import { hashSync } from '@documenso/lib/server-only/auth/hash';
+import { addUserToOrganisation } from '@documenso/lib/server-only/organisation/accept-organisation-invitation';
 
 import { prisma } from '..';
 import { seedTestEmail } from './users';

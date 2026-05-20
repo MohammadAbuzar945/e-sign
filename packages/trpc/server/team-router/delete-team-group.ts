@@ -6,7 +6,10 @@ import { prisma } from '@documenso/prisma';
 import { OrganisationGroupType, OrganisationMemberRole } from '@documenso/prisma/generated/types';
 
 import { authenticatedProcedure } from '../trpc';
-import { ZDeleteTeamGroupRequestSchema, ZDeleteTeamGroupResponseSchema } from './delete-team-group.types';
+import {
+  ZDeleteTeamGroupRequestSchema,
+  ZDeleteTeamGroupResponseSchema,
+} from './delete-team-group.types';
 
 export const deleteTeamGroupRoute = authenticatedProcedure
   // .meta(deleteTeamGroupMeta)

@@ -1,8 +1,9 @@
-import { prisma } from '@documenso/prisma';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { DocumentStatus, type Field, RecipientRole } from '@prisma/client';
 import { generateObject } from 'ai';
 import pMap from 'p-map';
+
+import { prisma } from '@documenso/prisma';
 
 import { AppError, AppErrorCode } from '../../../../errors/app-error';
 import { getFileServerSide } from '../../../../universal/upload/get-file.server';
@@ -11,10 +12,18 @@ import { getEnvelopeById } from '../../../envelope/get-envelope-by-id';
 import { createEnvelopeRecipients } from '../../../recipient/create-envelope-recipients';
 import { vertex } from '../../google';
 import { pdfToImages } from '../../pdf-to-images';
-import { buildRecipientContextMessage, normalizeDetectedField, resolveRecipientFromKey } from './helpers';
+import {
+  buildRecipientContextMessage,
+  normalizeDetectedField,
+  resolveRecipientFromKey,
+} from './helpers';
 import { SYSTEM_PROMPT } from './prompt';
 import { ZSubmitDetectedFieldsInputSchema } from './schema';
-import type { NormalizedFieldWithContext, NormalizedFieldWithPage, RecipientContext } from './types';
+import type {
+  NormalizedFieldWithContext,
+  NormalizedFieldWithPage,
+  RecipientContext,
+} from './types';
 
 export type DetectFieldsFromEnvelopeOptions = {
   context?: string;
@@ -236,7 +245,12 @@ type DetectFieldsFromPageOptions = {
   context?: string;
 };
 
-const detectFieldsFromPage = async ({ image, pageNumber, recipients, context }: DetectFieldsFromPageOptions) => {
+const detectFieldsFromPage = async ({
+  image,
+  pageNumber,
+  recipients,
+  context,
+}: DetectFieldsFromPageOptions) => {
   // Resize to 1000x1000 for consistent coordinate mapping
   const resizedImage = await resizeImageToGeminiImage({ image });
 

@@ -23,7 +23,13 @@ export const getTeamEmailByEmail = async ({ email }: GetTeamEmailByEmailOptions)
   });
 };
 
-export const getTeamWithEmail = async ({ userId, teamUrl }: { userId: number; teamUrl: string }) => {
+export const getTeamWithEmail = async ({
+  userId,
+  teamUrl,
+}: {
+  userId: number;
+  teamUrl: string;
+}) => {
   return await prisma.team.findFirstOrThrow({
     where: {
       ...buildTeamWhereQuery({ teamId: undefined, userId }),

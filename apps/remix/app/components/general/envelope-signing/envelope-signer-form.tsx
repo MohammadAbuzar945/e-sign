@@ -1,11 +1,13 @@
+import { useMemo } from 'react';
+
+import { Plural, Trans } from '@lingui/react/macro';
+import { RecipientRole } from '@prisma/client';
+
 import { isSignatureFieldType } from '@documenso/prisma/guards/is-signature-field';
 import { Input } from '@documenso/ui/primitives/input';
 import { Label } from '@documenso/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@documenso/ui/primitives/radio-group';
 import { SignaturePadDialog } from '@documenso/ui/primitives/signature-pad/signature-pad-dialog';
-import { Plural, Trans } from '@lingui/react/macro';
-import { RecipientRole } from '@prisma/client';
-import { useMemo } from 'react';
 
 import { useEmbedSigningContext } from '~/components/embed/embed-signing-context';
 
@@ -51,7 +53,10 @@ export default function EnvelopeSignerForm() {
           {assistantRecipients
             .filter((r) => r.fields.length > 0)
             .map((r) => (
-              <div key={r.id} className="relative flex flex-col gap-4 rounded-lg border border-border bg-widget p-4">
+              <div
+                key={r.id}
+                className="relative flex flex-col gap-4 rounded-lg border border-border bg-widget p-4"
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <RadioGroupItem
@@ -70,10 +75,10 @@ export default function EnvelopeSignerForm() {
                           </span>
                         )}
                       </Label>
-                      <p className="text-muted-foreground text-xs">{r.email}</p>
+                      <p className="text-xs text-muted-foreground">{r.email}</p>
                     </div>
                   </div>
-                  <div className="text-muted-foreground text-xs leading-[inherit]">
+                  <div className="text-xs leading-[inherit] text-muted-foreground">
                     <Plural
                       value={assistantFields.filter((field) => field.recipientId === r.id).length}
                       one="# field"

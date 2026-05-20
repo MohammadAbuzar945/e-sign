@@ -1,3 +1,13 @@
+import { useEffect, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Plural, Trans, useLingui } from '@lingui/react/macro';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { AlertTriangleIcon, FileIcon, UploadIcon, XIcon } from 'lucide-react';
+import { type FileRejection, useDropzone } from 'react-dropzone';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import { APP_DOCUMENT_UPLOAD_SIZE_LIMIT } from '@documenso/lib/constants/app';
 import { megabytesToBytes } from '@documenso/lib/universal/unit-convertions';
@@ -18,17 +28,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Plural, Trans, useLingui } from '@lingui/react/macro';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { AlertTriangleIcon, FileIcon, UploadIcon, XIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { type FileRejection, useDropzone } from 'react-dropzone';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 const ZEditEnvelopeItemFormSchema = z.object({
   title: ZDocumentTitleSchema,
@@ -57,7 +66,9 @@ export const EnvelopeItemEditDialog = ({
   const { envelope, editorFields, setLocalEnvelope, isEmbedded } = useCurrentEnvelopeEditor();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [replacementFile, setReplacementFile] = useState<{ file: File; pageCount: number } | null>(null);
+  const [replacementFile, setReplacementFile] = useState<{ file: File; pageCount: number } | null>(
+    null,
+  );
   const [isDropping, setIsDropping] = useState(false);
 
   const form = useForm<TEditEnvelopeItemFormSchema>({
@@ -71,7 +82,9 @@ export const EnvelopeItemEditDialog = ({
     onSuccess: ({ data, fields }) => {
       setLocalEnvelope({
         envelopeItems: envelope.envelopeItems.map((item) =>
-          item.id === data.id ? { ...item, documentDataId: data.documentDataId, title: data.title } : item,
+          item.id === data.id
+            ? { ...item, documentDataId: data.documentDataId, title: data.title }
+            : item,
         ),
       });
 
@@ -85,7 +98,8 @@ export const EnvelopeItemEditDialog = ({
   const fieldsOnExcessPages =
     replacementFile !== null
       ? envelope.fields.filter(
-          (field) => field.envelopeItemId === envelopeItem.id && field.page > replacementFile.pageCount,
+          (field) =>
+            field.envelopeItemId === envelopeItem.id && field.page > replacementFile.pageCount,
         )
       : [];
 
@@ -208,7 +222,11 @@ export const EnvelopeItemEditDialog = ({
   };
 
   return (
-    <Dialog {...props} open={isOpen} onOpenChange={(value) => !form.formState.isSubmitting && setIsOpen(value)}>
+    <Dialog
+      {...props}
+      open={isOpen}
+      onOpenChange={(value) => !form.formState.isSubmitting && setIsOpen(value)}
+    >
       <DialogTrigger onClick={(e) => e.stopPropagation()} asChild>
         {trigger}
       </DialogTrigger>
@@ -261,12 +279,18 @@ export const EnvelopeItemEditDialog = ({
                       <div className="flex min-w-0 items-center space-x-2">
                         <FileIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-sm">{replacementFile.file.name}</p>
-                          <p className="text-muted-foreground text-xs">
+                          <p className="truncate text-sm font-medium">
+                            {replacementFile.file.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
                             {formatFileSize(replacementFile.file.size)}
                             {isDropping ? ' · …' : ' · '}
                             {!isDropping && replacementFile.pageCount !== null && (
-                              <Plural one="1 page" other="# pages" value={replacementFile.pageCount} />
+                              <Plural
+                                one="1 page"
+                                other="# pages"
+                                value={replacementFile.pageCount}
+                              />
                             )}
                           </p>
                         </div>
@@ -302,14 +326,14 @@ export const EnvelopeItemEditDialog = ({
                     data-testid="envelope-item-edit-dropzone"
                     {...getRootProps()}
                     className={cn(
-                      'mt-1.5 flex cursor-pointer items-center justify-center rounded-md border border-border border-dashed px-4 py-4 transition-colors',
+                      'mt-1.5 flex cursor-pointer items-center justify-center rounded-md border border-dashed border-border px-4 py-4 transition-colors',
                       isDragActive
                         ? 'border-primary/50 bg-primary/5'
                         : 'hover:border-muted-foreground/50 hover:bg-muted/50',
                     )}
                   >
                     <input {...getInputProps()} />
-                    <div className="flex items-center space-x-2 text-muted-foreground text-sm">
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                       <UploadIcon className="h-4 w-4" />
                       <span>
                         <Trans>Drop PDF here or click to select</Trans>

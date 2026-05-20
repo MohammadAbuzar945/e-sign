@@ -1,8 +1,9 @@
-import { prisma } from '@documenso/prisma';
 import { sha256 } from '@noble/hashes/sha2';
 import { BackgroundJobStatus, Prisma } from '@prisma/client';
 import { CronExpressionParser } from 'cron-parser';
 import type { Context as HonoContext } from 'hono';
+
+import { prisma } from '@documenso/prisma';
 
 import { NEXT_PRIVATE_INTERNAL_WEBAPP_URL } from '../../constants/app';
 import { sign } from '../../server-only/crypto/sign';
@@ -49,11 +50,11 @@ export class LocalJobProvider extends BaseJobProvider {
   }
 
   static getInstance() {
-    if (!LocalJobProvider._instance) {
-      LocalJobProvider._instance = new LocalJobProvider();
+    if (!this._instance) {
+      this._instance = new LocalJobProvider();
     }
 
-    return LocalJobProvider._instance;
+    return this._instance;
   }
 
   public defineJob<N extends string, T>(definition: JobDefinition<N, T>) {
@@ -191,7 +192,9 @@ export class LocalJobProvider extends BaseJobProvider {
   }
 
   public async triggerJob(options: SimpleTriggerJobOptions) {
-    const eligibleJobs = Object.values(this._jobDefinitions).filter((job) => job.trigger.name === options.name);
+    const eligibleJobs = Object.values(this._jobDefinitions).filter(
+      (job) => job.trigger.name === options.name,
+    );
 
     await Promise.all(
       eligibleJobs.map(async (job) => {
@@ -242,7 +245,11 @@ export class LocalJobProvider extends BaseJobProvider {
 
       const definition = this._jobDefinitions[options.name];
 
-      if (typeof jobId !== 'string' || typeof signature !== 'string' || typeof options !== 'object') {
+      if (
+        typeof jobId !== 'string' ||
+        typeof signature !== 'string' ||
+        typeof options !== 'object'
+      ) {
         return c.text('Bad request', 400);
       }
 
@@ -311,7 +318,8 @@ export class LocalJobProvider extends BaseJobProvider {
 
         const taskHasExceededRetries = error instanceof BackgroundTaskExceededRetriesError;
         const jobHasExceededRetries =
-          backgroundJob.retried >= backgroundJob.maxRetries && !(error instanceof BackgroundTaskFailedError);
+          backgroundJob.retried >= backgroundJob.maxRetries &&
+          !(error instanceof BackgroundTaskFailedError);
 
         if (taskHasExceededRetries || jobHasExceededRetries) {
           backgroundJob = await prisma.backgroundJob.update({

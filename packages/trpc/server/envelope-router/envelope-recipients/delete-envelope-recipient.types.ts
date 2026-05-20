@@ -20,4 +20,6 @@ export const ZDeleteEnvelopeRecipientRequestSchema = z.object({
 export const ZDeleteEnvelopeRecipientResponseSchema = ZSuccessResponseSchema;
 
 export type TDeleteEnvelopeRecipientRequest = z.infer<typeof ZDeleteEnvelopeRecipientRequestSchema>;
-export type TDeleteEnvelopeRecipientResponse = z.infer<typeof ZDeleteEnvelopeRecipientResponseSchema>;
+export type TDeleteEnvelopeRecipientResponse = z.infer<
+  typeof ZDeleteEnvelopeRecipientResponseSchema
+>;

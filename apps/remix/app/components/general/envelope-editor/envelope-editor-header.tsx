@@ -1,8 +1,5 @@
-import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
-import { getEnvelopeItemPermissions, mapSecondaryIdToTemplateId } from '@documenso/lib/utils/envelope';
-import { Badge } from '@documenso/ui/primitives/badge';
-import { Button } from '@documenso/ui/primitives/button';
-import { Separator } from '@documenso/ui/primitives/separator';
+import { useMemo } from 'react';
+
 import { Trans, useLingui } from '@lingui/react/macro';
 import { DocumentStatus, EnvelopeType, TemplateType } from '@prisma/client';
 import {
@@ -14,9 +11,17 @@ import {
   SendIcon,
   SettingsIcon,
 } from 'lucide-react';
-import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
+
+import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
+import {
+  getEnvelopeItemPermissions,
+  mapSecondaryIdToTemplateId,
+} from '@documenso/lib/utils/envelope';
+import { Badge } from '@documenso/ui/primitives/badge';
+import { Button } from '@documenso/ui/primitives/button';
+import { Separator } from '@documenso/ui/primitives/separator';
 
 import { EnvelopeDistributeDialog } from '~/components/dialogs/envelope-distribute-dialog';
 import { EnvelopeRedistributeDialog } from '~/components/dialogs/envelope-redistribute-dialog';
@@ -68,11 +73,15 @@ export default function EnvelopeEditorHeader() {
   };
 
   return (
-    <nav className="w-full border-border border-b bg-background px-4 py-3 md:px-6">
+    <nav className="w-full border-b border-border bg-background px-4 py-3 md:px-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-center space-x-4">
           {editorConfig.embedded?.customBrandingLogo ? (
-            <img src={`/api/branding/logo/team/${envelope.teamId}`} alt="Logo" className="h-6 w-auto" />
+            <img
+              src={`/api/branding/logo/team/${envelope.teamId}`}
+              alt="Logo"
+              className="h-6 w-auto"
+            />
           ) : (
             <Link to="/">
               <BrandingLogo className="h-6 w-auto" />

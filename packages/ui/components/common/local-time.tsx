@@ -1,6 +1,7 @@
+import { useCallback, useMemo, useRef, useState } from 'react';
+
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import { DateTime } from 'luxon';
-import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { cn } from '../../lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '../../primitives/popover';
@@ -85,7 +86,12 @@ export const LocalTime = ({ date, className }: LocalTimeProps) => {
             isCopied={copiedField === 'Local'}
             onCopy={() => void onCopy('Local', local)}
           />
-          <TimeRow label="UTC" value={utc} isCopied={copiedField === 'UTC'} onCopy={() => void onCopy('UTC', utc)} />
+          <TimeRow
+            label="UTC"
+            value={utc}
+            isCopied={copiedField === 'UTC'}
+            onCopy={() => void onCopy('UTC', utc)}
+          />
           <TimeRow
             label="Unix"
             value={unix}

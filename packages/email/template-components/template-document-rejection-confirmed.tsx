@@ -18,11 +18,11 @@ export function TemplateDocumentRejectionConfirmed({
   return (
     <Container>
       <Section>
-        <Heading className="font-semibold text-2xl">
+        <Heading className="text-2xl font-semibold">
           <Trans>Rejection Confirmed</Trans>
         </Heading>
 
-        <Text className="text-base text-primary">
+        <Text className="text-primary text-base">
           <Trans>
             This email confirms that you have rejected the document{' '}
             <strong className="font-bold">"{documentName}"</strong> sent by {documentOwnerName}.
@@ -30,15 +30,16 @@ export function TemplateDocumentRejectionConfirmed({
         </Text>
 
         {reason && (
-          <Text className="font-medium text-base text-slate-400">
+          <Text className="text-base font-medium text-slate-400">
             <Trans>Rejection reason: {reason}</Trans>
           </Text>
         )}
 
         <Text className="text-base">
           <Trans>
-            The document owner has been notified of this rejection. No further action is required from you at this time.
-            The document owner may contact you with any questions regarding this rejection.
+            The document owner has been notified of this rejection. No further action is required
+            from you at this time. The document owner may contact you with any questions regarding
+            this rejection.
           </Trans>
         </Text>
       </Section>

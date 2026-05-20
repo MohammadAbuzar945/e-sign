@@ -1,3 +1,6 @@
+import { DocumentStatus, FieldType, RecipientRole, SigningStatus } from '@prisma/client';
+import { match } from 'ts-pattern';
+
 import { isBase64Image } from '@documenso/lib/constants/signatures';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { validateFieldAuth } from '@documenso/lib/server-only/document/validate-field-auth';
@@ -5,11 +8,12 @@ import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-log
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { extractFieldInsertionValues } from '@documenso/lib/utils/envelope-signing';
 import { prisma } from '@documenso/prisma';
-import { DocumentStatus, FieldType, RecipientRole, SigningStatus } from '@prisma/client';
-import { match } from 'ts-pattern';
 
 import { procedure } from '../trpc';
-import { ZSignEnvelopeFieldRequestSchema, ZSignEnvelopeFieldResponseSchema } from './sign-envelope-field.types';
+import {
+  ZSignEnvelopeFieldRequestSchema,
+  ZSignEnvelopeFieldResponseSchema,
+} from './sign-envelope-field.types';
 
 // Note that this is an unauthenticated public procedure route.
 export const signEnvelopeFieldRoute = procedure
@@ -108,7 +112,10 @@ export const signEnvelopeFieldRoute = procedure
       });
     }
 
-    if (recipient.signingStatus === SigningStatus.SIGNED || field.recipient.signingStatus === SigningStatus.SIGNED) {
+    if (
+      recipient.signingStatus === SigningStatus.SIGNED ||
+      field.recipient.signingStatus === SigningStatus.SIGNED
+    ) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: `Recipient ${recipient.id} has already signed`,
       });
@@ -258,14 +265,27 @@ export const signEnvelopeFieldRoute = procedure
                 type,
                 data: signatureImageAsBase64 || typedSignature || '',
               }))
-              .with(FieldType.DATE, FieldType.EMAIL, FieldType.NAME, FieldType.TEXT, FieldType.INITIALS, (type) => ({
-                type,
-                data: updatedField.customText,
-              }))
-              .with(FieldType.NUMBER, FieldType.RADIO, FieldType.CHECKBOX, FieldType.DROPDOWN, (type) => ({
-                type,
-                data: updatedField.customText,
-              }))
+              .with(
+                FieldType.DATE,
+                FieldType.EMAIL,
+                FieldType.NAME,
+                FieldType.TEXT,
+                FieldType.INITIALS,
+                (type) => ({
+                  type,
+                  data: updatedField.customText,
+                }),
+              )
+              .with(
+                FieldType.NUMBER,
+                FieldType.RADIO,
+                FieldType.CHECKBOX,
+                FieldType.DROPDOWN,
+                (type) => ({
+                  type,
+                  data: updatedField.customText,
+                }),
+              )
               .exhaustive(),
             fieldSecurity: derivedRecipientActionAuth
               ? {

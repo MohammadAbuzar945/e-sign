@@ -1,6 +1,7 @@
+import { OrganisationMemberInviteStatus } from '@prisma/client';
+
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
-import { OrganisationMemberInviteStatus } from '@prisma/client';
 
 import { maybeAuthenticatedProcedure } from '../trpc';
 import {

@@ -1,5 +1,9 @@
-import { DEFAULT_RECT_BACKGROUND, getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
 import Konva from 'konva';
+
+import {
+  DEFAULT_RECT_BACKGROUND,
+  getRecipientColorStyles,
+} from '@documenso/ui/lib/recipient-colors';
 
 import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
 import { calculateFieldPosition } from './field-renderer';
@@ -8,10 +12,17 @@ export const konvaTextFontFamily =
   '"Noto Sans", "Noto Sans Japanese", "Noto Sans Chinese", "Noto Sans Korean", sans-serif';
 export const konvaTextFill = 'black';
 
-export const upsertFieldGroup = (field: FieldToRender, options: RenderFieldElementOptions): Konva.Group => {
+export const upsertFieldGroup = (
+  field: FieldToRender,
+  options: RenderFieldElementOptions,
+): Konva.Group => {
   const { pageWidth, pageHeight, pageLayer, editable, scale } = options;
 
-  const { fieldX, fieldY, fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
+  const { fieldX, fieldY, fieldWidth, fieldHeight } = calculateFieldPosition(
+    field,
+    pageWidth,
+    pageHeight,
+  );
 
   const fieldGroup: Konva.Group =
     pageLayer.findOne(`#${field.renderId}`) ||
@@ -40,7 +51,10 @@ export const upsertFieldGroup = (field: FieldToRender, options: RenderFieldEleme
   return fieldGroup;
 };
 
-export const upsertFieldRect = (field: FieldToRender, options: RenderFieldElementOptions): Konva.Rect => {
+export const upsertFieldRect = (
+  field: FieldToRender,
+  options: RenderFieldElementOptions,
+): Konva.Rect => {
   const { pageWidth, pageHeight, mode, pageLayer, color } = options;
 
   const { fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
@@ -66,7 +80,13 @@ export const upsertFieldRect = (field: FieldToRender, options: RenderFieldElemen
   return fieldRect;
 };
 
-export const createSpinner = ({ fieldWidth, fieldHeight }: { fieldWidth: number; fieldHeight: number }) => {
+export const createSpinner = ({
+  fieldWidth,
+  fieldHeight,
+}: {
+  fieldWidth: number;
+  fieldHeight: number;
+}) => {
   const loadingGroup = new Konva.Group({
     name: 'loading-spinner-group',
   });
@@ -119,7 +139,11 @@ type CreateFieldHoverInteractionOptions = {
 /**
  * Adds smooth transition-like behavior for hover effects to the field group and rectangle.
  */
-export const createFieldHoverInteraction = ({ options, fieldGroup, fieldRect }: CreateFieldHoverInteractionOptions) => {
+export const createFieldHoverInteraction = ({
+  options,
+  fieldGroup,
+  fieldRect,
+}: CreateFieldHoverInteractionOptions) => {
   const { mode } = options;
 
   if (mode === 'export' || !options.color) {

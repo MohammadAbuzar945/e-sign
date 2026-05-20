@@ -1,7 +1,11 @@
-import { prisma } from '@documenso/prisma';
 import { DateTime } from 'luxon';
 
-import { EMAIL_VERIFICATION_STATE, USER_SIGNUP_VERIFICATION_TOKEN_IDENTIFIER } from '../../constants/email';
+import { prisma } from '@documenso/prisma';
+
+import {
+  EMAIL_VERIFICATION_STATE,
+  USER_SIGNUP_VERIFICATION_TOKEN_IDENTIFIER,
+} from '../../constants/email';
 import { jobsClient } from '../../jobs/client';
 
 export type VerifyEmailProps = {
@@ -46,7 +50,10 @@ export const verifyEmail = async ({ token }: VerifyEmailProps) => {
     });
 
     // If there isn't a recent token or it's older than 1 hour, send a new token
-    if (!mostRecentToken || DateTime.now().minus({ hours: 1 }).toJSDate() > mostRecentToken.createdAt) {
+    if (
+      !mostRecentToken ||
+      DateTime.now().minus({ hours: 1 }).toJSDate() > mostRecentToken.createdAt
+    ) {
       await jobsClient.triggerJob({
         name: 'send.signup.confirmation.email',
         payload: {

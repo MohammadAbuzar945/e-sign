@@ -1,10 +1,17 @@
-import { SUPPORTED_LANGUAGES } from '@documenso/lib/constants/i18n';
-import { dynamicActivate } from '@documenso/lib/utils/i18n';
-import { cn } from '@documenso/ui/lib/utils';
-import { CommandDialog, CommandGroup, CommandInput, CommandItem, CommandList } from '@documenso/ui/primitives/command';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { CheckIcon } from 'lucide-react';
+
+import { SUPPORTED_LANGUAGES } from '@documenso/lib/constants/i18n';
+import { dynamicActivate } from '@documenso/lib/utils/i18n';
+import { cn } from '@documenso/ui/lib/utils';
+import {
+  CommandDialog,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@documenso/ui/primitives/command';
 
 type LanguageSwitcherDialogProps = {
   open: boolean;
@@ -41,7 +48,12 @@ export const LanguageSwitcherDialog = ({ open, setOpen }: LanguageSwitcherDialog
               value={_(language.full)}
               onSelect={async () => setLanguage(language.short)}
             >
-              <CheckIcon className={cn('mr-2 h-4 w-4', i18n.locale === language.short ? 'opacity-100' : 'opacity-0')} />
+              <CheckIcon
+                className={cn(
+                  'mr-2 h-4 w-4',
+                  i18n.locale === language.short ? 'opacity-100' : 'opacity-0',
+                )}
+              />
               {_(language.full)}
             </CommandItem>
           ))}

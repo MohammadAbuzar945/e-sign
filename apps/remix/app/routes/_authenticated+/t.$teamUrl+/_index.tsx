@@ -1,5 +1,6 @@
-import { formatDocumentsPath } from '@documenso/lib/utils/teams';
 import { redirect } from 'react-router';
+
+import { formatDocumentsPath } from '@documenso/lib/utils/teams';
 
 import type { Route } from './+types/_index';
 

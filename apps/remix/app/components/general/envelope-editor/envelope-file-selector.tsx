@@ -1,6 +1,7 @@
+import { Plural } from '@lingui/react/macro';
+
 import { useCurrentEnvelopeRender } from '@documenso/lib/client-only/providers/envelope-render-provider';
 import { cn } from '@documenso/ui/lib/utils';
-import { Plural } from '@lingui/react/macro';
 
 type EnvelopeItemSelectorProps = {
   number: number;
@@ -30,15 +31,15 @@ export const EnvelopeItemSelector = ({
       {...buttonProps}
     >
       <div
-        className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full font-medium text-xs ${
+        className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium ${
           isSelected ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-600'
         }`}
       >
         {number}
       </div>
       <div className="min-w-0 text-left">
-        <div className="truncate font-medium text-sm">{primaryText}</div>
-        <div className="text-gray-500 text-xs">{secondaryText}</div>
+        <div className="truncate text-sm font-medium">{primaryText}</div>
+        <div className="text-xs text-gray-500">{secondaryText}</div>
       </div>
       {actionSlot ?? (
         <div
@@ -67,7 +68,12 @@ export const EnvelopeRendererFileSelector = ({
   const { envelopeItems, currentEnvelopeItem, setCurrentEnvelopeItem } = useCurrentEnvelopeRender();
 
   return (
-    <div className={cn('scrollbar-hidden flex h-fit flex-shrink-0 space-x-2 overflow-x-auto p-4', className)}>
+    <div
+      className={cn(
+        'scrollbar-hidden flex h-fit flex-shrink-0 space-x-2 overflow-x-auto p-4',
+        className,
+      )}
+    >
       {envelopeItems.map((doc, i) => (
         <EnvelopeItemSelector
           key={doc.id}

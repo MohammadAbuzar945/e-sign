@@ -1,3 +1,11 @@
+import { useEffect, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans, useLingui } from '@lingui/react/macro';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { useForm } from 'react-hook-form';
+import type { z } from 'zod';
+
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { ZCreateOrganisationEmailRequestSchema } from '@documenso/trpc/server/enterprise-router/create-organisation-email.types';
@@ -22,12 +30,6 @@ import {
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import type { z } from 'zod';
 
 type EmailDomain = {
   id: string;
@@ -67,7 +69,8 @@ export const OrganisationEmailCreateDialog = ({
     },
   });
 
-  const { mutateAsync: createOrganisationEmail, isPending } = trpc.enterprise.organisation.email.create.useMutation();
+  const { mutateAsync: createOrganisationEmail, isPending } =
+    trpc.enterprise.organisation.email.create.useMutation();
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -173,14 +176,14 @@ export const OrganisationEmailCreateDialog = ({
                           }}
                           placeholder={t`support`}
                         />
-                        <div className="absolute top-0 right-0 bottom-0 flex items-center rounded-r-md border bg-muted px-3 py-2 text-muted-foreground text-sm">
+                        <div className="bg-muted text-muted-foreground absolute bottom-0 right-0 top-0 flex items-center rounded-r-md border px-3 py-2 text-sm">
                           @{emailDomain.domain}
                         </div>
                       </div>
                     </FormControl>
                     <FormMessage />
                     {!form.formState.errors.email && (
-                      <span className="font-normal text-foreground/50 text-xs">
+                      <span className="text-foreground/50 text-xs font-normal">
                         {field.value ? (
                           field.value
                         ) : (
@@ -222,7 +225,11 @@ export const OrganisationEmailCreateDialog = ({
                   <Trans>Cancel</Trans>
                 </Button>
 
-                <Button type="submit" data-testid="dialog-create-organisation-email-button" loading={isPending}>
+                <Button
+                  type="submit"
+                  data-testid="dialog-create-organisation-email-button"
+                  loading={isPending}
+                >
                   <Trans>Create Email</Trans>
                 </Button>
               </DialogFooter>

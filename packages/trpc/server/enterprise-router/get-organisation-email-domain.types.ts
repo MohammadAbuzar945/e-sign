@@ -1,5 +1,6 @@
-import { ZEmailDomainSchema } from '@documenso/lib/types/email-domain';
 import { z } from 'zod';
+
+import { ZEmailDomainSchema } from '@documenso/lib/types/email-domain';
 
 export const ZGetOrganisationEmailDomainRequestSchema = z.object({
   emailDomainId: z.string(),
@@ -7,4 +8,6 @@ export const ZGetOrganisationEmailDomainRequestSchema = z.object({
 
 export const ZGetOrganisationEmailDomainResponseSchema = ZEmailDomainSchema;
 
-export type TGetOrganisationEmailDomainResponse = z.infer<typeof ZGetOrganisationEmailDomainResponseSchema>;
+export type TGetOrganisationEmailDomainResponse = z.infer<
+  typeof ZGetOrganisationEmailDomainResponseSchema
+>;

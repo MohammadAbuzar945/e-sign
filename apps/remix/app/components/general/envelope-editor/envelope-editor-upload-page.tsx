@@ -1,3 +1,12 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
+import type { DropResult } from '@hello-pangea/dnd';
+import { msg, plural } from '@lingui/core/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { FileWarningIcon, GripVerticalIcon, Loader2Icon, PencilIcon, XIcon } from 'lucide-react';
+import { ErrorCode as DropzoneErrorCode, type FileRejection, useDropzone } from 'react-dropzone';
+
 import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
 import { useEnvelopeAutosave } from '@documenso/lib/client-only/hooks/use-envelope-autosave';
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
@@ -13,16 +22,15 @@ import type { TCreateEnvelopeItemsPayload } from '@documenso/trpc/server/envelop
 import type { TReplaceEnvelopeItemPdfPayload } from '@documenso/trpc/server/envelope-router/replace-envelope-item-pdf.types';
 import { buildDropzoneRejectionDescription } from '@documenso/ui/lib/handle-dropzone-rejection';
 import { Button } from '@documenso/ui/primitives/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@documenso/ui/primitives/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@documenso/ui/primitives/card';
 import { DocumentDropzone } from '@documenso/ui/primitives/document-dropzone';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import type { DropResult } from '@hello-pangea/dnd';
-import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
-import { msg, plural } from '@lingui/core/macro';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { FileWarningIcon, GripVerticalIcon, Loader2Icon, PencilIcon, XIcon } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ErrorCode as DropzoneErrorCode, type FileRejection, useDropzone } from 'react-dropzone';
 
 import { EnvelopeItemDeleteDialog } from '~/components/dialogs/envelope-item-delete-dialog';
 
@@ -226,7 +234,8 @@ export const EnvelopeEditorUploadPage = () => {
 
     setLocalFiles((prev) => {
       const filteredFiles = prev.filter(
-        (uploadingFile) => uploadingFile.id !== newUploadingFiles.find((file) => file.id === uploadingFile.id)?.id,
+        (uploadingFile) =>
+          uploadingFile.id !== newUploadingFiles.find((file) => file.id === uploadingFile.id)?.id,
       );
 
       return filteredFiles.concat(
@@ -243,7 +252,9 @@ export const EnvelopeEditorUploadPage = () => {
   };
 
   const onReplacePdf = async (envelopeItemId: string, file: File) => {
-    setLocalFiles((prev) => prev.map((f) => (f.envelopeItemId === envelopeItemId ? { ...f, isReplacing: true } : f)));
+    setLocalFiles((prev) =>
+      prev.map((f) => (f.envelopeItemId === envelopeItemId ? { ...f, isReplacing: true } : f)),
+    );
 
     try {
       if (isEmbedded) {
@@ -263,7 +274,9 @@ export const EnvelopeEditorUploadPage = () => {
         );
 
         setLocalEnvelope({
-          envelopeItems: envelope.envelopeItems.map((item) => (item.id === envelopeItemId ? { ...item, data } : item)),
+          envelopeItems: envelope.envelopeItems.map((item) =>
+            item.id === envelopeItemId ? { ...item, data } : item,
+          ),
           fields: remainingFields,
         });
 
@@ -306,9 +319,13 @@ export const EnvelopeEditorUploadPage = () => {
    * Hide the envelope item from the list on deletion.
    */
   const onFileDelete = (envelopeItemId: string) => {
-    setLocalFiles((prev) => prev.filter((uploadingFile) => uploadingFile.envelopeItemId !== envelopeItemId));
+    setLocalFiles((prev) =>
+      prev.filter((uploadingFile) => uploadingFile.envelopeItemId !== envelopeItemId),
+    );
 
-    const fieldsWithoutDeletedItem = envelope.fields.filter((field) => field.envelopeItemId !== envelopeItemId);
+    const fieldsWithoutDeletedItem = envelope.fields.filter(
+      (field) => field.envelopeItemId !== envelopeItemId,
+    );
 
     setLocalEnvelope({
       envelopeItems: envelope.envelopeItems.filter((item) => item.id !== envelopeItemId),
@@ -335,46 +352,47 @@ export const EnvelopeEditorUploadPage = () => {
     debouncedUpdateEnvelopeItems(items);
   };
 
-  const { triggerSave: debouncedUpdateEnvelopeItems, flush: flushUpdateEnvelopeItems } = useEnvelopeAutosave(
-    async (files: LocalFile[]) => {
-      if (isEmbedded) {
-        const nextEnvelopeItems = files
-          .filter((item) => item.envelopeItemId)
-          .map((item, index) => {
-            const originalEnvelopeItem = envelope.envelopeItems.find(
-              (envelopeItem) => envelopeItem.id === item.envelopeItemId,
-            );
+  const { triggerSave: debouncedUpdateEnvelopeItems, flush: flushUpdateEnvelopeItems } =
+    useEnvelopeAutosave(
+      async (files: LocalFile[]) => {
+        if (isEmbedded) {
+          const nextEnvelopeItems = files
+            .filter((item) => item.envelopeItemId)
+            .map((item, index) => {
+              const originalEnvelopeItem = envelope.envelopeItems.find(
+                (envelopeItem) => envelopeItem.id === item.envelopeItemId,
+              );
 
-            return {
-              id: item.envelopeItemId || '',
-              title: item.title,
-              order: index + 1,
-              envelopeId: envelope.id,
-              data: originalEnvelopeItem?.data,
-              documentDataId: originalEnvelopeItem?.documentDataId || '',
-            };
+              return {
+                id: item.envelopeItemId || '',
+                title: item.title,
+                order: index + 1,
+                envelopeId: envelope.id,
+                data: originalEnvelopeItem?.data,
+                documentDataId: originalEnvelopeItem?.documentDataId || '',
+              };
+            });
+
+          setLocalEnvelope({
+            envelopeItems: nextEnvelopeItems,
           });
 
-        setLocalEnvelope({
-          envelopeItems: nextEnvelopeItems,
+          return;
+        }
+
+        await updateEnvelopeItems({
+          envelopeId: envelope.id,
+          data: files
+            .filter((item) => item.envelopeItemId)
+            .map((item, index) => ({
+              envelopeItemId: item.envelopeItemId || '',
+              order: index + 1,
+              title: item.title,
+            })),
         });
-
-        return;
-      }
-
-      await updateEnvelopeItems({
-        envelopeId: envelope.id,
-        data: files
-          .filter((item) => item.envelopeItemId)
-          .map((item, index) => ({
-            envelopeItemId: item.envelopeItemId || '',
-            order: index + 1,
-            title: item.title,
-          })),
-      });
-    },
-    isEmbedded ? 0 : 1000,
-  );
+      },
+      isEmbedded ? 0 : 1000,
+    );
 
   const flushUpdateEnvelopeItemsRef = useRef(flushUpdateEnvelopeItems);
   flushUpdateEnvelopeItemsRef.current = flushUpdateEnvelopeItems;
@@ -465,7 +483,7 @@ export const EnvelopeEditorUploadPage = () => {
               data-testid="envelope-item-dropzone"
               onDrop={onFileDrop}
               allowMultiple
-              className="pt-6 pb-4"
+              className="pb-4 pt-6"
               disabled={dropzoneDisabledMessage !== null}
               disabledMessage={dropzoneDisabledMessage || undefined}
               disabledHeading={msg`Upload disabled`}
@@ -534,10 +552,10 @@ export const EnvelopeEditorUploadPage = () => {
                                     }}
                                   />
                                 ) : (
-                                  <p className="font-medium text-sm">{localFile.title}</p>
+                                  <p className="text-sm font-medium">{localFile.title}</p>
                                 )}
 
-                                <div className="text-muted-foreground text-xs">
+                                <div className="text-xs text-muted-foreground">
                                   {localFile.isUploading ? (
                                     <Trans>Uploading</Trans>
                                   ) : localFile.isError ? (

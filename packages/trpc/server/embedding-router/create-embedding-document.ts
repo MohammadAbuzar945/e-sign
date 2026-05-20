@@ -1,8 +1,9 @@
+import { EnvelopeType } from '@prisma/client';
+
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { verifyEmbeddingPresignToken } from '@documenso/lib/server-only/embedding-presign/verify-embedding-presign-token';
 import { createEnvelope } from '@documenso/lib/server-only/envelope/create-envelope';
 import { mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
-import { EnvelopeType } from '@prisma/client';
 
 import { procedure } from '../trpc';
 import {
@@ -18,7 +19,9 @@ export const createEmbeddingDocumentRoute = procedure
     try {
       const authorizationHeader = req.headers.get('authorization');
 
-      const [presignToken] = (authorizationHeader || '').split('Bearer ').filter((s) => s.length > 0);
+      const [presignToken] = (authorizationHeader || '')
+        .split('Bearer ')
+        .filter((s) => s.length > 0);
 
       if (!presignToken) {
         throw new AppError(AppErrorCode.UNAUTHORIZED, {

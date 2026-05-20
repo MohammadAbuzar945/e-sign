@@ -12,7 +12,11 @@ export type UpdateTeamEmailOptions = {
   };
 };
 
-export const updateTeamEmail = async ({ userId, teamId, data }: UpdateTeamEmailOptions): Promise<void> => {
+export const updateTeamEmail = async ({
+  userId,
+  teamId,
+  data,
+}: UpdateTeamEmailOptions): Promise<void> => {
   const team = await prisma.team.findFirst({
     where: buildTeamWhereQuery({
       teamId,

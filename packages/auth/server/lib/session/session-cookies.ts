@@ -1,8 +1,13 @@
-import { formatSecureCookieName, getCookieDomain, useSecureCookies } from '@documenso/lib/constants/auth';
-import { appLog } from '@documenso/lib/utils/debugger';
-import { env } from '@documenso/lib/utils/env';
 import type { Context } from 'hono';
 import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie';
+
+import {
+  formatSecureCookieName,
+  getCookieDomain,
+  useSecureCookies,
+} from '@documenso/lib/constants/auth';
+import { appLog } from '@documenso/lib/utils/debugger';
+import { env } from '@documenso/lib/utils/env';
 
 import { AUTH_SESSION_LIFETIME } from '../../config';
 import { extractCookieFromHeaders } from '../utils/cookies';
@@ -56,7 +61,13 @@ export const getSessionCookie = async (c: Context): Promise<string | null> => {
  * @param sessionToken - The session token to set.
  */
 export const setSessionCookie = async (c: Context, sessionToken: string) => {
-  await setSignedCookie(c, sessionCookieName, sessionToken, getAuthSecret(), sessionCookieOptions).catch((err) => {
+  await setSignedCookie(
+    c,
+    sessionCookieName,
+    sessionToken,
+    getAuthSecret(),
+    sessionCookieOptions,
+  ).catch((err) => {
     appLog('SetSessionCookie', `Error setting signed cookie: ${err}`);
 
     throw err;

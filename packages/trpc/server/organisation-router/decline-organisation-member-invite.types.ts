@@ -6,4 +6,6 @@ export const ZDeclineOrganisationMemberInviteRequestSchema = z.object({
 
 export const ZDeclineOrganisationMemberInviteResponseSchema = z.void();
 
-export type TDeclineOrganisationMemberInviteResponse = z.infer<typeof ZDeclineOrganisationMemberInviteResponseSchema>;
+export type TDeclineOrganisationMemberInviteResponse = z.infer<
+  typeof ZDeclineOrganisationMemberInviteResponseSchema
+>;

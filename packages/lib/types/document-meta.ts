@@ -1,3 +1,7 @@
+import { msg } from '@lingui/core/macro';
+import { DocumentDistributionMethod, DocumentSigningOrder } from '@prisma/client';
+import { z } from 'zod';
+
 import { VALID_DATE_FORMAT_VALUES } from '@documenso/lib/constants/date-formats';
 import { ZEnvelopeExpirationPeriod } from '@documenso/lib/constants/envelope-expiration';
 import { ZEnvelopeReminderSettings } from '@documenso/lib/constants/envelope-reminder';
@@ -5,9 +9,6 @@ import { SUPPORTED_LANGUAGE_CODES } from '@documenso/lib/constants/i18n';
 import { isValidRedirectUrl } from '@documenso/lib/utils/is-valid-redirect-url';
 import { zEmail } from '@documenso/lib/utils/zod';
 import { DocumentMetaSchema } from '@documenso/prisma/generated/zod/modelSchema/DocumentMetaSchema';
-import { msg } from '@lingui/core/macro';
-import { DocumentDistributionMethod, DocumentSigningOrder } from '@prisma/client';
-import { z } from 'zod';
 
 import { ZDocumentEmailSettingsSchema } from './document-email';
 
@@ -47,7 +48,9 @@ export const ZDocumentSignatureSettingsSchema = z
   })
   .refine(
     (data) => {
-      return data.typedSignatureEnabled || data.uploadSignatureEnabled || data.drawnSignatureEnabled;
+      return (
+        data.typedSignatureEnabled || data.uploadSignatureEnabled || data.drawnSignatureEnabled
+      );
     },
     {
       message: msg`At least one signature type must be enabled`.id,
@@ -58,7 +61,9 @@ export type TDocumentSignatureSettings = z.infer<typeof ZDocumentSignatureSettin
 
 export const ZDocumentMetaTimezoneSchema = z
   .string()
-  .describe('The timezone to use for date fields and signing the document. Example Etc/UTC, Australia/Melbourne');
+  .describe(
+    'The timezone to use for date fields and signing the document. Example Etc/UTC, Australia/Melbourne',
+  );
 
 export type TDocumentMetaTimezone = z.infer<typeof ZDocumentMetaTimezoneSchema>;
 

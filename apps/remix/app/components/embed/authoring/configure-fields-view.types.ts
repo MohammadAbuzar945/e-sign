@@ -1,6 +1,7 @@
+import { z } from 'zod';
+
 import { ZFieldMetaSchema } from '@documenso/lib/types/field-meta';
 import { FieldType } from '@documenso/prisma/client';
-import { z } from 'zod';
 
 export const ZConfigureFieldsFormSchema = z.object({
   fields: z.array(
@@ -23,4 +24,6 @@ export const ZConfigureFieldsFormSchema = z.object({
 
 export type TConfigureFieldsFormSchema = z.infer<typeof ZConfigureFieldsFormSchema>;
 
-export type TConfigureFieldsFormSchemaField = z.infer<typeof ZConfigureFieldsFormSchema>['fields'][number];
+export type TConfigureFieldsFormSchemaField = z.infer<
+  typeof ZConfigureFieldsFormSchema
+>['fields'][number];

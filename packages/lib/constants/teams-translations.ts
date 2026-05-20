@@ -8,8 +8,9 @@ export const TEAM_MEMBER_ROLE_MAP: Record<keyof typeof TeamMemberRole, MessageDe
   MEMBER: msg`Member`,
 };
 
-export const EXTENDED_TEAM_MEMBER_ROLE_MAP: Record<keyof typeof TeamMemberRole, MessageDescriptor> = {
-  ADMIN: msg`Team Admin`,
-  MANAGER: msg`Team Manager`,
-  MEMBER: msg`Team Member`,
-};
+export const EXTENDED_TEAM_MEMBER_ROLE_MAP: Record<keyof typeof TeamMemberRole, MessageDescriptor> =
+  {
+    ADMIN: msg`Team Admin`,
+    MANAGER: msg`Team Manager`,
+    MEMBER: msg`Team Member`,
+  };

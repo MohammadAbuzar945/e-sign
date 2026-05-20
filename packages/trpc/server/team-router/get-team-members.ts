@@ -1,7 +1,10 @@
 import { getTeamMembers } from '@documenso/lib/server-only/team/get-team-members';
 
 import { authenticatedProcedure } from '../trpc';
-import { ZGetTeamMembersRequestSchema, ZGetTeamMembersResponseSchema } from './get-team-members.types';
+import {
+  ZGetTeamMembersRequestSchema,
+  ZGetTeamMembersResponseSchema,
+} from './get-team-members.types';
 
 export const getTeamMembersRoute = authenticatedProcedure
   //   .meta(getTeamMembersMeta)

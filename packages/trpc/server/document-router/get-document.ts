@@ -1,7 +1,11 @@
 import { getDocumentWithDetailsById } from '@documenso/lib/server-only/document/get-document-with-details-by-id';
 
 import { authenticatedProcedure } from '../trpc';
-import { getDocumentMeta, ZGetDocumentRequestSchema, ZGetDocumentResponseSchema } from './get-document.types';
+import {
+  ZGetDocumentRequestSchema,
+  ZGetDocumentResponseSchema,
+  getDocumentMeta,
+} from './get-document.types';
 
 export const getDocumentRoute = authenticatedProcedure
   .meta(getDocumentMeta)

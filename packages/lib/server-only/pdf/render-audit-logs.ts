@@ -1,22 +1,24 @@
 import type { I18n } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
-import type { DocumentMeta, Envelope, RecipientRole } from '@prisma/client';
+import type { DocumentMeta } from '@prisma/client';
+import type { Envelope, RecipientRole } from '@prisma/client';
 import Konva from 'konva';
 import 'konva/skia-backend';
-import fs from 'node:fs';
-import path from 'node:path';
 import type { DateTimeFormatOptions } from 'luxon';
 import { DateTime } from 'luxon';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Canvas } from 'skia-canvas';
 import { Image as SkiaImage } from 'skia-canvas';
-import { match, P } from 'ts-pattern';
+import { match } from 'ts-pattern';
+import { P } from 'ts-pattern';
 import { UAParser } from 'ua-parser-js';
 
 import { DOCUMENT_STATUS } from '../../constants/document';
 import { APP_I18N_OPTIONS } from '../../constants/i18n';
 import { RECIPIENT_ROLES_DESCRIPTION } from '../../constants/recipient-roles';
-import type { TDocumentAuditLog } from '../../types/document-audit-logs';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '../../types/document-audit-logs';
+import type { TDocumentAuditLog } from '../../types/document-audit-logs';
 import { formatDocumentAuditLogAction } from '../../utils/document-audit-logs';
 import { ensureFontLibrary } from './helpers';
 
@@ -217,7 +219,9 @@ const renderOverviewCard = (options: RenderOverviewCardOptions) => {
 
   const statusLabel = renderOverviewCardLabels({
     label: i18n._(msg`Status`),
-    text: i18n._(envelope.deletedAt ? msg`Deleted` : DOCUMENT_STATUS[envelope.status].description).toUpperCase(),
+    text: i18n
+      ._(envelope.deletedAt ? msg`Deleted` : DOCUMENT_STATUS[envelope.status].description)
+      .toUpperCase(),
     width: columnWidth,
   });
   const timeZoneLabel = renderOverviewCardLabels({
@@ -348,7 +352,9 @@ const renderRow = (options: RenderRowOptions) => {
   const auditLogTimestampText = new Konva.Text({
     x: columnWidth + columnSpacing,
     width: columnWidth,
-    text: DateTime.fromJSDate(auditLog.createdAt).setLocale(APP_I18N_OPTIONS.defaultLocale).toLocaleString(dateFormat),
+    text: DateTime.fromJSDate(auditLog.createdAt)
+      .setLocale(APP_I18N_OPTIONS.defaultLocale)
+      .toLocaleString(dateFormat),
     fontFamily: 'Inter',
     align: 'right',
     fontSize: textSm,
@@ -701,7 +707,10 @@ const getAuditLogIndicatorColor = (type: string) =>
     .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_REJECTED, () => '#ef4444') // bg-red-500
     .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_SENT, () => '#f97316') // bg-orange-500
     .with(
-      P.union(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_FIELD_INSERTED, DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_FIELD_UNINSERTED),
+      P.union(
+        DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_FIELD_INSERTED,
+        DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_FIELD_UNINSERTED,
+      ),
       () => '#3b82f6', // bg-blue-500
     )
     .otherwise(() => '#f1f5f9'); // bg-muted

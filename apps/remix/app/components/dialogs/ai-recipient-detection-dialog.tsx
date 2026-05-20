@@ -1,14 +1,22 @@
+import { useCallback, useEffect, useState } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Plural, Trans } from '@lingui/react/macro';
+import { CheckIcon, ShieldCheckIcon, UserIcon, XIcon } from 'lucide-react';
+
 import { RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-roles';
 import type { TDetectedRecipientSchema } from '@documenso/lib/server-only/ai/envelope/detect-recipients/schema';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Button } from '@documenso/ui/primitives/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@documenso/ui/primitives/dialog';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Plural, Trans } from '@lingui/react/macro';
-import { CheckIcon, ShieldCheckIcon, UserIcon, XIcon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@documenso/ui/primitives/dialog';
 
 import {
   AiApiError,
@@ -138,17 +146,20 @@ export const AiRecipientDetectionDialog = ({
             </DialogHeader>
 
             <div>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 <Trans>
-                  We'll scan your document to find signature fields and identify who needs to sign. Detected recipients
-                  will be suggested for you to review.
+                  We'll scan your document to find signature fields and identify who needs to sign.
+                  Detected recipients will be suggested for you to review.
                 </Trans>
               </p>
 
               <Alert className="mt-4 flex items-center gap-2 space-y-0" variant="neutral">
                 <ShieldCheckIcon className="h-5 w-5 stroke-green-600" />
                 <AlertDescription className="mt-0">
-                  <Trans>Your document is processed securely using AI services that don't retain your data.</Trans>
+                  <Trans>
+                    Your document is processed securely using AI services that don't retain your
+                    data.
+                  </Trans>
                 </AlertDescription>
               </Alert>
             </div>
@@ -178,7 +189,7 @@ export const AiRecipientDetectionDialog = ({
               <p className="mt-8 text-muted-foreground">{_(PROCESSING_MESSAGES[messageIndex])}</p>
 
               {progress && (
-                <p className="mt-2 text-muted-foreground/60 text-xs">
+                <p className="mt-2 text-xs text-muted-foreground/60">
                   <Plural
                     value={progress.recipientsDetected}
                     one={
@@ -195,7 +206,7 @@ export const AiRecipientDetectionDialog = ({
                 </p>
               )}
 
-              <p className="mt-2 max-w-[40ch] text-center text-muted-foreground/60 text-xs">
+              <p className="mt-2 max-w-[40ch] text-center text-xs text-muted-foreground/60">
                 <Trans>This can take a minute or two depending on the size of your document.</Trans>
               </p>
 
@@ -225,16 +236,16 @@ export const AiRecipientDetectionDialog = ({
               {detectedRecipients.length === 0 ? (
                 <div className="flex flex-col items-center py-8">
                   <UserIcon className="h-12 w-12 text-muted-foreground/50" />
-                  <p className="mt-4 text-center text-muted-foreground text-sm">
+                  <p className="mt-4 text-center text-sm text-muted-foreground">
                     <Trans>No recipients were detected in your document.</Trans>
                   </p>
-                  <p className="mt-1 text-center text-muted-foreground/70 text-xs">
+                  <p className="mt-1 text-center text-xs text-muted-foreground/70">
                     <Trans>You can add recipients manually in the editor.</Trans>
                   </p>
                 </div>
               ) : (
                 <>
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-sm text-muted-foreground">
                     <Plural
                       value={detectedRecipients.length}
                       one="We found # recipient in your document."
@@ -254,13 +265,13 @@ export const AiRecipientDetectionDialog = ({
                                 : '?'
                           }
                           primaryText={
-                            <p className="font-medium text-foreground text-sm">
+                            <p className="text-sm font-medium text-foreground">
                               {recipient.name || _(msg`Unknown name`)}
                             </p>
                           }
                           secondaryText={
-                            <div className="text-muted-foreground text-xs">
-                              <p className="text-muted-foreground/70 italic">
+                            <div className="text-xs text-muted-foreground">
+                              <p className="italic text-muted-foreground/70">
                                 {recipient.email || _(msg`No email detected`)}
                               </p>
                               <p>{_(RECIPIENT_ROLES_DESCRIPTION[recipient.role].roleName)}</p>
@@ -293,7 +304,7 @@ export const AiRecipientDetectionDialog = ({
 
               {detectedRecipients.length > 0 && (
                 <Button type="button" onClick={onAddRecipients}>
-                  <CheckIcon className="mr-2 -ml-1 h-4 w-4" />
+                  <CheckIcon className="-ml-1 mr-2 h-4 w-4" />
                   <Trans>Add recipients</Trans>
                 </Button>
               )}
@@ -310,11 +321,11 @@ export const AiRecipientDetectionDialog = ({
             </DialogHeader>
 
             <div className="py-4">
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 <Trans>Something went wrong while detecting recipients.</Trans>
               </p>
 
-              {error && <p className="mt-2 text-destructive text-sm">{error}</p>}
+              {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
             </div>
 
             <DialogFooter>
@@ -338,8 +349,10 @@ export const AiRecipientDetectionDialog = ({
             </DialogHeader>
 
             <div className="py-4">
-              <p className="text-muted-foreground text-sm">
-                <Trans>You've made too many detection requests. Please wait a minute before trying again.</Trans>
+              <p className="text-sm text-muted-foreground">
+                <Trans>
+                  You've made too many detection requests. Please wait a minute before trying again.
+                </Trans>
               </p>
             </div>
 

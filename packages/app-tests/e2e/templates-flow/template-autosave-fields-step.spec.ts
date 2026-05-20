@@ -1,10 +1,11 @@
+import type { Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
 import { PDF_VIEWER_PAGE_SELECTOR } from '@documenso/lib/constants/pdf-viewer';
 import { getTemplateById } from '@documenso/lib/server-only/template/get-template-by-id';
 import { mapSecondaryIdToTemplateId } from '@documenso/lib/utils/envelope';
 import { seedBlankTemplate } from '@documenso/prisma/seed/templates';
 import { seedUser } from '@documenso/prisma/seed/users';
-import type { Page } from '@playwright/test';
-import { expect, test } from '@playwright/test';
 
 import { apiSignin } from '../fixtures/authentication';
 
@@ -64,7 +65,10 @@ test.describe('AutoSave Fields Step', () => {
 
     await page.getByTestId('field-advanced-settings-footer').waitFor({ state: 'visible' });
 
-    await page.getByTestId('field-advanced-settings-footer').getByRole('button', { name: 'Cancel' }).click();
+    await page
+      .getByTestId('field-advanced-settings-footer')
+      .getByRole('button', { name: 'Cancel' })
+      .click();
 
     await triggerAutosave(page);
 
@@ -95,7 +99,9 @@ test.describe('AutoSave Fields Step', () => {
 
       expect(fields.length).toBe(3);
 
-      expect(fields.map((field) => field.type).toSorted()).toEqual(['SIGNATURE', 'TEXT', 'SIGNATURE'].toSorted());
+      expect(fields.map((field) => field.type).toSorted()).toEqual(
+        ['SIGNATURE', 'TEXT', 'SIGNATURE'].toSorted(),
+      );
     }).toPass();
   });
 
@@ -122,7 +128,10 @@ test.describe('AutoSave Fields Step', () => {
 
     await page.getByTestId('field-advanced-settings-footer').waitFor({ state: 'visible' });
 
-    await page.getByTestId('field-advanced-settings-footer').getByRole('button', { name: 'Cancel' }).click();
+    await page
+      .getByTestId('field-advanced-settings-footer')
+      .getByRole('button', { name: 'Cancel' })
+      .click();
 
     await triggerAutosave(page);
 
@@ -188,7 +197,10 @@ test.describe('AutoSave Fields Step', () => {
 
     await page.getByTestId('field-advanced-settings-footer').waitFor({ state: 'visible' });
 
-    await page.getByTestId('field-advanced-settings-footer').getByRole('button', { name: 'Cancel' }).click();
+    await page
+      .getByTestId('field-advanced-settings-footer')
+      .getByRole('button', { name: 'Cancel' })
+      .click();
 
     await triggerAutosave(page);
 
@@ -260,7 +272,10 @@ test.describe('AutoSave Fields Step', () => {
 
     await page.getByTestId('field-advanced-settings-footer').waitFor({ state: 'visible' });
 
-    await page.getByTestId('field-advanced-settings-footer').getByRole('button', { name: 'Save' }).click();
+    await page
+      .getByTestId('field-advanced-settings-footer')
+      .getByRole('button', { name: 'Save' })
+      .click();
 
     await page.waitForTimeout(2500);
     await triggerAutosave(page);
@@ -278,7 +293,9 @@ test.describe('AutoSave Fields Step', () => {
       const fields = retrievedTemplate.fields;
 
       expect(fields.length).toBe(2);
-      expect(fields.map((field) => field.type).toSorted()).toEqual(['SIGNATURE', 'TEXT'].toSorted());
+      expect(fields.map((field) => field.type).toSorted()).toEqual(
+        ['SIGNATURE', 'TEXT'].toSorted(),
+      );
 
       const textField = fields.find((field) => field.type === 'TEXT');
       expect(textField).toBeDefined();
@@ -289,7 +306,11 @@ test.describe('AutoSave Fields Step', () => {
 
       expect(textField.fieldMeta).toBeDefined();
 
-      if (textField.fieldMeta && typeof textField.fieldMeta === 'object' && 'type' in textField.fieldMeta) {
+      if (
+        textField.fieldMeta &&
+        typeof textField.fieldMeta === 'object' &&
+        'type' in textField.fieldMeta
+      ) {
         expect(textField.fieldMeta.type).toBe('text');
         expect(textField.fieldMeta.label).toBe('Test Field');
         expect(textField.fieldMeta.placeholder).toBe('Test Placeholder');

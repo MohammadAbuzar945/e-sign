@@ -1,8 +1,12 @@
-import { prisma } from '@documenso/prisma';
 import { EnvelopeType, WebhookTriggerEvents } from '@prisma/client';
 
-import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../types/webhook-payload';
-import type { EnvelopeIdOptions } from '../../utils/envelope';
+import { prisma } from '@documenso/prisma';
+
+import {
+  ZWebhookDocumentSchema,
+  mapEnvelopeToWebhookDocumentPayload,
+} from '../../types/webhook-payload';
+import { type EnvelopeIdOptions } from '../../utils/envelope';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
 

@@ -1,5 +1,6 @@
-import { createTeamMembers } from '@documenso/trpc/server/team-router/create-team-members';
 import { customAlphabet } from 'nanoid';
+
+import { createTeamMembers } from '@documenso/trpc/server/team-router/create-team-members';
 
 import { prisma } from '..';
 import type { Prisma } from '../client';
@@ -95,7 +96,11 @@ type SeedTeamMemberOptions = {
   name?: string;
 };
 
-export const seedTeamMember = async ({ teamId, name, role = TeamMemberRole.ADMIN }: SeedTeamMemberOptions) => {
+export const seedTeamMember = async ({
+  teamId,
+  name,
+  role = TeamMemberRole.ADMIN,
+}: SeedTeamMemberOptions) => {
   const { user } = await seedUser({ name });
 
   const team = await prisma.team.findFirstOrThrow({
@@ -157,7 +162,13 @@ export const unseedTeamEmail = async ({ teamId }: { teamId: number }) => {
   });
 };
 
-export const seedTeamEmailVerification = async ({ email, teamId }: { email: string; teamId: number }) => {
+export const seedTeamEmailVerification = async ({
+  email,
+  teamId,
+}: {
+  email: string;
+  teamId: number;
+}) => {
   return await prisma.teamEmailVerification.create({
     data: {
       teamId,

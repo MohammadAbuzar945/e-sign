@@ -1,5 +1,6 @@
-import { prisma } from '@documenso/prisma';
 import { EnvelopeType, type Prisma } from '@prisma/client';
+
+import { prisma } from '@documenso/prisma';
 
 import type { FindResultResponse } from '../../types/search-params';
 
@@ -9,7 +10,11 @@ export interface AdminFindDocumentsOptions {
   perPage?: number;
 }
 
-export const adminFindDocuments = async ({ query, page = 1, perPage = 10 }: AdminFindDocumentsOptions) => {
+export const adminFindDocuments = async ({
+  query,
+  page = 1,
+  perPage = 10,
+}: AdminFindDocumentsOptions) => {
   let termFilters: Prisma.EnvelopeWhereInput | undefined = !query
     ? undefined
     : {

@@ -1,6 +1,7 @@
+import { DocumentStatus, EnvelopeType } from '@prisma/client';
+
 import type { DateRange } from '@documenso/lib/types/search-params';
 import { kyselyPrisma, sql } from '@documenso/prisma';
-import { DocumentStatus, EnvelopeType } from '@prisma/client';
 
 export type OrganisationInsights = {
   id: number;
@@ -36,7 +37,10 @@ export async function getSigningVolume({
       eb.or([
         eb('o.name', 'ilike', `%${search}%`),
         eb.exists(
-          eb.selectFrom('Team as t').whereRef('t.organisationId', '=', 'o.id').where('t.name', 'ilike', `%${search}%`),
+          eb
+            .selectFrom('Team as t')
+            .whereRef('t.organisationId', '=', 'o.id')
+            .where('t.name', 'ilike', `%${search}%`),
         ),
       ]),
     )
@@ -78,7 +82,10 @@ export async function getSigningVolume({
       eb.or([
         eb('o.name', 'ilike', `%${search}%`),
         eb.exists(
-          eb.selectFrom('Team as t').whereRef('t.organisationId', '=', 'o.id').where('t.name', 'ilike', `%${search}%`),
+          eb
+            .selectFrom('Team as t')
+            .whereRef('t.organisationId', '=', 'o.id')
+            .where('t.name', 'ilike', `%${search}%`),
         ),
       ]),
     )
@@ -146,7 +153,10 @@ export async function getOrganisationInsights({
       eb.or([
         eb('o.name', 'ilike', `%${search}%`),
         eb.exists(
-          eb.selectFrom('Team as t').whereRef('t.organisationId', '=', 'o.id').where('t.name', 'ilike', `%${search}%`),
+          eb
+            .selectFrom('Team as t')
+            .whereRef('t.organisationId', '=', 'o.id')
+            .where('t.name', 'ilike', `%${search}%`),
         ),
       ]),
     )
@@ -155,7 +165,9 @@ export async function getOrganisationInsights({
       'o.createdAt as createdAt',
       'o.customerId as customerId',
       sql<string>`COALESCE(o.name, 'Unknown')`.as('name'),
-      sql<string>`CASE WHEN s.status IS NOT NULL THEN s.status ELSE NULL END`.as('subscriptionStatus'),
+      sql<string>`CASE WHEN s.status IS NOT NULL THEN s.status ELSE NULL END`.as(
+        'subscriptionStatus',
+      ),
       eb
         .selectFrom('Team as t')
         .whereRef('t.organisationId', '=', 'o.id')
@@ -200,7 +212,10 @@ export async function getOrganisationInsights({
       eb.or([
         eb('o.name', 'ilike', `%${search}%`),
         eb.exists(
-          eb.selectFrom('Team as t').whereRef('t.organisationId', '=', 'o.id').where('t.name', 'ilike', `%${search}%`),
+          eb
+            .selectFrom('Team as t')
+            .whereRef('t.organisationId', '=', 'o.id')
+            .where('t.name', 'ilike', `%${search}%`),
         ),
       ]),
     )

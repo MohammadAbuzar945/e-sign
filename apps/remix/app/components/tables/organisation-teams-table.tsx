@@ -1,3 +1,11 @@
+import { useMemo } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { useSearchParams } from 'react-router';
+import { Link } from 'react-router';
+
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
@@ -11,11 +19,6 @@ import { DataTable } from '@documenso/ui/primitives/data-table';
 import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router';
 
 import { TeamDeleteDialog } from '../dialogs/team-delete-dialog';
 
@@ -60,7 +63,9 @@ export const OrganisationTeamsTable = () => {
               avatarSrc={formatAvatarUrl(row.original.avatarImageId)}
               avatarClass="h-12 w-12"
               avatarFallback={row.original.name.slice(0, 1).toUpperCase()}
-              primaryText={<span className="font-semibold text-foreground/80">{row.original.name}</span>}
+              primaryText={
+                <span className="font-semibold text-foreground/80">{row.original.name}</span>
+              }
               secondaryText={`${NEXT_PUBLIC_WEBAPP_URL()}/t/${row.original.url}`}
             />
           </Link>
@@ -138,7 +143,11 @@ export const OrganisationTeamsTable = () => {
         ),
       }}
     >
-      {(table) => results.totalPages > 1 && <DataTablePagination additionalInformation="VisibleCount" table={table} />}
+      {(table) =>
+        results.totalPages > 1 && (
+          <DataTablePagination additionalInformation="VisibleCount" table={table} />
+        )
+      }
     </DataTable>
   );
 };

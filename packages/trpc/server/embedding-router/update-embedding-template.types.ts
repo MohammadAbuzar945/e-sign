@@ -1,3 +1,6 @@
+import { DocumentSigningOrder, RecipientRole } from '@prisma/client';
+import { z } from 'zod';
+
 import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';
 import {
   ZDocumentMetaDateFormatSchema,
@@ -20,8 +23,6 @@ import {
 } from '@documenso/lib/types/field';
 import { ZFieldAndMetaSchema } from '@documenso/lib/types/field-meta';
 import { ZRecipientEmailSchema } from '@documenso/lib/types/recipient';
-import { DocumentSigningOrder, RecipientRole } from '@prisma/client';
-import { z } from 'zod';
 
 import { ZDocumentTitleSchema } from '../document-router/schema';
 
@@ -75,4 +76,6 @@ export const ZUpdateEmbeddingTemplateResponseSchema = z.object({
   templateId: z.number(),
 });
 
-export type TUpdateEmbeddingTemplateRequestSchema = z.infer<typeof ZUpdateEmbeddingTemplateRequestSchema>;
+export type TUpdateEmbeddingTemplateRequestSchema = z.infer<
+  typeof ZUpdateEmbeddingTemplateRequestSchema
+>;

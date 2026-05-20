@@ -1,3 +1,15 @@
+import { useEffect, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Plural, useLingui } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { EnvelopeType } from '@prisma/client';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { FolderIcon, HomeIcon, Loader2, Search } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { match } from 'ts-pattern';
+import { z } from 'zod';
+
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
@@ -9,18 +21,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Plural, Trans, useLingui } from '@lingui/react/macro';
-import { EnvelopeType } from '@prisma/client';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { FolderIcon, HomeIcon, Loader2, Search } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { match } from 'ts-pattern';
-import { z } from 'zod';
 
 export type EnvelopesBulkMoveDialogProps = {
   envelopeIds: string[];
@@ -109,7 +119,10 @@ export const EnvelopesBulkMoveDialog = ({
       const error = AppError.parseError(err);
 
       const errorMessage = match(error.code)
-        .with(AppErrorCode.NOT_FOUND, () => t`The folder you are trying to move the items to does not exist.`)
+        .with(
+          AppErrorCode.NOT_FOUND,
+          () => t`The folder you are trying to move the items to does not exist.`,
+        )
         .with(AppErrorCode.UNAUTHORIZED, () => t`You are not allowed to move these items.`)
         .with(AppErrorCode.INVALID_BODY, () => t`All items must be of the same type.`)
         .otherwise(() => t`An error occurred while moving the items.`);
@@ -130,7 +143,11 @@ export const EnvelopesBulkMoveDialog = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isDocument ? <Trans>Move Documents to Folder</Trans> : <Trans>Move Templates to Folder</Trans>}
+            {isDocument ? (
+              <Trans>Move Documents to Folder</Trans>
+            ) : (
+              <Trans>Move Templates to Folder</Trans>
+            )}
           </DialogTitle>
 
           <DialogDescription>
@@ -151,7 +168,7 @@ export const EnvelopesBulkMoveDialog = ({
         </DialogHeader>
 
         <div className="relative">
-          <Search className="absolute top-3 left-2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t`Search folders...`}
             value={searchTerm}
@@ -205,7 +222,7 @@ export const EnvelopesBulkMoveDialog = ({
                           ))}
 
                           {searchTerm && filteredFolders?.length === 0 && (
-                            <div className="px-2 py-2 text-center text-muted-foreground text-sm">
+                            <div className="px-2 py-2 text-center text-sm text-muted-foreground">
                               <Trans>No folders found</Trans>
                             </div>
                           )}

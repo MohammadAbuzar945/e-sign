@@ -1,5 +1,6 @@
-import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import type { Page } from '@playwright/test';
+
+import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 
 type LoginOptions = {
   page: Page;

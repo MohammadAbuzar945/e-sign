@@ -83,7 +83,10 @@ type GetMemberOrganisationRoleOptions = {
 /**
  * Returns the highest Organisation of a given organisation member
  */
-export const getMemberOrganisationRole = async ({ organisationId, reference }: GetMemberOrganisationRoleOptions) => {
+export const getMemberOrganisationRole = async ({
+  organisationId,
+  reference,
+}: GetMemberOrganisationRoleOptions) => {
   const organisation = await prisma.organisation.findFirst({
     where: {
       id: organisationId,

@@ -40,7 +40,9 @@ export const deletedAccountServiceAccount = async () => {
   });
 
   if (!serviceAccount) {
-    throw new Error('Deleted account service account not found, have you ran the appropriate migrations?');
+    throw new Error(
+      'Deleted account service account not found, have you ran the appropriate migrations?',
+    );
   }
 
   return serviceAccount;
@@ -48,7 +50,9 @@ export const deletedAccountServiceAccount = async () => {
 
 export const migrateDeletedAccountServiceAccount = async () => {
   if (deletedServiceAccountEmail() !== LEGACY_DELETED_ACCOUNT_EMAIL) {
-    console.log(`Migrating deleted account service account to new email: ${deletedServiceAccountEmail()}`);
+    console.log(
+      `Migrating deleted account service account to new email: ${deletedServiceAccountEmail()}`,
+    );
 
     await prisma.user.updateMany({
       where: {

@@ -1,9 +1,11 @@
-import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
-import { Input } from '@documenso/ui/primitives/input';
+import { useCallback, useEffect, useState } from 'react';
+
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
-import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
+
+import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
+import { Input } from '@documenso/ui/primitives/input';
 
 export const DocumentSearch = ({ initialValue = '' }: { initialValue?: string }) => {
   const { _ } = useLingui();

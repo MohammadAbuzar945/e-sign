@@ -1,5 +1,6 @@
-import { ZSupportedLanguageCodeSchema } from '@documenso/lib/constants/locales';
 import { z } from 'zod';
+
+import { ZSupportedLanguageCodeSchema } from '@documenso/lib/constants/locales';
 
 import { ZCssVarsSchema } from './css-vars';
 

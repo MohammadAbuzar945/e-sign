@@ -1,6 +1,7 @@
+import * as React from 'react';
+
 import { cva } from 'class-variance-authority';
 import { Loader } from 'lucide-react';
-import * as React from 'react';
 
 import { cn } from '../lib/utils';
 
@@ -23,9 +24,11 @@ export interface SpinnerProps extends Omit<React.ComponentPropsWithoutRef<typeof
   size?: SpinnerSize;
 }
 
-const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>(({ className, size = 'default', ...props }, ref) => {
-  return <Loader ref={ref} className={cn(spinnerVariants({ size }), className)} {...props} />;
-});
+const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>(
+  ({ className, size = 'default', ...props }, ref) => {
+    return <Loader ref={ref} className={cn(spinnerVariants({ size }), className)} {...props} />;
+  },
+);
 
 Spinner.displayName = 'Spinner';
 
@@ -33,13 +36,19 @@ export interface SpinnerBoxProps extends React.HTMLAttributes<HTMLDivElement> {
   spinnerProps?: SpinnerProps;
 }
 
-const SpinnerBox = React.forwardRef<HTMLDivElement, SpinnerBoxProps>(({ className, spinnerProps, ...props }, ref) => {
-  return (
-    <div ref={ref} className={cn('flex items-center justify-center rounded-lg', className)} {...props}>
-      <Spinner {...spinnerProps} />
-    </div>
-  );
-});
+const SpinnerBox = React.forwardRef<HTMLDivElement, SpinnerBoxProps>(
+  ({ className, spinnerProps, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn('flex items-center justify-center rounded-lg', className)}
+        {...props}
+      >
+        <Spinner {...spinnerProps} />
+      </div>
+    );
+  },
+);
 
 SpinnerBox.displayName = 'SpinnerBox';
 

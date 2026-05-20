@@ -1,3 +1,10 @@
+import { useLayoutEffect, useMemo, useState } from 'react';
+
+import { Trans, useLingui } from '@lingui/react/macro';
+import { EnvelopeType } from '@prisma/client';
+import { CheckCircle2Icon } from 'lucide-react';
+import { type ShouldRevalidateFunctionArgs, redirect } from 'react-router';
+
 import { EnvelopeEditorProvider } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import type { SupportedLanguageCodes } from '@documenso/lib/constants/i18n';
 import { verifyEmbeddingPresignToken } from '@documenso/lib/server-only/embedding-presign/verify-embedding-presign-token';
@@ -10,17 +17,15 @@ import {
   ZEmbedEditEnvelopeAuthoringSchema,
 } from '@documenso/lib/types/envelope-editor';
 import type { TEnvelopeFieldAndMeta } from '@documenso/lib/types/field-meta';
-import { buildEmbeddedEditorOptions, PRESIGNED_ENVELOPE_ITEM_ID_PREFIX } from '@documenso/lib/utils/embed-config';
+import {
+  PRESIGNED_ENVELOPE_ITEM_ID_PREFIX,
+  buildEmbeddedEditorOptions,
+} from '@documenso/lib/utils/embed-config';
 import { prisma } from '@documenso/prisma';
 import { trpc } from '@documenso/trpc/react';
 import type { TUpdateEmbeddingEnvelopePayload } from '@documenso/trpc/server/embedding-router/update-embedding-envelope.types';
 import { Spinner } from '@documenso/ui/primitives/spinner';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { EnvelopeType } from '@prisma/client';
-import { CheckCircle2Icon } from 'lucide-react';
-import { useLayoutEffect, useMemo, useState } from 'react';
-import { redirect, type ShouldRevalidateFunctionArgs } from 'react-router';
 
 import { EnvelopeEditor } from '~/components/general/envelope-editor/envelope-editor';
 import { EnvelopeEditorRenderProviderWrapper } from '~/components/general/envelope-editor/envelope-editor-renderer-provider-wrapper';
@@ -49,7 +54,9 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
   }
 
   // We also know that the token is valid, but we need the userId + teamId
-  const result = await verifyEmbeddingPresignToken({ token, scope: `envelopeId:${id}` }).catch(() => null);
+  const result = await verifyEmbeddingPresignToken({ token, scope: `envelopeId:${id}` }).catch(
+    () => null,
+  );
 
   if (!result) {
     throw new Error('Invalid token');
@@ -88,7 +95,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     },
   });
 
-  let brandingLogo: string | undefined;
+  let brandingLogo: string | undefined = undefined;
 
   if (settings.brandingEnabled && settings.brandingLogo) {
     brandingLogo = settings.brandingLogo;
@@ -104,14 +111,17 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
 export default function EmbeddingAuthoringEnvelopeEditPage() {
   const [hasInitialized, setHasInitialized] = useState(false);
-  const [embedAuthoringOptions, setEmbedAuthoringOptions] = useState<TEmbedEditEnvelopeAuthoring | null>(null);
+  const [embedAuthoringOptions, setEmbedAuthoringOptions] =
+    useState<TEmbedEditEnvelopeAuthoring | null>(null);
 
   useLayoutEffect(() => {
     try {
       const hash = window.location.hash.slice(1);
 
       if (hash) {
-        const result = ZEmbedEditEnvelopeAuthoringSchema.safeParse(JSON.parse(decodeURIComponent(atob(hash))));
+        const result = ZEmbedEditEnvelopeAuthoringSchema.safeParse(
+          JSON.parse(decodeURIComponent(atob(hash))),
+        );
 
         if (result.success) {
           setEmbedAuthoringOptions(result.data);
@@ -156,7 +166,8 @@ const EnvelopeEditPage = ({ embedAuthoringOptions }: EnvelopeEditPageProps) => {
   const [isUpdatingEnvelope, setIsUpdatingEnvelope] = useState(false);
   const [updatedEnvelope, setUpdatedEnvelope] = useState<{ id: string } | null>(null);
 
-  const { mutateAsync: updateEmbeddingEnvelope } = trpc.embeddingPresign.updateEmbeddingEnvelope.useMutation();
+  const { mutateAsync: updateEmbeddingEnvelope } =
+    trpc.embeddingPresign.updateEmbeddingEnvelope.useMutation();
 
   const buildUpdateEnvelopeRequest = (
     envelope: TEditorEnvelope,
@@ -169,9 +180,13 @@ const EnvelopeEditPage = ({ embedAuthoringOptions }: EnvelopeEditPageProps) => {
       // Attach any new or replacement envelope item files to the request.
       if (item.data) {
         files.push(
-          new File([item.data], item.title?.endsWith('.pdf') ? item.title : `${item.title ?? 'document'}.pdf`, {
-            type: 'application/pdf',
-          }),
+          new File(
+            [item.data],
+            item.title?.endsWith('.pdf') ? item.title : `${item.title ?? 'document'}.pdf`,
+            {
+              type: 'application/pdf',
+            },
+          ),
         );
       }
 
@@ -317,12 +332,12 @@ const EnvelopeEditPage = ({ embedAuthoringOptions }: EnvelopeEditPageProps) => {
   );
 
   return (
-    <div className="relative min-h-screen min-w-screen">
+    <div className="min-w-screen relative min-h-screen">
       {isUpdatingEnvelope && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background">
           <Spinner />
 
-          <p className="mt-2 text-muted-foreground text-sm">
+          <p className="mt-2 text-sm text-muted-foreground">
             {envelope.type === EnvelopeType.DOCUMENT ? (
               <Trans>Updating Document</Trans>
             ) : (
@@ -337,7 +352,7 @@ const EnvelopeEditPage = ({ embedAuthoringOptions }: EnvelopeEditPageProps) => {
           <div className="mx-auto w-full max-w-md text-center">
             <CheckCircle2Icon className="mx-auto h-16 w-16 text-primary" />
 
-            <h1 className="mt-6 font-bold text-2xl">
+            <h1 className="mt-6 text-2xl font-bold">
               {envelope.type === EnvelopeType.TEMPLATE ? (
                 <Trans>Template Updated</Trans>
               ) : (

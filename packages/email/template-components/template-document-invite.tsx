@@ -1,8 +1,9 @@
-import { RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-roles';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { OrganisationType, RecipientRole } from '@prisma/client';
-import { match, P } from 'ts-pattern';
+import { P, match } from 'ts-pattern';
+
+import { RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-roles';
 
 import { Button, Section, Text } from '../components';
 import { TemplateDocumentImage } from './template-document-image';
@@ -40,7 +41,7 @@ export const TemplateDocumentInvite = ({
       <TemplateDocumentImage className="mt-6" assetBaseUrl={assetBaseUrl} />
 
       <Section>
-        <Text className="mx-auto mb-0 max-w-[80%] text-center font-semibold text-lg text-primary">
+        <Text className="text-primary mx-auto mb-0 max-w-[80%] text-center text-lg font-semibold">
           {match({ selfSigner, organisationType, includeSenderDetails, teamName })
             .with({ selfSigner: true }, () => (
               <Trans>
@@ -56,7 +57,8 @@ export const TemplateDocumentInvite = ({
               },
               () => (
                 <Trans>
-                  {inviterName} on behalf of "{teamName}" has invited you to {_(actionVerb).toLowerCase()}
+                  {inviterName} on behalf of "{teamName}" has invited you to{' '}
+                  {_(actionVerb).toLowerCase()}
                   <br />"{documentName}"
                 </Trans>
               ),
@@ -81,13 +83,15 @@ export const TemplateDocumentInvite = ({
             .with(RecipientRole.VIEWER, () => <Trans>Continue by viewing the document.</Trans>)
             .with(RecipientRole.APPROVER, () => <Trans>Continue by approving the document.</Trans>)
             .with(RecipientRole.CC, () => '')
-            .with(RecipientRole.ASSISTANT, () => <Trans>Continue by assisting with the document.</Trans>)
+            .with(RecipientRole.ASSISTANT, () => (
+              <Trans>Continue by assisting with the document.</Trans>
+            ))
             .exhaustive()}
         </Text>
 
-        <Section className="mt-8 mb-6 text-center">
+        <Section className="mb-6 mt-8 text-center">
           <Button
-            className="inline-flex items-center justify-center rounded-lg bg-documenso-500 px-6 py-3 text-center font-medium text-black text-sbase no-underline"
+            className="bg-documenso-500 text-sbase inline-flex items-center justify-center rounded-lg px-6 py-3 text-center font-medium text-black no-underline"
             href={signDocumentLink}
           >
             {match(role)

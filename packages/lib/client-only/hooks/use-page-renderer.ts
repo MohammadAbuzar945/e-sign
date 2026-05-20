@@ -1,7 +1,8 @@
-import Konva from 'konva';
 import { useEffect, useMemo, useRef } from 'react';
 
-import type { PageRenderData } from '../providers/envelope-render-provider';
+import Konva from 'konva';
+
+import { type PageRenderData } from '../providers/envelope-render-provider';
 
 type RenderFunction = (props: { stage: Konva.Stage; pageLayer: Konva.Layer }) => void;
 
@@ -65,7 +66,7 @@ export const usePageRenderer = (renderFunction: RenderFunction, pageData: PageRe
       pageLayer: pageLayer.current,
     });
 
-    void document.fonts.ready.then(() => {
+    void document.fonts.ready.then(function () {
       pageLayer.current?.batchDraw();
     });
 

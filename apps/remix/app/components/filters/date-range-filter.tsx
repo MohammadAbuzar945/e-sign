@@ -1,9 +1,17 @@
-import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
-import type { DateRange } from '@documenso/lib/types/search-params';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
+import { useTransition } from 'react';
+
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
-import { useTransition } from 'react';
+
+import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
+import type { DateRange } from '@documenso/lib/types/search-params';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 
 type DateRangeFilterProps = {
   currentRange: DateRange;
@@ -14,10 +22,10 @@ export const DateRangeFilter = ({ currentRange }: DateRangeFilterProps) => {
   const [isPending, startTransition] = useTransition();
   const updateSearchParams = useUpdateSearchParams();
 
-  const handleRangeChange = (value: DateRange) => {
+  const handleRangeChange = (value: string) => {
     startTransition(() => {
       updateSearchParams({
-        dateRange: value,
+        dateRange: value as DateRange,
         page: 1,
       });
     });

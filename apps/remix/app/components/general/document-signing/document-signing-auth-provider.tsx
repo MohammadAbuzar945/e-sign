@@ -1,3 +1,7 @@
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+
+import { type Envelope, FieldType, type Passkey, type Recipient } from '@prisma/client';
+
 import type { SessionUser } from '@documenso/auth/server/lib/session/session';
 import { MAXIMUM_PASSKEYS } from '@documenso/lib/constants/auth';
 import type {
@@ -9,8 +13,6 @@ import type {
 import { DocumentAuth } from '@documenso/lib/types/document-auth';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { trpc } from '@documenso/trpc/react';
-import { type Envelope, FieldType, type Passkey, type Recipient } from '@prisma/client';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 import type { DocumentSigningAuthDialogProps } from './document-signing-auth-dialog';
 import { DocumentSigningAuthDialog } from './document-signing-auth-dialog';
@@ -22,7 +24,10 @@ type PasskeyData = {
   isError: boolean;
 };
 
-type SigningAuthRecipient = Pick<Recipient, 'authOptions' | 'email' | 'role' | 'name' | 'token' | 'id'>;
+type SigningAuthRecipient = Pick<
+  Recipient,
+  'authOptions' | 'email' | 'role' | 'name' | 'token' | 'id'
+>;
 
 export type DocumentSigningAuthContextValue = {
   executeActionAuthProcedure: (_value: ExecuteActionAuthProcedureOptions) => Promise<void>;
@@ -82,7 +87,12 @@ export const DocumentSigningAuthProvider = ({
   const [isCurrentlyAuthenticating, setIsCurrentlyAuthenticating] = useState(false);
   const [preferredPasskeyId, setPreferredPasskeyId] = useState<string | null>(null);
 
-  const { documentAuthOption, recipientAuthOption, derivedRecipientAccessAuth, derivedRecipientActionAuth } = useMemo(
+  const {
+    documentAuthOption,
+    recipientAuthOption,
+    derivedRecipientAccessAuth,
+    derivedRecipientActionAuth,
+  } = useMemo(
     () =>
       extractDocumentAuthMethods({
         documentAuth: documentAuthOptions,
@@ -108,9 +118,8 @@ export const DocumentSigningAuthProvider = ({
     isError: passkeyQuery.isError,
   };
 
-  const [documentAuthDialogPayload, setDocumentAuthDialogPayload] = useState<ExecuteActionAuthProcedureOptions | null>(
-    null,
-  );
+  const [documentAuthDialogPayload, setDocumentAuthDialogPayload] =
+    useState<ExecuteActionAuthProcedureOptions | null>(null);
 
   /**
    * The pre calculated auth payload if the current user is authenticated correctly
@@ -130,7 +139,10 @@ export const DocumentSigningAuthProvider = ({
       };
     }
 
-    if (derivedRecipientActionAuth.includes(DocumentAuth.ACCOUNT) && user?.email === recipient.email) {
+    if (
+      derivedRecipientActionAuth.includes(DocumentAuth.ACCOUNT) &&
+      user?.email === recipient.email
+    ) {
       return {
         type: DocumentAuth.ACCOUNT,
       };

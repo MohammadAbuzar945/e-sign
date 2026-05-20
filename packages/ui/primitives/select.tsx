@@ -1,9 +1,10 @@
-import { AnimateGenericFadeInOut } from '@documenso/ui/components/animate/animate-generic-fade-in-out';
+import * as React from 'react';
 
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { AnimatePresence } from 'framer-motion';
 import { Check, ChevronDown, Loader } from 'lucide-react';
-import * as React from 'react';
+
+import { AnimateGenericFadeInOut } from '@documenso/ui/components/animate/animate-generic-fade-in-out';
 
 import { cn } from '../lib/utils';
 
@@ -31,7 +32,7 @@ const SelectTrigger = React.forwardRef<
     <AnimatePresence>
       {loading ? (
         <div className="flex w-full items-center justify-center">
-          <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Loader className="h-5 w-5 animate-spin text-gray-500 dark:text-gray-100" />
         </div>
       ) : (
         <AnimateGenericFadeInOut className="flex w-full justify-between">
@@ -55,7 +56,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        'fade-in-80 relative z-[1001] min-w-[8rem] animate-in overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md',
+        'relative z-[1001] min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-80',
         position === 'popper' && 'translate-y-1',
         className,
       )}
@@ -81,7 +82,11 @@ const SelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.Label ref={ref} className={cn('py-1.5 pr-2 pl-8 font-semibold text-sm', className)} {...props} />
+  <SelectPrimitive.Label
+    ref={ref}
+    className={cn('py-1.5 pl-8 pr-2 text-sm font-semibold', className)}
+    {...props}
+  />
 ));
 
 SelectLabel.displayName = SelectPrimitive.Label.displayName;
@@ -93,7 +98,7 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pr-2 pl-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       className,
     )}
     {...props}
@@ -114,9 +119,22 @@ const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.Separator ref={ref} className={cn('-mx-1 my-1 h-px bg-muted', className)} {...props} />
+  <SelectPrimitive.Separator
+    ref={ref}
+    className={cn('-mx-1 my-1 h-px bg-muted', className)}
+    {...props}
+  />
 ));
 
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName;
 
-export { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue };
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+};

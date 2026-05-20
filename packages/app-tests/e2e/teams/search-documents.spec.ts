@@ -1,11 +1,12 @@
+import { expect, test } from '@playwright/test';
+import { DocumentStatus, OrganisationMemberRole, TeamMemberRole } from '@prisma/client';
+
 import { generateDatabaseId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
 import { seedDocuments, seedTeamDocuments } from '@documenso/prisma/seed/documents';
 import { seedOrganisationMembers } from '@documenso/prisma/seed/organisations';
 import { seedTeam, seedTeamMember } from '@documenso/prisma/seed/teams';
 import { seedUser } from '@documenso/prisma/seed/users';
-import { expect, test } from '@playwright/test';
-import { DocumentStatus, OrganisationMemberRole, TeamMemberRole } from '@prisma/client';
 
 import { apiSignin, apiSignout } from '../fixtures/authentication';
 import { checkDocumentTabCount } from '../fixtures/documents';
@@ -109,7 +110,11 @@ test('[TEAMS]: search respects team document visibility', async ({ page }) => {
 });
 
 test('[TEAMS]: search does not reveal documents from other teams', async ({ page }) => {
-  const { team: teamA, teamOwner: teamAOwner, teamMember2: teamAMember } = await seedTeamDocuments();
+  const {
+    team: teamA,
+    teamOwner: teamAOwner,
+    teamMember2: teamAMember,
+  } = await seedTeamDocuments();
   const { team: teamB, teamOwner: teamBOwner } = await seedTeamDocuments();
 
   await seedDocuments([
@@ -152,7 +157,9 @@ test('[TEAMS]: search does not reveal documents from other teams', async ({ page
   await apiSignout({ page });
 });
 
-test('[TEAMS]: search respects recipient visibility regardless of team visibility', async ({ page }) => {
+test('[TEAMS]: search respects recipient visibility regardless of team visibility', async ({
+  page,
+}) => {
   const { team, owner } = await seedTeam();
   const memberUser = await seedTeamMember({ teamId: team.id, role: TeamMemberRole.MEMBER });
 
@@ -179,7 +186,9 @@ test('[TEAMS]: search respects recipient visibility regardless of team visibilit
   await page.waitForURL(/query=Admin(%20|\+|\s)Document/);
 
   await checkDocumentTabCount(page, 'All', 1);
-  await expect(page.getByRole('link', { name: 'Admin Document with Member Recipient' })).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Admin Document with Member Recipient' }),
+  ).toBeVisible();
 
   await apiSignout({ page });
 });
@@ -219,7 +228,9 @@ test('[TEAMS]: search by recipient name respects visibility', async ({ page }) =
   await page.waitForURL(/query=Unique(%20|\+|\s)Recipient/);
 
   await checkDocumentTabCount(page, 'All', 1);
-  await expect(page.getByRole('link', { name: 'Admin Document for Unique Recipient' })).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Admin Document for Unique Recipient' }),
+  ).toBeVisible();
 
   await apiSignout({ page });
 
@@ -234,7 +245,9 @@ test('[TEAMS]: search by recipient name respects visibility', async ({ page }) =
   await page.waitForURL(/query=Unique(%20|\+|\s)Recipient/);
 
   await checkDocumentTabCount(page, 'All', 0);
-  await expect(page.getByRole('link', { name: 'Admin Document for Unique Recipient' })).not.toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Admin Document for Unique Recipient' }),
+  ).not.toBeVisible();
 
   await apiSignout({ page });
 });

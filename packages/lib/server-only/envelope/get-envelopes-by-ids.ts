@@ -1,5 +1,6 @@
-import { prisma } from '@documenso/prisma';
 import type { EnvelopeType, Prisma } from '@prisma/client';
+
+import { prisma } from '@documenso/prisma';
 
 import { TEAM_DOCUMENT_VISIBILITY_MAP } from '../../constants/teams';
 import { AppError, AppErrorCode } from '../../errors/app-error';
@@ -41,7 +42,12 @@ export type GetEnvelopesByIdsOptions = {
  *
  * NOTE: Be extremely careful when modifying this function. Needs at minimum two reviewers to approve any changes.
  */
-export const getEnvelopesByIds = async ({ ids, userId, teamId, type }: GetEnvelopesByIdsOptions) => {
+export const getEnvelopesByIds = async ({
+  ids,
+  userId,
+  teamId,
+  type,
+}: GetEnvelopesByIdsOptions) => {
   const { envelopeWhereInput } = await getMultipleEnvelopeWhereInput({
     ids,
     userId,

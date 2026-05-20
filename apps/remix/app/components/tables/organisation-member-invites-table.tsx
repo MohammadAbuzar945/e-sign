@@ -1,3 +1,12 @@
+import { useMemo } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { OrganisationMemberInviteStatus } from '@prisma/client';
+import { History, MoreHorizontal, Trash2 } from 'lucide-react';
+import { useSearchParams } from 'react-router';
+
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { ORGANISATION_MEMBER_ROLE_MAP } from '@documenso/lib/constants/organisations-translations';
@@ -18,13 +27,6 @@ import {
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { OrganisationMemberInviteStatus } from '@prisma/client';
-import { History, MoreHorizontal, Trash2 } from 'lucide-react';
-import { useMemo } from 'react';
-import { useSearchParams } from 'react-router';
 
 export const OrganisationMemberInvitesTable = () => {
   const [searchParams] = useSearchParams();
@@ -49,37 +51,39 @@ export const OrganisationMemberInvitesTable = () => {
     },
   );
 
-  const { mutateAsync: resendOrganisationMemberInvitation } = trpc.organisation.member.invite.resend.useMutation({
-    onSuccess: () => {
-      toast({
-        title: _(msg`Success`),
-        description: _(msg`Invitation has been resent`),
-      });
-    },
-    onError: () => {
-      toast({
-        title: _(msg`Something went wrong`),
-        description: _(msg`Unable to resend invitation. Please try again.`),
-        variant: 'destructive',
-      });
-    },
-  });
+  const { mutateAsync: resendOrganisationMemberInvitation } =
+    trpc.organisation.member.invite.resend.useMutation({
+      onSuccess: () => {
+        toast({
+          title: _(msg`Success`),
+          description: _(msg`Invitation has been resent`),
+        });
+      },
+      onError: () => {
+        toast({
+          title: _(msg`Something went wrong`),
+          description: _(msg`Unable to resend invitation. Please try again.`),
+          variant: 'destructive',
+        });
+      },
+    });
 
-  const { mutateAsync: deleteOrganisationMemberInvitations } = trpc.organisation.member.invite.deleteMany.useMutation({
-    onSuccess: () => {
-      toast({
-        title: _(msg`Success`),
-        description: _(msg`Invitation has been deleted`),
-      });
-    },
-    onError: () => {
-      toast({
-        title: _(msg`Something went wrong`),
-        description: _(msg`Unable to delete invitation. Please try again.`),
-        variant: 'destructive',
-      });
-    },
-  });
+  const { mutateAsync: deleteOrganisationMemberInvitations } =
+    trpc.organisation.member.invite.deleteMany.useMutation({
+      onSuccess: () => {
+        toast({
+          title: _(msg`Success`),
+          description: _(msg`Invitation has been deleted`),
+        });
+      },
+      onError: () => {
+        toast({
+          title: _(msg`Something went wrong`),
+          description: _(msg`Unable to delete invitation. Please try again.`),
+          variant: 'destructive',
+        });
+      },
+    });
 
   const onPaginationChange = (page: number, perPage: number) => {
     updateSearchParams({
@@ -104,7 +108,9 @@ export const OrganisationMemberInvitesTable = () => {
             <AvatarWithText
               avatarClass="h-12 w-12"
               avatarFallback={row.original.email.slice(0, 1).toUpperCase()}
-              primaryText={<span className="font-semibold text-foreground/80">{row.original.email}</span>}
+              primaryText={
+                <span className="font-semibold text-foreground/80">{row.original.email}</span>
+              }
             />
           );
         },
@@ -202,7 +208,11 @@ export const OrganisationMemberInvitesTable = () => {
         ),
       }}
     >
-      {(table) => results.totalPages > 1 && <DataTablePagination additionalInformation="VisibleCount" table={table} />}
+      {(table) =>
+        results.totalPages > 1 && (
+          <DataTablePagination additionalInformation="VisibleCount" table={table} />
+        )
+      }
     </DataTable>
   );
 };

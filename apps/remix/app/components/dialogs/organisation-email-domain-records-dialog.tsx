@@ -1,3 +1,7 @@
+import { useLingui } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+
 import { CopyTextButton } from '@documenso/ui/components/common/copy-text-button';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
@@ -14,8 +18,6 @@ import {
 import { Input } from '@documenso/ui/primitives/input';
 import { Label } from '@documenso/ui/primitives/label';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { Trans, useLingui } from '@lingui/react/macro';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
 
 export type OrganisationEmailDomainRecordsDialogProps = {
   trigger: React.ReactNode;
@@ -70,7 +72,7 @@ export const OrganisationEmailDomainRecordContent = ({ records }: { records: Dom
 
                 <div className="relative">
                   <Input className="pr-12" disabled value={record.type} />
-                  <div className="absolute top-0 right-2 bottom-0 flex items-center justify-center">
+                  <div className="absolute bottom-0 right-2 top-0 flex items-center justify-center">
                     <CopyTextButton
                       value={record.type}
                       onCopySuccess={() => toast({ title: t`Copied to clipboard` })}
@@ -86,7 +88,7 @@ export const OrganisationEmailDomainRecordContent = ({ records }: { records: Dom
 
                 <div className="relative">
                   <Input className="pr-12" disabled value={record.name} />
-                  <div className="absolute top-0 right-2 bottom-0 flex items-center justify-center">
+                  <div className="absolute bottom-0 right-2 top-0 flex items-center justify-center">
                     <CopyTextButton
                       value={record.name}
                       onCopySuccess={() => toast({ title: t`Copied to clipboard` })}
@@ -102,7 +104,7 @@ export const OrganisationEmailDomainRecordContent = ({ records }: { records: Dom
 
                 <div className="relative">
                   <Input className="pr-12" disabled value={record.value} />
-                  <div className="absolute top-0 right-2 bottom-0 flex items-center justify-center">
+                  <div className="absolute bottom-0 right-2 top-0 flex items-center justify-center">
                     <CopyTextButton
                       value={record.value}
                       onCopySuccess={() => toast({ title: t`Copied to clipboard` })}
@@ -117,8 +119,9 @@ export const OrganisationEmailDomainRecordContent = ({ records }: { records: Dom
         <Alert variant="neutral">
           <AlertDescription>
             <Trans>
-              Once you update your DNS records, it may take up to 48 hours for it to be propogated. Once the DNS
-              propagation is complete you will need to come back and press the "Sync" domains button.
+              Once you update your DNS records, it may take up to 48 hours for it to be propogated.
+              Once the DNS propagation is complete you will need to come back and press the "Sync"
+              domains button.
             </Trans>
           </AlertDescription>
         </Alert>

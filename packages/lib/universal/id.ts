@@ -36,7 +36,13 @@ export const generateDatabaseId = (prefix: DatabaseIdPrefix) => prefixedId(prefi
 
 export const extractLegacyIds = (envelope: Pick<Envelope, 'type' | 'secondaryId'>) => {
   return {
-    documentId: envelope.type === EnvelopeType.DOCUMENT ? mapSecondaryIdToDocumentId(envelope.secondaryId) : null,
-    templateId: envelope.type === EnvelopeType.TEMPLATE ? mapSecondaryIdToTemplateId(envelope.secondaryId) : null,
+    documentId:
+      envelope.type === EnvelopeType.DOCUMENT
+        ? mapSecondaryIdToDocumentId(envelope.secondaryId)
+        : null,
+    templateId:
+      envelope.type === EnvelopeType.TEMPLATE
+        ? mapSecondaryIdToTemplateId(envelope.secondaryId)
+        : null,
   };
 };

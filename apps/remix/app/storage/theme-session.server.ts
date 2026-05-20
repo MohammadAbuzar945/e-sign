@@ -1,6 +1,7 @@
-import { getCookieDomain, useSecureCookies } from '@documenso/lib/constants/auth';
 import { createCookieSessionStorage } from 'react-router';
 import { createThemeSessionResolver } from 'remix-themes';
+
+import { getCookieDomain, useSecureCookies } from '@documenso/lib/constants/auth';
 
 const themeSessionStorage = createCookieSessionStorage({
   cookie: {

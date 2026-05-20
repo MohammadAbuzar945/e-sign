@@ -1,7 +1,8 @@
-import type { RecipientWithFields } from '@documenso/prisma/types/recipient-with-fields';
+import { type PropsWithChildren, createContext, useContext } from 'react';
 
 import type { Recipient } from '@prisma/client';
-import { createContext, type PropsWithChildren, useContext } from 'react';
+
+import type { RecipientWithFields } from '@documenso/prisma/types/recipient-with-fields';
 
 export interface DocumentSigningRecipientContextValue {
   /**
@@ -9,7 +10,10 @@ export interface DocumentSigningRecipientContextValue {
    * In regular mode, this is the actual signer.
    * In assistant mode, this is the recipient who is helping fill out the document.
    */
-  recipient: Pick<Recipient | RecipientWithFields, 'name' | 'email' | 'token' | 'role' | 'authOptions'>;
+  recipient: Pick<
+    Recipient | RecipientWithFields,
+    'name' | 'email' | 'token' | 'role' | 'authOptions'
+  >;
 
   /**
    * Only present in assistant mode.
@@ -23,10 +27,15 @@ export interface DocumentSigningRecipientContextValue {
   isAssistantMode: boolean;
 }
 
-const DocumentSigningRecipientContext = createContext<DocumentSigningRecipientContextValue | null>(null);
+const DocumentSigningRecipientContext = createContext<DocumentSigningRecipientContextValue | null>(
+  null,
+);
 
 export interface DocumentSigningRecipientProviderProps extends PropsWithChildren {
-  recipient: Pick<Recipient | RecipientWithFields, 'name' | 'email' | 'token' | 'role' | 'authOptions'>;
+  recipient: Pick<
+    Recipient | RecipientWithFields,
+    'name' | 'email' | 'token' | 'role' | 'authOptions'
+  >;
   targetSigner?: RecipientWithFields | null;
 }
 

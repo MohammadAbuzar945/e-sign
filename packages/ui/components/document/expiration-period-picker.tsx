@@ -1,10 +1,17 @@
+import { Plural, Trans } from '@lingui/react/macro';
+
 import type {
   TEnvelopeExpirationDurationPeriod,
   TEnvelopeExpirationPeriod,
 } from '@documenso/lib/constants/envelope-expiration';
 import { Input } from '@documenso/ui/primitives/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
-import { Plural, Trans } from '@lingui/react/macro';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 
 type ExpirationMode = 'duration' | 'disabled' | 'inherit';
 
@@ -28,7 +35,9 @@ const getAmount = (value: TEnvelopeExpirationPeriod | null | undefined): number 
   return 1;
 };
 
-const getUnit = (value: TEnvelopeExpirationPeriod | null | undefined): TEnvelopeExpirationDurationPeriod['unit'] => {
+const getUnit = (
+  value: TEnvelopeExpirationPeriod | null | undefined,
+): TEnvelopeExpirationDurationPeriod['unit'] => {
   if (value && 'unit' in value) {
     return value.unit;
   }

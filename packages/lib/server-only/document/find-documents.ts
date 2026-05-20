@@ -1,20 +1,16 @@
-import { kyselyPrisma, prisma, sql } from '@documenso/prisma';
-import type { DB } from '@documenso/prisma/generated/types';
-import { ExtendedDocumentStatus } from '@documenso/prisma/types/extended-document-status';
 import type { DocumentSource, Envelope, Team, TeamEmail } from '@prisma/client';
-import {
-  DocumentStatus,
-  DocumentVisibility,
-  EnvelopeType,
-  RecipientRole,
-  SigningStatus,
-  TeamMemberRole,
-} from '@prisma/client';
+import { DocumentVisibility } from '@prisma/client';
+import { DocumentStatus } from '@prisma/client';
+import { EnvelopeType, RecipientRole, SigningStatus, TeamMemberRole } from '@prisma/client';
 import type { Expression, ExpressionBuilder, SelectQueryBuilder, SqlBool } from 'kysely';
 import { DateTime } from 'luxon';
 import { match } from 'ts-pattern';
 
-import type { FindResultResponse } from '../../types/search-params';
+import { kyselyPrisma, prisma, sql } from '@documenso/prisma';
+import type { DB } from '@documenso/prisma/generated/types';
+import { ExtendedDocumentStatus } from '@documenso/prisma/types/extended-document-status';
+
+import { type FindResultResponse } from '../../types/search-params';
 import { maskRecipientTokensForDocument } from '../../utils/mask-recipient-tokens-for-document';
 import { getTeamById } from '../team/get-team';
 
@@ -141,14 +137,18 @@ export const findDocuments = async ({
   // folder, period, sender, source, template, and search.
 
   const buildBaseQuery = () => {
-    let qb = kyselyPrisma.$kysely.selectFrom('Envelope').select(['Envelope.id', 'Envelope.createdAt']);
+    let qb = kyselyPrisma.$kysely
+      .selectFrom('Envelope')
+      .select(['Envelope.id', 'Envelope.createdAt']);
 
     // Type must be DOCUMENT (enum cast requires raw sql — this is the one escape hatch)
     qb = qb.where('Envelope.type', '=', sql.lit(EnvelopeType.DOCUMENT));
 
     // Folder filter
     qb =
-      folderId !== undefined ? qb.where('Envelope.folderId', '=', folderId) : qb.where('Envelope.folderId', 'is', null);
+      folderId !== undefined
+        ? qb.where('Envelope.folderId', '=', folderId)
+        : qb.where('Envelope.folderId', 'is', null);
 
     // Period filter
     if (period) {
@@ -220,7 +220,10 @@ export const findDocuments = async ({
             eb.or([
               eb('Envelope.userId', '=', user.id),
               eb.and([
-                eb('Envelope.status', 'in', [sql.lit(DocumentStatus.COMPLETED), sql.lit(DocumentStatus.PENDING)]),
+                eb('Envelope.status', 'in', [
+                  sql.lit(DocumentStatus.COMPLETED),
+                  sql.lit(DocumentStatus.PENDING),
+                ]),
                 recipientExists(eb, user.email),
               ]),
             ]),
@@ -308,7 +311,10 @@ export const findDocuments = async ({
         DocumentVisibility.MANAGER_AND_ABOVE,
         DocumentVisibility.ADMIN,
       ])
-      .with(TeamMemberRole.MANAGER, () => [DocumentVisibility.EVERYONE, DocumentVisibility.MANAGER_AND_ABOVE])
+      .with(TeamMemberRole.MANAGER, () => [
+        DocumentVisibility.EVERYONE,
+        DocumentVisibility.MANAGER_AND_ABOVE,
+      ])
       .otherwise(() => [DocumentVisibility.EVERYONE]);
 
     // Visibility: meets role threshold OR directly involved
@@ -325,11 +331,15 @@ export const findDocuments = async ({
 
     // Deleted filter for team path
     const teamDeletedFilter = (eb: EnvelopeExpressionBuilder) => {
-      const branches = [eb.and([eb('Envelope.teamId', '=', teamData.id), eb('Envelope.deletedAt', 'is', null)])];
+      const branches = [
+        eb.and([eb('Envelope.teamId', '=', teamData.id), eb('Envelope.deletedAt', 'is', null)]),
+      ];
 
       if (teamEmail) {
         branches.push(eb.and([senderEmailIs(eb, teamEmail), eb('Envelope.deletedAt', 'is', null)]));
-        branches.push(recipientExists(eb, teamEmail, (reb) => reb('Recipient.documentDeletedAt', 'is', null)));
+        branches.push(
+          recipientExists(eb, teamEmail, (reb) => reb('Recipient.documentDeletedAt', 'is', null)),
+        );
       }
 
       return eb.or(branches);
@@ -343,7 +353,10 @@ export const findDocuments = async ({
           if (teamEmail) {
             accessBranches.push(senderEmailIs(eb, teamEmail));
             accessBranches.push(
-              eb.and([eb('status', '!=', sql.lit(ExtendedDocumentStatus.DRAFT)), recipientExists(eb, teamEmail)]),
+              eb.and([
+                eb('status', '!=', sql.lit(ExtendedDocumentStatus.DRAFT)),
+                recipientExists(eb, teamEmail),
+              ]),
             );
           }
 
@@ -355,21 +368,23 @@ export const findDocuments = async ({
           return null;
         }
 
-        return qb.where('Envelope.status', '!=', sql.lit(ExtendedDocumentStatus.DRAFT)).where((eb) =>
-          eb.and([
-            visibilityFilter(eb),
-            // Single EXISTS check: the team-email recipient must be NOT_SIGNED,
-            // non-CC, and not soft-deleted. Replaces teamDeletedFilter + separate
-            // recipientExists, eliminating a hashed SubPlan (~79k rows).
-            recipientExists(eb, teamEmail, (reb) =>
-              reb.and([
-                reb('Recipient.documentDeletedAt', 'is', null),
-                reb('Recipient.signingStatus', '=', sql.lit(SigningStatus.NOT_SIGNED)),
-                reb('Recipient.role', '!=', sql.lit(RecipientRole.CC)),
-              ]),
-            ),
-          ]),
-        );
+        return qb
+          .where('Envelope.status', '!=', sql.lit(ExtendedDocumentStatus.DRAFT))
+          .where((eb) =>
+            eb.and([
+              visibilityFilter(eb),
+              // Single EXISTS check: the team-email recipient must be NOT_SIGNED,
+              // non-CC, and not soft-deleted. Replaces teamDeletedFilter + separate
+              // recipientExists, eliminating a hashed SubPlan (~79k rows).
+              recipientExists(eb, teamEmail, (reb) =>
+                reb.and([
+                  reb('Recipient.documentDeletedAt', 'is', null),
+                  reb('Recipient.signingStatus', '=', sql.lit(SigningStatus.NOT_SIGNED)),
+                  reb('Recipient.role', '!=', sql.lit(RecipientRole.CC)),
+                ]),
+              ),
+            ]),
+          );
       })
       .with(ExtendedDocumentStatus.DRAFT, () =>
         qb.where('Envelope.status', '=', sql.lit(ExtendedDocumentStatus.DRAFT)).where((eb) => {
@@ -451,7 +466,10 @@ export const findDocuments = async ({
   const offset = Math.max(page - 1, 0) * perPage;
 
   // Data query: paginated, executed directly via Kysely query builder
-  const dataQuery = filteredQuery.orderBy(`Envelope.${orderByColumn}`, orderByDirection).limit(perPage).offset(offset);
+  const dataQuery = filteredQuery
+    .orderBy(`Envelope.${orderByColumn}`, orderByDirection)
+    .limit(perPage)
+    .offset(offset);
 
   // Count query: either windowed (fast, capped) or full (exact, for API consumers).
   const baseCountQuery = filteredQuery.clearSelect().select('Envelope.id');
@@ -464,7 +482,10 @@ export const findDocuments = async ({
         .selectFrom(baseCountQuery.as('filtered'))
         .select(({ fn }) => fn.count<number>('id').as('total'));
 
-  const [dataResult, countResult] = await Promise.all([dataQuery.execute(), countQuery.executeTakeFirstOrThrow()]);
+  const [dataResult, countResult] = await Promise.all([
+    dataQuery.execute(),
+    countQuery.executeTakeFirstOrThrow(),
+  ]);
 
   const ids = dataResult.map((row) => row.id);
 

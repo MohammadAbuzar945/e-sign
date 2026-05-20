@@ -1,14 +1,5 @@
-import { getBoundingClientRect } from '@documenso/lib/client-only/get-bounding-client-rect';
-import { useDocumentElement } from '@documenso/lib/client-only/hooks/use-document-element';
-import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
-import { PDF_VIEWER_PAGE_SELECTOR } from '@documenso/lib/constants/pdf-viewer';
-import { FIELD_META_DEFAULT_VALUES } from '@documenso/lib/types/field-meta';
-import { nanoid } from '@documenso/lib/universal/id';
-import { canRecipientFieldsBeModified } from '@documenso/lib/utils/recipients';
-import { SignatureIcon } from '@documenso/ui/icons/signature';
-import { getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
-import { cn } from '@documenso/ui/lib/utils';
-import { FRIENDLY_FIELD_TYPE } from '@documenso/ui/primitives/document-flow/types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 import { FieldType } from '@prisma/client';
@@ -23,7 +14,18 @@ import {
   TextIcon,
   UserIcon,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { getBoundingClientRect } from '@documenso/lib/client-only/get-bounding-client-rect';
+import { useDocumentElement } from '@documenso/lib/client-only/hooks/use-document-element';
+import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
+import { PDF_VIEWER_PAGE_SELECTOR } from '@documenso/lib/constants/pdf-viewer';
+import { FIELD_META_DEFAULT_VALUES } from '@documenso/lib/types/field-meta';
+import { nanoid } from '@documenso/lib/universal/id';
+import { canRecipientFieldsBeModified } from '@documenso/lib/utils/recipients';
+import { SignatureIcon } from '@documenso/ui/icons/signature';
+import { getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
+import { cn } from '@documenso/ui/lib/utils';
+import { FRIENDLY_FIELD_TYPE } from '@documenso/ui/primitives/document-flow/types';
 
 const MIN_HEIGHT_PX = 12;
 const MIN_WIDTH_PX = 36;
@@ -103,7 +105,9 @@ export const EnvelopeEditorFieldDragDrop = ({
   const { isWithinPageBounds, getPage } = useDocumentElement();
 
   const isFieldsDisabled = useMemo(() => {
-    const selectedSigner = envelope.recipients.find((recipient) => recipient.id === selectedRecipientId);
+    const selectedSigner = envelope.recipients.find(
+      (recipient) => recipient.id === selectedRecipientId,
+    );
     const fields = envelope.fields;
 
     if (!selectedSigner) {
@@ -132,7 +136,12 @@ export const EnvelopeEditorFieldDragDrop = ({
   const onMouseMove = useCallback(
     (event: MouseEvent) => {
       setIsFieldWithinBounds(
-        isWithinPageBounds(event, PDF_VIEWER_PAGE_SELECTOR, fieldBounds.current.width, fieldBounds.current.height),
+        isWithinPageBounds(
+          event,
+          PDF_VIEWER_PAGE_SELECTOR,
+          fieldBounds.current.width,
+          fieldBounds.current.height,
+        ),
       );
 
       setCoords({
@@ -153,7 +162,12 @@ export const EnvelopeEditorFieldDragDrop = ({
 
       if (
         !$page ||
-        !isWithinPageBounds(event, PDF_VIEWER_PAGE_SELECTOR, fieldBounds.current.width, fieldBounds.current.height)
+        !isWithinPageBounds(
+          event,
+          PDF_VIEWER_PAGE_SELECTOR,
+          fieldBounds.current.width,
+          fieldBounds.current.height,
+        )
       ) {
         setSelectedField(null);
         return;
@@ -193,7 +207,14 @@ export const EnvelopeEditorFieldDragDrop = ({
       setIsFieldWithinBounds(false);
       setSelectedField(null);
     },
-    [isWithinPageBounds, selectedField, selectedRecipientId, selectedEnvelopeItemId, getPage, editorFields],
+    [
+      isWithinPageBounds,
+      selectedField,
+      selectedRecipientId,
+      selectedEnvelopeItemId,
+      getPage,
+      editorFields,
+    ],
   );
 
   useEffect(() => {
@@ -255,7 +276,7 @@ export const EnvelopeEditorFieldDragDrop = ({
           >
             <p
               className={cn(
-                'flex items-center justify-center gap-x-1.5 font-normal font-noto text-muted-foreground text-sm group-data-[selected]:text-foreground',
+                'flex items-center justify-center gap-x-1.5 font-noto text-sm font-normal text-muted-foreground group-data-[selected]:text-foreground',
                 field.className,
                 selectedRecipientStyles.fieldButtonText,
               )}
@@ -270,7 +291,7 @@ export const EnvelopeEditorFieldDragDrop = ({
       {selectedField && (
         <div
           className={cn(
-            'pointer-events-none fixed z-50 flex cursor-pointer flex-col items-center justify-center rounded-[2px] bg-white font-noto text-muted-foreground ring-2 transition duration-200 [container-type:size] dark:text-muted-background',
+            'dark:text-muted-background pointer-events-none fixed z-50 flex cursor-pointer flex-col items-center justify-center rounded-[2px] bg-white font-noto text-muted-foreground ring-2 transition duration-200 [container-type:size]',
             selectedRecipientStyles.base,
             selectedField === FieldType.SIGNATURE && 'font-signature',
             {
@@ -285,7 +306,9 @@ export const EnvelopeEditorFieldDragDrop = ({
             width: fieldBounds.current.width,
           }}
         >
-          <span className="text-[clamp(0.425rem,25cqw,0.825rem)]">{t(FRIENDLY_FIELD_TYPE[selectedField])}</span>
+          <span className="text-[clamp(0.425rem,25cqw,0.825rem)]">
+            {t(FRIENDLY_FIELD_TYPE[selectedField])}
+          </span>
         </div>
       )}
     </>

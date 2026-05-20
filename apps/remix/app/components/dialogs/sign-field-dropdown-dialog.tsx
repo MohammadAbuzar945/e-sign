@@ -1,3 +1,6 @@
+import { useLingui } from '@lingui/react/macro';
+import { createCallable } from 'react-call';
+
 import type { TDropdownFieldMeta } from '@documenso/lib/types/field-meta';
 import {
   CommandDialog,
@@ -7,8 +10,6 @@ import {
   CommandItem,
   CommandList,
 } from '@documenso/ui/primitives/command';
-import { useLingui } from '@lingui/react/macro';
-import { createCallable } from 'react-call';
 
 export type SignFieldDropdownDialogProps = {
   fieldMeta: TDropdownFieldMeta;

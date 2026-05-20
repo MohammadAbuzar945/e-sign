@@ -1,3 +1,11 @@
+import { useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useLingui } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
@@ -10,14 +18,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 export type OrganisationEmailDomainDeleteDialogProps = {
   emailDomainId: string;
@@ -97,9 +107,10 @@ export const OrganisationEmailDomainDeleteDialog = ({
 
           <DialogDescription className="mt-4">
             <Trans>
-              You are about to remove the email domain <span className="font-semibold">{emailDomain}</span> from{' '}
-              <span className="font-semibold">{organisation.name}</span>. All emails associated with this domain will be
-              deleted.
+              You are about to remove the email domain{' '}
+              <span className="font-semibold">{emailDomain}</span> from{' '}
+              <span className="font-semibold">{organisation.name}</span>. All emails associated with
+              this domain will be deleted.
             </Trans>
           </DialogDescription>
         </DialogHeader>
@@ -115,7 +126,9 @@ export const OrganisationEmailDomainDeleteDialog = ({
                     <FormLabel>
                       <Trans>
                         Confirm by typing{' '}
-                        <span className="font-semibold font-sm text-destructive">{deleteMessage}</span>
+                        <span className="font-sm text-destructive font-semibold">
+                          {deleteMessage}
+                        </span>
                       </Trans>
                     </FormLabel>
                     <FormControl>

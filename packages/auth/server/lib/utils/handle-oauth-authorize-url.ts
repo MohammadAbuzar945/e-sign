@@ -1,7 +1,8 @@
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { CodeChallengeMethod, generateCodeVerifier, generateState, OAuth2Client } from 'arctic';
+import { CodeChallengeMethod, OAuth2Client, generateCodeVerifier, generateState } from 'arctic';
 import type { Context } from 'hono';
 import { setCookie } from 'hono/cookie';
+
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 
 import type { OAuthClientOptions } from '../../config';
 import { sessionCookieOptions } from '../session/session-cookies';
@@ -48,7 +49,11 @@ export const handleOAuthAuthorizeUrl = async (options: HandleOAuthAuthorizeUrlOp
     requiredScopes: clientOptions.scope,
   });
 
-  const oAuthClient = new OAuth2Client(clientOptions.clientId, clientOptions.clientSecret, clientOptions.redirectUrl);
+  const oAuthClient = new OAuth2Client(
+    clientOptions.clientId,
+    clientOptions.clientSecret,
+    clientOptions.redirectUrl,
+  );
 
   const scopes = clientOptions.scope;
   const state = generateState();
