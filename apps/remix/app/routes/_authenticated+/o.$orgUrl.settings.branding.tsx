@@ -1,9 +1,6 @@
-import { msg } from '@lingui/core/macro';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { Loader } from 'lucide-react';
-
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
+import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { putFile } from '@documenso/lib/universal/upload/put-file';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import type { SanitizeBrandingCssWarning } from '@documenso/lib/utils/sanitize-branding-css';
@@ -15,7 +12,6 @@ import { msg, plural } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { Loader } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router';
 
 import {
   BrandingPreferencesForm,
@@ -126,8 +122,7 @@ export default function OrganisationSettingsBrandingPage() {
       ? t`Here you can set branding preferences for your team.`
       : t`Here you can set branding preferences for your organisation. Teams will inherit these settings by default.`;
 
-  const allowCustomBranding =
-    organisationWithSettings.organisationClaim.flags.allowCustomBranding;
+  const allowCustomBranding = organisationWithSettings.organisationClaim.flags.allowCustomBranding;
 
   return (
     <div className="max-w-2xl">
@@ -176,9 +171,7 @@ export default function OrganisationSettingsBrandingPage() {
             </AlertTitle>
 
             <AlertDescription className="mr-2">
-              <Trans>
-                Please contact us at help@nomiadocs.com for this feature!
-              </Trans>
+              <Trans>Please contact us at help@nomiadocs.com for this feature!</Trans>
             </AlertDescription>
           </div>
 

@@ -3,13 +3,14 @@ import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 
 import { BrandingLogo } from '~/components/general/branding-logo';
+import { msg } from '@lingui/core/macro';
 import { appMetaTags } from '~/utils/meta';
 import { nonce } from '~/utils/nonce';
 
 import type { LoaderFunctionArgs } from 'react-router';
 
 export function meta() {
-  return appMetaTags('API Reference');
+  return appMetaTags(msg`API Reference`);
 }
 
 function filterDeprecatedEndpoints(spec: Record<string, unknown>): Record<string, unknown> {

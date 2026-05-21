@@ -88,7 +88,11 @@ export type OnCreateUserHookOptions = {
  *
  * @returns User
  */
-export const onCreateUserHook = async (user: User) => {
+export const onCreateUserHook = async (user: User, options?: OnCreateUserHookOptions) => {
+  if (options?.skipPersonalOrganisation) {
+    return user;
+  }
+
   const organisation = await createPersonalOrganisation({ userId: user.id });
 
   if (!organisation) {

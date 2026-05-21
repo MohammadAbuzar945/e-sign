@@ -1,21 +1,15 @@
-import { useMemo } from 'react';
-
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { ReadStatus } from '@prisma/client';
-import { Link } from 'react-router';
-
 import { authClient } from '@documenso/auth/client';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import { Sheet, SheetContent } from '@documenso/ui/primitives/sheet';
 import { ThemeSwitcher } from '@documenso/ui/primitives/theme-switcher';
-import { Trans, useLingui } from '@lingui/react/macro';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 import { ReadStatus } from '@prisma/client';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
-
 import { BrandingLogo } from '~/components/general/branding-logo';
 import { useOptionalCurrentTeam } from '~/providers/team';
 
@@ -25,7 +19,7 @@ export type AppNavMobileProps = {
 };
 
 export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps) => {
-  const { t } = useLingui();
+  const { _ } = useLingui();
 
   const { organisations } = useSession();
 
@@ -55,11 +49,11 @@ export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps
       return [
         {
           href: '/inbox',
-          text: t`Inbox`,
+          text: _(msg`Inbox`),
         },
         {
           href: '/settings/profile',
-          text: t`Settings`,
+          text: _(msg`Settings`),
         },
       ];
     }
@@ -67,19 +61,19 @@ export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps
     return [
       {
         href: `/t/${teamUrl}/documents`,
-        text: t`Documents`,
+        text: _(msg`Documents`),
       },
       {
         href: `/t/${teamUrl}/templates`,
-        text: t`Templates`,
+        text: _(msg`Templates`),
       },
       {
         href: '/inbox',
-        text: t`Inbox`,
+        text: _(msg`Inbox`),
       },
       {
         href: '/settings/profile',
-        text: t`Settings`,
+        text: _(msg`Settings`),
       },
     ];
   }, [currentTeam, organisations]);

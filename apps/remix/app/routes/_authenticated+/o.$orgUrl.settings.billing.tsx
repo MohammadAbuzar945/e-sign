@@ -1,4 +1,5 @@
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import { msg } from '@lingui/core/macro';
@@ -7,12 +8,7 @@ import { Trans } from '@lingui/react/macro';
 import { SubscriptionStatus } from '@prisma/client';
 import { Loader } from 'lucide-react';
 import type Stripe from 'stripe';
-import { P, match } from 'ts-pattern';
-
-import { useSession } from '@documenso/lib/client-only/providers/session';
-import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
-import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
-import { trpc } from '@documenso/trpc/react';
+import { match, P } from 'ts-pattern';
 
 import { BillingPlans } from '~/components/general/billing-plans';
 import { OrganisationBillingPortalButton } from '~/components/general/organisations/organisation-billing-portal-button';
@@ -42,6 +38,7 @@ export default function TeamsSettingBillingPage() {
   }
 
   const { data: subscriptionQuery, isLoading: isLoadingSubscription } =
+    // biome-ignore lint/correctness/useHookAtTopLevel: <explanation>
     trpc.enterprise.billing.subscription.get.useQuery({
       organisationId: organisation.id,
     });

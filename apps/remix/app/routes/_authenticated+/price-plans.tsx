@@ -3,12 +3,13 @@ import { redirect } from 'react-router';
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { prisma } from '@documenso/prisma';
 
+import { msg } from '@lingui/core/macro';
 import { appMetaTags } from '~/utils/meta';
 
 import type { Route } from './+types/price-plans';
 
 export function meta() {
-  return appMetaTags('Price Plans');
+  return appMetaTags(msg`Price Plans`);
 }
 
 export async function loader({ request }: Route.LoaderArgs) {

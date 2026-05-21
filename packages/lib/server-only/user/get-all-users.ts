@@ -1,7 +1,5 @@
 import { prisma } from '@documenso/prisma';
 import { EnvelopeType, Prisma } from '@prisma/client';
-
-import { prisma } from '@documenso/prisma';
 import { ADMIN_HIDDEN_USER_EMAILS } from './service-accounts/deleted-account';
 
 type GetAllUsersProps = {

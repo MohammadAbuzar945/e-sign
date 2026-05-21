@@ -1,5 +1,4 @@
 import { URL_PATTERN, ZNameSchema } from '@documenso/lib/constants/auth';
-import { PROTECTED_TEAM_URLS } from '@documenso/lib/constants/teams';
 import { zEmail } from '@documenso/lib/utils/zod';
 import { TeamMemberRole } from '@prisma/client';
 import { z } from 'zod';

@@ -1,16 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Plural, Trans } from '@lingui/react/macro';
-import { FieldType, type Field, type Recipient } from '@prisma/client';
-import { useForm } from 'react-hook-form';
-import { useRevalidator } from 'react-router';
-import { match } from 'ts-pattern';
-
 import { AUTO_SIGNABLE_FIELD_TYPES } from '@documenso/lib/constants/autosign';
 import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
-import type { TSignEnvelopeFieldValue } from '@documenso/trpc/server/envelope-router/sign-envelope-field.types';
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@documenso/ui/primitives/dialog';
@@ -20,12 +9,11 @@ import { useToast } from '@documenso/ui/primitives/use-toast';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Plural, Trans } from '@lingui/react/macro';
-import type { Field, Recipient } from '@prisma/client';
-import { FieldType } from '@prisma/client';
-import { useState } from 'react';
+import { type Field, FieldType, type Recipient } from '@prisma/client';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRevalidator } from 'react-router';
-import { match, P } from 'ts-pattern';
+import { match } from 'ts-pattern';
 
 import { DocumentSigningDisclosure } from '~/components/general/document-signing/document-signing-disclosure';
 
@@ -202,7 +190,7 @@ export const DocumentSigningAutoSign = ({
   return (
     <>
       {!open && autoSignableFields.length > AUTO_SIGN_THRESHOLD && (
-        <div className="fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6">
+        <div className="fixed right-4 bottom-4 z-50 sm:right-6 sm:bottom-6">
           <Button
             type="button"
             className="shadow-lg"
@@ -218,65 +206,65 @@ export const DocumentSigningAutoSign = ({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            <Trans>Automatically sign fields</Trans>
-          </DialogTitle>
-        </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>
+              <Trans>Automatically sign fields</Trans>
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="max-w-[50ch] text-muted-foreground">
-          <p>
-            <Trans>
-              When you sign a document, we can automatically fill in and sign the following fields using information
-              that has already been provided. You can also manually sign or remove any automatically signed fields
-              afterwards if you desire.
-            </Trans>
-          </p>
+          <div className="max-w-[50ch] text-muted-foreground">
+            <p>
+              <Trans>
+                When you sign a document, we can automatically fill in and sign the following fields using information
+                that has already been provided. You can also manually sign or remove any automatically signed fields
+                afterwards if you desire.
+              </Trans>
+            </p>
 
-          <ul className="mt-4 flex list-inside list-disc flex-col gap-y-0.5">
-            {AUTO_SIGNABLE_FIELD_TYPES.map((fieldType) => (
-              <li key={fieldType}>
-                <Trans>{_(FRIENDLY_FIELD_TYPE[fieldType as FieldType])}</Trans>
-                <span className="pl-2 text-sm">
-                  (
-                  <Plural
-                    value={autoSignableFields.filter((f) => f.type === fieldType).length}
-                    one="1 matching field"
-                    other="# matching fields"
-                  />
-                  )
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+            <ul className="mt-4 flex list-inside list-disc flex-col gap-y-0.5">
+              {AUTO_SIGNABLE_FIELD_TYPES.map((fieldType) => (
+                <li key={fieldType}>
+                  <Trans>{_(FRIENDLY_FIELD_TYPE[fieldType as FieldType])}</Trans>
+                  <span className="pl-2 text-sm">
+                    (
+                    <Plural
+                      value={autoSignableFields.filter((f) => f.type === fieldType).length}
+                      one="1 matching field"
+                      other="# matching fields"
+                    />
+                    )
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-        <DocumentSigningDisclosure className="mt-4" />
+          <DocumentSigningDisclosure className="mt-4" />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogFooter className="flex w-full flex-1 flex-nowrap gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setOpen(false);
-                }}
-              >
-                <Trans>Cancel</Trans>
-              </Button>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <DialogFooter className="flex w-full flex-1 flex-nowrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setOpen(false);
+                  }}
+                >
+                  <Trans>Cancel</Trans>
+                </Button>
 
-              <Button
-                type="submit"
-                className="min-w-[6rem]"
-                loading={form.formState.isSubmitting}
-                disabled={!autoSignableFields.length}
-              >
-                <Trans>Sign</Trans>
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+                <Button
+                  type="submit"
+                  className="min-w-[6rem]"
+                  loading={form.formState.isSubmitting}
+                  disabled={!autoSignableFields.length}
+                >
+                  <Trans>Sign</Trans>
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </>

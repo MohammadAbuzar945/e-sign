@@ -174,21 +174,6 @@ export const SubscriptionClaimForm = ({
                               onCheckedChange={field.onChange}
                               disabled={isRestrictedFeature && !field.value} // Allow disabling of restricted features.
                             />
-                return (
-                  <FormField
-                    key={key}
-                    control={form.control}
-                    name={`flags.${key}`}
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <div className="flex items-center">
-                            <Checkbox
-                              id={`flag-${key}`}
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              disabled={isRestrictedFeature && !field.value} // Allow disabling of restricted features.
-                            />
 
                             <label
                               className="ml-2 flex flex-row items-center text-sm text-muted-foreground"

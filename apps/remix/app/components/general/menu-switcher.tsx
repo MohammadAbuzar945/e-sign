@@ -1,11 +1,3 @@
-import { useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { ChevronsUpDown, CreditCardIcon } from 'lucide-react';
-import { Link } from 'react-router';
-
 import { authClient } from '@documenso/auth/client';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
@@ -19,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@documenso/ui/primitives/dropdown-menu';
 import { msg } from '@lingui/core/macro';
@@ -96,10 +89,7 @@ export const MenuSwitcher = () => {
           </Link>
         </DropdownMenuItem>
 
-        <DropdownMenuItem
-          className="text-muted-foreground px-4 py-2"
-          onClick={() => setLanguageSwitcherOpen(true)}
-        >
+        <DropdownMenuItem className="px-4 py-2 text-muted-foreground" onClick={() => setLanguageSwitcherOpen(true)}>
           <Trans>Language</Trans>
         </DropdownMenuItem>
 

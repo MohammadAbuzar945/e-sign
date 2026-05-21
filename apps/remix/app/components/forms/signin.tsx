@@ -20,12 +20,18 @@ import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import type { TurnstileInstance } from '@marsidev/react-turnstile';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';  
 import { FaIdCardClip } from 'react-icons/fa6';
 import { FcGoogle } from 'react-icons/fc';
 import { Link, useNavigate } from 'react-router';
 import { match } from 'ts-pattern';
 import { z } from 'zod';
+import { useState } from 'react';
+import { useEffect, useRef } from 'react';
+
+import { useMemo } from 'react';
+import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
+import { KeyRoundIcon } from 'lucide-react';
 
 const CommonErrorMessages: Record<string, MessageDescriptor> = {
   [AuthenticationErrorCode.AccountDisabled]: msg`This account has been disabled. Please contact support.`,
@@ -73,6 +79,8 @@ export const SignInForm = ({
 }: SignInFormProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
+  
 
   const navigate = useNavigate();
 

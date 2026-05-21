@@ -219,20 +219,20 @@ export const DocumentPreferencesForm = ({
                     <Trans>Default Document Visibility</Trans>
                   </FormLabel>
 
-                  <FormControl>
-                    <Select
-                      {...field}
-                      value={field.value === null ? '-1' : field.value}
-                      onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
-                    >
+                  <Select
+                    value={field.value === null ? '-1' : field.value}
+                    onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
+                  >
+                    <FormControl>
                       <SelectTrigger
                         className="bg-background text-muted-foreground"
                         data-testid="document-visibility-trigger"
                       >
                         <SelectValue />
                       </SelectTrigger>
+                    </FormControl>
 
-                      <SelectContent>
+                    <SelectContent>
                         <SelectItem value={DocumentVisibility.EVERYONE}>
                           <Trans>Everyone can access and view the document</Trans>
                         </SelectItem>
@@ -248,9 +248,8 @@ export const DocumentPreferencesForm = ({
                             <Trans>Inherit from organisation</Trans>
                           </SelectItem>
                         )}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
+                    </SelectContent>
+                  </Select>
 
                   <FormDescription>
                     <Trans>Controls the default visibility of an uploaded document.</Trans>
@@ -269,20 +268,20 @@ export const DocumentPreferencesForm = ({
                   <Trans>Default Document Language</Trans>
                 </FormLabel>
 
-                <FormControl>
-                  <Select
-                    {...field}
-                    value={field.value === null ? '-1' : field.value}
-                    onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
-                  >
+                <Select
+                  value={field.value === null ? '-1' : field.value}
+                  onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
+                >
+                  <FormControl>
                     <SelectTrigger
                       className="bg-background text-muted-foreground"
                       data-testid="document-language-trigger"
                     >
                       <SelectValue />
                     </SelectTrigger>
+                  </FormControl>
 
-                    <SelectContent>
+                  <SelectContent>
                       {Object.entries(SUPPORTED_LANGUAGES).map(([code, language]) => (
                         <SelectItem key={code} value={code}>
                           {_(language.full)}
@@ -292,9 +291,8 @@ export const DocumentPreferencesForm = ({
                       <SelectItem value={'-1'}>
                         <Trans>Inherit from organisation</Trans>
                       </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                  </SelectContent>
+                </Select>
 
                 <FormDescription>
                   <Trans>
@@ -315,16 +313,17 @@ export const DocumentPreferencesForm = ({
                   <Trans>Default Date Format</Trans>
                 </FormLabel>
 
-                <FormControl>
-                  <Select
-                    value={field.value === null ? '-1' : field.value}
-                    onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
-                  >
+                <Select
+                  value={field.value === null ? '-1' : field.value}
+                  onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
+                >
+                  <FormControl>
                     <SelectTrigger data-testid="document-date-format-trigger">
                       <SelectValue />
                     </SelectTrigger>
+                  </FormControl>
 
-                    <SelectContent>
+                  <SelectContent>
                       {DATE_FORMATS.map((format) => (
                         <SelectItem key={format.key} value={format.value}>
                           {format.label}
@@ -336,9 +335,8 @@ export const DocumentPreferencesForm = ({
                           <Trans>Inherit from organisation</Trans>
                         </SelectItem>
                       )}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                  </SelectContent>
+                </Select>
 
                 <FormMessage />
               </FormItem>
@@ -416,22 +414,22 @@ export const DocumentPreferencesForm = ({
                     <Trans>Send on Behalf of Team</Trans>
                   </FormLabel>
 
-                  <FormControl>
-                    <Select
-                      {...field}
-                      value={field.value === null ? '-1' : field.value.toString()}
-                      onValueChange={(value) =>
-                        field.onChange(value === 'true' ? true : value === 'false' ? false : null)
-                      }
-                    >
+                  <Select
+                    value={field.value === null ? '-1' : field.value.toString()}
+                    onValueChange={(value) =>
+                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                    }
+                  >
+                    <FormControl>
                       <SelectTrigger
                         className="bg-background text-muted-foreground"
                         data-testid="include-sender-details-trigger"
                       >
                         <SelectValue />
                       </SelectTrigger>
+                    </FormControl>
 
-                      <SelectContent>
+                    <SelectContent>
                         <SelectItem value="true">
                           <Trans>Yes</Trans>
                         </SelectItem>
@@ -445,9 +443,8 @@ export const DocumentPreferencesForm = ({
                             <Trans>Inherit from organisation</Trans>
                           </SelectItem>
                         )}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
+                    </SelectContent>
+                  </Select>
 
                   <div className="pt-2">
                     <div className="font-medium text-muted-foreground text-xs">
@@ -486,22 +483,22 @@ export const DocumentPreferencesForm = ({
                   <Trans>Include the Signing Certificate in the Document</Trans>
                 </FormLabel>
 
-                <FormControl>
-                  <Select
-                    {...field}
-                    value={field.value === null ? '-1' : field.value.toString()}
-                    onValueChange={(value) =>
-                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
-                    }
-                  >
+                <Select
+                  value={field.value === null ? '-1' : field.value.toString()}
+                  onValueChange={(value) =>
+                    field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                  }
+                >
+                  <FormControl>
                     <SelectTrigger
                       className="bg-background text-muted-foreground"
                       data-testid="include-signing-certificate-trigger"
                     >
                       <SelectValue />
                     </SelectTrigger>
+                  </FormControl>
 
-                    <SelectContent>
+                  <SelectContent>
                       <SelectItem value="true">
                         <Trans>Yes</Trans>
                       </SelectItem>
@@ -515,9 +512,8 @@ export const DocumentPreferencesForm = ({
                           <Trans>Inherit from organisation</Trans>
                         </SelectItem>
                       )}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                  </SelectContent>
+                </Select>
 
                 <FormDescription>
                   <Trans>
@@ -539,35 +535,34 @@ export const DocumentPreferencesForm = ({
                   <Trans>Include QR code in certificate</Trans>
                 </FormLabel>
 
-                <FormControl>
-                  <Select
-                    {...field}
-                    value={field.value === null ? '-1' : field.value.toString()}
-                    onValueChange={(value) =>
-                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
-                    }
-                  >
+                <Select
+                  value={field.value === null ? '-1' : field.value.toString()}
+                  onValueChange={(value) =>
+                    field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                  }
+                >
+                  <FormControl>
                     <SelectTrigger className="bg-background text-muted-foreground">
                       <SelectValue />
                     </SelectTrigger>
+                  </FormControl>
 
-                    <SelectContent>
-                      <SelectItem value="true">
-                        <Trans>Yes</Trans>
+                  <SelectContent>
+                    <SelectItem value="true">
+                      <Trans>Yes</Trans>
+                    </SelectItem>
+
+                    <SelectItem value="false">
+                      <Trans>No</Trans>
+                    </SelectItem>
+
+                    {canInherit && (
+                      <SelectItem value={'-1'}>
+                        <Trans>Inherit from organisation</Trans>
                       </SelectItem>
-
-                      <SelectItem value="false">
-                        <Trans>No</Trans>
-                      </SelectItem>
-
-                      {canInherit && (
-                        <SelectItem value={'-1'}>
-                          <Trans>Inherit from organisation</Trans>
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                    )}
+                  </SelectContent>
+                </Select>
 
                 <FormDescription>
                   <Trans>
@@ -588,35 +583,34 @@ export const DocumentPreferencesForm = ({
                   <Trans>Include the Audit Logs in the Document</Trans>
                 </FormLabel>
 
-                <FormControl>
-                  <Select
-                    {...field}
-                    value={field.value === null ? '-1' : field.value.toString()}
-                    onValueChange={(value) =>
-                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
-                    }
-                  >
+                <Select
+                  value={field.value === null ? '-1' : field.value.toString()}
+                  onValueChange={(value) =>
+                    field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                  }
+                >
+                  <FormControl>
                     <SelectTrigger className="bg-background text-muted-foreground">
                       <SelectValue />
                     </SelectTrigger>
+                  </FormControl>
 
-                    <SelectContent>
-                      <SelectItem value="true">
-                        <Trans>Yes</Trans>
+                  <SelectContent>
+                    <SelectItem value="true">
+                      <Trans>Yes</Trans>
+                    </SelectItem>
+
+                    <SelectItem value="false">
+                      <Trans>No</Trans>
+                    </SelectItem>
+
+                    {canInherit && (
+                      <SelectItem value={'-1'}>
+                        <Trans>Inherit from organisation</Trans>
                       </SelectItem>
-
-                      <SelectItem value="false">
-                        <Trans>No</Trans>
-                      </SelectItem>
-
-                      {canInherit && (
-                        <SelectItem value={'-1'}>
-                          <Trans>Inherit from organisation</Trans>
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                    )}
+                  </SelectContent>
+                </Select>
 
                 <FormDescription>
                   <Trans>
@@ -722,13 +716,14 @@ export const DocumentPreferencesForm = ({
                 </FormLabel>
 
                 <Select
-                  {...field}
                   value={field.value === null ? '-1' : field.value.toString()}
                   onValueChange={(value) => field.onChange(value === 'true' ? true : value === 'false' ? false : null)}
                 >
-                  <SelectTrigger className="bg-background text-muted-foreground">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <FormControl>
+                    <SelectTrigger className="bg-background text-muted-foreground">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
 
                   <SelectContent>
                     <SelectItem value="true">
@@ -822,35 +817,34 @@ export const DocumentPreferencesForm = ({
                     <Trans>AI Features</Trans>
                   </FormLabel>
 
-                  <FormControl>
-                    <Select
-                      {...field}
-                      value={field.value === null ? '-1' : field.value.toString()}
-                      onValueChange={(value) =>
-                        field.onChange(value === 'true' ? true : value === 'false' ? false : null)
-                      }
-                    >
+                  <Select
+                    value={field.value === null ? '-1' : field.value.toString()}
+                    onValueChange={(value) =>
+                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                    }
+                  >
+                    <FormControl>
                       <SelectTrigger className="bg-background text-muted-foreground">
                         <SelectValue />
                       </SelectTrigger>
+                    </FormControl>
 
-                      <SelectContent>
-                        <SelectItem value="true">
-                          <Trans>Enabled</Trans>
+                    <SelectContent>
+                      <SelectItem value="true">
+                        <Trans>Enabled</Trans>
+                      </SelectItem>
+
+                      <SelectItem value="false">
+                        <Trans>Disabled</Trans>
+                      </SelectItem>
+
+                      {canInherit && (
+                        <SelectItem value={'-1'}>
+                          <Trans>Inherit from organisation</Trans>
                         </SelectItem>
-
-                        <SelectItem value="false">
-                          <Trans>Disabled</Trans>
-                        </SelectItem>
-
-                        {canInherit && (
-                          <SelectItem value={'-1'}>
-                            <Trans>Inherit from organisation</Trans>
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
+                      )}
+                    </SelectContent>
+                  </Select>
 
                   <FormDescription>
                     <Trans>
@@ -885,34 +879,34 @@ export const DocumentPreferencesForm = ({
                     <FormLabel>
                       <Trans>Team KBA defaults</Trans>
                     </FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value ? '-1' : '0'}
-                        onValueChange={(value) => {
-                          const inherit = value === '-1';
-                          field.onChange(inherit);
-                          if (inherit) {
-                            const next = normalizeStoredKbaSettings(resolvedEffectiveKba);
-                            form.setValue('kbaMode', next.mode);
-                            form.setValue('kbaIsEnabled', next.isEnabled);
-                            form.setValue('kbaMaxAttempts', next.maxAttempts);
-                            form.setValue('kbaLockoutMinutes', next.lockoutMinutes);
-                          }
-                        }}
-                      >
+                    <Select
+                      value={field.value ? '-1' : '0'}
+                      onValueChange={(value) => {
+                        const inherit = value === '-1';
+                        field.onChange(inherit);
+                        if (inherit) {
+                          const next = normalizeStoredKbaSettings(resolvedEffectiveKba);
+                          form.setValue('kbaMode', next.mode);
+                          form.setValue('kbaIsEnabled', next.isEnabled);
+                          form.setValue('kbaMaxAttempts', next.maxAttempts);
+                          form.setValue('kbaLockoutMinutes', next.lockoutMinutes);
+                        }
+                      }}
+                    >
+                      <FormControl>
                         <SelectTrigger className="bg-background text-muted-foreground">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="-1">
-                            <Trans>Inherit from organisation</Trans>
-                          </SelectItem>
-                          <SelectItem value="0">
-                            <Trans>Override organisation settings</Trans>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="-1">
+                          <Trans>Inherit from organisation</Trans>
+                        </SelectItem>
+                        <SelectItem value="0">
+                          <Trans>Override organisation settings</Trans>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </FormItem>
                 )}
               />
@@ -1030,21 +1024,21 @@ export const DocumentPreferencesForm = ({
                           <FormLabel>
                             <Trans>Default KBA scope</Trans>
                           </FormLabel>
-                          <FormControl>
-                            <Select value={field.value} onValueChange={field.onChange}>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
                               <SelectTrigger className="bg-background text-muted-foreground">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="PER_ENVELOPE">
-                                  <Trans>One challenge for the whole document</Trans>
-                                </SelectItem>
-                                <SelectItem value="PER_RECIPIENT">
-                                  <Trans>Separate challenge per recipient</Trans>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="PER_ENVELOPE">
+                                <Trans>One challenge for the whole document</Trans>
+                              </SelectItem>
+                              <SelectItem value="PER_RECIPIENT">
+                                <Trans>Separate challenge per recipient</Trans>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}

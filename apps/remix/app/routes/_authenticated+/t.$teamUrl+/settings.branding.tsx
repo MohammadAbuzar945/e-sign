@@ -1,12 +1,8 @@
-import { msg } from '@lingui/core/macro';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { Loader } from 'lucide-react';
-
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { putFile } from '@documenso/lib/universal/upload/put-file';
 import type { SanitizeBrandingCssWarning } from '@documenso/lib/utils/sanitize-branding-css';
 import { trpc } from '@documenso/trpc/react';
-import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { plural } from '@lingui/core/macro';
@@ -121,15 +117,15 @@ export default function TeamsSettingsPage() {
           <BrandingPreferencesForm
             canInherit={true}
             context="Team"
+            hasAdvancedBranding={
+              organisation.organisationClaim.flags.embedSigningWhiteLabel === true || !IS_BILLING_ENABLED()
+            }
             settings={teamWithSettings.teamSettings}
             onFormSubmit={onBrandingPreferencesFormSubmit}
           />
         </section>
       ) : (
-        <Alert
-          className="mt-8 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
-          variant="neutral"
-        >
+        <Alert className="mt-8 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
           <div className="mb-4 sm:mb-0">
             <AlertTitle>
               <Trans>Branding Preferences</Trans>

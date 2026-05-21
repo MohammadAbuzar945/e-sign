@@ -410,18 +410,19 @@ const SigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV1Loade
           <>
             {sessionData?.user && <AuthenticatedHeader />}
 
-          <div className="mt-8 mb-8 px-4 md:mt-12 md:mb-12 md:px-8">
-            <DocumentSigningPageViewV1
-              recipient={recipientWithFields}
-              document={document}
-              fields={fields}
-              completedFields={completedFields}
-              isRecipientsTurn={isRecipientsTurn}
-              allRecipients={allRecipients}
-              includeSenderDetails={includeSenderDetails}
-            />
-          </div>
-          </DocumentSigningKbaAccessGate>
+            <div className="mt-8 mb-8 px-4 md:mt-12 md:mb-12 md:px-8">
+              <DocumentSigningPageViewV1
+                recipient={recipientWithFields}
+                document={document}
+                fields={fields}
+                completedFields={completedFields}
+                isRecipientsTurn={isRecipientsTurn}
+                allRecipients={allRecipients}
+                includeSenderDetails={includeSenderDetails}
+              />
+            </div>
+          </>
+        </DocumentSigningKbaAccessGate>
       </DocumentSigningAuthProvider>
     </DocumentSigningProvider>
   );

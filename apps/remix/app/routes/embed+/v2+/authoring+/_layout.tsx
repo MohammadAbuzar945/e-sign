@@ -112,6 +112,8 @@ export default function AuthoringLayout() {
     createdAt: new Date(),
     avatarImageId: null,
     organisationId: '',
+    isPrivate: false,
+    isTeamMember: true,
     teamEmail: null,
     currentTeamRole: TeamMemberRole.MEMBER,
     preferences: {
@@ -135,6 +137,7 @@ export default function AuthoringLayout() {
     organisationClaim,
     teams: [team],
     subscription: null,
+    credits: 0,
     currentOrganisationRole: OrganisationMemberRole.MEMBER,
   };
 

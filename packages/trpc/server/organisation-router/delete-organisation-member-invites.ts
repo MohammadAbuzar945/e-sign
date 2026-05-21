@@ -2,6 +2,7 @@ import { syncMemberCountWithStripeSeatPlan } from '@documenso/ee/server-only/str
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
+import { validateIfSubscriptionIsRequired } from '@documenso/lib/utils/billing';
 import { getMemberOrganisationRole } from '@documenso/lib/server-only/team/get-member-roles';
 import { buildOrganisationWhereQuery, isOrganisationRoleWithinUserHierarchy } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
@@ -97,12 +98,8 @@ export const deleteOrganisationMemberInvitesRoute = authenticatedProcedure
 
     // Removing pending invites is a reducing operation, so we don't gate it on
     // the subscription being present. Sync Stripe only when one exists.
-    if (organisation.subscription) {
-      await syncMemberCountWithStripeSeatPlan(
-        organisation.subscription,
-        organisationClaim,
-        totalMemberCountWithInvites,
-      );
+    if (subscription) {
+      await syncMemberCountWithStripeSeatPlan(subscription, organisationClaim, totalMemberCountWithInvites);
     }
 
     await prisma.organisationMemberInvite.deleteMany({

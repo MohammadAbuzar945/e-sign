@@ -5,6 +5,7 @@ import { unsafeGetEntireEnvelope } from '@documenso/lib/server-only/admin/get-en
 import { decryptSecondaryData } from '@documenso/lib/server-only/crypto/decrypt';
 import { getDocumentCertificateAuditLogs } from '@documenso/lib/server-only/document/get-document-certificate-audit-logs';
 import { getOrganisationClaimByTeamId } from '@documenso/lib/server-only/organisation/get-organisation-claims';
+import { getTeamSettings } from '@documenso/lib/server-only/team/get-team-settings';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
@@ -21,31 +22,6 @@ import { prop, sortBy } from 'remeda';
 import { match } from 'ts-pattern';
 import { UAParser } from 'ua-parser-js';
 import { renderSVG } from 'uqr';
-
-import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-import { APP_I18N_OPTIONS, ZSupportedLanguageCodeSchema } from '@documenso/lib/constants/i18n';
-import {
-  RECIPIENT_ROLES_DESCRIPTION,
-  RECIPIENT_ROLE_SIGNING_REASONS,
-} from '@documenso/lib/constants/recipient-roles';
-import { unsafeGetEntireEnvelope } from '@documenso/lib/server-only/admin/get-entire-document';
-import { decryptSecondaryData } from '@documenso/lib/server-only/crypto/decrypt';
-import { getDocumentCertificateAuditLogs } from '@documenso/lib/server-only/document/get-document-certificate-audit-logs';
-import { getOrganisationClaimByTeamId } from '@documenso/lib/server-only/organisation/get-organisation-claims';
-import { getTeamSettings } from '@documenso/lib/server-only/team/get-team-settings';
-import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
-import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
-import { mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
-import { getTranslations } from '@documenso/lib/utils/i18n';
-import { Card, CardContent } from '@documenso/ui/primitives/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@documenso/ui/primitives/table';
 
 import type { Route } from './+types/certificate';
 
@@ -91,8 +67,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   ]);
 
   const documentLanguage = ZSupportedLanguageCodeSchema.parse(envelope.documentMeta?.language);
-  const includeQrCodeInCertificate =
-    envelope.includeQrCodeInCertificate ?? teamSettings.includeQrCodeInCertificate;
+  const includeQrCodeInCertificate = envelope.includeQrCodeInCertificate ?? teamSettings.includeQrCodeInCertificate;
 
   return {
     document: {
@@ -129,14 +104,7 @@ export async function loader({ request }: Route.LoaderArgs) {
  * Update: Maybe <Trans> tags work now after RR7 migration.
  */
 export default function SigningCertificate({ loaderData }: Route.ComponentProps) {
-  const {
-    document,
-    documentLanguage,
-    hidePoweredBy,
-    includeQrCodeInCertificate,
-    auditLogs,
-    messages,
-  } = loaderData;
+  const { document, documentLanguage, hidePoweredBy, includeQrCodeInCertificate, auditLogs, messages } = loaderData;
 
   const { i18n, _ } = useLingui();
 
@@ -400,37 +368,30 @@ export default function SigningCertificate({ loaderData }: Route.ComponentProps)
 
       {!hidePoweredBy && (
         <div className="my-6 w-full">
-          <div className="mb-4 border-t border-gray-200" />
+          <div className="mb-4 border-gray-200 border-t" />
 
           <div className="flex flex-col items-end gap-4">
             {includeQrCodeInCertificate && document.qrToken && (
               <div
                 className="h-24 w-24"
                 dangerouslySetInnerHTML={{
-                  __html: renderSVG(
-                    `${NEXT_PUBLIC_WEBAPP_URL()}/share/${document.qrToken}`,
-                    { ecc: 'Q' },
-                  ),
+                  __html: renderSVG(`${NEXT_PUBLIC_WEBAPP_URL()}/share/${document.qrToken}`, { ecc: 'Q' }),
                 }}
               />
             )}
 
             <div className="max-w-md space-y-2 text-right">
-              <h3 className="text-sm font-medium text-[#444] print:text-xs">
-                Digitally Signed & Verified
-              </h3>
+              <h3 className="font-medium text-[#444] text-sm print:text-xs">Digitally Signed & Verified</h3>
 
-              <p className="text-[8px] leading-relaxed text-[#444] print:text-[7px]">
-                This document is digitally signed by Nomia Africa (Pty) Ltd using Adobe AATL
-                trusted certificate issued by SSL.com. This signature includes Long-Term Validation
-                (LTV) metadata, ensuring the document's authenticity and integrity can be verified
-                for long-term archival purposes.
+              <p className="text-[#444] text-[8px] leading-relaxed print:text-[7px]">
+                This document is digitally signed by Nomia Africa (Pty) Ltd using Adobe AATL trusted certificate issued
+                by SSL.com. This signature includes Long-Term Validation (LTV) metadata, ensuring the document's
+                authenticity and integrity can be verified for long-term archival purposes.
               </p>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

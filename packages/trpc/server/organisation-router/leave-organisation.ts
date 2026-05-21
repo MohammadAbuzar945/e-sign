@@ -2,6 +2,7 @@ import { syncMemberCountWithStripeSeatPlan } from '@documenso/ee/server-only/str
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { jobs } from '@documenso/lib/jobs/client';
 import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
+import { validateIfSubscriptionIsRequired } from '@documenso/lib/utils/billing';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
 import { OrganisationMemberInviteStatus } from '@documenso/prisma/client';
@@ -39,6 +40,11 @@ export const leaveOrganisationRoute = authenticatedProcedure
             id: true,
           },
         },
+        teams: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
@@ -59,8 +65,8 @@ export const leaveOrganisationRoute = authenticatedProcedure
 
     // Leaving is a reducing operation, so we don't gate it on the subscription
     // being present. Sync Stripe only when one exists.
-    if (organisation.subscription) {
-      await syncMemberCountWithStripeSeatPlan(organisation.subscription, organisationClaim, newMemberCount);
+    if (subscription) {
+      await syncMemberCountWithStripeSeatPlan(subscription, organisationClaim, newMemberCount);
     }
 
     const teamIds = organisation.teams.map((team) => team.id);

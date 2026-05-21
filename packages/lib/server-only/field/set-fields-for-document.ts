@@ -151,7 +151,7 @@ export const setFieldsForDocument = async ({
         numberFieldParsedMeta,
         false,
       );
-          const errors = validateNumberField(String(numberFieldParsedMeta.value || ''), numberFieldParsedMeta, false);
+         
 
       if (errors.length > 0) {
         throw new Error(errors.join(', '));

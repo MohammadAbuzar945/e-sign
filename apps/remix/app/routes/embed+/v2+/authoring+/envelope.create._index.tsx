@@ -345,6 +345,7 @@ const EnvelopeCreatePage = ({ embedAuthoringOptions }: EnvelopeCreatePageProps) 
       userId: tokenUserId,
       teamId: tokenTeamId,
       folderId: embedAuthoringOptions?.folderId ?? null,
+      includeQrCodeInCertificate: teamSettings.includeQrCodeInCertificate ?? null,
       documentMeta: {
         id: '',
         ...defaultDocumentMeta,

@@ -20,16 +20,7 @@ import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-reques
 import { nanoid, prefixedId } from '@documenso/lib/universal/id';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
-import type { DocumentMeta, DocumentVisibility, TemplateType } from '@prisma/client';
-import {
-  DocumentSource,
-  EnvelopeType,
-  FolderType,
-  RecipientRole,
-  SendStatus,
-  SigningStatus,
-  WebhookTriggerEvents,
-} from '@prisma/client';
+
 
 import type {
   TDocumentAccessAuthTypes,

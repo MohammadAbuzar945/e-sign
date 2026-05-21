@@ -1,19 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
-import { EnvelopeType } from '@prisma/client';
-import { FolderType, OrganisationType } from '@prisma/client';
-import { Bird } from 'lucide-react';
-import { useParams, useSearchParams } from 'react-router';
-import { Link } from 'react-router';
-import { z } from 'zod';
 import { useSessionStorage } from '@documenso/lib/client-only/hooks/use-session-storage';
-
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { STATS_COUNT_CAP } from '@documenso/lib/constants/document';
 import { SKIP_QUERY_BATCH_META } from '@documenso/lib/constants/trpc';
-import { useSession } from '@documenso/lib/client-only/providers/session';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
 import { parseToIntegerArray } from '@documenso/lib/utils/params';
 import { formatDocumentsPath } from '@documenso/lib/utils/teams';
@@ -27,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 import { msg } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { EnvelopeType, FolderType, OrganisationType } from '@prisma/client';
+import { Bird } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { z } from 'zod';
@@ -163,14 +153,12 @@ export default function DocumentsPage() {
             <Bird className="h-12 w-12" strokeWidth={1.5} />
 
             <div className="text-center">
-              <h3 className="text-lg font-semibold">
+              <h3 className="font-semibold text-lg">
                 <Trans>Documents are not available</Trans>
               </h3>
 
               <p className="mt-2 max-w-[50ch]">
-                <Trans>
-                  You must be a member of this team to view or manage its documents and folders.
-                </Trans>
+                <Trans>You must be a member of this team to view or manage its documents and folders.</Trans>
               </p>
             </div>
           </div>
@@ -223,20 +211,13 @@ export default function DocumentsPage() {
                       return true;
                     })
                     .map((value) => (
-                      <TabsTrigger
-                        key={value}
-                        className="min-w-[60px] hover:text-foreground"
-                        value={value}
-                        asChild
-                      >
+                      <TabsTrigger key={value} className="min-w-[60px] hover:text-foreground" value={value} asChild>
                         <Link to={getTabHref(value)} preventScrollReset>
                           <DocumentStatus status={value} />
 
                           {value !== ExtendedDocumentStatus.ALL && (
                             <span className="ml-1 inline-block opacity-50">
-                              {stats[value] >= STATS_COUNT_CAP
-                                ? `${STATS_COUNT_CAP.toLocaleString()}+`
-                                : stats[value]}
+                              {stats[value] >= STATS_COUNT_CAP ? `${STATS_COUNT_CAP.toLocaleString()}+` : stats[value]}
                             </span>
                           )}
                         </Link>
@@ -264,8 +245,7 @@ export default function DocumentsPage() {
                 status={
                   organisation?.type === OrganisationType.PERSONAL &&
                   hasMounted &&
-                  (findDocumentSearchParams.status || ExtendedDocumentStatus.ALL) ===
-                    ExtendedDocumentStatus.INBOX
+                  (findDocumentSearchParams.status || ExtendedDocumentStatus.ALL) === ExtendedDocumentStatus.INBOX
                     ? ExtendedDocumentStatus.ALL
                     : findDocumentSearchParams.status || ExtendedDocumentStatus.ALL
                 }

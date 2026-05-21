@@ -1,11 +1,8 @@
-import { OrganisationGroupType, OrganisationMemberInviteStatus } from '@prisma/client';
-
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
-import { prisma } from '@documenso/prisma';
-import { OrganisationMemberInviteStatus } from '@prisma/client';
-
 import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
+import { prisma } from '@documenso/prisma';
+import { OrganisationGroupType, OrganisationMemberInviteStatus } from '@prisma/client';
 import { maybeAuthenticatedProcedure } from '../trpc';
 import {
   ZDeclineOrganisationMemberInviteRequestSchema,

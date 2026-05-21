@@ -1,6 +1,7 @@
 import { PDF_SIZE_A4_72PPI } from '@documenso/lib/constants/pdf';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { generateAuditLogPdf } from '@documenso/lib/server-only/pdf/generate-audit-log-pdf';
+import { getTeamSettings } from '@documenso/lib/server-only/team/get-team-settings';
 import { unsafeBuildEnvelopeIdQuery } from '@documenso/lib/utils/envelope';
 import { prisma } from '@documenso/prisma';
 import { EnvelopeType } from '@prisma/client';
@@ -56,6 +57,10 @@ export const downloadDocumentAuditLogsRoute = adminProcedure
       });
     }
 
+    const teamSettings = await getTeamSettings({
+      teamId: envelope.teamId,
+    });
+
     const auditLogPdf = await generateAuditLogPdf({
       envelope,
       recipients: envelope.recipients,
@@ -65,6 +70,8 @@ export const downloadDocumentAuditLogsRoute = adminProcedure
         email: envelope.user.email,
         name: envelope.user.name || '',
       },
+      includeQrCodeInCertificate:
+        envelope.includeQrCodeInCertificate ?? teamSettings.includeQrCodeInCertificate ?? true,
       envelopeItems: envelope.envelopeItems.map((item) => item.title),
       pageWidth: PDF_SIZE_A4_72PPI.width,
       pageHeight: PDF_SIZE_A4_72PPI.height,

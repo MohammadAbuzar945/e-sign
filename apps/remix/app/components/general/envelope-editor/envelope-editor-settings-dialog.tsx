@@ -21,8 +21,8 @@ import {
   ZDocumentMetaTimezoneSchema,
 } from '@documenso/lib/types/document-meta';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
-import { normalizeStoredKbaSettings } from '@documenso/lib/utils/kba-settings';
 import { isValidRedirectUrl } from '@documenso/lib/utils/is-valid-redirect-url';
+import { normalizeStoredKbaSettings } from '@documenso/lib/utils/kba-settings';
 import { canAccessTeamDocument, DocumentSignatureType, extractTeamSignatureSettings } from '@documenso/lib/utils/teams';
 import { zEmail } from '@documenso/lib/utils/zod';
 import { trpc } from '@documenso/trpc/react';
@@ -92,9 +92,9 @@ import { z } from 'zod';
 
 import { useCurrentTeam } from '~/providers/team';
 
-const DOCUMENT_DISTRIBUTION_METHOD_SETTINGS_OPTIONS = Object.values(
-  DOCUMENT_DISTRIBUTION_METHODS,
-).filter(({ value }) => value !== DocumentDistributionMethod.NONE);
+const DOCUMENT_DISTRIBUTION_METHOD_SETTINGS_OPTIONS = Object.values(DOCUMENT_DISTRIBUTION_METHODS).filter(
+  ({ value }) => value !== DocumentDistributionMethod.NONE,
+);
 
 const ZKbaAnswerTypeSchema = z.enum(['STRING', 'NUMERIC', 'MCQ']);
 const ZKbaModeSchema = z.enum(['PER_ENVELOPE', 'PER_RECIPIENT']);
@@ -109,74 +109,78 @@ const parseMcqOptions = (optionsInput?: string) => {
     .map((option) => option.trim())
     .filter((option) => option.length > 0)
     .map((label) => ({
-      key: label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      key: label
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, ''),
       label,
     }))
     .filter((option) => option.key.length > 0);
 };
 
-export const ZAddSettingsFormSchema = z.object({
-  templateType: z.nativeEnum(TemplateType).optional(),
-  externalId: z.string().optional(),
-  visibility: z.nativeEnum(DocumentVisibility).optional(),
-  includeQrCodeInCertificate: z.boolean().nullish(),
-  globalAccessAuth: z
-    .array(z.union([ZDocumentAccessAuthTypesSchema, z.literal('-1')]))
-    .transform((val) => {
-      if (val.includes('-1')) {
-        return val.filter((entry) => entry !== '-1');
-      }
+export const ZAddSettingsFormSchema = z
+  .object({
+    templateType: z.nativeEnum(TemplateType).optional(),
+    externalId: z.string().optional(),
+    visibility: z.nativeEnum(DocumentVisibility).optional(),
+    includeQrCodeInCertificate: z.boolean().nullish(),
+    globalAccessAuth: z
+      .array(z.union([ZDocumentAccessAuthTypesSchema, z.literal('-1')]))
+      .transform((val) => {
+        if (val.includes('-1')) {
+          return val.filter((entry) => entry !== '-1');
+        }
 
-      return val;
-    })
-    .optional()
-    .default(['-1']),
-  globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional().default([]),
-  kbaMode: ZKbaModeSchema.default('PER_ENVELOPE'),
-  kbaMaxAttempts: z.number().int().min(1).max(20).default(5),
-  kbaLockoutMinutes: z.number().int().min(1).max(1440).default(15),
-  kbaAnswerType: ZKbaAnswerTypeSchema.default('STRING'),
-  kbaApplySameToAllRecipients: z.boolean().default(true),
-  kbaQuestion: z.string().optional(),
-  kbaAnswer: z.string().optional(),
-  kbaMcqOptions: z.string().optional(),
-  kbaRecipientChallenges: z
-    .array(
-      z.object({
-        recipientId: z.number(),
-        recipientName: z.string(),
-        recipientEmail: z.string(),
-        question: z.string().optional(),
-        answer: z.string().optional(),
-      }),
-    )
-    .default([]),
-  meta: z.object({
-    subject: z.string(),
-    message: z.string(),
-    timezone: ZDocumentMetaTimezoneSchema.default(DEFAULT_DOCUMENT_TIME_ZONE),
-    dateFormat: ZDocumentMetaDateFormatSchema.default(DEFAULT_DOCUMENT_DATE_FORMAT),
-    distributionMethod: z.nativeEnum(DocumentDistributionMethod).optional().default(DocumentDistributionMethod.EMAIL),
-    redirectUrl: z
-      .string()
+        return val;
+      })
       .optional()
-      .refine((value) => value === undefined || value === '' || isValidRedirectUrl(value), {
-        message: 'Please enter a valid URL, make sure you include http:// or https:// part of the url.',
+      .default(['-1']),
+    globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional().default([]),
+    kbaMode: ZKbaModeSchema.default('PER_ENVELOPE'),
+    kbaMaxAttempts: z.number().int().min(1).max(20).default(5),
+    kbaLockoutMinutes: z.number().int().min(1).max(1440).default(15),
+    kbaAnswerType: ZKbaAnswerTypeSchema.default('STRING'),
+    kbaApplySameToAllRecipients: z.boolean().default(true),
+    kbaQuestion: z.string().optional(),
+    kbaAnswer: z.string().optional(),
+    kbaMcqOptions: z.string().optional(),
+    kbaRecipientChallenges: z
+      .array(
+        z.object({
+          recipientId: z.number(),
+          recipientName: z.string(),
+          recipientEmail: z.string(),
+          question: z.string().optional(),
+          answer: z.string().optional(),
+        }),
+      )
+      .default([]),
+    meta: z.object({
+      subject: z.string(),
+      message: z.string(),
+      timezone: ZDocumentMetaTimezoneSchema.default(DEFAULT_DOCUMENT_TIME_ZONE),
+      dateFormat: ZDocumentMetaDateFormatSchema.default(DEFAULT_DOCUMENT_DATE_FORMAT),
+      distributionMethod: z.nativeEnum(DocumentDistributionMethod).optional().default(DocumentDistributionMethod.EMAIL),
+      redirectUrl: z
+        .string()
+        .optional()
+        .refine((value) => value === undefined || value === '' || isValidRedirectUrl(value), {
+          message: 'Please enter a valid URL, make sure you include http:// or https:// part of the url.',
+        }),
+      language: z
+        .union([z.string(), z.enum(SUPPORTED_LANGUAGE_CODES)])
+        .optional()
+        .default('en'),
+      emailId: z.string().nullable(),
+      emailReplyTo: z.preprocess((val) => (val === '' ? undefined : val), zEmail().optional()),
+      emailSettings: ZDocumentEmailSettingsSchema,
+      signatureTypes: z.array(z.nativeEnum(DocumentSignatureType)).min(1, {
+        message: msg`At least one signature type must be enabled`.id,
       }),
-    language: z
-      .union([z.string(), z.enum(SUPPORTED_LANGUAGE_CODES)])
-      .optional()
-      .default('en'),
-    emailId: z.string().nullable(),
-    emailReplyTo: z.preprocess((val) => (val === '' ? undefined : val), zEmail().optional()),
-    emailSettings: ZDocumentEmailSettingsSchema,
-    signatureTypes: z.array(z.nativeEnum(DocumentSignatureType)).min(1, {
-      message: msg`At least one signature type must be enabled`.id,
+      envelopeExpirationPeriod: ZEnvelopeExpirationPeriod.nullish(),
+      reminderSettings: ZEnvelopeReminderSettings.nullish(),
     }),
-    envelopeExpirationPeriod: ZEnvelopeExpirationPeriod.nullish(),
-    reminderSettings: ZEnvelopeReminderSettings.nullish(),
-  }),
-})
+  })
   .superRefine((value, ctx) => {
     const requiresKba = value.globalAccessAuth.includes(DocumentAccessAuth.KBA);
 
@@ -286,9 +290,7 @@ export const ZAddSettingsFormSchema = z.object({
       if (value.kbaMode === 'PER_RECIPIENT' && !value.kbaApplySameToAllRecipients) {
         value.kbaRecipientChallenges.forEach((challenge, index) => {
           const normalizedAnswer = challenge.answer?.trim().toLowerCase();
-          const hasMatchingOption = parsedOptions.some(
-            (option) => option.label.toLowerCase() === normalizedAnswer,
-          );
+          const hasMatchingOption = parsedOptions.some((option) => option.label.toLowerCase() === normalizedAnswer);
 
           if (parsedOptions.length > 0 && normalizedAnswer && !hasMatchingOption) {
             ctx.addIssue({
@@ -300,9 +302,7 @@ export const ZAddSettingsFormSchema = z.object({
         });
       } else {
         const normalizedAnswer = value.kbaAnswer?.trim().toLowerCase();
-        const hasMatchingOption = parsedOptions.some(
-          (option) => option.label.toLowerCase() === normalizedAnswer,
-        );
+        const hasMatchingOption = parsedOptions.some((option) => option.label.toLowerCase() === normalizedAnswer);
 
         if (parsedOptions.length > 0 && normalizedAnswer && !hasMatchingOption) {
           ctx.addIssue({
@@ -377,28 +377,23 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
     documentAuth: envelope.authOptions,
   });
 
-  const { data: envelopeKbaConfig, isLoading: isLoadingEnvelopeKbaConfig } =
-    trpc.envelope.getKba.useQuery(
-      {
-        envelopeId: envelope.id,
-      },
-      {
-        enabled: open,
-      },
-    );
+  const { data: envelopeKbaConfig, isLoading: isLoadingEnvelopeKbaConfig } = trpc.envelope.getKba.useQuery(
+    {
+      envelopeId: envelope.id,
+    },
+    {
+      enabled: open,
+    },
+  );
 
   const { data: teamForKbaDefaults } = trpc.team.get.useQuery({
     teamReference: team.id,
   });
 
   const createDefaultValues = () => {
-    const firstKbaChallenge =
-      envelopeKbaConfig?.envelopeChallenge ?? envelopeKbaConfig?.recipientChallenges.at(0);
+    const firstKbaChallenge = envelopeKbaConfig?.envelopeChallenge ?? envelopeKbaConfig?.recipientChallenges.at(0);
     const recipientChallengeById = new Map(
-      (envelopeKbaConfig?.recipientChallenges ?? []).map((challenge) => [
-        challenge.recipientId,
-        challenge,
-      ]),
+      (envelopeKbaConfig?.recipientChallenges ?? []).map((challenge) => [challenge.recipientId, challenge]),
     );
     const mcqOptions = firstKbaChallenge?.mcqOptions?.map((option) => option.label).join(', ') ?? '';
 
@@ -408,9 +403,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
         : envelope.documentMeta.distributionMethod || DocumentDistributionMethod.EMAIL;
 
     const authParsed = ZDocumentAuthOptionsSchema.parse(envelope.authOptions ?? {});
-    const teamDerivedKba = normalizeStoredKbaSettings(
-      teamForKbaDefaults?.derivedSettings?.kbaSettings,
-    );
+    const teamDerivedKba = normalizeStoredKbaSettings(teamForKbaDefaults?.derivedSettings?.kbaSettings);
     const storedGlobalAccessAuth = [...(documentAuthOption?.globalAccessAuth || [])];
     let globalAccessAuthForForm = [...storedGlobalAccessAuth];
     if (
@@ -430,8 +423,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
       globalActionAuth: documentAuthOption?.globalActionAuth || [],
       kbaMode: envelopeKbaConfig?.settings?.mode ?? ('PER_ENVELOPE' as const),
       kbaMaxAttempts: envelopeKbaConfig?.settings?.maxAttempts ?? teamDerivedKba.maxAttempts,
-      kbaLockoutMinutes:
-        envelopeKbaConfig?.settings?.lockoutMinutes ?? teamDerivedKba.lockoutMinutes,
+      kbaLockoutMinutes: envelopeKbaConfig?.settings?.lockoutMinutes ?? teamDerivedKba.lockoutMinutes,
       kbaAnswerType: firstKbaChallenge?.answerType ?? ('STRING' as const),
       kbaApplySameToAllRecipients: (envelopeKbaConfig?.settings?.mode ?? 'PER_ENVELOPE') === 'PER_ENVELOPE',
       kbaQuestion: envelopeKbaConfig?.envelopeChallenge?.question ?? '',
@@ -447,17 +439,14 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
         recipientEmail: recipient.email,
         question: recipientChallengeById.get(recipient.id)?.question ?? '',
         answer:
-          lastSavedKbaAnswers.recipientAnswers[recipient.id] ??
-          recipientChallengeById.get(recipient.id)?.answer ??
-          '',
+          lastSavedKbaAnswers.recipientAnswers[recipient.id] ?? recipientChallengeById.get(recipient.id)?.answer ?? '',
       })),
       meta: {
         subject: envelope.documentMeta.subject ?? '',
         message: envelope.documentMeta.message ?? '',
         timezone: envelope.documentMeta.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE,
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        dateFormat: (envelope.documentMeta.dateFormat ??
-          DEFAULT_DOCUMENT_DATE_FORMAT) as TDocumentMetaDateFormat,
+        dateFormat: (envelope.documentMeta.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT) as TDocumentMetaDateFormat,
         distributionMethod: resolvedDistributionMethod,
         redirectUrl: envelope.documentMeta.redirectUrl ?? '',
         language: envelope.documentMeta.language ?? 'en',
@@ -521,9 +510,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
       reminderSettings,
     } = data.meta;
 
-    const parsedGlobalAccessAuth = z
-      .array(ZDocumentAccessAuthTypesSchema)
-      .safeParse(data.globalAccessAuth);
+    const parsedGlobalAccessAuth = z.array(ZDocumentAccessAuthTypesSchema).safeParse(data.globalAccessAuth);
 
     const teamKbaDefaultEnabled = normalizeStoredKbaSettings(
       teamForKbaDefaults?.derivedSettings?.kbaSettings,
@@ -591,10 +578,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
               recipientId: challenge.recipientId,
               answerType: data.kbaAnswerType,
               question: effectiveQuestion,
-              answer:
-                data.kbaAnswerType === 'MCQ'
-                  ? (recipientMcqAnswerOption?.key ?? '')
-                  : effectiveAnswer,
+              answer: data.kbaAnswerType === 'MCQ' ? (recipientMcqAnswerOption?.key ?? '') : effectiveAnswer,
               mcqOptions: data.kbaAnswerType === 'MCQ' ? parsedOptions : undefined,
             };
           });
@@ -613,9 +597,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                     answerType: data.kbaAnswerType,
                     question: data.kbaQuestion?.trim() ?? '',
                     answer:
-                      data.kbaAnswerType === 'MCQ'
-                        ? (mcqAnswerOption?.key ?? '')
-                        : (data.kbaAnswer?.trim() ?? ''),
+                      data.kbaAnswerType === 'MCQ' ? (mcqAnswerOption?.key ?? '') : (data.kbaAnswer?.trim() ?? ''),
                     mcqOptions: data.kbaAnswerType === 'MCQ' ? parsedOptions : undefined,
                   }
                 : null,
@@ -1007,17 +989,17 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                                       </Trans>
                                     </p>
 
-                                  <ul className="ml-3.5 list-outside list-disc space-y-0.5 py-2">
-                                    <li>
-                                      <Trans>
-                                        <strong>Email</strong> - The recipient will be emailed the
-                                        document to sign, approve, etc.
-                                      </Trans>
-                                    </li>
-                                  </ul>
-                                </TooltipContent>
-                              </Tooltip>
-                            </FormLabel>
+                                    <ul className="ml-3.5 list-outside list-disc space-y-0.5 py-2">
+                                      <li>
+                                        <Trans>
+                                          <strong>Email</strong> - The recipient will be emailed the document to sign,
+                                          approve, etc.
+                                        </Trans>
+                                      </li>
+                                    </ul>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </FormLabel>
 
                               <FormControl>
                                 <Select {...field} onValueChange={field.onChange}>
@@ -1281,10 +1263,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                                 </FormLabel>
 
                                 <FormControl>
-                                  <Select
-                                    value={field.value}
-                                    onValueChange={(value) => field.onChange(value)}
-                                  >
+                                  <Select value={field.value} onValueChange={(value) => field.onChange(value)}>
                                     <SelectTrigger className="bg-background">
                                       <SelectValue />
                                     </SelectTrigger>
@@ -1314,10 +1293,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                                 </FormLabel>
 
                                 <FormControl>
-                                  <Select
-                                    value={field.value}
-                                    onValueChange={(value) => field.onChange(value)}
-                                  >
+                                  <Select value={field.value} onValueChange={(value) => field.onChange(value)}>
                                     <SelectTrigger className="bg-background">
                                       <SelectValue />
                                     </SelectTrigger>
@@ -1450,9 +1426,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                                     <FormControl>
                                       <PasswordInput
                                         className="bg-background"
-                                        inputMode={
-                                          kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined
-                                        }
+                                        inputMode={kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined}
                                         placeholder={
                                           kbaAnswerType === 'NUMERIC'
                                             ? t`Digits only (e.g. 1234)`
@@ -1466,8 +1440,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                                         onBlur={field.onBlur}
                                         onChange={
                                           kbaAnswerType === 'NUMERIC'
-                                            ? (e) =>
-                                                field.onChange(e.target.value.replace(/\D/g, ''))
+                                            ? (e) => field.onChange(e.target.value.replace(/\D/g, ''))
                                             : field.onChange
                                         }
                                       />
@@ -1548,9 +1521,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                                         <FormControl>
                                           <PasswordInput
                                             className="bg-background"
-                                            inputMode={
-                                              kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined
-                                            }
+                                            inputMode={kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined}
                                             placeholder={
                                               kbaAnswerType === 'NUMERIC'
                                                 ? t`Digits only (e.g. 1234)`
@@ -1564,20 +1535,14 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                                             onBlur={field.onBlur}
                                             onChange={
                                               kbaAnswerType === 'NUMERIC'
-                                                ? (e) =>
-                                                    field.onChange(
-                                                      e.target.value.replace(/\D/g, ''),
-                                                    )
+                                                ? (e) => field.onChange(e.target.value.replace(/\D/g, ''))
                                                 : field.onChange
                                             }
                                           />
                                         </FormControl>
                                         {kbaAnswerType === 'NUMERIC' ? (
                                           <FormDescription>
-                                            <Trans>
-                                              Only numbers are allowed—letters and symbols are
-                                              removed.
-                                            </Trans>
+                                            <Trans>Only numbers are allowed—letters and symbols are removed.</Trans>
                                           </FormDescription>
                                         ) : null}
                                         <FormMessage />
@@ -1589,7 +1554,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
 
                               {envelope.recipients.map((recipient, index) => (
                                 <div key={recipient.id} className="space-y-3 rounded-md border p-3">
-                                  <p className="text-sm font-bold">
+                                  <p className="font-bold text-sm">
                                     {recipient.name ? `${recipient.name} (${recipient.email})` : recipient.email}
                                   </p>
 
@@ -1625,9 +1590,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                                         <FormControl>
                                           <PasswordInput
                                             className="bg-background"
-                                            inputMode={
-                                              kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined
-                                            }
+                                            inputMode={kbaAnswerType === 'NUMERIC' ? 'numeric' : undefined}
                                             placeholder={
                                               kbaAnswerType === 'NUMERIC'
                                                 ? t`Digits only (e.g. 1234)`
@@ -1642,21 +1605,14 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                                             onBlur={field.onBlur}
                                             onChange={
                                               kbaAnswerType === 'NUMERIC'
-                                                ? (e) =>
-                                                    field.onChange(
-                                                      e.target.value.replace(/\D/g, ''),
-                                                    )
+                                                ? (e) => field.onChange(e.target.value.replace(/\D/g, ''))
                                                 : field.onChange
                                             }
                                           />
                                         </FormControl>
-                                        {kbaAnswerType === 'NUMERIC' &&
-                                        !kbaApplySameToAllRecipients ? (
+                                        {kbaAnswerType === 'NUMERIC' && !kbaApplySameToAllRecipients ? (
                                           <FormDescription>
-                                            <Trans>
-                                              Only numbers are allowed—letters and symbols are
-                                              removed.
-                                            </Trans>
+                                            <Trans>Only numbers are allowed—letters and symbols are removed.</Trans>
                                           </FormDescription>
                                         ) : null}
                                         <FormMessage />
@@ -1682,9 +1638,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
                             <FormControl>
                               <Select
                                 value={field.value == null ? '-1' : String(field.value)}
-                                onValueChange={(value) =>
-                                  field.onChange(value === '-1' ? null : value === 'true')
-                                }
+                                onValueChange={(value) => field.onChange(value === '-1' ? null : value === 'true')}
                               >
                                 <SelectTrigger className="bg-background text-muted-foreground">
                                   <SelectValue placeholder={t`Inherit from team`} />
