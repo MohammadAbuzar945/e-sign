@@ -78,4 +78,5 @@ certs
 certsArchived
 
 .cursor/
-analysis
+analysiscerts/
+certsArchived/
