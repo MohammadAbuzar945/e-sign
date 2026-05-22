@@ -243,8 +243,8 @@ export const EnvelopeEditorPreviewPage = () => {
         mode: 'export',
       }}
     >
-      <div className="relative flex h-full">
-        <div className="flex h-full w-full flex-col overflow-y-auto px-2" ref={scrollableContainerRef}>
+      <div className="relative flex h-full min-w-0 flex-1">
+        <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto px-2" ref={scrollableContainerRef}>
           {/* Horizontal envelope item selector */}
           <EnvelopeRendererFileSelector className="px-0" fields={editorFields.localFields} />
 
@@ -258,7 +258,7 @@ export const EnvelopeEditorPreviewPage = () => {
           </Alert>
 
           {/* Document View */}
-          <div className="mt-4 flex h-full flex-col items-center justify-center">
+          <div className="mt-4 flex min-h-0 flex-1 flex-col items-center justify-center">
             {currentEnvelopeItem !== null ? (
               <EnvelopePdfViewer
                 customPageRenderer={EnvelopeGenericPageRenderer}

@@ -1,4 +1,6 @@
+import { useIsMounted } from '@documenso/lib/client-only/hooks/use-is-mounted';
 import type { PeriodSelectorValue } from '@documenso/lib/server-only/document/find-documents';
+import { Button } from '@documenso/ui/primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { Trans } from '@lingui/react/macro';
 import { useMemo } from 'react';
@@ -9,11 +11,36 @@ const isPeriodSelectorValue = (value: unknown): value is PeriodSelectorValue => 
   return ['', '7d', '14d', '30d'].includes(value as string);
 };
 
+const PeriodSelectorFallback = ({ period }: { period: PeriodSelectorValue | 'all' }) => {
+  return (
+    <Button
+      variant="outline"
+      role="combobox"
+      disabled
+      className="max-w-[200px] text-muted-foreground"
+      aria-expanded={false}
+    >
+      <span className="truncate">
+        {period === '7d' ? (
+          <Trans>Last 7 days</Trans>
+        ) : period === '14d' ? (
+          <Trans>Last 14 days</Trans>
+        ) : period === '30d' ? (
+          <Trans>Last 30 days</Trans>
+        ) : (
+          <Trans>All Time</Trans>
+        )}
+      </span>
+    </Button>
+  );
+};
+
 export const PeriodSelector = () => {
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
 
   const navigate = useNavigate();
+  const isMounted = useIsMounted();
 
   const period = useMemo(() => {
     const p = searchParams?.get('period') ?? 'all';
@@ -36,6 +63,10 @@ export const PeriodSelector = () => {
 
     void navigate(`${pathname}?${params.toString()}`, { preventScrollReset: true });
   };
+
+  if (!isMounted) {
+    return <PeriodSelectorFallback period={period} />;
+  }
 
   return (
     <Select defaultValue={period} onValueChange={onPeriodChange}>
