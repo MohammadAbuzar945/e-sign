@@ -41,6 +41,6 @@ export const handleInitialsFieldClick = async (
 
   return {
     type: FieldType.INITIALS,
-    value: initials,
+    value: initialsToInsert,
   };
 };
