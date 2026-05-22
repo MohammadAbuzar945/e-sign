@@ -62,16 +62,7 @@ export const useEditorRecipients = ({ envelope }: EditorRecipientsProps): UseEdi
     const signers: TLocalRecipient[] =
       formRecipients.length > 0
         ? sortBy(formRecipients, [prop('signingOrder'), 'asc'], [prop('id'), 'asc'])
-        : [
-            {
-              formId: initialId,
-              name: '',
-              email: '',
-              role: RecipientRole.SIGNER,
-              signingOrder: 1,
-              actionAuth: [],
-            },
-          ];
+        : [];
 
     return {
       signers,

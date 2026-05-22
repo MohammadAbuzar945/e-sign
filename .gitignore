@@ -76,3 +76,6 @@ tmp/
 .opencode/package-lock.json
 certs
 certsArchived
+
+.cursor/
+analysis

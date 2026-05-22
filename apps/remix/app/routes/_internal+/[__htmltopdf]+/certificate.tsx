@@ -5,6 +5,7 @@ import { unsafeGetEntireEnvelope } from '@documenso/lib/server-only/admin/get-en
 import { decryptSecondaryData } from '@documenso/lib/server-only/crypto/decrypt';
 import { getDocumentCertificateAuditLogs } from '@documenso/lib/server-only/document/get-document-certificate-audit-logs';
 import { getOrganisationClaimByTeamId } from '@documenso/lib/server-only/organisation/get-organisation-claims';
+import { getTeamSettings } from '@documenso/lib/server-only/team/get-team-settings';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
@@ -21,8 +22,6 @@ import { prop, sortBy } from 'remeda';
 import { match } from 'ts-pattern';
 import { UAParser } from 'ua-parser-js';
 import { renderSVG } from 'uqr';
-
-import { BrandingLogo } from '~/components/general/branding-logo';
 
 import type { Route } from './+types/certificate';
 
@@ -58,15 +57,17 @@ export async function loader({ request }: Route.LoaderArgs) {
     throw redirect('/');
   }
 
-  const organisationClaim = await getOrganisationClaimByTeamId({ teamId: envelope.teamId });
+  const [organisationClaim, teamSettings, auditLogs, messages] = await Promise.all([
+    getOrganisationClaimByTeamId({ teamId: envelope.teamId }),
+    getTeamSettings({ teamId: envelope.teamId }),
+    getDocumentCertificateAuditLogs({
+      envelopeId: envelope.id,
+    }),
+    getTranslations(ZSupportedLanguageCodeSchema.parse(envelope.documentMeta?.language)),
+  ]);
 
   const documentLanguage = ZSupportedLanguageCodeSchema.parse(envelope.documentMeta?.language);
-
-  const auditLogs = await getDocumentCertificateAuditLogs({
-    envelopeId: envelope.id,
-  });
-
-  const messages = await getTranslations(documentLanguage);
+  const includeQrCodeInCertificate = envelope.includeQrCodeInCertificate ?? teamSettings.includeQrCodeInCertificate;
 
   return {
     document: {
@@ -86,6 +87,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       documentMeta: envelope.documentMeta,
     },
     hidePoweredBy: organisationClaim.flags.hidePoweredBy,
+    includeQrCodeInCertificate,
     documentLanguage,
     auditLogs,
     messages,
@@ -102,7 +104,7 @@ export async function loader({ request }: Route.LoaderArgs) {
  * Update: Maybe <Trans> tags work now after RR7 migration.
  */
 export default function SigningCertificate({ loaderData }: Route.ComponentProps) {
-  const { document, documentLanguage, hidePoweredBy, auditLogs, messages } = loaderData;
+  const { document, documentLanguage, hidePoweredBy, includeQrCodeInCertificate, auditLogs, messages } = loaderData;
 
   const { i18n, _ } = useLingui();
 
@@ -162,6 +164,7 @@ export default function SigningCertificate({ loaderData }: Route.ComponentProps)
       authLevel = match(accessAuthMethod)
         .with('ACCOUNT', () => _(msg`Account Authentication`))
         .with('TWO_FACTOR_AUTH', () => _(msg`Two-Factor Authentication`))
+        .with('KBA', () => _(msg`KBA Authentication`))
         .with(undefined, () => _(msg`Email`))
         .exhaustive();
     }
@@ -364,23 +367,28 @@ export default function SigningCertificate({ loaderData }: Route.ComponentProps)
       </Card>
 
       {!hidePoweredBy && (
-        <div className="my-8 flex-row-reverse space-y-4">
-          <div className="flex items-end justify-end gap-x-4">
-            <div
-              className="flex h-24 w-24 justify-center"
-              dangerouslySetInnerHTML={{
-                __html: renderSVG(`${NEXT_PUBLIC_WEBAPP_URL()}/share/${document.qrToken}`, {
-                  ecc: 'Q',
-                }),
-              }}
-            />
-          </div>
+        <div className="my-6 w-full">
+          <div className="mb-4 border-gray-200 border-t" />
 
-          <div className="flex items-end justify-end gap-x-4">
-            <p className="flex-shrink-0 font-medium text-sm print:text-xs">
-              {_(msg`Signing certificate provided by`)}:
-            </p>
-            <BrandingLogo className="max-h-6 print:max-h-4" />
+          <div className="flex flex-col items-end gap-4">
+            {includeQrCodeInCertificate && document.qrToken && (
+              <div
+                className="h-24 w-24"
+                dangerouslySetInnerHTML={{
+                  __html: renderSVG(`${NEXT_PUBLIC_WEBAPP_URL()}/share/${document.qrToken}`, { ecc: 'Q' }),
+                }}
+              />
+            )}
+
+            <div className="max-w-md space-y-2 text-right">
+              <h3 className="font-medium text-[#444] text-sm print:text-xs">Digitally Signed & Verified</h3>
+
+              <p className="text-[#444] text-[8px] leading-relaxed print:text-[7px]">
+                This document is digitally signed by Nomia Africa (Pty) Ltd using Adobe AATL trusted certificate issued
+                by SSL.com. This signature includes Long-Term Validation (LTV) metadata, ensuring the document's
+                authenticity and integrity can be verified for long-term archival purposes.
+              </p>
+            </div>
           </div>
         </div>
       )}

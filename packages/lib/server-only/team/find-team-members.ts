@@ -31,26 +31,49 @@ export const findTeamMembers = async ({
   const orderByColumn = orderBy?.column ?? 'name';
   const orderByDirection = orderBy?.direction ?? 'desc';
 
-  // Check that the user belongs to the team they are trying to find members in.
-  const userTeam = await prisma.organisationMember.findFirst({
+  const team = await prisma.team.findUnique({
     where: {
-      userId,
-      organisationGroupMembers: {
-        some: {
-          group: {
-            teamGroups: {
-              some: {
-                teamId,
-              },
-            },
-          },
+      id: teamId,
+    },
+    include: {
+      organisation: {
+        select: {
+          ownerUserId: true,
         },
       },
     },
   });
 
-  if (!userTeam) {
-    throw new AppError(AppErrorCode.UNAUTHORIZED);
+  if (!team) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'Team not found',
+    });
+  }
+
+  const isOrganisationOwner = team.organisation.ownerUserId === userId;
+
+  if (!isOrganisationOwner) {
+    // Check that the user belongs to the team they are trying to find members in.
+    const userTeam = await prisma.organisationMember.findFirst({
+      where: {
+        userId,
+        organisationGroupMembers: {
+          some: {
+            group: {
+              teamGroups: {
+                some: {
+                  teamId,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!userTeam) {
+      throw new AppError(AppErrorCode.UNAUTHORIZED);
+    }
   }
 
   const termFilters: Prisma.OrganisationMemberWhereInput | undefined = match(query)

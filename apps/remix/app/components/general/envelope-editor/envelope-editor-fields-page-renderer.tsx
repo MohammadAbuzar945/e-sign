@@ -633,7 +633,8 @@ const FieldActionButtons = ({
 
     const fields = editorFields.localFields.filter((field) => selectedFieldFormId.includes(field.formId));
 
-    if (fields.length === 0) {
+
+    if (fields.length === 0 || !fields[0]?.recipientId) {
       return null;
     }
 

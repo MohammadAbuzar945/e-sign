@@ -1,6 +1,6 @@
 import { Trans } from '@lingui/react/macro';
 
-import { Button, Heading, Text } from '../components';
+import { Button, Heading, Section, Text } from '../components';
 
 export interface TemplateDocumentRejectedProps {
   documentName: string;
@@ -21,28 +21,30 @@ export function TemplateDocumentRejected({
         <Trans>Document Rejected</Trans>
       </Heading>
 
-      <Text className="mb-4 text-base">
+      <Text className="mb-4 text-center text-base">
         <Trans>
           {signerName} has rejected the document "{documentName}".
         </Trans>
       </Text>
 
       {rejectionReason && (
-        <Text className="mb-4 text-base text-slate-400">
+        <Text className="mb-4 text-center text-base text-slate-400">
           <Trans>Reason for rejection: {rejectionReason}</Trans>
         </Text>
       )}
 
-      <Text className="mb-6 text-base">
+      <Text className="mb-6 text-center text-base">
         <Trans>You can view the document and its status by clicking the button below.</Trans>
       </Text>
 
-      <Button
-        href={documentUrl}
-        className="inline-flex items-center justify-center rounded-lg bg-documenso-500 px-6 py-3 text-center font-medium text-black text-sm no-underline"
-      >
-        <Trans>View Document</Trans>
-      </Button>
+      <Section className="mb-6 mt-8 text-center">
+        <Button
+          href={documentUrl}
+          className="inline-flex items-center justify-center rounded-lg bg-documenso-500 px-6 py-3 text-center font-medium text-black text-sm no-underline"
+        >
+          <Trans>View Document</Trans>
+        </Button>
+      </Section>
     </div>
   );
 }

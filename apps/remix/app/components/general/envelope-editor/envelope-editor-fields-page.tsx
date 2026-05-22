@@ -82,6 +82,7 @@ export const EnvelopeEditorFieldsPage = () => {
 
   const { _ } = useLingui();
 
+  // Dialog state - initialized to false to prevent automatic opening
   const [isAiFieldDialogOpen, setIsAiFieldDialogOpen] = useState(false);
   const [isAiEnableDialogOpen, setIsAiEnableDialogOpen] = useState(false);
   const { revalidate } = useRevalidator();
@@ -274,40 +275,36 @@ export const EnvelopeEditorFieldsPage = () => {
               selectedEnvelopeItemId={currentEnvelopeItem?.id ?? null}
             />
 
-            {editorConfig.fields?.allowAIDetection && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-4 w-full"
-                  onClick={onDetectClick}
-                  disabled={envelope.status !== DocumentStatus.DRAFT}
-                  title={
-                    envelope.status !== DocumentStatus.DRAFT
-                      ? _(msg`You can only detect fields in draft envelopes`)
-                      : undefined
-                  }
-                >
-                  <SparklesIcon className="mr-2 -ml-1 h-4 w-4" />
-                  <Trans>Detect with AI</Trans>
-                </Button>
+            {/* <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-4 w-full"
+              onClick={onDetectClick}
+              disabled={envelope.status !== DocumentStatus.DRAFT}
+              title={
+                envelope.status !== DocumentStatus.DRAFT
+                  ? _(msg`You can only detect fields in draft envelopes`)
+                  : undefined
+              }
+            >
+              <SparklesIcon className="-ml-1 mr-2 h-4 w-4" />
+              <Trans>Detect with AI</Trans>
+            </Button> */}
 
-                <AiFieldDetectionDialog
-                  open={isAiFieldDialogOpen}
-                  onOpenChange={setIsAiFieldDialogOpen}
-                  onComplete={onFieldDetectionComplete}
-                  envelopeId={envelope.id}
-                  teamId={envelope.teamId}
-                />
+            <AiFieldDetectionDialog
+              open={isAiFieldDialogOpen}
+              onOpenChange={setIsAiFieldDialogOpen}
+              onComplete={onFieldDetectionComplete}
+              envelopeId={envelope.id}
+              teamId={envelope.teamId}
+            />
 
-                <AiFeaturesEnableDialog
-                  open={isAiEnableDialogOpen}
-                  onOpenChange={setIsAiEnableDialogOpen}
-                  onEnabled={onAiFeaturesEnabled}
-                />
-              </>
-            )}
+            <AiFeaturesEnableDialog
+              open={isAiEnableDialogOpen}
+              onOpenChange={setIsAiEnableDialogOpen}
+              onEnabled={onAiFeaturesEnabled}
+            />
           </section>
 
           {/* Field details section. */}

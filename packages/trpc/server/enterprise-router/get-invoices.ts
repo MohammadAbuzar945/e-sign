@@ -33,9 +33,6 @@ export const getInvoicesRoute = authenticatedProcedure
         userId,
         roles: ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_ORGANISATION'],
       }),
-      include: {
-        subscription: true,
-      },
     });
 
     if (!organisation) {

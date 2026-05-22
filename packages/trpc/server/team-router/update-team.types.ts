@@ -21,6 +21,7 @@ export const ZUpdateTeamRequestSchema = z.object({
   data: z.object({
     name: ZTeamNameSchema.optional(),
     url: ZTeamUrlSchema.optional(),
+    isPrivate: z.boolean().optional(),
     profileBio: z
       .string()
       .max(MAX_PROFILE_BIO_LENGTH, {

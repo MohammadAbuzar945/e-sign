@@ -20,15 +20,18 @@ import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import type { TurnstileInstance } from '@marsidev/react-turnstile';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
-import { KeyRoundIcon } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';  
 import { FaIdCardClip } from 'react-icons/fa6';
 import { FcGoogle } from 'react-icons/fc';
 import { Link, useNavigate } from 'react-router';
 import { match } from 'ts-pattern';
 import { z } from 'zod';
+import { useState } from 'react';
+import { useEffect, useRef } from 'react';
+
+import { useMemo } from 'react';
+import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
+import { KeyRoundIcon } from 'lucide-react';
 
 const CommonErrorMessages: Record<string, MessageDescriptor> = {
   [AuthenticationErrorCode.AccountDisabled]: msg`This account has been disabled. Please contact support.`,
@@ -76,6 +79,8 @@ export const SignInForm = ({
 }: SignInFormProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
+  
 
   const navigate = useNavigate();
 
@@ -89,8 +94,6 @@ export const SignInForm = ({
   const turnstileSiteKey = env('NEXT_PUBLIC_TURNSTILE_SITE_KEY');
   const turnstileRef = useRef<TurnstileInstance>(null);
   const twoFactorTurnstileRef = useRef<TurnstileInstance>(null);
-
-  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
 
   const redirectPath = useMemo(() => {
     // Handle SSR
@@ -323,7 +326,7 @@ export const SignInForm = ({
   return (
     <Form {...form}>
       <form className={cn('flex w-full flex-col gap-y-4', className)} onSubmit={form.handleSubmit(onFormSubmit)}>
-        <fieldset className="flex w-full flex-col gap-y-4" disabled={isSubmitting || isPasskeyLoading}>
+        <fieldset className="flex w-full flex-col gap-y-4" disabled={isSubmitting}>
           <FormField
             control={form.control}
             name="email"

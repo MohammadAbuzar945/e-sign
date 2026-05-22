@@ -191,6 +191,7 @@ export const DocumentPageViewRecipients = ({ envelope, documentRootPath }: Docum
                 </PopoverHover>
               )}
 
+              {/*
               {envelope.status === DocumentStatus.PENDING &&
                 recipient.signingStatus === SigningStatus.NOT_SIGNED &&
                 recipient.role !== RecipientRole.CC &&
@@ -221,6 +222,7 @@ export const DocumentPageViewRecipients = ({ envelope, documentRootPath }: Docum
                     </Tooltip>
                   </TooltipProvider>
                 )}
+              */}
             </div>
           </li>
         ))}

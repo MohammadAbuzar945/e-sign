@@ -11,9 +11,9 @@ import { TemplateResetPassword } from '../template-components/template-reset-pas
 export type ResetPasswordTemplateProps = Partial<TemplateResetPasswordProps>;
 
 export const ResetPasswordTemplate = ({
-  userName = 'Lucas Smith',
-  userEmail = 'lucas@documenso.com',
-  assetBaseUrl = 'http://localhost:3002',
+  userName = 'Abuzar ',
+  userEmail = 'abuzarmohammad945@gmail.com',
+  assetBaseUrl = 'http://localhost:4002',
 }: ResetPasswordTemplateProps) => {
   const { _ } = useLingui();
   const branding = useBranding();
@@ -34,9 +34,13 @@ export const ResetPasswordTemplate = ({
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid p-4 backdrop-blur-sm">
             <Section>
               {branding.brandingEnabled && branding.brandingLogo ? (
-                <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-6" />
+                <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20" />
               ) : (
-                <Img src={getAssetUrl('/static/logo.png')} alt="Documenso Logo" className="mb-4 h-6" />
+                <Img
+                  src={getAssetUrl('/static/logo.png')}
+                  alt="Nomia Logo"
+                  className="mb-4 h-16"
+                />
               )}
 
               <TemplateResetPassword userName={userName} userEmail={userEmail} assetBaseUrl={assetBaseUrl} />
@@ -59,9 +63,10 @@ export const ResetPasswordTemplate = ({
               </Text>
               <Text className="mt-2 text-base text-slate-400">
                 <Trans>
-                  Didn't request a password change? We are here to help you secure your account, just{' '}
-                  <Link className="font-normal text-documenso-700" href="mailto:hi@documenso.com">
-                    contact us
+                  Didn't request a password change? We are here to help you secure your account,
+                  just{' '}
+                  <Link className="font-normal text-documenso-700" href="mailto:help@nomiadocs.com">
+                    contact us  
                   </Link>
                   .
                 </Trans>

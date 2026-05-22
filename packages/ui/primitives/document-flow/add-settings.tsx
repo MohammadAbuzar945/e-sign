@@ -87,6 +87,7 @@ export const AddSettingsFormPartial = ({
       title: document.title,
       externalId: document.externalId || '',
       visibility: document.visibility || '',
+      includeQrCodeInCertificate: document.includeQrCodeInCertificate ?? null,
       globalAccessAuth: documentAuthOption?.globalAccessAuth || [],
       globalActionAuth: documentAuthOption?.globalActionAuth || [],
 
@@ -266,6 +267,46 @@ export const AddSettingsFormPartial = ({
                       value={field.value}
                       disabled={field.disabled}
                     />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="includeQrCodeInCertificate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    <Trans>Include QR code in certificate</Trans>
+                  </FormLabel>
+
+                  <FormControl>
+                    <Select
+                      value={field.value == null ? '-1' : String(field.value)}
+                      onValueChange={(value) => {
+                        field.onChange(
+                          value === '-1' ? null : value === 'true',
+                        );
+                        void handleAutoSave();
+                      }}
+                    >
+                      <SelectTrigger className="bg-background text-muted-foreground">
+                        <SelectValue placeholder={t`Inherit from team`} />
+                      </SelectTrigger>
+
+                      <SelectContent>
+                        <SelectItem value="true">
+                          <Trans>Yes</Trans>
+                        </SelectItem>
+                        <SelectItem value="false">
+                          <Trans>No</Trans>
+                        </SelectItem>
+                        <SelectItem value="-1">
+                          <Trans>Inherit from team</Trans>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                 </FormItem>
               )}

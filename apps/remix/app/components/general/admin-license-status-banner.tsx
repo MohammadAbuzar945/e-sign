@@ -13,7 +13,17 @@ export type AdminLicenseStatusBannerProps = {
 export const AdminLicenseStatusBanner = ({ license }: AdminLicenseStatusBannerProps) => {
   const licenseStatus = license?.derivedStatus;
 
-  if (!license || licenseStatus === 'ACTIVE' || licenseStatus === 'NOT_FOUND') {
+  // Don't show banner if:
+  // 1. No license data at all
+  // 2. License is ACTIVE
+  // 3. License is NOT_FOUND (no license key configured - user not using enterprise features)
+  // 4. UNAUTHORIZED but no license key was requested (user not trying to use enterprise features)
+  if (
+    !license ||
+    licenseStatus === 'ACTIVE' ||
+    licenseStatus === 'NOT_FOUND' ||
+    (licenseStatus === 'UNAUTHORIZED' && !license.requestedLicenseKey)
+  ) {
     return null;
   }
 

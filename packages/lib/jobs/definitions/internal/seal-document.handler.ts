@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { PDFDocument } from '@cantoo/pdf-lib';
+import { deductOrganisationCredits, getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { addRejectionStampToPdf } from '@documenso/lib/server-only/pdf/add-rejection-stamp-to-pdf';
 import { generateAuditLogPdf } from '@documenso/lib/server-only/pdf/generate-audit-log-pdf';
 import { generateCertificatePdf } from '@documenso/lib/server-only/pdf/generate-certificate-pdf';
@@ -12,7 +13,7 @@ import { DocumentStatus, EnvelopeType, RecipientRole, SigningStatus, WebhookTrig
 import { nanoid } from 'nanoid';
 import { groupBy } from 'remeda';
 
-import { NEXT_PRIVATE_USE_PLAYWRIGHT_PDF } from '../../../constants/app';
+import { NEXT_PRIVATE_USE_PLAYWRIGHT_PDF, NEXT_PUBLIC_WEBAPP_URL } from '../../../constants/app';
 import { AppError, AppErrorCode } from '../../../errors/app-error';
 import { sendCompletedEmail } from '../../../server-only/document/send-completed-email';
 import { getAuditLogsPdf } from '../../../server-only/htmltopdf/get-audit-logs-pdf';
@@ -79,6 +80,43 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
       teamId: envelope.teamId,
     });
 
+    // Get the organization ID to use its credits for deduction
+    // Each organization has its own credits pool
+    const team = await prisma.team.findFirst({
+      where: {
+        id: envelope.teamId,
+      },
+      include: {
+        organisation: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    // Use organization's credits if team exists and belongs to an organization
+    // Otherwise, fall back to the envelope creator's personal organization
+    let organisationId: string;
+    if (team?.organisation?.id) {
+      organisationId = team.organisation.id;
+    } else {
+      // Find user's personal organisation
+      const personalOrg = await prisma.organisation.findFirst({
+        where: {
+          ownerUserId: envelope.userId,
+          type: 'PERSONAL',
+        },
+        select: {
+          id: true,
+        },
+      });
+      if (!personalOrg) {
+        throw new Error(`Personal organisation not found for user ${envelope.userId}`);
+      }
+      organisationId = personalOrg.id;
+    }
+
     // Ensure all CC recipients are marked as signed
     await prisma.recipient.updateMany({
       where: {
@@ -121,6 +159,19 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
 
     // Get the rejection reason from the rejected recipient
     const rejectionReason = rejectedRecipient?.rejectionReason ?? '';
+
+    const creditsToConsume = envelopeItems.length;
+
+    // Check if organisation has enough credits before proceeding (only for completed documents, not rejected or resealing)
+    if (!isRejected && !isResealing) {
+      const userCredits = await getOrganisationCredits(organisationId);
+      if (userCredits < creditsToConsume) {
+        throw new AppError(AppErrorCode.INVALID_REQUEST, {
+          message: 'Insufficient credits to seal document',
+          userMessage: `You do not have enough credits to complete this document. This envelope requires ${creditsToConsume} credit(s). Please purchase more credits.`,
+        });
+      }
+    }
 
     // Skip the field check if the document is rejected
     if (!isRejected && fieldsContainUnsignedRequiredField(fields)) {
@@ -178,6 +229,8 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
 
     const needsCertificate = settings.includeSigningCertificate;
     const needsAuditLog = settings.includeAuditLog;
+    const includeQrCodeInCertificate =
+      envelope.includeQrCodeInCertificate ?? settings.includeQrCodeInCertificate ?? true;
 
     const newDocumentData: Array<{ oldDocumentDataId: string; newDocumentDataId: string }> = [];
 
@@ -191,7 +244,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
       let certificateDoc: PDF | null = null;
       let auditLogDoc: PDF | null = null;
 
-      if (needsCertificate || needsAuditLog) {
+      if ((needsCertificate || needsAuditLog) && !isRejected && !isResealing) {
         const pdfDoc = await PDF.load(pdfData);
 
         const { width: pageWidth, height: pageHeight } = getLastPageDimensions(pdfDoc);
@@ -213,6 +266,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
           recipients: envelope.recipients,
           fields,
           language: envelope.documentMeta.language,
+          includeQrCodeInCertificate,
           envelopeOwner: {
             email: envelope.user.email,
             name: envelope.user.name || '',
@@ -243,6 +297,14 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
           needsCertificate ? makeCertificatePdf() : null,
           needsAuditLog ? makeAuditLogPdf() : null,
         ]);
+      }
+
+      // Verify the same certificateDoc is being used for all files
+      if (certificateDoc) {
+        const certificatePageCount = certificateDoc.getPageCount();
+        console.log(
+          `[Certificate Verification] Adding certificate (${certificatePageCount} page(s)) to file: ${envelopeItem.title}`,
+        );
       }
 
       const result = await decorateAndSignPdf({
@@ -282,10 +344,25 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
         },
       });
 
+      // Increment creditConsumed for the team when document is completed (not rejected)
+      if (!isRejected && !isResealing) {
+        await tx.$executeRaw`
+          UPDATE "Team"
+          SET "creditConsumed" = "creditConsumed" + ${creditsToConsume}
+          WHERE id = ${envelope.teamId}
+        `;
+      }
+
       await tx.documentAuditLog.create({
         data: envelopeCompletedAuditLog,
       });
     });
+
+    // Deduct credits when document is completed (not rejected)
+    // Use organization's credits pool
+    if (!isRejected && !isResealing) {
+      await deductOrganisationCredits(organisationId, creditsToConsume);
+    }
 
     return {
       envelopeId: envelope.id,
@@ -325,6 +402,41 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
     userId: updatedEnvelope.userId,
     teamId: updatedEnvelope.teamId ?? undefined,
   });
+
+  // Call external webhook if updatedEnvelope.fromNomia is true with the same payload shape as internal webhooks
+  if (updatedEnvelope.fromNomia) {
+    console.log('Calling external webhook for document completion');
+
+    const payload = ZWebhookDocumentSchema.parse(
+      mapEnvelopeToWebhookDocumentPayload(updatedEnvelope),
+    );
+
+    const webhookEndpoint =
+      NEXT_PUBLIC_WEBAPP_URL() === 'https://sign.nomiadocs.com'
+        ? 'https://tapi.nomiadocs.com/esignature/documentSendv1'
+        : 'https://api.nomiadocs.com/esignature/documentSendv1';
+
+    const payloadData = {
+      event: isRejected
+        ? WebhookTriggerEvents.DOCUMENT_REJECTED
+        : WebhookTriggerEvents.DOCUMENT_COMPLETED,
+      payload,
+      createdAt: new Date().toISOString(),
+      webhookEndpoint,
+    };
+
+    await fetch(webhookEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payloadData),
+    });
+  }
+
+
+
+
 };
 
 type DecorateAndSignPdfOptions = {
@@ -458,7 +570,10 @@ const decorateAndSignPdf = async ({
 
   pdfDoc = await PDF.load(await pdfDoc.save({ useXRefStream: true }));
 
-  const pdfBytes = await signPdf({ pdf: pdfDoc });
+  // Do not cryptographically sign rejected documents; only sign completed ones
+  const pdfBytes = isRejected
+    ? await pdfDoc.save({ useXRefStream: true })
+    : await signPdf({ pdf: pdfDoc });
 
   const { name } = path.parse(envelopeItem.title);
 

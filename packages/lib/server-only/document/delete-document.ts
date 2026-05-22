@@ -109,6 +109,40 @@ export const deleteDocument = async ({ id, userId, teamId, requestMetadata }: De
       });
   }
 
+  await triggerWebhook({
+    event: WebhookTriggerEvents.DOCUMENT_CANCELLED,
+    data: ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(envelope)),
+    userId,
+    teamId,
+  });
+
+  // Call external webhook if envelope.fromNomia is true with the same payload shape as internal webhooks
+  if (envelope.fromNomia) {
+    console.log('Calling external webhook in deleted');
+
+    const payload = ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(envelope));
+
+    const webhookEndpoint =
+      NEXT_PUBLIC_WEBAPP_URL() === 'https://sign.nomiadocs.com'
+        ? 'https://tapi.nomiadocs.com/esignature/documentSendv1'
+        : 'https://api.nomiadocs.com/esignature/documentSendv1';
+
+    const payloadData = {
+      event: WebhookTriggerEvents.DOCUMENT_CANCELLED,
+      payload,
+      createdAt: new Date().toISOString(),
+      webhookEndpoint,
+    };
+
+    await fetch(webhookEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payloadData),
+    });
+  }
+
   return envelope;
 };
 

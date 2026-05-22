@@ -46,18 +46,22 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
   );
 
   const flush = useCallback(async () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+    // Drain debounced work and any saves queued while another save was in flight.
+    while (true) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
 
-    if (pendingPromiseRef.current) {
-      // Already running → wait for it
-      await pendingPromiseRef.current;
-      return;
-    }
+      if (pendingPromiseRef.current) {
+        await pendingPromiseRef.current;
+        continue;
+      }
 
-    if (lastArgsRef.current) {
+      if (!lastArgsRef.current) {
+        break;
+      }
+
       const args = lastArgsRef.current;
       lastArgsRef.current = null;
 

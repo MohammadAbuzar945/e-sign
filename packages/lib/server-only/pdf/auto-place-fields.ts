@@ -70,7 +70,15 @@ export const extractPlaceholdersFromPDF = async (pdf: Buffer): Promise<Placehold
     const pageWidth = page.width;
     const pageHeight = page.height;
 
-    const matches = page.findText(PLACEHOLDER_REGEX);
+    let matches: ReturnType<typeof page.findText>;
+
+    try {
+      matches = page.findText(PLACEHOLDER_REGEX);
+    } catch {
+      // Some PDFs use Type1/embedded fonts that @libpdf cannot parse (e.g. "Start marker missing").
+      // Skip text extraction for this page and continue.
+      continue;
+    }
 
     for (const match of matches) {
       const placeholder = match.text;

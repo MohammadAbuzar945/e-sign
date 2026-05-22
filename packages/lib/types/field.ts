@@ -64,25 +64,25 @@ export const ZFieldWidthSchema = z.number().min(1).describe('The width of the fi
 
 export const ZFieldHeightSchema = z.number().min(1).describe('The height of the field.');
 
-export const ZClampedFieldPositionXSchema = z
+export const ZClampedFieldPositionXSchema = z.coerce
   .number()
   .min(0)
   .max(100)
   .describe('The percentage based X coordinate where the field will be placed.');
 
-export const ZClampedFieldPositionYSchema = z
+export const ZClampedFieldPositionYSchema = z.coerce
   .number()
   .min(0)
   .max(100)
   .describe('The percentage based Y coordinate where the field will be placed.');
 
-export const ZClampedFieldWidthSchema = z
+export const ZClampedFieldWidthSchema = z.coerce
   .number()
   .min(0)
   .max(100)
   .describe('The percentage based width of the field on the page.');
 
-export const ZClampedFieldHeightSchema = z
+export const ZClampedFieldHeightSchema = z.coerce
   .number()
   .min(0)
   .max(100)

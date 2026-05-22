@@ -31,7 +31,7 @@ export const handleTrpcRouterError = (
   if (isLoggableAppError || isLoggableTrpcError) {
     errorLogger.error(error);
   } else {
-    errorLogger.info('TRPC_ERROR_HANDLER');
+    errorLogger.info({ path }, 'TRPC_ERROR_HANDLER');
   }
 };
 

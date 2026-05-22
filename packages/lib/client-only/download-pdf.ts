@@ -1,4 +1,4 @@
-import type { EnvelopeItem } from '@prisma/client';
+import { DocumentStatus, type EnvelopeItem } from '@prisma/client';
 
 import { getEnvelopeItemPdfUrl } from '../utils/envelope-download';
 import { downloadFile } from './download-file';
@@ -43,6 +43,7 @@ export const downloadPDF = async ({ envelopeItem, token, fileName, version = 'si
   const blob = await fetch(downloadUrl).then(async (res) => await res.blob());
 
   const baseTitle = (fileName ?? 'document').replace(/\.pdf$/, '');
+
 
   downloadFile({
     filename: `${baseTitle}${versionToFilenameSuffix(version)}`,

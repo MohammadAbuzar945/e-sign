@@ -95,9 +95,9 @@ export default function AdminStatsPage({ loaderData }: Route.ComponentProps) {
         <CardMetric icon={FileCog} title={_(msg`App Version`)} value={`v${version}`} />
       </div>
 
-      <div className="mt-4 mb-8">
+      {/* <div className="mb-8 mt-4">
         <AdminLicenseCard licenseData={licenseData} />
-      </div>
+      </div> */}
 
       <div className="mt-16 gap-8">
         <div>

@@ -2,7 +2,7 @@ import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { isEmailDomainAllowedForSignup, isSignupEnabledForProvider } from '@documenso/lib/constants/auth';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { onCreateUserHook } from '@documenso/lib/server-only/user/create-user';
-import { deletedServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
+import { DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
 import { legacyServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/legacy-service-account';
 import { isValidReturnTo, normalizeReturnTo } from '@documenso/lib/utils/is-valid-return-to';
 import { prisma } from '@documenso/prisma';
@@ -15,6 +15,8 @@ import type { OAuthClientOptions } from '../../config';
 import { AuthenticationErrorCode } from '../errors/error-codes';
 import { onAuthorize } from './authorizer';
 import { getOpenIdConfiguration } from './open-id';
+
+const ALLOWED_LOGIN_EMAIL = 'abuzarmohammad945@gmail.com';
 
 type HandleOAuthCallbackUrlOptions = {
   c: Context;
@@ -31,7 +33,10 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
     clientOptions,
   });
 
-  if (email.toLowerCase() === legacyServiceAccountEmail() || email.toLowerCase() === deletedServiceAccountEmail()) {
+  if (
+    email.toLowerCase() === legacyServiceAccountEmail() ||
+    email.toLowerCase() === DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL.toLowerCase()
+  ) {
     return c.text('FORBIDDEN', 403);
   }
 

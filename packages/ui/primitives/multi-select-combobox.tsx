@@ -58,6 +58,11 @@ export function MultiSelectCombobox<T = OptionValue>({
   const { _ } = useLingui();
 
   const [open, setOpen] = React.useState(false);
+  const [hasMounted, setHasMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const handleSelect = (selectedOption: T) => {
     let newSelectedOptions = [...selectedValues, selectedOption];
@@ -103,6 +108,24 @@ export function MultiSelectCombobox<T = OptionValue>({
   }, [selectedOptions, emptySelectionPlaceholder, loading]);
 
   const showClearButton = enableClearAllButton && selectedValues.length > 0;
+
+  // Avoid Radix ID / `aria-*` hydration mismatches by not rendering the
+  // Popover tree on the server. We render a simple disabled button for the
+  // SSR pass and upgrade it to the full interactive combobox after mount.
+  if (!hasMounted) {
+    return (
+      <Button
+        variant="outline"
+        role="combobox"
+        disabled
+        className={cn('w-[200px] px-3', className)}
+        data-testid={testId}
+        aria-expanded={false}
+      >
+        <span className="truncate">{buttonLabel || emptySelectionPlaceholder}</span>
+      </Button>
+    );
+  }
 
   return (
     <Popover open={open && !loading} onOpenChange={setOpen}>

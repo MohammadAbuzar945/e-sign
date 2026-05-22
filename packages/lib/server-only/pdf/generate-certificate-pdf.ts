@@ -34,12 +34,22 @@ export type GenerateCertificatePdfOptions = {
     signature?: Pick<Signature, 'signatureImageAsBase64' | 'typedSignature'> | null;
   })[];
   language?: string;
+  includeQrCodeInCertificate: boolean;
   pageWidth: number;
   pageHeight: number;
 };
 
 export const generateCertificatePdf = async (options: GenerateCertificatePdfOptions) => {
-  const { envelope, envelopeOwner, recipients, fields, language, pageWidth, pageHeight } = options;
+  const {
+    envelope,
+    envelopeOwner,
+    recipients,
+    fields,
+    language,
+    includeQrCodeInCertificate,
+    pageWidth,
+    pageHeight,
+  } = options;
 
   const documentLanguage = ZSupportedLanguageCodeSchema.parse(language);
 
@@ -113,6 +123,7 @@ export const generateCertificatePdf = async (options: GenerateCertificatePdfOpti
         authLevel = match(accessAuthMethod)
           .with('ACCOUNT', () => i18n._(msg`Account Authentication`))
           .with('TWO_FACTOR_AUTH', () => i18n._(msg`Two-Factor Authentication`))
+          .with('KBA', () => i18n._(msg`KBA Authentication`))
           .with(undefined, () => i18n._(msg`Email`))
           .exhaustive();
       }
@@ -138,6 +149,7 @@ export const generateCertificatePdf = async (options: GenerateCertificatePdfOpti
     envelopeOwner,
     envelopeId: envelope.id,
     qrToken: envelope.qrToken,
+    includeQrCodeInCertificate,
     hidePoweredBy: organisationClaim.flags.hidePoweredBy ?? false,
     pageWidth,
     pageHeight,

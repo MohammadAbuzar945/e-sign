@@ -22,6 +22,8 @@ export enum AppErrorCode {
   SCHEMA_FAILED = 'SCHEMA_FAILED',
   TOO_MANY_REQUESTS = 'TOO_MANY_REQUESTS',
   TWO_FACTOR_AUTH_FAILED = 'TWO_FACTOR_AUTH_FAILED',
+  'KBA_AUTH_FAILED' = 'KBA_AUTH_FAILED',
+  'KBA_AUTH_LOCKED' = 'KBA_AUTH_LOCKED',
   WEBHOOK_INVALID_REQUEST = 'WEBHOOK_INVALID_REQUEST',
   ENVELOPE_DRAFT = 'ENVELOPE_DRAFT',
   ENVELOPE_COMPLETED = 'ENVELOPE_COMPLETED',
@@ -50,6 +52,8 @@ export const genericErrorCodeToTrpcErrorCodeMap: Record<string, { code: string; 
   [AppErrorCode.ENVELOPE_COMPLETED]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.ENVELOPE_REJECTED]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.ENVELOPE_LEGACY]: { code: 'BAD_REQUEST', status: 400 },
+    [AppErrorCode.KBA_AUTH_FAILED]: { code: 'UNAUTHORIZED', status: 401 },
+    [AppErrorCode.KBA_AUTH_LOCKED]: { code: 'UNAUTHORIZED', status: 401 },
 };
 
 export const ZAppErrorJsonSchema = z.object({

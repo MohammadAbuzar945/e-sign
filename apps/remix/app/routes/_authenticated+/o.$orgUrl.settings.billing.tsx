@@ -1,4 +1,5 @@
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import { msg } from '@lingui/core/macro';
@@ -21,9 +22,23 @@ export function meta() {
 export default function TeamsSettingBillingPage() {
   const { _, i18n } = useLingui();
 
+  const { user } = useSession();
   const organisation = useCurrentOrganisation();
 
+  const isOrganisationOwner = organisation.ownerUserId === user.id;
+
+  if (!isOrganisationOwner) {
+    return (
+      <div className="flex items-center justify-center rounded-lg py-32">
+        <p className="text-muted-foreground text-sm">
+          <Trans>Only organisation owners can access billing.</Trans>
+        </p>
+      </div>
+    );
+  }
+
   const { data: subscriptionQuery, isLoading: isLoadingSubscription } =
+    // biome-ignore lint/correctness/useHookAtTopLevel: <explanation>
     trpc.enterprise.billing.subscription.get.useQuery({
       organisationId: organisation.id,
     });

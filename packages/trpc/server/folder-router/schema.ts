@@ -101,3 +101,16 @@ export const ZFindFoldersInternalResponseSchema = z.object({
 });
 
 export type TFindFoldersResponse = z.infer<typeof ZFindFoldersResponseSchema>;
+
+export const ZGetTeamFoldersRequestSchema = z.void();
+
+export const ZGetTeamFoldersResponseSchema = z.object({
+  folders: z.array(
+    z.object({
+      id: z.string().describe('The unique ID of the folder'),
+      name: z.string().describe('The name of the folder'),
+    }),
+  ),
+});
+
+export type TGetTeamFoldersResponse = z.infer<typeof ZGetTeamFoldersResponseSchema>;

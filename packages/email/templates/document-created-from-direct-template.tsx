@@ -22,7 +22,7 @@ export const DocumentCreatedFromDirectTemplateEmailTemplate = ({
   recipientRole = RecipientRole.SIGNER,
   documentLink = 'http://localhost:3000',
   documentName = 'Open Source Pledge.pdf',
-  assetBaseUrl = 'http://localhost:3002',
+  assetBaseUrl = 'http://localhost:4002',
 }: DocumentCompletedEmailTemplateProps) => {
   const { _ } = useLingui();
   const branding = useBranding();
@@ -45,9 +45,13 @@ export const DocumentCreatedFromDirectTemplateEmailTemplate = ({
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid p-2 backdrop-blur-sm">
             <Section className="p-2">
               {branding.brandingEnabled && branding.brandingLogo ? (
-                <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-6" />
+                <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20" />
               ) : (
-                <Img src={getAssetUrl('/static/logo.png')} alt="Documenso Logo" className="mb-4 h-6" />
+                <Img
+                  src={getAssetUrl('/static/logo.png')}
+                  alt="Nomia Logo"
+                  className="mb-4 h-16"
+                />
               )}
 
               <TemplateDocumentImage className="mt-6" assetBaseUrl={assetBaseUrl} />

@@ -13,7 +13,7 @@ export type DocumentDeleteEmailTemplateProps = Partial<TemplateDocumentDeletePro
 
 export const DocumentSuperDeleteEmailTemplate = ({
   documentName = 'Open Source Pledge.pdf',
-  assetBaseUrl = 'http://localhost:3002',
+  assetBaseUrl = 'http://localhost:4002',
   reason = 'Unknown',
 }: DocumentDeleteEmailTemplateProps) => {
   const { _ } = useLingui();
@@ -35,9 +35,13 @@ export const DocumentSuperDeleteEmailTemplate = ({
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid p-4 backdrop-blur-sm">
             <Section>
               {branding.brandingEnabled && branding.brandingLogo ? (
-                <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-6" />
+                <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20" />
               ) : (
-                <Img src={getAssetUrl('/static/logo.png')} alt="Documenso Logo" className="mb-4 h-6" />
+                <Img
+                  src={getAssetUrl('/static/logo.png')}
+                  alt="Nomia Logo"
+                  className="mb-4 h-16"
+                />
               )}
 
               <TemplateDocumentDelete reason={reason} documentName={documentName} assetBaseUrl={assetBaseUrl} />

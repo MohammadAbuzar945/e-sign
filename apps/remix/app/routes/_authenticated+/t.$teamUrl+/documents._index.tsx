@@ -1,5 +1,6 @@
 import { useSessionStorage } from '@documenso/lib/client-only/hooks/use-session-storage';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { STATS_COUNT_CAP } from '@documenso/lib/constants/document';
 import { SKIP_QUERY_BATCH_META } from '@documenso/lib/constants/trpc';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
@@ -15,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 import { msg } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { EnvelopeType, FolderType, OrganisationType } from '@prisma/client';
+import { Bird } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { z } from 'zod';
@@ -51,6 +53,15 @@ const ZSearchParamsSchema = ZFindDocumentsInternalRequestSchema.pick({
 export default function DocumentsPage() {
   const organisation = useCurrentOrganisation();
   const team = useCurrentTeam();
+  const { user } = useSession();
+
+  // Prevent Radix `useId`-based aria-* hydration mismatches by ensuring that
+  // the tabs list is identical between server and the initial client render.
+  // We only apply org-specific tab filtering after mount.
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const { folderId } = useParams();
   const [searchParams] = useSearchParams();
@@ -90,6 +101,9 @@ export default function DocumentsPage() {
     },
   );
 
+  const isOrganisationOwner = organisation.ownerUserId === user.id;
+  const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
+
   const getTabHref = (value: keyof typeof ExtendedDocumentStatus) => {
     const params = new URLSearchParams(searchParams);
 
@@ -126,6 +140,33 @@ export default function DocumentsPage() {
     }
   }, [data?.stats]);
 
+  // // Clear selection when navigation or filters change
+  // useEffect(() => {
+  //   setRowSelection({});
+  // }, [folderId, findDocumentSearchParams]);
+
+  if (isOwnerNonMember) {
+    return (
+      <EnvelopeDropZoneWrapper type={EnvelopeType.DOCUMENT}>
+        <div className="mx-auto w-full max-w-screen-xl px-4 md:px-8">
+          <div className="mt-8 flex flex-col items-center justify-center gap-y-4 text-muted-foreground/60">
+            <Bird className="h-12 w-12" strokeWidth={1.5} />
+
+            <div className="text-center">
+              <h3 className="font-semibold text-lg">
+                <Trans>Documents are not available</Trans>
+              </h3>
+
+              <p className="mt-2 max-w-[50ch]">
+                <Trans>You must be a member of this team to view or manage its documents and folders.</Trans>
+              </p>
+            </div>
+          </div>
+        </div>
+      </EnvelopeDropZoneWrapper>
+    );
+  }
+
   return (
     <EnvelopeDropZoneWrapper type={EnvelopeType.DOCUMENT}>
       <div className="mx-auto w-full max-w-screen-xl px-4 md:px-8">
@@ -144,37 +185,47 @@ export default function DocumentsPage() {
           </div>
 
           <div className="-m-1 flex flex-wrap gap-x-4 gap-y-6 overflow-hidden p-1">
-            <Tabs value={findDocumentSearchParams.status || 'ALL'} className="overflow-x-auto">
-              <TabsList>
-                {[
-                  ExtendedDocumentStatus.INBOX,
-                  ExtendedDocumentStatus.PENDING,
-                  ExtendedDocumentStatus.COMPLETED,
-                  ExtendedDocumentStatus.DRAFT,
-                  ExtendedDocumentStatus.ALL,
-                ]
-                  .filter((value) => {
-                    if (organisation.type === OrganisationType.PERSONAL) {
-                      return value !== ExtendedDocumentStatus.INBOX;
-                    }
+            {hasMounted && (
+              <Tabs
+                value={
+                  organisation?.type === OrganisationType.PERSONAL &&
+                  (findDocumentSearchParams.status || 'ALL') === ExtendedDocumentStatus.INBOX
+                    ? ExtendedDocumentStatus.ALL
+                    : findDocumentSearchParams.status || 'ALL'
+                }
+                className="overflow-x-auto"
+              >
+                <TabsList>
+                  {[
+                    ExtendedDocumentStatus.INBOX,
+                    ExtendedDocumentStatus.PENDING,
+                    ExtendedDocumentStatus.COMPLETED,
+                    ExtendedDocumentStatus.DRAFT,
+                    ExtendedDocumentStatus.ALL,
+                  ]
+                    .filter((value) => {
+                      if (organisation?.type === OrganisationType.PERSONAL) {
+                        return value !== ExtendedDocumentStatus.INBOX;
+                      }
 
-                    return true;
-                  })
-                  .map((value) => (
-                    <TabsTrigger key={value} className="min-w-[60px] hover:text-foreground" value={value} asChild>
-                      <Link to={getTabHref(value)} preventScrollReset>
-                        <DocumentStatus status={value} />
+                      return true;
+                    })
+                    .map((value) => (
+                      <TabsTrigger key={value} className="min-w-[60px] hover:text-foreground" value={value} asChild>
+                        <Link to={getTabHref(value)} preventScrollReset>
+                          <DocumentStatus status={value} />
 
-                        {value !== ExtendedDocumentStatus.ALL && (
-                          <span className="ml-1 inline-block opacity-50">
-                            {stats[value] >= STATS_COUNT_CAP ? `${STATS_COUNT_CAP.toLocaleString()}+` : stats[value]}
-                          </span>
-                        )}
-                      </Link>
-                    </TabsTrigger>
-                  ))}
-              </TabsList>
-            </Tabs>
+                          {value !== ExtendedDocumentStatus.ALL && (
+                            <span className="ml-1 inline-block opacity-50">
+                              {stats[value] >= STATS_COUNT_CAP ? `${STATS_COUNT_CAP.toLocaleString()}+` : stats[value]}
+                            </span>
+                          )}
+                        </Link>
+                      </TabsTrigger>
+                    ))}
+                </TabsList>
+              </Tabs>
+            )}
 
             {team && <DocumentsTableSenderFilter teamId={team.id} />}
 
@@ -190,7 +241,15 @@ export default function DocumentsPage() {
         <div className="mt-8">
           <div>
             {data && data.count === 0 ? (
-              <DocumentsTableEmptyState status={findDocumentSearchParams.status || ExtendedDocumentStatus.ALL} />
+              <DocumentsTableEmptyState
+                status={
+                  organisation?.type === OrganisationType.PERSONAL &&
+                  hasMounted &&
+                  (findDocumentSearchParams.status || ExtendedDocumentStatus.ALL) === ExtendedDocumentStatus.INBOX
+                    ? ExtendedDocumentStatus.ALL
+                    : findDocumentSearchParams.status || ExtendedDocumentStatus.ALL
+                }
+              />
             ) : (
               <DocumentsTable
                 data={data}

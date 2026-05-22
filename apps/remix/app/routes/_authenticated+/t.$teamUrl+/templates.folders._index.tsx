@@ -1,3 +1,5 @@
+import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { FolderType } from '@documenso/lib/types/folder-type';
 import { formatTemplatesPath } from '@documenso/lib/utils/teams';
 import { trpc } from '@documenso/trpc/react';
@@ -28,6 +30,8 @@ export default function TemplatesFoldersPage() {
   const [searchParams] = useSearchParams();
 
   const parentId = searchParams.get('parentId');
+  const organisation = useCurrentOrganisation();
+  const { user } = useSession();
 
   const [isMovingFolder, setIsMovingFolder] = useState(false);
   const [folderToMove, setFolderToMove] = useState<TFolderWithSubfolders | null>(null);
@@ -55,9 +59,27 @@ export default function TemplatesFoldersPage() {
 
   const formatBreadcrumbPath = (folderId: string) => {
     const templatesPath = formatTemplatesPath(team.url);
-
     return `${templatesPath}/f/${folderId}`;
   };
+
+  const isOrganisationOwner = organisation.ownerUserId === user.id;
+  const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
+
+  if (isOwnerNonMember) {
+    return (
+      <div className="mx-auto w-full max-w-screen-xl px-4 md:px-8">
+        <div className="mt-8 text-center text-muted-foreground">
+          <h2 className="font-semibold text-xl">
+            <Trans>Folders are not available</Trans>
+          </h2>
+
+          <p className="mx-auto mt-2 max-w-[50ch] text-sm">
+            <Trans>You must be a member of this team to view, create, or manage its template folders.</Trans>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-screen-xl px-4 md:px-8">

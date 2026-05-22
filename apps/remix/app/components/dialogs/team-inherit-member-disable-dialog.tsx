@@ -18,9 +18,13 @@ import { useCurrentTeam } from '~/providers/team';
 
 type TeamMemberInheritDisableDialogProps = {
   group: TeamGroup;
+  disabled?: boolean;
 };
 
-export const TeamMemberInheritDisableDialog = ({ group }: TeamMemberInheritDisableDialogProps) => {
+export const TeamMemberInheritDisableDialog = ({
+  group,
+  disabled = false,
+}: TeamMemberInheritDisableDialogProps) => {
   const { toast } = useToast();
   const { t } = useLingui();
 
@@ -46,7 +50,7 @@ export const TeamMemberInheritDisableDialog = ({ group }: TeamMemberInheritDisab
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" disabled={disabled}>
           <Trans>Disable access</Trans>
         </Button>
       </DialogTrigger>
@@ -72,17 +76,18 @@ export const TeamMemberInheritDisableDialog = ({ group }: TeamMemberInheritDisab
             </Button>
           </DialogClose>
 
-          <Button
-            type="submit"
-            variant="destructive"
-            loading={deleteGroupMutation.isPending}
-            onClick={() =>
-              deleteGroupMutation.mutate({
-                teamId: team.id,
-                teamGroupId: group.id,
-              })
-            }
-          >
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={disabled}
+              loading={deleteGroupMutation.isPending}
+              onClick={() =>
+                deleteGroupMutation.mutate({
+                  teamId: team.id,
+                  teamGroupId: group.id,
+                })
+              }
+            >
             <Trans>Disable</Trans>
           </Button>
         </DialogFooter>

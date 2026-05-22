@@ -46,6 +46,7 @@ export const ZGetAdminOrganisationResponseSchema = ZOrganisationSchema.extend({
   }).array(),
   subscription: SubscriptionSchema.nullable(),
   organisationClaim: OrganisationClaimSchema,
+  credits: z.number(),
 });
 
 export type TGetAdminOrganisationResponse = z.infer<typeof ZGetAdminOrganisationResponseSchema>;

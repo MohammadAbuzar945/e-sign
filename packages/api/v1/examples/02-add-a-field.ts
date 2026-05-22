@@ -32,7 +32,8 @@ const main = async () => {
     throw new Error('Failed to create field');
   }
 
-  const { id: fieldId } = body;
+  const createdField = Array.isArray(body.fields) ? body.fields[0] : body.fields;
+  const fieldId = createdField.id;
 
   console.log(`Field created with id: ${fieldId}`);
 };

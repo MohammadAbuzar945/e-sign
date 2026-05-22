@@ -3,6 +3,7 @@ import { prisma } from '@documenso/prisma';
 import { ORGANISATION_USER_ACCOUNT_TYPE } from '../../../constants/organisations';
 import { getEmailContext } from '../../../server-only/email/get-email-context';
 import { orphanEnvelopes } from '../../../server-only/envelope/orphan-envelopes';
+import { getCurrentSubscriptionByOrganisationId } from '../../../server-only/subscription/get-current-subscription-by-organisation-id';
 import { sendOrganisationDeleteEmail } from '../../../server-only/organisation/delete-organisation-email';
 import { jobs } from '../../client';
 import type { JobRunIO } from '../../client/_internal/job';
@@ -32,11 +33,6 @@ export const run = async ({ payload, io }: { payload: TAdminDeleteOrganisationJo
         teams: {
           select: {
             id: true,
-          },
-        },
-        subscription: {
-          select: {
-            planId: true,
           },
         },
       },
@@ -99,8 +95,12 @@ export const run = async ({ payload, io }: { payload: TAdminDeleteOrganisationJo
   }
 
   // 4. If the organisation has a Stripe subscription, schedule it to be cancelled at the end of the current billing period.
-  if (organisation.subscription) {
-    const stripeSubscriptionId = organisation.subscription.planId;
+  const currentSubscription = await getCurrentSubscriptionByOrganisationId({
+    organisationId: organisation.id,
+  });
+
+  if (currentSubscription) {
+    const stripeSubscriptionId = currentSubscription.planId;
 
     await jobs.triggerJob({
       name: 'internal.cancel-organisation-subscription',

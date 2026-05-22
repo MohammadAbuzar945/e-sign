@@ -44,6 +44,7 @@ export const EnvelopeDeleteDialog = ({
   const { t } = useLingui();
 
   const deleteMessage = msg`delete`;
+  const trpcUtils = trpcReact.useUtils();
 
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -54,6 +55,11 @@ export const EnvelopeDeleteDialog = ({
   const { mutateAsync: deleteEnvelope, isPending } = trpcReact.envelope.delete.useMutation({
     onSuccess: async () => {
       void refreshLimits();
+
+      await Promise.all([
+        trpcUtils.document.inbox.getCount.invalidate(),
+        trpcUtils.document.inbox.find.invalidate(),
+      ]);
 
       toast({
         title: canManageDocument

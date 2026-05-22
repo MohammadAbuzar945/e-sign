@@ -3,6 +3,7 @@ import { getPortalSession } from '@documenso/ee/server-only/stripe/get-portal-se
 import { IS_BILLING_ENABLED, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
 
@@ -35,7 +36,6 @@ export const manageSubscriptionRoute = authenticatedProcedure
         roles: ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_BILLING'],
       }),
       include: {
-        subscription: true,
         owner: {
           select: {
             email: true,
@@ -53,8 +53,17 @@ export const manageSubscriptionRoute = authenticatedProcedure
 
     // If for some reason customer ID is missing in the organisation but
     // exists in the subscription take it from the subscription.
-    if (!customerId && organisation.subscription?.customerId) {
-      customerId = organisation.subscription.customerId;
+    if (!customerId) {
+      const currentSubscription = await getCurrentSubscriptionByOrganisationId({
+        organisationId: organisation.id,
+      });
+
+      if (currentSubscription?.customerId) {
+        customerId = currentSubscription.customerId;
+      }
+    }
+
+    if (customerId && !organisation.customerId) {
 
       await prisma.organisation
         .update({

@@ -24,11 +24,14 @@ import { Link } from 'react-router';
 export const MenuSwitcher = () => {
   const { _ } = useLingui();
 
-  const { user } = useSession();
+  const { user, organisations } = useSession();
 
   const [languageSwitcherOpen, setLanguageSwitcherOpen] = useState(false);
 
   const isUserAdmin = isAdmin(user);
+
+  const isOrganisationOwner = organisations.some((org) => org.ownerUserId === user.id);
+  const firstOwnedOrganisation = organisations.find((org) => org.ownerUserId === user.id);
 
   const formatAvatarFallback = (name?: string) => {
     if (name !== undefined) {

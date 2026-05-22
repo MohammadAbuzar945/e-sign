@@ -1,5 +1,4 @@
 import { URL_PATTERN, ZNameSchema } from '@documenso/lib/constants/auth';
-import { PROTECTED_TEAM_URLS } from '@documenso/lib/constants/teams';
 import { zEmail } from '@documenso/lib/utils/zod';
 import { TeamMemberRole } from '@prisma/client';
 import { z } from 'zod';
@@ -17,7 +16,8 @@ import { z } from 'zod';
  * - 3-30 characters
  * - Cannot start and end with underscores or dashes.
  * - Cannot contain consecutive underscores or dashes.
- * - Cannot be a reserved URL in the PROTECTED_TEAM_URLS list
+ *
+ * Note: Route conflicts are avoided by prefixing team URLs with org suffix (e.g. orgSuffix-teamurl).
  */
 export const ZTeamUrlSchema = z
   .string()
@@ -27,10 +27,10 @@ export const ZTeamUrlSchema = z
   .toLowerCase()
   .regex(/^[a-z0-9].*[^_-]$/, 'Team URL cannot start or end with dashes or underscores.')
   .regex(/^(?!.*[-_]{2})/, 'Team URL cannot contain consecutive dashes or underscores.')
-  .regex(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/, 'Team URL can only contain letters, numbers, dashes and underscores.')
-  .refine((value) => !PROTECTED_TEAM_URLS.includes(value), {
-    message: 'This URL is already in use.',
-  });
+  .regex(
+    /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/,
+    'Team URL can only contain letters, numbers, dashes and underscores.',
+  );
 
 export const ZTeamNameSchema = z
   .string()

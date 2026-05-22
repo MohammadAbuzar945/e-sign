@@ -1,4 +1,6 @@
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
+import { getCurrentSubscriptionsByOrganisationIds } from '@documenso/lib/server-only/subscription/get-current-subscriptions-by-organisation-ids';
+import { ADMIN_HIDDEN_USER_EMAILS } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
 import { prisma } from '@documenso/prisma';
 import { Prisma } from '@prisma/client';
 
@@ -119,8 +121,16 @@ export const findAdminOrganisations = async ({
     };
   }
 
+  const excludeHiddenOwnerFilter: Prisma.OrganisationWhereInput = {
+    owner: { email: { notIn: [...ADMIN_HIDDEN_USER_EMAILS] } },
+  };
+  whereClause =
+    Object.keys(whereClause).length === 0
+      ? excludeHiddenOwnerFilter
+      : { AND: [excludeHiddenOwnerFilter, whereClause] };
+
   const orderBy: Prisma.OrganisationOrderByWithRelationInput[] = query
-    ? [{ subscription: { status: 'asc' } }, { name: 'asc' }]
+    ? [{ name: 'asc' }]
     : [{ createdAt: 'desc' }];
 
   const [data, count] = await Promise.all([
@@ -143,7 +153,6 @@ export const findAdminOrganisations = async ({
             name: true,
           },
         },
-        subscription: true,
       },
     }),
     prisma.organisation.count({
@@ -151,8 +160,15 @@ export const findAdminOrganisations = async ({
     }),
   ]);
 
+  const subscriptionsByOrganisationId = await getCurrentSubscriptionsByOrganisationIds({
+    organisationIds: data.map((organisation) => organisation.id),
+  });
+
   return {
-    data,
+    data: data.map((organisation) => ({
+      ...organisation,
+      subscription: subscriptionsByOrganisationId[organisation.id] ?? null,
+    })),
     count,
     currentPage: Math.max(page, 1),
     perPage,

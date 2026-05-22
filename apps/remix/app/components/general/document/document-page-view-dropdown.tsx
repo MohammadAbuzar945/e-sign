@@ -156,6 +156,7 @@ export const DocumentPageViewDropdown = ({ envelope }: DocumentPageViewDropdownP
           }
         />
 
+        {/*
         <DropdownMenuLabel>
           <Trans>Share</Trans>
         </DropdownMenuLabel>
@@ -171,6 +172,7 @@ export const DocumentPageViewDropdown = ({ envelope }: DocumentPageViewDropdownP
             }
           />
         )}
+        */}
 
         <DocumentResendDialog
           document={{
@@ -180,7 +182,7 @@ export const DocumentPageViewDropdown = ({ envelope }: DocumentPageViewDropdownP
           recipients={nonSignedRecipients}
         />
 
-        <DocumentShareButton
+        {/* <DocumentShareButton
           documentId={mapSecondaryIdToDocumentId(envelope.secondaryId)}
           token={isOwner ? undefined : recipient?.token}
           trigger={({ loading, disabled }) => (
@@ -191,7 +193,7 @@ export const DocumentPageViewDropdown = ({ envelope }: DocumentPageViewDropdownP
               </div>
             </DropdownMenuItem>
           )}
-        />
+        /> */}
       </DropdownMenuContent>
 
       <EnvelopeSaveAsTemplateDialog

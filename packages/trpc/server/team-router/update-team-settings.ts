@@ -32,6 +32,7 @@ export const updateTeamSettingsRoute = authenticatedProcedure
       documentDateFormat,
       includeSenderDetails,
       includeSigningCertificate,
+      includeQrCodeInCertificate,
       includeAuditLog,
       typedSignatureEnabled,
       uploadSignatureEnabled,
@@ -58,6 +59,9 @@ export const updateTeamSettingsRoute = authenticatedProcedure
       defaultRecipients,
       // AI features settings.
       aiFeaturesEnabled,
+
+      // KBA defaults (null = inherit from organisation).
+      kbaSettings,
     } = data;
 
     if (Object.values(data).length === 0) {
@@ -125,11 +129,11 @@ export const updateTeamSettingsRoute = authenticatedProcedure
     const isChangingIncludeSenderDetails =
       includeSenderDetails !== undefined && includeSenderDetails !== currentIncludeSenderDetails;
 
-    if (isPersonalOrganisation && isChangingIncludeSenderDetails) {
-      throw new AppError(AppErrorCode.INVALID_BODY, {
-        message: 'Personal teams cannot update the sender details',
-      });
-    }
+    // if (isPersonalOrganisation && isChangingIncludeSenderDetails) {
+    //   throw new AppError(AppErrorCode.INVALID_BODY, {
+    //     message: 'Personal teams cannot update the sender details',
+    //   });
+    // }
 
     // Sanitize custom branding CSS at write time. `null` means inherit-from-org
     // for teams, so only run the sanitiser when an explicit string is provided.
@@ -166,6 +170,7 @@ export const updateTeamSettingsRoute = authenticatedProcedure
             documentDateFormat,
             includeSenderDetails,
             includeSigningCertificate,
+            includeQrCodeInCertificate,
             includeAuditLog,
             typedSignatureEnabled,
             uploadSignatureEnabled,
@@ -191,7 +196,16 @@ export const updateTeamSettingsRoute = authenticatedProcedure
 
             // AI features settings.
             aiFeaturesEnabled,
-          },
+
+            // KBA defaults (null / DbNull = inherit organisation). Cast for Prisma client versions
+            // where generated XOR input has not yet picked up `kbaSettings`.
+            ...(kbaSettings !== undefined
+              ? {
+                  kbaSettings:
+                    kbaSettings === null ? Prisma.DbNull : (kbaSettings as Prisma.InputJsonValue),
+                }
+              : {}),
+          } as unknown as Prisma.TeamGlobalSettingsUncheckedUpdateWithoutTeamInput,
         },
       },
     });

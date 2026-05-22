@@ -42,6 +42,7 @@ export const FolderCreateDialog = ({ type, trigger, parentFolderId, ...props }: 
   const parentId = parentFolderId ?? folderId;
 
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const { mutateAsync: createFolder } = trpc.folder.createFolder.useMutation();
 
@@ -75,10 +76,25 @@ export const FolderCreateDialog = ({ type, trigger, parentFolderId, ...props }: 
   };
 
   useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
     if (!isCreateFolderOpen) {
       form.reset();
     }
   }, [isCreateFolderOpen, form]);
+
+  const defaultTrigger = (
+    <Button variant="outline" className="flex items-center" data-testid="folder-create-button">
+      <FolderPlusIcon className="mr-2 h-4 w-4" />
+      <Trans>Create Folder</Trans>
+    </Button>
+  );
+
+  if (!isHydrated) {
+    return <>{trigger ?? defaultTrigger}</>;
+  }
 
   return (
     <Dialog {...props} open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>

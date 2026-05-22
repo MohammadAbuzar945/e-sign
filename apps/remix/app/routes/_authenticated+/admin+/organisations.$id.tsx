@@ -1,3 +1,7 @@
+import { useEffect } from 'react';
+
+
+
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { SUBSCRIPTION_STATUS_MAP } from '@documenso/lib/constants/billing';
 import { AppError } from '@documenso/lib/errors/app-error';
@@ -35,7 +39,7 @@ import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router';
 import { match } from 'ts-pattern';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 import { AdminOrganisationDeleteDialog } from '~/components/dialogs/admin-organisation-delete-dialog';
 import { AdminOrganisationMemberDeleteDialog } from '~/components/dialogs/admin-organisation-member-delete-dialog';
@@ -65,8 +69,9 @@ export default function OrganisationGroupSettingsPage({ params, loaderData }: Ro
 
   const organisationId = params.id;
 
-  const { data: organisation, isLoading: isLoadingOrganisation } = trpc.admin.organisation.get.useQuery(
-    {
+  const utils = trpc.useUtils();
+  const { data: organisation, isLoading: isLoadingOrganisation } =
+    trpc.admin.organisation.get.useQuery({
       organisationId,
     },
     {
@@ -317,13 +322,16 @@ export default function OrganisationGroupSettingsPage({ params, loaderData }: Ro
         </Accordion>
       </div>
 
-      <SettingsHeader
+      {/* <SettingsHeader
         title={t`Manage subscription`}
         subtitle={t`Manage the ${organisation.name} organisation subscription`}
         className="mt-16"
-      />
+      /> */}
 
-      <Alert className="my-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
+      {/* <Alert
+        className="my-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
+        variant="neutral"
+      >
         <div className="mb-4 sm:mb-0">
           <AlertTitle>
             <Trans>Subscription</Trans>
@@ -379,7 +387,7 @@ export default function OrganisationGroupSettingsPage({ params, loaderData }: Ro
             </Button>
           </div>
         )}
-      </Alert>
+      </Alert> */}
 
       <OrganisationAdminForm organisation={organisation} licenseFlags={licenseFlags} />
 
@@ -443,6 +451,100 @@ type TUpdateGenericOrganisationDataFormSchema = z.infer<typeof ZUpdateGenericOrg
 type OrganisationAdminFormOptions = {
   organisation: TGetAdminOrganisationResponse;
   licenseFlags?: TLicenseClaim;
+};
+
+const ZAdminOrganisationCreditsFormSchema = z.object({
+  credits: z.coerce.number().int().min(0),
+});
+
+type TAdminOrganisationCreditsFormSchema = z.infer<typeof ZAdminOrganisationCreditsFormSchema>;
+
+const AdminOrganisationCreditsForm = ({
+  organisationId,
+  credits,
+  onSuccess,
+}: {
+  organisationId: string;
+  credits: number;
+  onSuccess: () => void;
+}) => {
+  const { toast } = useToast();
+  const { t } = useLingui();
+
+  const { mutateAsync: updateCredits, isPending: isUpdatingCredits } =
+    trpc.admin.organisation.updateCredits.useMutation({
+      onSuccess: () => {
+        onSuccess();
+        toast({
+          title: t`Success`,
+          description: t`Organisation credits have been updated`,
+          duration: 5000,
+        });
+      },
+      onError: () => {
+        toast({
+          title: t`Error`,
+          description: t`We couldn't update organisation credits. Please try again.`,
+          variant: 'destructive',
+        });
+      },
+    });
+
+  const form = useForm<TAdminOrganisationCreditsFormSchema>({
+    resolver: zodResolver(ZAdminOrganisationCreditsFormSchema),
+    defaultValues: {
+      credits,
+    },
+  });
+
+  useEffect(() => {
+    form.reset({ credits });
+  }, [credits]);
+
+  const onSubmit = async (data: TAdminOrganisationCreditsFormSchema) => {
+    await updateCredits({
+      organisationId,
+      credits: data.credits,
+    });
+  };
+
+  return (
+    <div className="mt-16">
+      <label className="text-sm font-medium leading-none">
+        <Trans>User Credits</Trans>
+      </label>
+      <p className="mt-1 text-sm text-muted-foreground">
+        <Trans>Current balance: {credits} credits</Trans>
+      </p>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 flex flex-wrap items-end gap-4">
+          <FormField
+            control={form.control}
+            name="credits"
+            render={({ field }) => (
+              <FormItem className="w-full min-w-[120px] max-w-[200px]">
+                <FormLabel>
+                  <Trans>Set credits</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" loading={isUpdatingCredits}>
+            <Trans>Update</Trans>
+          </Button>
+        </form>
+      </Form>
+    </div>
+  );
 };
 
 const GenericOrganisationAdminForm = ({ organisation }: OrganisationAdminFormOptions) => {
@@ -552,7 +654,11 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
 
   const { mutateAsync: updateOrganisation } = trpc.admin.organisation.update.useMutation();
 
-  const hasRestrictedEnterpriseFeatures = Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).some(
+  const visibleFeatureFlags = Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).filter(
+    (flag) => flag.key === 'allowCustomBranding',
+  );
+
+  const hasRestrictedEnterpriseFeatures = visibleFeatureFlags.some(
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     (flag) => flag.isEnterprise && !licenseFlags?.[flag.key as keyof TLicenseClaim],
   );
@@ -598,7 +704,7 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
+        {/* <FormField
           control={form.control}
           name="originalSubscriptionClaimId"
           render={({ field }) => (
@@ -645,9 +751,9 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
               <FormMessage />
             </FormItem>
           )}
-        />
+        /> */}
 
-        <FormField
+        {/* <FormField
           control={form.control}
           name="customerId"
           render={({ field }) => (
@@ -671,7 +777,7 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
               <FormMessage />
             </FormItem>
           )}
-        />
+        /> */}
 
         <FormField
           control={form.control}
@@ -751,8 +857,9 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
           </FormLabel>
 
           <div className="mt-2 space-y-2 rounded-md border p-4">
-            {Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).map(({ key, label, isEnterprise }) => {
-              const isRestrictedFeature = isEnterprise && !licenseFlags?.[key as keyof TLicenseClaim]; // eslint-disable-line @typescript-eslint/consistent-type-assertions
+            {visibleFeatureFlags.map(({ key, label, isEnterprise }) => {
+              const isRestrictedFeature =
+                isEnterprise && !licenseFlags?.[key as keyof TLicenseClaim]; // eslint-disable-line @typescript-eslint/consistent-type-assertions
 
               return (
                 <FormField
@@ -786,7 +893,7 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
             })}
           </div>
 
-          {hasRestrictedEnterpriseFeatures && (
+          {/* {hasRestrictedEnterpriseFeatures && (
             <Alert variant="neutral" className="mt-4">
               <AlertDescription>
                 <span>¹&nbsp;</span>
@@ -800,7 +907,7 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
                 </Link>
               </AlertDescription>
             </Alert>
-          )}
+          )} */}
         </div>
 
         <div className="flex justify-end">

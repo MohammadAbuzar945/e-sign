@@ -116,6 +116,7 @@ app.route('/api/v1', tsRestHonoApp);
 app.use('/api/jobs/*', jobsClient.getApiHandler());
 
 app.use('/api/trpc/*', trpcRateLimitMiddleware);
+app.use('/api/trpc/*', cors());
 app.use('/api/trpc/*', reactRouterTrpcServer);
 
 // Unstable API server routes. Order matters for these two.

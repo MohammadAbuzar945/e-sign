@@ -1,22 +1,47 @@
-import {
-  FIELD_MAX_LETTER_SPACING,
-  FIELD_MAX_LINE_HEIGHT,
-  FIELD_MIN_LETTER_SPACING,
-  FIELD_MIN_LINE_HEIGHT,
-} from '@documenso/lib/types/field-meta';
+import { useEffect } from 'react';
+import type * as React from 'react';
+
+import { Trans, useLingui } from '@lingui/react/macro';
+import { type Control, useFormContext } from 'react-hook-form';
+
+import { FIELD_MIN_LINE_HEIGHT } from '@documenso/lib/types/field-meta';
+import { FIELD_MAX_LINE_HEIGHT } from '@documenso/lib/types/field-meta';
+import { FIELD_MIN_LETTER_SPACING } from '@documenso/lib/types/field-meta';
+import { FIELD_MAX_LETTER_SPACING } from '@documenso/lib/types/field-meta';
 import { cn } from '@documenso/ui/lib/utils';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage , useFormField} from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { useEffect } from 'react';
-import { type Control, useFormContext } from 'react-hook-form';
+
 
 // Can't seem to get the non-any type to work with correct types.
 // Eg Control<{ fontSize?: number } doesn't seem to work when there are required items.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FormControlType = Control<any>;
+
+/**
+ * Same accessibility hooks as FormControl, applied directly to SelectTrigger so Radix Slot
+ * is not between Select root and the trigger (avoids ref warnings in strict setups).
+ */
+const FormControlledSelectTrigger = ({
+  fieldRef,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SelectTrigger> & {
+  fieldRef: React.Ref<React.ElementRef<typeof SelectTrigger>>;
+}) => {
+  const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
+
+  return (
+    <SelectTrigger
+      ref={fieldRef}
+      id={formItemId}
+      aria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}
+      aria-invalid={!!error}
+      {...props}
+    />
+  );
+};
 
 export const EditorGenericFontSizeField = ({
   formControl,
@@ -75,24 +100,30 @@ export const EditorGenericTextAlignField = ({
           <FormLabel>
             <Trans>Text Align</Trans>
           </FormLabel>
-          <FormControl>
-            <Select {...field} onValueChange={field.onChange}>
-              <SelectTrigger data-testid="field-form-textAlign">
-                <SelectValue placeholder={t`Select text align`} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="left">
-                  <Trans>Left</Trans>
-                </SelectItem>
-                <SelectItem value="center">
-                  <Trans>Center</Trans>
-                </SelectItem>
-                <SelectItem value="right">
-                  <Trans>Right</Trans>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </FormControl>
+          <Select
+            value={field.value}
+            onValueChange={field.onChange}
+            onOpenChange={(open) => {
+              if (!open) {
+                field.onBlur();
+              }
+            }}
+          >
+            <FormControlledSelectTrigger fieldRef={field.ref} data-testid="field-form-textAlign">
+              <SelectValue placeholder={t`Select text align`} />
+            </FormControlledSelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">
+                <Trans>Left</Trans>
+              </SelectItem>
+              <SelectItem value="center">
+                <Trans>Center</Trans>
+              </SelectItem>
+              <SelectItem value="right">
+                <Trans>Right</Trans>
+              </SelectItem>
+            </SelectContent>
+          </Select>
           <FormMessage />
         </FormItem>
       )}
@@ -118,24 +149,33 @@ export const EditorGenericVerticalAlignField = ({
           <FormLabel>
             <Trans>Vertical Align</Trans>
           </FormLabel>
-          <FormControl>
-            <Select {...field} onValueChange={field.onChange}>
-              <SelectTrigger data-testid="field-form-verticalAlign">
-                <SelectValue placeholder={t`Select vertical align`} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="top">
-                  <Trans>Top</Trans>
-                </SelectItem>
-                <SelectItem value="middle">
-                  <Trans>Middle</Trans>
-                </SelectItem>
-                <SelectItem value="bottom">
-                  <Trans>Bottom</Trans>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </FormControl>
+          <Select
+            value={field.value}
+            onValueChange={field.onChange}
+            onOpenChange={(open) => {
+              if (!open) {
+                field.onBlur();
+              }
+            }}
+          >
+            <FormControlledSelectTrigger
+              fieldRef={field.ref}
+              data-testid="field-form-verticalAlign"
+            >
+              <SelectValue placeholder={t`Select vertical align`} />
+            </FormControlledSelectTrigger>
+            <SelectContent>
+              <SelectItem value="top">
+                <Trans>Top</Trans>
+              </SelectItem>
+              <SelectItem value="middle">
+                <Trans>Middle</Trans>
+              </SelectItem>
+              <SelectItem value="bottom">
+                <Trans>Bottom</Trans>
+              </SelectItem>
+            </SelectContent>
+          </Select>
           <FormMessage />
         </FormItem>
       )}

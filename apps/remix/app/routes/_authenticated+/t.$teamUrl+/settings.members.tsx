@@ -4,12 +4,19 @@ import { useLingui } from '@lingui/react/macro';
 import { useEffect, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
 
+import { useSession } from '@documenso/lib/client-only/providers/session';
+
 import { TeamMemberCreateDialog } from '~/components/dialogs/team-member-create-dialog';
 import { SettingsHeader } from '~/components/general/settings-header';
 import { TeamMembersTable } from '~/components/tables/team-members-table';
+import { TeamLogsTable } from '~/components/tables/team-logs-table';
+import { TeamAuditLogDownloadButton } from '~/components/general/team/team-audit-log-download-button';
+import { useOptionalCurrentTeam } from '~/providers/team';
 
 export default function TeamsSettingsMembersPage() {
   const { t } = useLingui();
+  const team = useOptionalCurrentTeam();
+  const { user } = useSession();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const { pathname } = useLocation();
@@ -52,6 +59,19 @@ export default function TeamsSettingsMembersPage() {
       />
 
       <TeamMembersTable />
+
+      {team && (
+        <div className="mt-8 space-y-4">
+          <SettingsHeader
+            title={t`Team activity`}
+            subtitle={t`View recent changes to your team members and roles.`}
+          >
+            <TeamAuditLogDownloadButton teamId={team.id} />
+          </SettingsHeader>
+
+          <TeamLogsTable teamId={team.id} userId={user.id} />
+        </div>
+      )}
     </div>
   );
 }

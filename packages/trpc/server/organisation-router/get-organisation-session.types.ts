@@ -15,7 +15,9 @@ export const ZGetOrganisationSessionResponseSchema = ZOrganisationSchema.extend(
       avatarImageId: true,
       organisationId: true,
     }).extend({
+      isPrivate: z.boolean(),
       currentTeamRole: z.nativeEnum(TeamMemberRole),
+      isTeamMember: z.boolean(),
       teamEmail: TeamEmailSchema.pick({ email: true }).nullable(),
       preferences: z.object({
         aiFeaturesEnabled: z.boolean(),
@@ -24,6 +26,7 @@ export const ZGetOrganisationSessionResponseSchema = ZOrganisationSchema.extend(
   ),
   subscription: SubscriptionSchema.nullable(),
   currentOrganisationRole: z.nativeEnum(OrganisationMemberRole),
+  credits: z.number().optional().default(0),
 }).array();
 
 export type TGetOrganisationSessionResponse = z.infer<typeof ZGetOrganisationSessionResponseSchema>;

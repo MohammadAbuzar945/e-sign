@@ -27,6 +27,7 @@ export type DocumentUploadButtonProps = {
   type: EnvelopeType;
   internalVersion: '1' | '2';
   maxFiles?: number;
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
   [key: string]: unknown;
 };
 
@@ -39,7 +40,7 @@ export const DocumentUploadButton = ({
   disabledMessage = msg`You cannot upload documents at this time.`,
   type,
   internalVersion,
-
+  variant,
   maxFiles,
   ...props
 }: DocumentUploadButtonProps) => {
@@ -75,8 +76,14 @@ export const DocumentUploadButton = ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button className="bg-warning hover:bg-warning/80" asChild>
-              <Link to={isPersonalLayoutMode ? `/settings/billing` : `/o/${organisation.url}/settings/billing`}>
+            <Button className="hover:bg-warning/80 bg-warning" asChild>
+              <Link
+                to={
+                  organisation
+                    ? `/o/${organisation.url}/price-plan`
+                    : `/price-plans`
+                }
+              >
                 <Trans>Upgrade</Trans>
               </Link>
             </Button>
@@ -90,7 +97,7 @@ export const DocumentUploadButton = ({
   }
 
   return (
-    <Button loading={loading} aria-disabled={disabled} {...getRootProps()} {...props}>
+    <Button loading={loading} aria-disabled={disabled} variant={variant} {...getRootProps()} {...props}>
       <div className="flex items-center gap-2">
         <input data-testid="document-upload-input" {...getInputProps()} />
         {!loading && <Upload className="h-4 w-4" />}

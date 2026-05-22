@@ -121,7 +121,7 @@ export const EnvelopeDownloadDialog = ({
         envelopeItem,
         token,
         fileName: envelopeItem.title,
-        version,
+        version
       });
 
       setIsDownloadingState((prev) => ({

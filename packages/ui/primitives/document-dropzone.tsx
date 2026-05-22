@@ -154,8 +154,8 @@ export const DocumentDropzone = ({
           </p>
 
           {disabled && IS_BILLING_ENABLED() && (
-            <Button className="mt-4 w-32 bg-warning hover:bg-warning/80" asChild>
-              <Link to={`/o/${organisation.url}/settings/billing`}>
+            <Button className="hover:bg-warning/80 bg-warning mt-4 w-32" asChild>
+              <Link to={organisation ? `/o/${organisation.url}/price-plan` : `/price-plans`}>
                 <Trans>Upgrade</Trans>
               </Link>
             </Button>

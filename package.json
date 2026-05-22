@@ -40,7 +40,8 @@
     "make:version": "npm version --workspace @documenso/remix --include-workspace-root --no-git-tag-version -m \"v%s\"",
     "translate": "npm run translate:extract && npm run translate:compile",
     "translate:extract": "lingui extract --clean",
-    "translate:compile": "lingui compile"
+    "translate:compile": "lingui compile",
+    "openapi:merge-nomia": "node scripts/merge-nomia-openapi.mjs"
   },
   "packageManager": "npm@11.11.0",
   "engines": {
@@ -91,15 +92,17 @@
     "@libpdf/core": "^0.3.6",
     "@lingui/conf": "^5.6.0",
     "@lingui/core": "^5.6.0",
+    "@marsidev/react-turnstile": "^1.5.0",
     "@prisma/extension-read-replicas": "^0.4.1",
+    "@rvf/set-get": "^7.0.2",
     "ai": "^5.0.104",
     "cron-parser": "^5.5.0",
     "luxon": "^3.7.2",
     "patch-package": "^8.0.1",
+    "paystack-sdk": "^3.6.1",
     "posthog-node": "4.18.0",
     "react": "^18",
     "typescript": "5.6.2",
-    "@marsidev/react-turnstile": "^1.5.0",
     "zod": "^3.25.76"
   },
   "overrides": {

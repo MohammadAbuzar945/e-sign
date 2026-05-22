@@ -1,4 +1,5 @@
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { cn } from '@documenso/ui/lib/utils';
@@ -29,6 +30,9 @@ export default function SettingsLayout() {
 
   const isBillingEnabled = IS_BILLING_ENABLED();
   const organisation = useCurrentOrganisation();
+  const { user } = useSession();
+
+  const isOrganisationOwner = organisation.ownerUserId === user.id;
 
   const organisationSettingRoutes = [
     {
@@ -68,14 +72,14 @@ export default function SettingsLayout() {
       icon: FaUsers,
     },
     {
-      path: `/o/${organisation.url}/settings/members`,
-      label: t`Members`,
-      icon: Users2Icon,
-    },
-    {
       path: `/o/${organisation.url}/settings/groups`,
       label: t`Groups`,
       icon: GroupIcon,
+    },
+    {
+      path: `/o/${organisation.url}/settings/members`,
+      label: t`Members`,
+      icon: Users2Icon,
     },
     {
       path: `/o/${organisation.url}/settings/sso`,
@@ -83,11 +87,16 @@ export default function SettingsLayout() {
       icon: ShieldCheckIcon,
     },
     {
-      path: `/o/${organisation.url}/settings/billing`,
+      path: `/o/${organisation.url}/price-plan`,
       label: t`Billing`,
       icon: CreditCardIcon,
+      requiresOwner: true as const,
     },
   ].filter((route) => {
+    if ('requiresOwner' in route && route.requiresOwner && !isOrganisationOwner) {
+      return false;
+    }
+
     if (!isBillingEnabled && route.path.includes('/billing')) {
       return false;
     }
@@ -145,11 +154,11 @@ export default function SettingsLayout() {
             'col-span-12 mb-8 flex flex-wrap items-center justify-start gap-x-2 gap-y-4 md:col-span-3 md:w-full md:flex-col md:items-start md:gap-y-2',
           )}
         >
-          {organisationSettingRoutes.map((route) => (
+          {organisationSettingRoutes.map((route, index) => (
             <NavLink
               to={route.path}
               className={cn('group w-full justify-start', route.isSubNav && 'pl-8')}
-              key={route.path}
+              key={`${route.path}-${String(route.label)}-${index}`}
             >
               <Button
                 variant="ghost"

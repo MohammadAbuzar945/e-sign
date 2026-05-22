@@ -49,12 +49,15 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
   const { mutateAsync: createEnvelope } = trpc.envelope.create.useMutation();
 
   const disabledMessage = useMemo(() => {
-    if (organisation.subscription && remaining.documents === 0) {
-      return msg`Document upload disabled due to unpaid invoices`;
+    const isOrganisationOwner = organisation.ownerUserId === user.id;
+    const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
+
+    if (isOwnerNonMember) {
+      return msg`You must be a member of this team to upload documents.`;
     }
 
-    if (remaining.documents === 0) {
-      return msg`You have reached your document limit.`;
+    if (organisation.subscription && remaining.documents === 0) {
+      return msg`Document upload disabled due to unpaid invoices`;
     }
 
     if (!user.emailVerified) {
@@ -62,9 +65,20 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining.documents, user.emailVerified, team]);
+  }, [organisation.subscription, remaining.documents, user.emailVerified, team]);
 
   const onFileDrop = async (files: File[]) => {
+    // Check if user has no credits remaining
+    if (type === EnvelopeType.DOCUMENT && (remaining.documents === 0 || remaining.documents === null)) {
+      toast({
+        title: t`Upload failed`,
+        description: t`You have reached your document limit. Please upgrade your plan to upload more documents.`,
+        variant: 'destructive',
+        duration: 7500,
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
 
@@ -95,7 +109,7 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
 
       const pathPrefix = type === EnvelopeType.DOCUMENT ? formatDocumentsPath(team.url) : formatTemplatesPath(team.url);
 
-      const aiQueryParam = team.preferences.aiFeaturesEnabled ? '?ai=true' : '';
+      const aiQueryParam = team.preferences.aiFeaturesEnabled ? '?ai=false' : '';
 
       await navigate(`${pathPrefix}/${id}/edit${aiQueryParam}`);
 
@@ -167,16 +181,24 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
     });
   };
 
+  const isOrganisationOwner = organisation.ownerUserId === user.id;
+  const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
+
+  const isDisabled = !user.emailVerified || isOwnerNonMember;
+  const hasNoCredits = type === EnvelopeType.DOCUMENT && (remaining.documents === 0 || remaining.documents === null);
+  const showCreditsInfo = type === EnvelopeType.DOCUMENT && typeof remaining.documents === 'number';
+
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn('relative flex flex-col gap-2', className)}>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <div>
               <DocumentUploadButton
                 loading={isLoading}
-                disabled={remaining.documents === 0 || !user.emailVerified}
+                disabled={isDisabled}
                 disabledMessage={disabledMessage}
+                variant={hasNoCredits ? 'default' : 'default'}
                 onDrop={onFileDrop}
                 onDropRejected={onFileDropRejected}
                 type={type}
@@ -186,17 +208,29 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
             </div>
           </TooltipTrigger>
 
-          {type === EnvelopeType.DOCUMENT && remaining.documents > 0 && Number.isFinite(remaining.documents) && (
+          {showCreditsInfo && remaining.documents > 0 && (
             <TooltipContent>
               <p className="text-sm">
                 <Trans>
-                  {remaining.documents} of {quota.documents} documents remaining this month.
+                  {remaining.documents} envelopes remaining
                 </Trans>
               </p>
             </TooltipContent>
           )}
         </Tooltip>
       </TooltipProvider>
+
+      {/* Always show remaining credits under the button */}
+      {showCreditsInfo && (
+        <p className={cn(
+          "text-xs text-center",
+          hasNoCredits ? "text-muted-foreground" : "text-muted-foreground"
+        )}>
+          <Trans>
+            {remaining.documents} envelopes remaining
+          </Trans>
+        </p>
+      )}
     </div>
   );
 };

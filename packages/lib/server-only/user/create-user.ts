@@ -5,6 +5,7 @@ import type { User } from '@prisma/client';
 import { SALT_ROUNDS } from '../../constants/auth';
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { createPersonalOrganisation } from '../organisation/create-organisation';
+import { INITIAL_USER_CREDITS } from '@documenso/ee/server-only/limits/user-credits';
 
 export interface CreateUserOptions {
   name: string;
@@ -87,9 +88,35 @@ export type OnCreateUserHookOptions = {
  *
  * @returns User
  */
-export const onCreateUserHook = async (user: User, options: OnCreateUserHookOptions = {}) => {
-  if (!options.skipPersonalOrganisation) {
-    await createPersonalOrganisation({ userId: user.id });
+export const onCreateUserHook = async (user: User, options?: OnCreateUserHookOptions) => {
+  if (options?.skipPersonalOrganisation) {
+    return user;
+  }
+
+  const organisation = await createPersonalOrganisation({ userId: user.id });
+
+  if (!organisation) {
+    console.error('Failed to create personal organisation for user:', user.id);
+    return user;
+  }
+
+  // Initialize organisation credits with 10 initial credits during signup
+  const existingCredits = await prisma.userCredits.findFirst({
+    where: {
+      organisationId: organisation.id,
+      isActive: true,
+    },
+  });
+
+  if (!existingCredits) {
+    await prisma.userCredits.create({
+      data: {
+        organisationId: organisation.id,
+        userId: user.id,
+        credits: INITIAL_USER_CREDITS,
+        isActive: true,
+      },
+    });
   }
 
   return user;

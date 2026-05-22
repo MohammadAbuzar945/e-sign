@@ -114,7 +114,10 @@ export default function SettingsSecurity({ loaderData }: Route.ComponentProps) {
         </Alert>
       )}
 
-      <Alert className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
+      {/* <Alert
+        className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
+        variant="neutral"
+      >
         <div className="mb-4 sm:mb-0">
           <AlertTitle>
             <Trans>Passkeys</Trans>
@@ -130,7 +133,7 @@ export default function SettingsSecurity({ loaderData }: Route.ComponentProps) {
             <Trans>Manage passkeys</Trans>
           </Link>
         </Button>
-      </Alert>
+      </Alert> */}
 
       <Alert className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
         <div className="mr-4 mb-4 sm:mb-0">
@@ -168,8 +171,11 @@ export default function SettingsSecurity({ loaderData }: Route.ComponentProps) {
         </Button>
       </Alert>
 
-      <Alert className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
-        <div className="mr-4 mb-4 sm:mb-0">
+      {/* <Alert
+        className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
+        variant="neutral"
+      >
+        <div className="mb-4 mr-4 sm:mb-0">
           <AlertTitle>
             <Trans>Linked Accounts</Trans>
           </AlertTitle>
@@ -184,7 +190,7 @@ export default function SettingsSecurity({ loaderData }: Route.ComponentProps) {
             <Trans>Manage linked accounts</Trans>
           </Link>
         </Button>
-      </Alert>
+      </Alert> */}
     </div>
   );
 }

@@ -70,7 +70,10 @@ export default function TeamsSettingsGroupsPage() {
       <TeamGroupsTable />
 
       <AnimateGenericFadeInOut key={everyoneGroupQuery.isFetched ? 'true' : 'false'}>
-        {everyoneGroupQuery.isFetched && <TeamInheritMemberAlert memberAccessTeamGroup={memberAccessTeamGroup} />}
+        {everyoneGroupQuery.isFetched && <TeamInheritMemberAlert
+            memberAccessTeamGroup={memberAccessTeamGroup}
+            isPrivate={team.isPrivate}
+          />}
       </AnimateGenericFadeInOut>
     </div>
   );

@@ -63,6 +63,11 @@ export const AddSubjectFormPartial = ({
 
   const organisation = useCurrentOrganisation();
 
+  const initialDistributionMethod =
+    document.documentMeta?.distributionMethod === DocumentDistributionMethod.NONE
+      ? DocumentDistributionMethod.EMAIL
+      : document.documentMeta?.distributionMethod || DocumentDistributionMethod.EMAIL;
+
   const form = useForm<TAddSubjectFormSchema>({
     defaultValues: {
       meta: {
@@ -71,7 +76,7 @@ export const AddSubjectFormPartial = ({
         // emailReplyName: document.documentMeta?.emailReplyName || undefined,
         subject: document.documentMeta?.subject ?? '',
         message: document.documentMeta?.message ?? '',
-        distributionMethod: document.documentMeta?.distributionMethod || DocumentDistributionMethod.EMAIL,
+        distributionMethod: initialDistributionMethod,
         emailSettings: ZDocumentEmailSettingsSchema.parse(document?.documentMeta?.emailSettings),
       },
     },
@@ -171,9 +176,6 @@ export const AddSubjectFormPartial = ({
               <TabsTrigger className="w-full" value={DocumentDistributionMethod.EMAIL}>
                 <Trans>Email</Trans>
               </TabsTrigger>
-              <TabsTrigger className="w-full" value={DocumentDistributionMethod.NONE}>
-                <Trans>None</Trans>
-              </TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -216,7 +218,7 @@ export const AddSubjectFormPartial = ({
                                     </SelectItem>
                                   ))}
 
-                                  <SelectItem value={'-1'}>Documenso</SelectItem>
+                                  <SelectItem value={'-1'}>Nomia</SelectItem>
                                 </SelectContent>
                               </Select>
                             </FormControl>

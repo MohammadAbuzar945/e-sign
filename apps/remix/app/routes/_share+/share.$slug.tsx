@@ -1,4 +1,4 @@
-import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { env } from '@documenso/lib/utils/env';
 import { getDocumentByAccessToken } from '@documenso/lib/server-only/document/get-document-by-access-token';
 import { redirect, useLoaderData } from 'react-router';
 
@@ -10,17 +10,17 @@ export function meta({ params: { slug } }: Route.MetaArgs) {
   if (slug.startsWith('qr_')) {
     return undefined;
   }
-
+  const NEXT_PUBLIC_WEBAPP_URL = env('NEXT_PUBLIC_WEBAPP_URL');
   return [
-    { title: 'Documenso - Share' },
-    { description: 'I just signed a document in style with Documenso!' },
+    { title: 'Nomia - Share' },
+    { description: 'I just signed a document in style with Nomia!' },
     {
       property: 'og:title',
-      content: 'Documenso - Join the open source signing revolution',
+      content: 'Nomia - Join the open source signing revolution',
     },
     {
       property: 'og:description',
-      content: 'I just signed with Documenso!',
+      content: 'I just signed with Nomia!',
     },
     {
       property: 'og:type',
@@ -28,7 +28,7 @@ export function meta({ params: { slug } }: Route.MetaArgs) {
     },
     {
       property: 'og:image',
-      content: `${NEXT_PUBLIC_WEBAPP_URL()}/share/${slug}/opengraph`,
+      content: `${env('NEXT_PUBLIC_WEBAPP_URL')}/share/${slug}/opengraph`,
     },
     {
       name: 'twitter:site',
@@ -40,11 +40,11 @@ export function meta({ params: { slug } }: Route.MetaArgs) {
     },
     {
       name: 'twitter:image',
-      content: `${NEXT_PUBLIC_WEBAPP_URL()}/share/${slug}/opengraph`,
+      content: `${env('NEXT_PUBLIC_WEBAPP_URL')}/share/${slug}/opengraph`,
     },
     {
       name: 'twitter:description',
-      content: 'I just signed with Documenso!',
+      content: 'I just signed with Nomia!',
     },
   ];
 }
@@ -70,7 +70,7 @@ export const loader = async ({ request, params: { slug } }: Route.LoaderArgs) =>
   }
 
   // Is hardcoded because this whole meta is hardcoded anyway for Documenso.
-  throw redirect('https://documenso.com');
+  throw redirect(env('NEXT_PUBLIC_WEBAPP_URL') ?? '');
 };
 
 export default function SharePage() {

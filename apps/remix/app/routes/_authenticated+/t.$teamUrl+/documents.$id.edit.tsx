@@ -17,6 +17,10 @@ import { useCurrentTeam } from '~/providers/team';
 
 import type { Route } from './+types/documents.$id.edit';
 
+export async function loader() {
+  return null;
+}
+
 export default function EnvelopeEditorPage({ params }: Route.ComponentProps) {
   const navigate = useNavigate();
   const team = useCurrentTeam();
@@ -33,6 +37,7 @@ export default function EnvelopeEditorPage({ params }: Route.ComponentProps) {
       retry: false,
       gcTime: 0,
       ...DO_NOT_INVALIDATE_QUERY_ON_MUTATION,
+      ...(team?.id != null && { context: { teamId: String(team.id) } }),
     },
   );
 

@@ -1,5 +1,6 @@
 import { IS_AI_FEATURES_CONFIGURED } from '@documenso/lib/constants/app';
 import { DocumentSignatureType } from '@documenso/lib/constants/document';
+import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';
 import { trpc } from '@documenso/trpc/react';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { msg } from '@lingui/core/macro';
@@ -48,6 +49,7 @@ export default function TeamsSettingsPage() {
         documentDateFormat,
         includeSenderDetails,
         includeSigningCertificate,
+        includeQrCodeInCertificate,
         includeAuditLog,
         signatureTypes,
         defaultRecipients,
@@ -55,7 +57,21 @@ export default function TeamsSettingsPage() {
         aiFeaturesEnabled,
         envelopeExpirationPeriod,
         reminderSettings,
+        kbaInheritOrganisationKbaDefaults,
+        kbaMode,
+        kbaIsEnabled,
+        kbaMaxAttempts,
+        kbaLockoutMinutes,
       } = data;
+
+      const kbaSettings = kbaInheritOrganisationKbaDefaults
+        ? null
+        : ZDocumentKbaSettingsSchema.parse({
+            mode: kbaMode,
+            isEnabled: kbaIsEnabled,
+            maxAttempts: kbaMaxAttempts,
+            lockoutMinutes: kbaLockoutMinutes,
+          });
 
       await updateTeamSettings({
         teamId: team.id,
@@ -66,6 +82,7 @@ export default function TeamsSettingsPage() {
           documentDateFormat,
           includeSenderDetails,
           includeSigningCertificate,
+          includeQrCodeInCertificate,
           includeAuditLog,
           defaultRecipients,
           aiFeaturesEnabled,
@@ -83,6 +100,7 @@ export default function TeamsSettingsPage() {
                 drawSignatureEnabled: signatureTypes.includes(DocumentSignatureType.DRAW),
               }),
           delegateDocumentOwnership: delegateDocumentOwnership,
+          kbaSettings,
         },
       });
 
@@ -119,6 +137,7 @@ export default function TeamsSettingsPage() {
           canInherit={true}
           isAiFeaturesConfigured={isAiFeaturesConfigured}
           settings={teamWithSettings.teamSettings}
+          effectiveKbaSettings={teamWithSettings.organisationKbaSettings}
           onFormSubmit={onDocumentPreferencesSubmit}
         />
       </section>

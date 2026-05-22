@@ -31,7 +31,7 @@ export const DocumentGlobalAuthActionSelect = ({
       label: _(msg`No restrictions`),
     },
     ...Object.values(DocumentActionAuth)
-      .filter((auth) => auth !== DocumentAuth.ACCOUNT)
+      .filter((auth) => auth !== DocumentAuth.ACCOUNT && auth !== DocumentAuth.PASSKEY)
       .map((authType) => ({
         value: authType,
         label: _(DOCUMENT_AUTH_TYPES[authType].value),

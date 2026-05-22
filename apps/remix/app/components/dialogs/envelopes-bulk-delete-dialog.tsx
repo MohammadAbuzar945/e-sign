@@ -42,7 +42,11 @@ export const EnvelopesBulkDeleteDialog = ({
     onSuccess: async (result) => {
       // Invalidate the appropriate query based on envelope type.
       if (isDocument) {
-        await trpcUtils.document.findDocumentsInternal.invalidate();
+        await Promise.all([
+          trpcUtils.document.findDocumentsInternal.invalidate(),
+          trpcUtils.document.inbox.getCount.invalidate(),
+          trpcUtils.document.inbox.find.invalidate(),
+        ]);
       } else {
         await trpcUtils.template.findTemplates.invalidate();
       }

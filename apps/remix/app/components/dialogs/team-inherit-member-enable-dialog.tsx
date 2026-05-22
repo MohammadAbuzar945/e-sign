@@ -17,7 +17,13 @@ import { OrganisationGroupType, OrganisationMemberRole, TeamMemberRole } from '@
 
 import { useCurrentTeam } from '~/providers/team';
 
-export const TeamMemberInheritEnableDialog = () => {
+type TeamMemberInheritEnableDialogProps = {
+  disabled?: boolean;
+};
+
+export const TeamMemberInheritEnableDialog = ({
+  disabled = false,
+}: TeamMemberInheritEnableDialogProps) => {
   const organisation = useCurrentOrganisation();
   const team = useCurrentTeam();
 
@@ -67,7 +73,7 @@ export const TeamMemberInheritEnableDialog = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" disabled={disabled}>
           <Trans>Enable access</Trans>
         </Button>
       </DialogTrigger>
@@ -94,7 +100,7 @@ export const TeamMemberInheritEnableDialog = () => {
 
           <Button
             type="submit"
-            disabled={organisationGroupQuery.isPending}
+            disabled={disabled || organisationGroupQuery.isPending}
             loading={isPending}
             onClick={enableAccessGroup}
           >

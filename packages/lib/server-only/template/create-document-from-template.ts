@@ -48,6 +48,7 @@ import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { mapSecondaryIdToTemplateId } from '../../utils/envelope';
 import { buildTeamWhereQuery } from '../../utils/teams';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
+import { processExternalId } from '../envelope/create-envelope';
 import { incrementDocumentId } from '../envelope/increment-id';
 import { insertFormValuesInPdf } from '../pdf/insert-form-values-in-pdf';
 import { getTeamSettings } from '../team/get-team-settings';
@@ -524,7 +525,10 @@ export const createDocumentFromTemplate = async ({
     }),
   });
 
-  const { envelope, createdEnvelope } = await prisma.$transaction(async (tx) => {
+  const finalExternalId = externalId || template.externalId;
+  const { processedExternalId, fromNomia } = processExternalId(finalExternalId || undefined);
+
+ const {envelope, createdEnvelope} = await prisma.$transaction(async (tx) => {
     const envelope = await tx.envelope.create({
       data: {
         id: prefixedId('envelope'),
@@ -533,7 +537,8 @@ export const createDocumentFromTemplate = async ({
         internalVersion: template.internalVersion,
         qrToken: prefixedId('qr'),
         source: DocumentSource.TEMPLATE,
-        externalId: externalId || template.externalId,
+        externalId: processedExternalId,
+        fromNomia,
         templateId: legacyTemplateId, // The template this envelope was created from.
         userId,
         folderId,
@@ -552,6 +557,7 @@ export const createDocumentFromTemplate = async ({
         useLegacyFieldInsertion: template.useLegacyFieldInsertion ?? false,
         documentMetaId: documentMeta.id,
         formValues: formValues ?? undefined,
+        
         recipients: {
           createMany: {
             data: allFinalRecipients.map((recipient) => {
@@ -750,11 +756,7 @@ export const createDocumentFromTemplate = async ({
     if (!createdEnvelope) {
       throw new Error('Document not found');
     }
-
-    return { envelope, createdEnvelope };
-  });
-
-  // Trigger webhook outside the transaction to avoid holding the connection
+      // Trigger webhook outside the transaction to avoid holding the connection
   // open during network I/O.
   await Promise.allSettled([
     triggerWebhook({
@@ -770,6 +772,8 @@ export const createDocumentFromTemplate = async ({
       teamId,
     }),
   ]);
+    return { envelope, createdEnvelope };
+  });
 
   return envelope;
 };

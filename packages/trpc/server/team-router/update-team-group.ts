@@ -1,10 +1,12 @@
 import { TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
+import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
 import { OrganisationGroupType } from '@documenso/prisma/generated/types';
 
+import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 import { authenticatedProcedure } from '../trpc';
 import { ZUpdateTeamGroupRequestSchema, ZUpdateTeamGroupResponseSchema } from './update-team-group.types';
 
@@ -78,5 +80,24 @@ export const updateTeamGroupRoute = authenticatedProcedure
       data: {
         teamRole: data.teamRole,
       },
+    });
+
+    await (prisma as any).teamAuditLog.create({
+      data: createTeamAuditLogData({
+        teamId: teamGroup.teamId,
+        type: TEAM_AUDIT_LOG_TYPE.TEAM_GROUP_ROLE_UPDATED,
+        data: {
+          organisationGroupId: teamGroup.organisationGroupId,
+          organisationGroupName: teamGroup.organisationGroup.name ?? null,
+          previousRole: teamGroup.teamRole,
+          newRole: data.teamRole,
+        },
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+        metadata: ctx.metadata,
+      }),
     });
   });

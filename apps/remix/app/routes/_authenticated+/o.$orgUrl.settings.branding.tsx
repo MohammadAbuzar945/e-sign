@@ -2,7 +2,7 @@ import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/org
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { putFile } from '@documenso/lib/universal/upload/put-file';
-import { canExecuteOrganisationAction, isPersonalLayout } from '@documenso/lib/utils/organisations';
+import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import type { SanitizeBrandingCssWarning } from '@documenso/lib/utils/sanitize-branding-css';
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
@@ -12,7 +12,6 @@ import { msg, plural } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { Loader } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router';
 
 import {
   BrandingPreferencesForm,
@@ -123,11 +122,13 @@ export default function OrganisationSettingsBrandingPage() {
       ? t`Here you can set branding preferences for your team.`
       : t`Here you can set branding preferences for your organisation. Teams will inherit these settings by default.`;
 
+  const allowCustomBranding = organisationWithSettings.organisationClaim.flags.allowCustomBranding;
+
   return (
     <div className="max-w-2xl">
       <SettingsHeader title={settingsHeaderText} subtitle={settingsHeaderSubtitle} />
 
-      {organisationWithSettings.organisationClaim.flags.allowCustomBranding || !IS_BILLING_ENABLED() ? (
+      {allowCustomBranding ? (
         <section>
           <BrandingPreferencesForm
             context="Organisation"
@@ -170,17 +171,15 @@ export default function OrganisationSettingsBrandingPage() {
             </AlertTitle>
 
             <AlertDescription className="mr-2">
-              <Trans>Currently branding can only be configured for Teams and above plans.</Trans>
+              <Trans>Please contact us at help@nomiadocs.com for this feature!</Trans>
             </AlertDescription>
           </div>
 
-          {canExecuteOrganisationAction('MANAGE_BILLING', organisation.currentOrganisationRole) && (
-            <Button asChild variant="outline">
-              <Link to={isPersonalLayoutMode ? '/settings/billing' : `/o/${organisation.url}/settings/billing`}>
-                <Trans>Update Billing</Trans>
-              </Link>
-            </Button>
-          )}
+          <Button asChild variant="outline">
+            <a href="mailto:help@nomiadocs.com">
+              <Trans>Contact us</Trans>
+            </a>
+          </Button>
         </Alert>
       )}
     </div>

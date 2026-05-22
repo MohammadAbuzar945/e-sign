@@ -9,6 +9,7 @@ import { isBase64Image } from '@documenso/lib/constants/signatures';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
 import type { TEnvelope } from '@documenso/lib/types/envelope';
 import { ZFullFieldSchema } from '@documenso/lib/types/field';
+import { FIELD_META_DEFAULT_VALUES } from '@documenso/lib/types/field-meta';
 import { createSpinner } from '@documenso/lib/universal/field-renderer/field-generic-items';
 import { renderField } from '@documenso/lib/universal/field-renderer/render-field';
 import { isFieldUnsignedAndRequired } from '@documenso/lib/utils/advanced-fields-helpers';
@@ -127,7 +128,24 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
       return;
     }
 
-    const fieldToRender = ZFullFieldSchema.parse(unparsedField);
+    // Normalize legacy / null metadata to default values before validation so we always
+    // render a sensible field configuration.
+    const parsedFieldToRender = ZFullFieldSchema.safeParse({
+      ...unparsedField,
+      fieldMeta: unparsedField.fieldMeta ?? FIELD_META_DEFAULT_VALUES[unparsedField.type],
+    });
+
+    if (!parsedFieldToRender.success) {
+      // eslint-disable-next-line no-console
+      console.warn('Skipping render of field with invalid metadata', {
+        fieldId: unparsedField.id,
+        error: parsedFieldToRender.error,
+      });
+
+      return;
+    }
+
+    const fieldToRender = parsedFieldToRender.data;
 
     const color = fieldToRender.fieldMeta?.readOnly
       ? 'readOnly'
@@ -192,9 +210,22 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
         fieldHeight,
       });
 
-      const parsedFoundField = ZFullFieldSchema.parse(foundField);
+      const parsedFoundField = ZFullFieldSchema.safeParse({
+        ...foundField,
+        fieldMeta: foundField.fieldMeta ?? FIELD_META_DEFAULT_VALUES[foundField.type],
+      });
 
-      match(parsedFoundField)
+      if (!parsedFoundField.success) {
+        // eslint-disable-next-line no-console
+        console.warn('Skipping click handling for field with invalid metadata', {
+          fieldId: foundField.id,
+          error: parsedFoundField.error,
+        });
+
+        return;
+      }
+
+      match(parsedFoundField.data)
         /**
          * CHECKBOX FIELD.
          */

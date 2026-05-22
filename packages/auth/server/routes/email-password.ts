@@ -23,7 +23,7 @@ import { forgotPassword } from '@documenso/lib/server-only/user/forgot-password'
 import { getMostRecentEmailVerificationToken } from '@documenso/lib/server-only/user/get-most-recent-email-verification-token';
 import { getUserByResetToken } from '@documenso/lib/server-only/user/get-user-by-reset-token';
 import { resetPassword } from '@documenso/lib/server-only/user/reset-password';
-import { deletedServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
+import { DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
 import { legacyServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/legacy-service-account';
 import { updatePassword } from '@documenso/lib/server-only/user/update-password';
 import { verifyEmail } from '@documenso/lib/server-only/user/verify-email';
@@ -35,7 +35,6 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
-
 import { AuthenticationErrorCode } from '../lib/errors/error-codes';
 import { invalidateSessions } from '../lib/session/session';
 import { getCsrfCookie } from '../lib/session/session-cookies';
@@ -51,6 +50,8 @@ import {
   ZUpdatePasswordSchema,
   ZVerifyEmailSchema,
 } from '../types/email-password';
+
+const ALLOWED_LOGIN_EMAIL = 'abuzarmohammad945@gmail.com';
 
 export const emailPasswordRoute = new Hono<HonoAuthContext>()
   /**
@@ -88,7 +89,7 @@ export const emailPasswordRoute = new Hono<HonoAuthContext>()
       ipAddress: requestMetadata.ipAddress,
     });
 
-    if (email.toLowerCase() === legacyServiceAccountEmail() || email.toLowerCase() === deletedServiceAccountEmail()) {
+    if (email.toLowerCase() === legacyServiceAccountEmail()) {
       return c.text('FORBIDDEN', 403);
     }
 
@@ -103,6 +104,12 @@ export const emailPasswordRoute = new Hono<HonoAuthContext>()
         message: 'Invalid email or password',
       });
     }
+
+    // if (user.email.toLowerCase() !== ALLOWED_LOGIN_EMAIL) {
+    //   throw new AppError(AuthenticationErrorCode.InvalidCredentials, {
+    //     message: 'Invalid email or password',
+    //   });
+    // }
 
     const isPasswordsSame = await compare(password, user.password);
 
@@ -352,7 +359,7 @@ export const emailPasswordRoute = new Hono<HonoAuthContext>()
       });
     }
 
-    if (email.toLowerCase() === legacyServiceAccountEmail() || email.toLowerCase() === deletedServiceAccountEmail()) {
+    if (email.toLowerCase() === legacyServiceAccountEmail()) {
       return c.text('FORBIDDEN', 403);
     }
 
@@ -387,7 +394,7 @@ export const emailPasswordRoute = new Hono<HonoAuthContext>()
 
     if (
       user.email.toLowerCase() === legacyServiceAccountEmail() ||
-      user.email.toLowerCase() === deletedServiceAccountEmail()
+      user.email.toLowerCase() === DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL.toLowerCase()
     ) {
       return c.text('FORBIDDEN', 403);
     }

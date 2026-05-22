@@ -36,7 +36,7 @@ jobs:
           BRANCH="chore/extract-translations"
 
           git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@documenso.com'
+          git config --global user.email 'github-actions@nomiadocs.com'
 
           git fetch origin
 

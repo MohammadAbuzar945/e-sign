@@ -7,9 +7,17 @@ import { TeamMemberInheritEnableDialog } from '~/components/dialogs/team-inherit
 
 type TeamInheritMemberAlertProps = {
   memberAccessTeamGroup: TeamGroup | null;
+  isPrivate: boolean;
 };
 
-export const TeamInheritMemberAlert = ({ memberAccessTeamGroup }: TeamInheritMemberAlertProps) => {
+export const TeamInheritMemberAlert = ({
+  memberAccessTeamGroup,
+  isPrivate,
+}: TeamInheritMemberAlertProps) => {
+  if (isPrivate) {
+    return null;
+  }
+
   return (
     <Alert className="flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
       <div className="mb-4 sm:mb-0">
@@ -27,9 +35,9 @@ export const TeamInheritMemberAlert = ({ memberAccessTeamGroup }: TeamInheritMem
       </div>
 
       {memberAccessTeamGroup ? (
-        <TeamMemberInheritDisableDialog group={memberAccessTeamGroup} />
+        <TeamMemberInheritDisableDialog group={memberAccessTeamGroup} disabled={isPrivate} />
       ) : (
-        <TeamMemberInheritEnableDialog />
+        <TeamMemberInheritEnableDialog disabled={isPrivate} />
       )}
     </Alert>
   );

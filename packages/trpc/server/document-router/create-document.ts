@@ -27,6 +27,7 @@ export const createDocumentRoute = authenticatedProcedure
       title,
       externalId,
       visibility,
+      includeQrCodeInCertificate,
       globalAccessAuth,
       globalActionAuth,
       recipients,
@@ -62,7 +63,7 @@ export const createDocumentRoute = authenticatedProcedure
 
     if (remaining.documents <= 0) {
       throw new AppError(AppErrorCode.LIMIT_EXCEEDED, {
-        message: 'You have reached your document limit for this month. Please upgrade your plan.',
+        message: 'You have reached your document limit. Please upgrade your plan.',
         statusCode: 400,
       });
     }
@@ -70,12 +71,13 @@ export const createDocumentRoute = authenticatedProcedure
     const document = await createEnvelope({
       userId: user.id,
       teamId,
-      internalVersion: 1,
+      internalVersion: 2,
       data: {
         type: EnvelopeType.DOCUMENT,
         title,
         externalId,
         visibility,
+        includeQrCodeInCertificate,
         globalAccessAuth,
         globalActionAuth,
         formValues,

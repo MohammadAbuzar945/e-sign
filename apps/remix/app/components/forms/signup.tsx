@@ -219,9 +219,9 @@ export const SignUpForm = ({
         <div className="absolute -inset-8 -z-[1] bg-background/50 backdrop-blur-[2px]" />
 
         <div className="relative flex h-full w-full flex-col items-center justify-evenly">
-          <div className="rounded-2xl border bg-background px-4 py-1 font-medium text-sm">
+          {/* <div className="bg-background rounded-2xl border px-4 py-1 text-sm font-medium">
             <Trans>User profiles are here!</Trans>
-          </div>
+          </div> */}
 
           <div className="w-full max-w-md">
             <UserProfileTimur rows={2} className="rounded-2xl border border-border bg-background shadow-md" />
@@ -407,9 +407,9 @@ export const SignUpForm = ({
         </Form>
         <p className="mt-6 text-muted-foreground text-xs">
           <Trans>
-            By proceeding, you agree to our{' '}
+          By proceeding, you agree to our{' '}
             <Link
-              to="https://documen.so/terms"
+              to="/articles/terms"
               target="_blank"
               className="text-documenso-700 duration-200 hover:opacity-70"
             >
@@ -417,7 +417,7 @@ export const SignUpForm = ({
             </Link>{' '}
             and{' '}
             <Link
-              to="https://documen.so/privacy"
+              to="/articles/privacy"
               target="_blank"
               className="text-documenso-700 duration-200 hover:opacity-70"
             >

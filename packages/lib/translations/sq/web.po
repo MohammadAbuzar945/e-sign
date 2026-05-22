@@ -8392,8 +8392,8 @@ msgid "You have reached the maximum limit of {0} direct templates. <0>Upgrade yo
 msgstr "Ju keni arritur limitin maksimal të {0} shablloneve direkte. <0>Përmirësoni llogarinë tuaj për të vazhduar!</0>"
 
 #: apps/remix/app/components/dialogs/team-create-dialog.tsx
-msgid "You have reached the maximum number of teams for your plan. Please contact sales at <0>support@documenso.com</0> if you would like to adjust your plan."
-msgstr "Ju keni arritur numrin maksimal të ekipeve për planin tuaj. Ju lutemi kontaktoni shitjet në <0>support@documenso.com</0> nëse dëshironi të ndryshoni planin tuaj."
+msgid "You have reached the maximum number of teams for your plan. Please contact sales at <0>help@nomiadocs.com</0> if you would like to adjust your plan."
+msgstr "Ju keni arritur numrin maksimal të ekipeve për planin tuaj. Ju lutemi kontaktoni shitjet në <0>help@nomiadocs.com</0> nëse dëshironi të ndryshoni planin tuaj."
 
 #: apps/remix/app/components/general/document/document-upload.tsx
 #: apps/remix/app/components/general/document/document-drop-zone-wrapper.tsx
@@ -8657,8 +8657,8 @@ msgid "Your personal organisation"
 msgstr "Organizata juaj personale"
 
 #: apps/remix/app/components/dialogs/organisation-member-invite-dialog.tsx
-msgid "Your plan does not support inviting members. Please upgrade or your plan or contact sales at <0>support@documenso.com</0> if you would like to discuss your options."
-msgstr "Plani juaj nuk mbulon ftesën e anëtarëve. Ju lutemi përditësoni ose kontaktoni me shitjet në <0>support@documenso.com</0> nëse dëshironi të diskutoni opsionet tuaja."
+msgid "Your plan does not support inviting members. Please upgrade or your plan or contact sales at <0>help@nomiadocs.com</0> if you would like to discuss your options."
+msgstr "Plani juaj nuk mbulon ftesën e anëtarëve. Ju lutemi përditësoni ose kontaktoni me shitjet në <0>help@nomiadocs.com</0> nëse dëshironi të diskutoni opsionet tuaja."
 
 #: apps/remix/app/components/forms/profile.tsx
 msgid "Your profile has been updated successfully."

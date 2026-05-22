@@ -19,8 +19,21 @@ type ExtractDocumentAuthMethodsOptions = {
  * Will combine the recipient and document auth values to derive the final
  * auth values for a recipient if possible.
  */
-export const extractDocumentAuthMethods = ({ documentAuth, recipientAuth }: ExtractDocumentAuthMethodsOptions) => {
-  const documentAuthOption = ZDocumentAuthOptionsSchema.parse(documentAuth);
+export const extractDocumentAuthMethods = ({
+  documentAuth,
+  recipientAuth,
+}: ExtractDocumentAuthMethodsOptions) => {
+  const parsedDocumentAuth = ZDocumentAuthOptionsSchema.parse(documentAuth);
+  const documentAuthOption =
+    parsedDocumentAuth.kbaAccessExplicitlyDisabled === true
+      ? {
+          ...parsedDocumentAuth,
+          globalAccessAuth: parsedDocumentAuth.globalAccessAuth.filter(
+            (method) => method !== DocumentAuth.KBA,
+          ),
+        }
+      : parsedDocumentAuth;
+
   const recipientAuthOption = ZRecipientAuthOptionsSchema.parse(recipientAuth);
 
   const derivedRecipientAccessAuth: TRecipientAccessAuthTypes[] =
@@ -48,10 +61,19 @@ export const extractDocumentAuthMethods = ({ documentAuth, recipientAuth }: Extr
  * Create document auth options in a type safe way.
  */
 export const createDocumentAuthOptions = (options: TDocumentAuthOptions): TDocumentAuthOptions => {
-  return {
+  const base: TDocumentAuthOptions = {
     globalAccessAuth: options?.globalAccessAuth ?? [],
     globalActionAuth: options?.globalActionAuth ?? [],
   };
+
+  if (options?.kbaAccessExplicitlyDisabled === true) {
+    return {
+      ...base,
+      kbaAccessExplicitlyDisabled: true,
+    };
+  }
+
+  return base;
 };
 
 /**
@@ -61,5 +83,40 @@ export const createRecipientAuthOptions = (options: TRecipientAuthOptions): TRec
   return {
     accessAuth: options?.accessAuth ?? [],
     actionAuth: options?.actionAuth ?? [],
+  };
+};
+
+/**
+ * When envelope KBA policy is off (or missing), strip KBA from document and recipient access auth
+ * so signing links behave like "no KBA" and the gate / loaders stay consistent with the server.
+ */
+export const stripKbaFromAuthJsonWhenPolicyInactive = ({
+  documentAuth,
+  recipientAuth,
+  kbaPolicyIsActive,
+}: {
+  documentAuth: Envelope['authOptions'];
+  recipientAuth: Recipient['authOptions'];
+  kbaPolicyIsActive: boolean;
+}): { documentAuth: TDocumentAuthOptions; recipientAuth: TRecipientAuthOptions } => {
+  if (kbaPolicyIsActive) {
+    return {
+      documentAuth: ZDocumentAuthOptionsSchema.parse(documentAuth),
+      recipientAuth: ZRecipientAuthOptionsSchema.parse(recipientAuth),
+    };
+  }
+
+  const doc = ZDocumentAuthOptionsSchema.parse(documentAuth);
+  const rec = ZRecipientAuthOptionsSchema.parse(recipientAuth);
+
+  return {
+    documentAuth: createDocumentAuthOptions({
+      ...doc,
+      globalAccessAuth: doc.globalAccessAuth.filter((method) => method !== DocumentAuth.KBA),
+    }),
+    recipientAuth: createRecipientAuthOptions({
+      ...rec,
+      accessAuth: rec.accessAuth.filter((method) => method !== DocumentAuth.KBA),
+    }),
   };
 };

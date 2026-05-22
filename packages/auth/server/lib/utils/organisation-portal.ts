@@ -1,6 +1,7 @@
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { DOCUMENSO_ENCRYPTION_KEY } from '@documenso/lib/constants/crypto';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { ZClaimFlagsSchema } from '@documenso/lib/types/subscription';
 import { symmetricDecrypt } from '@documenso/lib/universal/crypto';
 import { formatOrganisationCallbackUrl } from '@documenso/lib/utils/organisation-authentication-portal';
 import { prisma } from '@documenso/prisma';
@@ -46,16 +47,20 @@ export const getOrganisationAuthenticationPortalOptions = async (
     });
   }
 
+  const { organisationClaim, organisationAuthenticationPortal } = organisation;
+  const claimFlags = ZClaimFlagsSchema.safeParse(organisationClaim?.flags);
+
   if (
-    !organisation.organisationClaim.flags.authenticationPortal ||
-    !organisation.organisationAuthenticationPortal.enabled
+    !claimFlags.success ||
+    !claimFlags.data.authenticationPortal ||
+    !organisationAuthenticationPortal?.enabled
   ) {
     throw new AppError(AppErrorCode.NOT_SETUP, {
       message: 'Authentication portal is not enabled for this organisation',
     });
   }
 
-  const { clientId, clientSecret: encryptedClientSecret, wellKnownUrl } = organisation.organisationAuthenticationPortal;
+  const { clientId, clientSecret: encryptedClientSecret, wellKnownUrl } = organisationAuthenticationPortal;
 
   if (!clientId || !encryptedClientSecret || !wellKnownUrl) {
     throw new AppError(AppErrorCode.NOT_SETUP, {

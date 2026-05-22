@@ -238,7 +238,7 @@ export const TemplateDirectLinkDialog = ({
                           You have reached the maximum limit of {quota.directTemplates} direct templates.{' '}
                           <Link
                             className="mt-1 block underline underline-offset-4"
-                            to={`/o/${organisation.url}/settings/billing`}
+                            to={organisation ? `/o/${organisation.url}/price-plan` : `/price-plans`}
                           >
                             Upgrade your account to continue!
                           </Link>

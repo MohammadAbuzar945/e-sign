@@ -67,7 +67,13 @@ export default function DocumentPage({ params }: Route.ComponentProps) {
     },
     {
       ...DO_NOT_INVALIDATE_QUERY_ON_MUTATION,
-      enabled: envelope && envelope.internalVersion === 2 && envelope.status === DocumentStatus.PENDING,
+      enabled: envelope != null &&
+        envelope.internalVersion === 2 &&
+        envelope.status === DocumentStatus.PENDING,
+      ...(team?.id != null && { context: { teamId: String(team.id) } }),
+      // Refetch every 3 seconds when document is pending to catch status changes
+      refetchInterval: () =>
+        envelope?.status === DocumentStatus.PENDING ? 3000 : false,
     },
   );
 

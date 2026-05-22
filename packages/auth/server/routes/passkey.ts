@@ -1,7 +1,7 @@
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { rateLimitResponse } from '@documenso/lib/server-only/rate-limit/rate-limit-middleware';
 import { passkeyRateLimit } from '@documenso/lib/server-only/rate-limit/rate-limits';
-import { deletedServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
+import { DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
 import { legacyServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/legacy-service-account';
 import type { TAuthenticationResponseJSONSchema } from '@documenso/lib/types/webauthn';
 import { ZAuthenticationResponseJSONSchema } from '@documenso/lib/types/webauthn';
@@ -92,7 +92,7 @@ export const passkeyRoute = new Hono<HonoAuthContext>()
 
     if (
       user.email.toLowerCase() === legacyServiceAccountEmail() ||
-      user.email.toLowerCase() === deletedServiceAccountEmail()
+      user.email.toLowerCase() === DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL.toLowerCase()
     ) {
       return c.text('FORBIDDEN', 403);
     }

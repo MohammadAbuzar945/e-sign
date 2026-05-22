@@ -1,5 +1,7 @@
 import { router } from '../trpc';
 import { accessAuthRequest2FAEmailRoute } from './access-auth-request-2fa-email';
+import { accessAuthGetKbaChallengeRoute } from './access-auth-get-kba-challenge';
+import { accessAuthVerifyKbaRoute } from './access-auth-verify-kba';
 import { createAttachmentRoute } from './attachment/create-attachment';
 import { deleteAttachmentRoute } from './attachment/delete-attachment';
 import { findAttachmentsRoute } from './attachment/find-attachments';
@@ -8,9 +10,10 @@ import { createDocumentRoute } from './create-document';
 import { createDocumentTemporaryRoute } from './create-document-temporary';
 import { deleteDocumentRoute } from './delete-document';
 import { distributeDocumentRoute } from './distribute-document';
-import { downloadDocumentRoute } from './download-document';
 import { downloadDocumentAuditLogsRoute } from './download-document-audit-logs';
 import { downloadDocumentBetaRoute } from './download-document-beta';
+import { downloadDocumentRoute } from './download-document';
+import { downloadDocumentUrlRoute } from './download-document-url';
 import { downloadDocumentCertificateRoute } from './download-document-certificate';
 import { duplicateDocumentRoute } from './duplicate-document';
 import { findDocumentAuditLogsRoute } from './find-document-audit-logs';
@@ -41,6 +44,7 @@ export const documentRouter = router({
   share: shareDocumentRoute,
 
   download: downloadDocumentRoute,
+  downloadUrl: downloadDocumentUrlRoute,
 
   // Deprecated endpoints which need to be removed in the future.
   downloadBeta: downloadDocumentBetaRoute,
@@ -52,6 +56,8 @@ export const documentRouter = router({
 
   accessAuth: router({
     request2FAEmail: accessAuthRequest2FAEmailRoute,
+    getKbaChallenge: accessAuthGetKbaChallengeRoute,
+    verifyKba: accessAuthVerifyKbaRoute,
   }),
 
   auditLog: {

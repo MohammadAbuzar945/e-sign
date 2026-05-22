@@ -27,7 +27,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { match } from 'ts-pattern';
-
 import { EnvelopeDeleteDialog } from '~/components/dialogs/envelope-delete-dialog';
 import { EnvelopeDistributeDialog } from '~/components/dialogs/envelope-distribute-dialog';
 import { EnvelopeDownloadDialog } from '~/components/dialogs/envelope-download-dialog';
@@ -35,12 +34,11 @@ import { EnvelopeDuplicateDialog } from '~/components/dialogs/envelope-duplicate
 import { EnvelopeRedistributeDialog } from '~/components/dialogs/envelope-redistribute-dialog';
 import { EnvelopeSaveAsTemplateDialog } from '~/components/dialogs/envelope-save-as-template-dialog';
 import { TemplateDirectLinkDialog } from '~/components/dialogs/template-direct-link-dialog';
+import { EnvelopeEditorFieldsPage } from '~/components/general/envelope-editor/envelope-editor-fields-page';
+import { EnvelopeEditorPreviewPage } from '~/components/general/envelope-editor/envelope-editor-preview-page';
 import { EnvelopeEditorSettingsDialog } from '~/components/general/envelope-editor/envelope-editor-settings-dialog';
-
-import { EnvelopeEditorFieldsPage } from './envelope-editor-fields-page';
+import { EnvelopeEditorUploadPage } from '~/components/general/envelope-editor/envelope-editor-upload-page';
 import EnvelopeEditorHeader from './envelope-editor-header';
-import { EnvelopeEditorPreviewPage } from './envelope-editor-preview-page';
-import { EnvelopeEditorUploadPage } from './envelope-editor-upload-page';
 
 type EnvelopeEditorStepData = {
   id: string;
@@ -166,11 +164,11 @@ export const EnvelopeEditor = () => {
 
     const foundStep = envelopeEditorSteps.find((step) => step.id === stepParam);
 
-    if (foundStep && foundStep.id !== pageToRender) {
+    if (foundStep && pageToRender !== 'loading' && pageToRender !== foundStep.id) {
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
       void handleStepChange(foundStep.id as EnvelopeEditorStep);
     }
-  }, [searchParams]);
+  }, [searchParams, pageToRender, envelopeEditorSteps]);
 
   const currentStepData = envelopeEditorSteps.find((step) => step.id === searchParamsStep) || envelopeEditorSteps[0];
 
@@ -179,7 +177,7 @@ export const EnvelopeEditor = () => {
       <EnvelopeEditorHeader />
 
       {/* Main Content Area */}
-      <div className="flex h-[calc(100vh-4rem)] w-screen">
+      <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden">
         {/* Left Section - Step Navigation */}
         <div
           className={cn('flex w-80 flex-shrink-0 flex-col overflow-y-auto border-border border-r bg-background py-4', {
@@ -270,7 +268,7 @@ export const EnvelopeEditor = () => {
                   className={cn(
                     `cursor-pointer rounded-lg text-left transition-colors ${
                       isActive
-                        ? 'border border-green-200 bg-green-50 dark:border-green-500/20 dark:bg-green-500/10'
+                        ? 'border border-green-400 bg-green-50 dark:border-green-500/20 dark:bg-green-500/10'
                         : 'border border-gray-200 hover:bg-gray-50 dark:border-gray-400/20 dark:hover:bg-gray-400/10'
                     }`,
                     {

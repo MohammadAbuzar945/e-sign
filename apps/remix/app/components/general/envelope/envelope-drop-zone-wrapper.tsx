@@ -56,7 +56,11 @@ export const EnvelopeDropZoneWrapper = ({ children, type, className }: EnvelopeD
 
   const onFileDrop = async (files: File[]) => {
     if (isUploadDisabled && IS_BILLING_ENABLED()) {
-      await navigate(`/o/${organisation.url}/settings/billing`);
+      if (organisation) {
+        await navigate(`/o/${organisation.url}/price-plan`);
+      } else {
+        await navigate(`/price-plans`);
+      }
       return;
     }
 
@@ -103,7 +107,7 @@ export const EnvelopeDropZoneWrapper = ({ children, type, className }: EnvelopeD
 
       const pathPrefix = type === EnvelopeType.DOCUMENT ? formatDocumentsPath(team.url) : formatTemplatesPath(team.url);
 
-      const aiQueryParam = team.preferences.aiFeaturesEnabled ? '?ai=true' : '';
+      const aiQueryParam = team.preferences.aiFeaturesEnabled ? '?ai=false' : '';
 
       await navigate(`${pathPrefix}/${id}/edit${aiQueryParam}`);
     } catch (err) {
@@ -196,8 +200,8 @@ export const EnvelopeDropZoneWrapper = ({ children, type, className }: EnvelopeD
 
             {isUploadDisabled && IS_BILLING_ENABLED() && (
               <Link
-                to={`/o/${organisation.url}/settings/billing`}
-                className="mt-4 text-amber-500 text-sm hover:underline dark:text-amber-400"
+                to={organisation ? `/o/${organisation.url}/price-plan` : `/price-plans`}
+                className="mt-4 text-sm text-amber-500 hover:underline dark:text-amber-400"
               >
                 <Trans>Upgrade your plan to upload more documents</Trans>
               </Link>

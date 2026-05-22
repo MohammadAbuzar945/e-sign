@@ -24,6 +24,8 @@ export const trpc = createTRPCClient<AppRouter>({
       false: httpBatchLink({
         url: `${getBaseUrl()}/api/trpc`,
         transformer: dataTransformer,
+        // Prevent proxy/server 414s by splitting large batches into smaller requests.
+        maxURLLength: 2048,
         headers: (opts) => {
           const operationWithTeamId = opts.opList.find(
             (op) => op.context.teamId && typeof op.context.teamId === 'string',

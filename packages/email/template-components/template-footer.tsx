@@ -2,6 +2,7 @@ import { Trans } from '@lingui/react/macro';
 
 import { Link, Section, Text } from '../components';
 import { useBranding } from '../providers/branding';
+import { env } from '@documenso/lib/utils/env';
 
 export type TemplateFooterProps = {
   isDocument?: boolean;
@@ -16,8 +17,8 @@ export const TemplateFooter = ({ isDocument = true }: TemplateFooterProps) => {
         <Text className="my-4 text-base text-slate-400">
           <Trans>
             This document was sent using{' '}
-            <Link className="text-[#7AC455]" href="https://documen.so/mail-footer">
-              Documenso
+            <Link className="text-[#3346b1]" href={env('NEXT_PUBLIC_WEBAPP_URL') ?? 'http://localhost:3000'}>
+              Nomia
             </Link>
             .
           </Trans>
@@ -38,10 +39,9 @@ export const TemplateFooter = ({ isDocument = true }: TemplateFooterProps) => {
       )}
 
       {!branding.brandingEnabled && (
-        <Text className="my-8 text-slate-400 text-sm">
-          Documenso, Inc.
+        <Text className="my-8 text-sm text-slate-400">
+          Nomia Africa (Pty) Limited.
           <br />
-          2261 Market Street, #5211, San Francisco, CA 94114, USA
         </Text>
       )}
     </Section>

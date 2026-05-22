@@ -91,11 +91,15 @@ export const DocumentsTableActionDropdown = ({ row, onMoveDocument }: DocumentsT
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger data-testid="document-table-action-btn">
-        <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+      <DropdownMenuTrigger
+        data-testid="document-table-action-btn"
+        onClick={(e) => e.stopPropagation()}
+        className="inline-flex items-center justify-center rounded-md focus:outline-none"
+      >
+        <MoreHorizontal className="text-muted-foreground h-5 w-5" />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="w-52" align="start" forceMount>
+      <DropdownMenuContent className="w-52" align="start">
         <DropdownMenuLabel>
           <Trans>Action</Trans>
         </DropdownMenuLabel>
@@ -210,7 +214,7 @@ export const DocumentsTableActionDropdown = ({ row, onMoveDocument }: DocumentsT
           <Trans>Share</Trans>
         </DropdownMenuLabel>
 
-        {canManageDocument && (
+        {/* {canManageDocument && (
           <DocumentRecipientLinkCopyDialog
             recipients={row.recipients}
             trigger={
@@ -222,11 +226,11 @@ export const DocumentsTableActionDropdown = ({ row, onMoveDocument }: DocumentsT
               </DropdownMenuItem>
             }
           />
-        )}
+        )} */}
 
         <DocumentResendDialog document={row} recipients={nonSignedRecipients} />
 
-        <DocumentShareButton
+        {/* <DocumentShareButton
           documentId={row.id}
           token={isOwner ? undefined : recipient?.token}
           trigger={({ loading, disabled }) => (
@@ -237,7 +241,7 @@ export const DocumentsTableActionDropdown = ({ row, onMoveDocument }: DocumentsT
               </div>
             </DropdownMenuItem>
           )}
-        />
+        /> */}
       </DropdownMenuContent>
 
       <EnvelopeSaveAsTemplateDialog

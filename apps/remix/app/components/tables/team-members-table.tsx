@@ -1,5 +1,6 @@
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { EXTENDED_TEAM_MEMBER_ROLE_MAP } from '@documenso/lib/constants/teams-translations';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
@@ -22,7 +23,7 @@ import { TableCell } from '@documenso/ui/primitives/table';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { OrganisationGroupType, OrganisationMemberRole } from '@prisma/client';
+import { OrganisationGroupType, OrganisationMemberRole, TeamMemberRole } from '@prisma/client';
 import { EditIcon, MoreHorizontal, Trash2Icon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
@@ -41,6 +42,7 @@ export const TeamMembersTable = () => {
 
   const organisation = useCurrentOrganisation();
   const team = useCurrentTeam();
+  const { user } = useSession();
 
   const parsedSearchParams = ZUrlSearchParamsSchema.parse(Object.fromEntries(searchParams ?? []));
 
@@ -123,62 +125,76 @@ export const TeamMembersTable = () => {
       },
       {
         header: _(msg`Actions`),
-        cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-            </DropdownMenuTrigger>
+        cell: ({ row }) => {
+          const isDirectTeamMember = groups.some(
+            (group) =>
+              group.organisationGroupType === OrganisationGroupType.INTERNAL_TEAM &&
+              group.members.some((member) => member.id === row.original.id),
+          );
 
-            <DropdownMenuContent className="w-52" align="start" forceMount>
-              <DropdownMenuLabel>
-                <Trans>Actions</Trans>
-              </DropdownMenuLabel>
+          const isSelfAdmin = row.original.userId === user.id && row.original.teamRole === TeamMemberRole.ADMIN;
 
-              <TeamMemberUpdateDialog
-                currentUserTeamRole={team.currentTeamRole}
-                teamId={team.id}
-                memberId={row.original.id}
-                memberName={row.original.name ?? ''}
-                memberTeamRole={row.original.teamRole}
-                trigger={
-                  <DropdownMenuItem
-                    disabled={
-                      organisation.ownerUserId === row.original.userId ||
-                      !isTeamRoleWithinUserHierarchy(team.currentTeamRole, row.original.teamRole)
-                    }
-                    onSelect={(e) => e.preventDefault()}
-                    title="Update team member role"
-                  >
-                    <EditIcon className="mr-2 h-4 w-4" />
-                    <Trans>Update role</Trans>
-                  </DropdownMenuItem>
-                }
-              />
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger>
+                <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+              </DropdownMenuTrigger>
 
-              <TeamMemberDeleteDialog
-                teamId={team.id}
-                teamName={team.name}
-                memberId={row.original.id}
-                memberName={row.original.name ?? ''}
-                memberEmail={row.original.email}
-                isInheritMemberEnabled={memberAccessTeamGroup !== undefined}
-                trigger={
-                  <DropdownMenuItem
-                    onSelect={(e) => e.preventDefault()}
-                    disabled={
-                      organisation.ownerUserId === row.original.userId ||
-                      !isTeamRoleWithinUserHierarchy(team.currentTeamRole, row.original.teamRole)
-                    }
-                    title={_(msg`Remove team member`)}
-                  >
-                    <Trash2Icon className="mr-2 h-4 w-4" />
-                    <Trans>Remove</Trans>
-                  </DropdownMenuItem>
-                }
-              />
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
+              <DropdownMenuContent className="w-52" align="start" forceMount>
+                <DropdownMenuLabel>
+                  <Trans>Actions</Trans>
+                </DropdownMenuLabel>
+
+                <TeamMemberUpdateDialog
+                  currentUserTeamRole={team.currentTeamRole}
+                  teamId={team.id}
+                  memberId={row.original.id}
+                  memberName={row.original.name ?? ''}
+                  memberTeamRole={row.original.teamRole}
+                  trigger={
+                    <DropdownMenuItem
+                      disabled={
+                        isSelfAdmin || !isTeamRoleWithinUserHierarchy(team.currentTeamRole, row.original.teamRole)
+                      }
+                      onSelect={(e) => e.preventDefault()}
+                      title="Update team member role"
+                    >
+                      <EditIcon className="mr-2 h-4 w-4" />
+                      <Trans>Update role</Trans>
+                    </DropdownMenuItem>
+                  }
+                />
+
+                <TeamMemberDeleteDialog
+                  teamId={team.id}
+                  teamName={team.name}
+                  memberId={row.original.id}
+                  memberName={row.original.name ?? ''}
+                  memberEmail={row.original.email}
+                  isInheritMemberEnabled={memberAccessTeamGroup !== undefined}
+                  trigger={
+                    <DropdownMenuItem
+                      onSelect={(e) => e.preventDefault()}
+                      disabled={
+                        isSelfAdmin ||
+                        !isDirectTeamMember ||
+                        !isTeamRoleWithinUserHierarchy(team.currentTeamRole, row.original.teamRole)
+                      }
+                      title={
+                        !isDirectTeamMember
+                          ? _(msg`This member is added via a group. Remove them from the group instead.`)
+                          : _(msg`Remove team member`)
+                      }
+                    >
+                      <Trash2Icon className="mr-2 h-4 w-4" />
+                      <Trans>Remove</Trans>
+                    </DropdownMenuItem>
+                  }
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
     ] satisfies DataTableColumnDef<(typeof results)['data'][number]>[];
   }, [groups]);
@@ -227,7 +243,9 @@ export const TeamMembersTable = () => {
       </DataTable>
 
       <AnimateGenericFadeInOut key={groupQuery.isPending ? 'pending' : 'fetched'}>
-        {!groupQuery.isPending && <TeamInheritMemberAlert memberAccessTeamGroup={memberAccessTeamGroup || null} />}
+        {!groupQuery.isPending && (
+          <TeamInheritMemberAlert memberAccessTeamGroup={memberAccessTeamGroup || null} isPrivate={team.isPrivate} />
+        )}
       </AnimateGenericFadeInOut>
     </div>
   );

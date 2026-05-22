@@ -1,5 +1,6 @@
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
 import { stripe } from '@documenso/lib/server-only/stripe';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
@@ -16,9 +17,6 @@ export const getSubscription = async ({ organisationId, userId }: GetSubscriptio
       userId,
       roles: ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_ORGANISATION'],
     }),
-    include: {
-      subscription: true,
-    },
   });
 
   if (!organisation) {
@@ -27,16 +25,20 @@ export const getSubscription = async ({ organisationId, userId }: GetSubscriptio
     });
   }
 
-  if (!organisation.subscription) {
+  const currentSubscription = await getCurrentSubscriptionByOrganisationId({
+    organisationId: organisation.id,
+  });
+
+  if (!currentSubscription) {
     return null;
   }
 
-  const stripeSubscription = await stripe.subscriptions.retrieve(organisation.subscription.planId, {
+  const stripeSubscription = await stripe.subscriptions.retrieve(currentSubscription.planId, {
     expand: ['items.data.price.product'],
   });
 
   return {
-    organisationSubscription: organisation.subscription,
+    organisationSubscription: currentSubscription,
     stripeSubscription,
   };
 };

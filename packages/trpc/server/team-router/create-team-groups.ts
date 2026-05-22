@@ -1,10 +1,14 @@
 import { ALLOWED_TEAM_GROUP_TYPES, TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
+import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
 import { generateDatabaseId } from '@documenso/lib/universal/id';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
 import { OrganisationGroupType, OrganisationMemberRole, TeamMemberRole } from '@documenso/prisma/generated/types';
+
+import type { CreateTeamAuditLogDataResponse } from '@documenso/lib/utils/team-audit-logs';
+import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 
 import { authenticatedProcedure } from '../trpc';
 import { ZCreateTeamGroupsRequestSchema, ZCreateTeamGroupsResponseSchema } from './create-team-groups.types';
@@ -109,4 +113,38 @@ export const createTeamGroupsRoute = authenticatedProcedure
         teamRole: group.teamRole,
       })),
     });
+
+    const organisationGroupsById = new Map(
+      team.organisation.groups.map((group) => [group.id, group]),
+    );
+
+    const auditLogs: CreateTeamAuditLogDataResponse[] = [];
+
+    for (const group of groups) {
+      const organisationGroup = organisationGroupsById.get(group.organisationGroupId);
+
+      auditLogs.push(
+        createTeamAuditLogData({
+          teamId,
+          type: TEAM_AUDIT_LOG_TYPE.TEAM_GROUP_ATTACHED,
+          data: {
+            organisationGroupId: group.organisationGroupId,
+            organisationGroupName: organisationGroup?.name ?? null,
+            teamRole: group.teamRole,
+          },
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          },
+          metadata: ctx.metadata,
+        }),
+      );
+    }
+
+    if (auditLogs.length > 0) {
+      await (prisma as any).teamAuditLog.createMany({
+        data: auditLogs,
+      });
+    }
   });

@@ -15,6 +15,14 @@ export interface FindFoldersInternalOptions {
 export const findFoldersInternal = async ({ userId, teamId, parentId, type }: FindFoldersInternalOptions) => {
   const team = await getTeamById({ userId, teamId });
 
+  const isOrganisationOwner = team.organisation.ownerUserId === userId;
+  const isTeamMember = team.teamGroups.length > 0;
+
+  // Organisation owners who are not members of the team should not see team folders.
+  if (isOrganisationOwner && !isTeamMember) {
+    return [];
+  }
+
   const visibilityFilters = {
     visibility: {
       in: TEAM_DOCUMENT_VISIBILITY_MAP[team.currentTeamRole],

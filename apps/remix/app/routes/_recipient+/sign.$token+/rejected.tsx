@@ -2,16 +2,20 @@ import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
 import { loadRecipientBrandingByTeamId } from '@documenso/lib/server-only/branding/load-recipient-branding';
 import { getDocumentAndSenderByToken } from '@documenso/lib/server-only/document/get-document-by-token';
-import { isRecipientAuthorized } from '@documenso/lib/server-only/document/is-recipient-authorized';
 import { getFieldsForToken } from '@documenso/lib/server-only/field/get-fields-for-token';
 import { getRecipientByToken } from '@documenso/lib/server-only/recipient/get-recipient-by-token';
+import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
+import { isDocumentCompleted } from '@documenso/lib/utils/document';
+import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
 import { Trans } from '@lingui/react/macro';
-import { FieldType } from '@prisma/client';
-import { XCircle } from 'lucide-react';
+import { FieldType, SigningStatus } from '@prisma/client';
+import { DownloadIcon, XCircle } from 'lucide-react';
 import { Link } from 'react-router';
+import { match } from 'ts-pattern';
 
+import { EnvelopeDownloadDialog } from '~/components/dialogs/envelope-download-dialog';
 import { DocumentSigningAuthPageView } from '~/components/general/document-signing/document-signing-auth-page';
 import { RecipientBranding } from '~/components/general/recipient-branding';
 import { useCspNonce } from '~/utils/nonce';
@@ -50,12 +54,24 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw new Response('Not Found', { status: 404 });
   }
 
-  const isDocumentAccessValid = await isRecipientAuthorized({
-    type: 'ACCESS',
-    documentAuthOptions: document.authOptions,
-    recipient,
-    userId: user?.id,
+  const { derivedRecipientAccessAuth } = extractDocumentAuthMethods({
+    documentAuth: document.authOptions,
+    recipientAuth: recipient.authOptions,
   });
+
+  // After rejection, the signing token is sufficient to show the confirmation (same idea as
+  // `/complete` not re-requiring KBA). ACCOUNT access still applies until the recipient has
+  // actually rejected, so the page cannot be used to leak envelope details before rejection.
+  const isDocumentAccessValid =
+    recipient.signingStatus === SigningStatus.REJECTED
+      ? true
+      : derivedRecipientAccessAuth.every((accessAuth) =>
+          match(accessAuth)
+            .with(DocumentAccessAuth.ACCOUNT, () => user && user.email === recipient.email)
+            .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => true)
+            .with(DocumentAccessAuth.KBA, () => true)
+            .exhaustive(),
+        );
 
   const recipientReference =
     recipient.name || fields.find((field) => field.type === FieldType.NAME)?.customText || recipient.email;
@@ -65,6 +81,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       isDocumentAccessValid: true,
       recipientReference,
       truncatedTitle,
+      document,
+      recipient,
       branding,
     };
   }
@@ -82,7 +100,7 @@ export default function RejectedSigningPage({ loaderData }: Route.ComponentProps
   const user = sessionData?.user;
   const cspNonce = useCspNonce();
 
-  const { isDocumentAccessValid, recipientReference, truncatedTitle, branding } = loaderData;
+  const { isDocumentAccessValid, recipientReference, truncatedTitle, document, recipient, branding } = loaderData;
 
   if (!isDocumentAccessValid) {
     return (
@@ -125,13 +143,30 @@ export default function RejectedSigningPage({ loaderData }: Route.ComponentProps
             <Trans>No further action is required from you at this time.</Trans>
           </p>
 
-          {user && (
-            <Button className="mt-6" asChild>
-              <Link to={`/`}>
-                <Trans>Return Home</Trans>
-              </Link>
-            </Button>
-          )}
+          <div className="mt-8 flex w-full max-w-xs flex-col items-stretch gap-4 md:w-auto md:max-w-none md:flex-row md:items-center">
+            {document && isDocumentCompleted(document) && (
+              <EnvelopeDownloadDialog
+                envelopeId={document.envelopeId}
+                envelopeStatus={document.status}
+                envelopeItems={document.envelopeItems}
+                token={recipient?.token}
+                trigger={
+                  <Button type="button" variant="outline" className="flex-1 md:flex-initial">
+                    <DownloadIcon className="mr-2 h-5 w-5" />
+                    <Trans>Download</Trans>
+                  </Button>
+                }
+              />
+            )}
+
+            {user && (
+              <Button className="flex-1 md:flex-initial" asChild>
+                <Link to={`/`}>
+                  <Trans>Return Home</Trans>
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </>

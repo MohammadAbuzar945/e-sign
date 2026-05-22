@@ -10,6 +10,7 @@ import {
   DocumentStatus,
   EnvelopeType,
   FieldType,
+  KbaScopeType,
   RecipientRole,
   SendStatus,
   SigningStatus,
@@ -22,6 +23,7 @@ import { AppError, AppErrorCode } from '../../errors/app-error';
 import { jobs } from '../../jobs/client';
 import { extractDerivedDocumentEmailSettings } from '../../types/document-email';
 import {
+  FIELD_META_DEFAULT_VALUES,
   ZCheckboxFieldMeta,
   ZDropdownFieldMeta,
   ZFieldAndMetaSchema,
@@ -33,13 +35,16 @@ import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../
 import { getFileServerSide } from '../../universal/upload/get-file.server';
 import { putNormalizedPdfFileServerSide } from '../../universal/upload/put-file.server';
 import { isDocumentCompleted } from '../../utils/document';
+import { DocumentAuth } from '../../types/document-auth';
 import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import { type EnvelopeIdOptions, mapSecondaryIdToDocumentId } from '../../utils/envelope';
 import { toCheckboxCustomText, toRadioCustomText } from '../../utils/fields';
 import { getRecipientsWithMissingFields, isRecipientEmailValidForSending } from '../../utils/recipients';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
+import { isPersistedKbaChallengeCompleteForSend } from '../kba/kba';
 import { insertFormValuesInPdf } from '../pdf/insert-form-values-in-pdf';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
+import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
 
 export type SendDocumentOptions = {
   id: EnvelopeIdOptions;
@@ -65,6 +70,12 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
       },
       fields: true,
       documentMeta: true,
+      kbaPolicy: true,
+      kbaChallenges: {
+        where: {
+          isActive: true,
+        },
+      },
       envelopeItems: {
         select: {
           id: true,
@@ -120,6 +131,51 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
         await injectFormValuesIntoDocument(envelope, envelopeItem);
       }),
     );
+  }
+
+  const documentAuthForSend = extractDocumentAuthMethods({
+    documentAuth: envelope.authOptions,
+  });
+
+  if (documentAuthForSend.documentAuthOption.globalAccessAuth.includes(DocumentAuth.KBA)) {
+    if (!envelope.kbaPolicy?.isEnabled) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message:
+          'Knowledge-based authentication (KBA) is required for this document but is not configured. Open Document Settings, enable Security, and set the KBA question and answer before sending.',
+      });
+    }
+
+    const activeChallenges = envelope.kbaChallenges;
+
+    if (envelope.kbaPolicy.mode === 'PER_ENVELOPE') {
+      const envelopeChallenge = activeChallenges.find(
+        (challenge) => challenge.scopeType === KbaScopeType.ENVELOPE,
+      );
+
+      if (!isPersistedKbaChallengeCompleteForSend(envelopeChallenge)) {
+        throw new AppError(AppErrorCode.INVALID_REQUEST, {
+          message:
+            'KBA is selected but the security question or answer is not fully configured. Open Document Settings → Security and set both the question and the answer before sending.',
+        });
+      }
+    } else {
+      const recipientsNeedingKba = envelope.recipients.filter(
+        (recipient) => recipient.role !== RecipientRole.CC,
+      );
+
+      for (const recipient of recipientsNeedingKba) {
+        const recipientChallenge = activeChallenges.find(
+          (challenge) =>
+            challenge.scopeType === KbaScopeType.RECIPIENT && challenge.recipientId === recipient.id,
+        );
+
+        if (!isPersistedKbaChallengeCompleteForSend(recipientChallenge)) {
+          throw new AppError(AppErrorCode.INVALID_REQUEST, {
+            message: `KBA is selected but the security question or answer is incomplete for a signer. Open Document Settings → Security and complete per-recipient KBA before sending.`,
+          });
+        }
+      }
+    }
   }
 
   // Validate that recipients with auth requirements have a valid email.
@@ -314,6 +370,37 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
     teamId,
   });
 
+  // Call external webhook if envelope.fromNomia is true with the same payload shape as internal webhooks
+  if (envelope.fromNomia) {
+    console.log('Calling external webhook in sent');
+
+    const payload = ZWebhookDocumentSchema.parse(
+      mapEnvelopeToWebhookDocumentPayload(updatedEnvelope),
+    );
+
+    const webhookEndpoint =
+      NEXT_PUBLIC_WEBAPP_URL() === 'https://sign.nomiadocs.com'
+        ? 'https://tapi.nomiadocs.com/esignature/documentSendv1'
+        : 'https://api.nomiadocs.com/esignature/documentSendv1';
+
+    const payloadData = {
+      event: WebhookTriggerEvents.DOCUMENT_SENT,
+      payload,
+      createdAt: new Date().toISOString(),
+      webhookEndpoint,
+    };
+
+    await fetch(webhookEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payloadData),
+    });
+  }
+
+
+
   return updatedEnvelope;
 };
 
@@ -360,12 +447,19 @@ export const extractFieldAutoInsertValues = (
   unknownField: Field,
   recipient: Pick<Recipient, 'email'>,
 ): { fieldId: number; customText: string } | null => {
-  const parsedField = ZFieldAndMetaSchema.safeParse(unknownField);
+  const parsedField = ZFieldAndMetaSchema.safeParse({
+    ...unknownField,
+    fieldMeta: unknownField.fieldMeta ?? FIELD_META_DEFAULT_VALUES[unknownField.type],
+  });
 
-  if (parsedField.error) {
-    throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'One or more fields have invalid metadata. Error: ' + parsedField.error.message,
+  if (!parsedField.success) {
+    // eslint-disable-next-line no-console
+    console.warn('Skipping auto-insert for field with invalid metadata', {
+      fieldId: unknownField.id,
+      error: parsedField.error,
     });
+
+    return null;
   }
 
   const field = parsedField.data;

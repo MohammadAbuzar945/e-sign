@@ -32,19 +32,30 @@ export const findTeams = async ({
     organisation: {
       id: organisationId,
     },
-    teamGroups: {
-      some: {
-        organisationGroup: {
-          organisationGroupMembers: {
-            some: {
-              organisationMember: {
-                userId,
+    OR: [
+      // Teams where the current user is a member via organisation groups.
+      {
+        teamGroups: {
+          some: {
+            organisationGroup: {
+              organisationGroupMembers: {
+                some: {
+                  organisationMember: {
+                    userId,
+                  },
+                },
               },
             },
           },
         },
       },
-    },
+      // All teams in the organisation when the current user is the organisation owner.
+      {
+        organisation: {
+          ownerUserId: userId,
+        },
+      },
+    ],
   };
 
   if (query && query.length > 0) {
@@ -83,10 +94,13 @@ export const findTeams = async ({
     }),
   ]);
 
-  const maskedData = data.map((team) => ({
-    ...team,
-    currentTeamRole: getHighestTeamRoleInGroup(team.teamGroups),
-  }));
+  const maskedData = data.map((team) => {
+    return {
+      ...team,
+      currentTeamRole: getHighestTeamRoleInGroup(team.teamGroups),
+      completedDocumentCount: team.creditConsumed,
+    };
+  });
 
   return {
     data: maskedData,

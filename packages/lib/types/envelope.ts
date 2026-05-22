@@ -36,6 +36,7 @@ export const ZEnvelopeSchema = EnvelopeSchema.pick({
   teamId: true,
   folderId: true,
   templateId: true,
+  includeQrCodeInCertificate: true,
 }).extend({
   documentMeta: DocumentMetaSchema.pick({
     signingOrder: true,

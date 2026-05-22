@@ -6,6 +6,7 @@ import { Body, Container, Head, Hr, Html, Img, Preview, Section, Text } from '..
 import { useBranding } from '../providers/branding';
 import { TemplateFooter } from '../template-components/template-footer';
 import TemplateImage from '../template-components/template-image';
+import { env } from '@documenso/lib/utils/env';
 
 export type OrganisationJoinEmailProps = {
   assetBaseUrl: string;
@@ -17,17 +18,17 @@ export type OrganisationJoinEmailProps = {
 };
 
 export const OrganisationJoinEmailTemplate = ({
-  assetBaseUrl = 'http://localhost:3002',
-  baseUrl = 'https://documenso.com',
+  assetBaseUrl = 'http://localhost:4002',
+  baseUrl = env('NEXT_PUBLIC_WEBAPP_URL') ?? 'http://localhost:3000',
   memberName = 'John Doe',
-  memberEmail = 'johndoe@documenso.com',
+  memberEmail = 'johndoe@nomiadocs.com',
   organisationName = 'Organisation Name',
   organisationUrl = 'demo',
 }: OrganisationJoinEmailProps) => {
   const { _ } = useLingui();
   const branding = useBranding();
 
-  const previewText = msg`A member has joined your organisation on Documenso`;
+  const previewText = msg`A member has joined your organisation on Nomia`;
 
   return (
     <Html>
@@ -38,9 +39,13 @@ export const OrganisationJoinEmailTemplate = ({
         <Section className="bg-white text-slate-500">
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid p-2 backdrop-blur-sm">
             {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-6 p-2" />
+              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
             ) : (
-              <TemplateImage assetBaseUrl={assetBaseUrl} className="mb-4 h-6 p-2" staticAsset="logo.png" />
+              <TemplateImage
+                assetBaseUrl={assetBaseUrl}
+                className="mb-4 h-16 p-2"
+                staticAsset="logo.png"
+              />
             )}
 
             <Section>

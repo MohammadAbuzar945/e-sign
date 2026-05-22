@@ -100,8 +100,12 @@ export const DirectTemplateConfigureForm = ({
                   <FormControl>
                     <Input
                       {...field}
-                      disabled={field.disabled || derivedRecipientAccessAuth.length > 0 || user?.email !== undefined}
-                      placeholder="recipient@documenso.com"
+                      disabled={
+                        field.disabled ||
+                        derivedRecipientAccessAuth.length > 0 ||
+                        user?.email !== undefined
+                      }
+                      placeholder="recipient@nomiadocs.com"
                     />
                   </FormControl>
 

@@ -1,3 +1,10 @@
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { OrganisationGroupType } from '@prisma/client';
+import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { EXTENDED_ORGANISATION_MEMBER_ROLE_MAP } from '@documenso/lib/constants/organisations-translations';
@@ -18,13 +25,7 @@ import {
 } from '@documenso/ui/primitives/dropdown-menu';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { OrganisationGroupType } from '@prisma/client';
-import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
-import { useMemo } from 'react';
-import { useSearchParams } from 'react-router';
+
 
 import { OrganisationMemberDeleteDialog } from '~/components/dialogs/organisation-member-delete-dialog';
 import { OrganisationMemberUpdateDialog } from '~/components/dialogs/organisation-member-update-dialog';
@@ -95,10 +96,6 @@ export const OrganisationMembersDataTable = () => {
         header: _(msg`Member Since`),
         accessorKey: 'createdAt',
         cell: ({ row }) => i18n.date(row.original.createdAt),
-      },
-      {
-        header: _(msg`Groups`),
-        cell: ({ row }) => row.original.groups.filter((group) => group.type === OrganisationGroupType.CUSTOM).length,
       },
       {
         header: _(msg`Actions`),
@@ -196,9 +193,6 @@ export const OrganisationMembersDataTable = () => {
             </TableCell>
             <TableCell>
               <Skeleton className="h-4 w-20 rounded-full" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-4 w-6 rounded-full" />
             </TableCell>
           </>
         ),

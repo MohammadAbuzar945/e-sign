@@ -1,3 +1,14 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg, t } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import type { TeamGlobalSettings } from '@prisma/client';
+import { DocumentVisibility, OrganisationType, type RecipientRole } from '@prisma/client';
+import type { ChangeEvent } from 'react';
+import { InfoIcon } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { DATE_FORMATS } from '@documenso/lib/constants/date-formats';
@@ -11,7 +22,15 @@ import { isValidLanguageCode, SUPPORTED_LANGUAGE_CODES, SUPPORTED_LANGUAGES } fr
 import { TIME_ZONES } from '@documenso/lib/constants/time-zones';
 import type { TDefaultRecipients } from '@documenso/lib/types/default-recipients';
 import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';
-import { type TDocumentMetaDateFormat, ZDocumentMetaTimezoneSchema } from '@documenso/lib/types/document-meta';
+import {
+  ZDocumentKbaModeSchema,
+  type TDocumentKbaSettings,
+} from '@documenso/lib/types/document-auth';
+import {
+  type TDocumentMetaDateFormat,
+  ZDocumentMetaTimezoneSchema,
+} from '@documenso/lib/types/document-meta';
+import { normalizeStoredKbaSettings } from '@documenso/lib/utils/kba-settings';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import { recipientAbbreviation } from '@documenso/lib/utils/recipient-formatter';
 import { extractTeamSignatureSettings } from '@documenso/lib/utils/teams';
@@ -19,9 +38,10 @@ import { DocumentSignatureSettingsTooltip } from '@documenso/ui/components/docum
 import { ExpirationPeriodPicker } from '@documenso/ui/components/document/expiration-period-picker';
 import { ReminderSettingsPicker } from '@documenso/ui/components/document/reminder-settings-picker';
 import { RecipientRoleSelect } from '@documenso/ui/components/recipient/recipient-role-select';
-import { Alert } from '@documenso/ui/primitives/alert';
+import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Button } from '@documenso/ui/primitives/button';
+import { Switch } from '@documenso/ui/primitives/switch';
 import { Combobox } from '@documenso/ui/primitives/combobox';
 import {
   Form,
@@ -33,15 +53,14 @@ import {
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
 import { MultiSelectCombobox } from '@documenso/ui/primitives/multi-select-combobox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg, t } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import type { TeamGlobalSettings } from '@prisma/client';
-import { DocumentVisibility, OrganisationType, type RecipientRole } from '@prisma/client';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
+import { Input } from '@documenso/ui/primitives/input';
 
 import { useOptionalCurrentTeam } from '~/providers/team';
 
@@ -58,6 +77,7 @@ export type TDocumentPreferencesFormSchema = {
   documentDateFormat: TDocumentMetaDateFormat | null;
   includeSenderDetails: boolean | null;
   includeSigningCertificate: boolean | null;
+  includeQrCodeInCertificate: boolean | null;
   includeAuditLog: boolean | null;
   signatureTypes: DocumentSignatureType[];
   defaultRecipients: TDefaultRecipients | null;
@@ -65,6 +85,11 @@ export type TDocumentPreferencesFormSchema = {
   aiFeaturesEnabled: boolean | null;
   envelopeExpirationPeriod: TEnvelopeExpirationPeriod | null;
   reminderSettings: TEnvelopeReminderSettings | null;
+  kbaInheritOrganisationKbaDefaults: boolean;
+  kbaMode: TDocumentKbaSettings['mode'];
+  kbaIsEnabled: boolean;
+  kbaMaxAttempts: number;
+  kbaLockoutMinutes: number;
 };
 
 type SettingsSubset = Pick<
@@ -75,6 +100,7 @@ type SettingsSubset = Pick<
   | 'documentDateFormat'
   | 'includeSenderDetails'
   | 'includeSigningCertificate'
+  | 'includeQrCodeInCertificate'
   | 'includeAuditLog'
   | 'typedSignatureEnabled'
   | 'uploadSignatureEnabled'
@@ -84,11 +110,18 @@ type SettingsSubset = Pick<
   | 'aiFeaturesEnabled'
   | 'envelopeExpirationPeriod'
   | 'reminderSettings'
->;
+> & {
+  /** Organisation/team stored JSON; null on team means inherit organisation defaults. */
+  kbaSettings?: unknown | null;
+};
 
 export type DocumentPreferencesFormProps = {
   settings: SettingsSubset;
   canInherit: boolean;
+  /**
+   * Effective KBA defaults when the team has not overridden (`kbaSettings` is null on the team).
+   */
+  effectiveKbaSettings?: TDocumentKbaSettings;
   isAiFeaturesConfigured?: boolean;
   onFormSubmit: (data: TDocumentPreferencesFormSchema) => Promise<void>;
 };
@@ -97,6 +130,7 @@ export const DocumentPreferencesForm = ({
   settings,
   onFormSubmit,
   canInherit,
+  effectiveKbaSettings,
   isAiFeaturesConfigured = false,
 }: DocumentPreferencesFormProps) => {
   const { _ } = useLingui();
@@ -116,6 +150,7 @@ export const DocumentPreferencesForm = ({
     documentDateFormat: ZDocumentMetaTimezoneSchema.nullable(),
     includeSenderDetails: z.boolean().nullable(),
     includeSigningCertificate: z.boolean().nullable(),
+    includeQrCodeInCertificate: z.boolean().nullable(),
     includeAuditLog: z.boolean().nullable(),
     signatureTypes: z.array(z.nativeEnum(DocumentSignatureType)).min(canInherit ? 0 : 1, {
       message: msg`At least one signature type must be enabled`.id,
@@ -125,7 +160,18 @@ export const DocumentPreferencesForm = ({
     aiFeaturesEnabled: z.boolean().nullable(),
     envelopeExpirationPeriod: ZEnvelopeExpirationPeriod.nullable(),
     reminderSettings: ZEnvelopeReminderSettings.nullable(),
+    kbaInheritOrganisationKbaDefaults: z.boolean(),
+    kbaMode: ZDocumentKbaModeSchema,
+    kbaIsEnabled: z.boolean(),
+    kbaMaxAttempts: z.number().int().min(1).max(20),
+    kbaLockoutMinutes: z.number().int().min(1).max(1440),
   });
+
+  const resolvedEffectiveKba =
+    effectiveKbaSettings ?? normalizeStoredKbaSettings(settings.kbaSettings);
+  const displayKba = normalizeStoredKbaSettings(
+    canInherit && settings.kbaSettings === null ? resolvedEffectiveKba : settings.kbaSettings,
+  );
 
   const form = useForm<TDocumentPreferencesFormSchema>({
     defaultValues: {
@@ -136,6 +182,7 @@ export const DocumentPreferencesForm = ({
       documentDateFormat: settings.documentDateFormat as TDocumentMetaDateFormat | null,
       includeSenderDetails: settings.includeSenderDetails,
       includeSigningCertificate: settings.includeSigningCertificate,
+      includeQrCodeInCertificate: settings.includeQrCodeInCertificate,
       includeAuditLog: settings.includeAuditLog,
       signatureTypes: extractTeamSignatureSettings({ ...settings }),
       defaultRecipients: settings.defaultRecipients ? ZDefaultRecipientsSchema.parse(settings.defaultRecipients) : null,
@@ -143,9 +190,20 @@ export const DocumentPreferencesForm = ({
       aiFeaturesEnabled: settings.aiFeaturesEnabled,
       envelopeExpirationPeriod: settings.envelopeExpirationPeriod ?? null,
       reminderSettings: settings.reminderSettings ?? null,
+      kbaInheritOrganisationKbaDefaults: canInherit ? settings.kbaSettings === null : false,
+      kbaMode: displayKba.mode,
+      kbaIsEnabled: displayKba.isEnabled,
+      kbaMaxAttempts: displayKba.maxAttempts,
+      kbaLockoutMinutes: displayKba.lockoutMinutes,
     },
     resolver: zodResolver(ZDocumentPreferencesFormSchema),
   });
+
+  const kbaInheritOrganisationKbaDefaults = form.watch('kbaInheritOrganisationKbaDefaults');
+  const kbaIsEnabled = form.watch('kbaIsEnabled');
+  const showTeamKbaOverrideFields = canInherit && !kbaInheritOrganisationKbaDefaults;
+  const showKbaTuningFields =
+    kbaIsEnabled && (!canInherit || showTeamKbaOverrideFields);
 
   return (
     <Form {...form}>
@@ -161,20 +219,20 @@ export const DocumentPreferencesForm = ({
                     <Trans>Default Document Visibility</Trans>
                   </FormLabel>
 
-                  <FormControl>
-                    <Select
-                      {...field}
-                      value={field.value === null ? '-1' : field.value}
-                      onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
-                    >
+                  <Select
+                    value={field.value === null ? '-1' : field.value}
+                    onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
+                  >
+                    <FormControl>
                       <SelectTrigger
                         className="bg-background text-muted-foreground"
                         data-testid="document-visibility-trigger"
                       >
                         <SelectValue />
                       </SelectTrigger>
+                    </FormControl>
 
-                      <SelectContent>
+                    <SelectContent>
                         <SelectItem value={DocumentVisibility.EVERYONE}>
                           <Trans>Everyone can access and view the document</Trans>
                         </SelectItem>
@@ -190,9 +248,8 @@ export const DocumentPreferencesForm = ({
                             <Trans>Inherit from organisation</Trans>
                           </SelectItem>
                         )}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
+                    </SelectContent>
+                  </Select>
 
                   <FormDescription>
                     <Trans>Controls the default visibility of an uploaded document.</Trans>
@@ -211,20 +268,20 @@ export const DocumentPreferencesForm = ({
                   <Trans>Default Document Language</Trans>
                 </FormLabel>
 
-                <FormControl>
-                  <Select
-                    {...field}
-                    value={field.value === null ? '-1' : field.value}
-                    onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
-                  >
+                <Select
+                  value={field.value === null ? '-1' : field.value}
+                  onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
+                >
+                  <FormControl>
                     <SelectTrigger
                       className="bg-background text-muted-foreground"
                       data-testid="document-language-trigger"
                     >
                       <SelectValue />
                     </SelectTrigger>
+                  </FormControl>
 
-                    <SelectContent>
+                  <SelectContent>
                       {Object.entries(SUPPORTED_LANGUAGES).map(([code, language]) => (
                         <SelectItem key={code} value={code}>
                           {_(language.full)}
@@ -234,9 +291,8 @@ export const DocumentPreferencesForm = ({
                       <SelectItem value={'-1'}>
                         <Trans>Inherit from organisation</Trans>
                       </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                  </SelectContent>
+                </Select>
 
                 <FormDescription>
                   <Trans>
@@ -257,16 +313,17 @@ export const DocumentPreferencesForm = ({
                   <Trans>Default Date Format</Trans>
                 </FormLabel>
 
-                <FormControl>
-                  <Select
-                    value={field.value === null ? '-1' : field.value}
-                    onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
-                  >
+                <Select
+                  value={field.value === null ? '-1' : field.value}
+                  onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
+                >
+                  <FormControl>
                     <SelectTrigger data-testid="document-date-format-trigger">
                       <SelectValue />
                     </SelectTrigger>
+                  </FormControl>
 
-                    <SelectContent>
+                  <SelectContent>
                       {DATE_FORMATS.map((format) => (
                         <SelectItem key={format.key} value={format.value}>
                           {format.label}
@@ -278,9 +335,8 @@ export const DocumentPreferencesForm = ({
                           <Trans>Inherit from organisation</Trans>
                         </SelectItem>
                       )}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                  </SelectContent>
+                </Select>
 
                 <FormMessage />
               </FormItem>
@@ -358,22 +414,22 @@ export const DocumentPreferencesForm = ({
                     <Trans>Send on Behalf of Team</Trans>
                   </FormLabel>
 
-                  <FormControl>
-                    <Select
-                      {...field}
-                      value={field.value === null ? '-1' : field.value.toString()}
-                      onValueChange={(value) =>
-                        field.onChange(value === 'true' ? true : value === 'false' ? false : null)
-                      }
-                    >
+                  <Select
+                    value={field.value === null ? '-1' : field.value.toString()}
+                    onValueChange={(value) =>
+                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                    }
+                  >
+                    <FormControl>
                       <SelectTrigger
                         className="bg-background text-muted-foreground"
                         data-testid="include-sender-details-trigger"
                       >
                         <SelectValue />
                       </SelectTrigger>
+                    </FormControl>
 
-                      <SelectContent>
+                    <SelectContent>
                         <SelectItem value="true">
                           <Trans>Yes</Trans>
                         </SelectItem>
@@ -387,9 +443,8 @@ export const DocumentPreferencesForm = ({
                             <Trans>Inherit from organisation</Trans>
                           </SelectItem>
                         )}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
+                    </SelectContent>
+                  </Select>
 
                   <div className="pt-2">
                     <div className="font-medium text-muted-foreground text-xs">
@@ -428,22 +483,22 @@ export const DocumentPreferencesForm = ({
                   <Trans>Include the Signing Certificate in the Document</Trans>
                 </FormLabel>
 
-                <FormControl>
-                  <Select
-                    {...field}
-                    value={field.value === null ? '-1' : field.value.toString()}
-                    onValueChange={(value) =>
-                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
-                    }
-                  >
+                <Select
+                  value={field.value === null ? '-1' : field.value.toString()}
+                  onValueChange={(value) =>
+                    field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                  }
+                >
+                  <FormControl>
                     <SelectTrigger
                       className="bg-background text-muted-foreground"
                       data-testid="include-signing-certificate-trigger"
                     >
                       <SelectValue />
                     </SelectTrigger>
+                  </FormControl>
 
-                    <SelectContent>
+                  <SelectContent>
                       <SelectItem value="true">
                         <Trans>Yes</Trans>
                       </SelectItem>
@@ -457,14 +512,62 @@ export const DocumentPreferencesForm = ({
                           <Trans>Inherit from organisation</Trans>
                         </SelectItem>
                       )}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                  </SelectContent>
+                </Select>
 
                 <FormDescription>
                   <Trans>
-                    Controls whether the signing certificate will be included in the document when it is downloaded. The
-                    signing certificate can still be downloaded from the logs page separately.
+                    Controls whether the signing certificate will be included in the document when
+                    it is downloaded. The signing certificate can still be downloaded from the logs
+                    page separately.
+                  </Trans>
+                </FormDescription>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="includeQrCodeInCertificate"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>
+                  <Trans>Include QR code in certificate</Trans>
+                </FormLabel>
+
+                <Select
+                  value={field.value === null ? '-1' : field.value.toString()}
+                  onValueChange={(value) =>
+                    field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                  }
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-background text-muted-foreground">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+
+                  <SelectContent>
+                    <SelectItem value="true">
+                      <Trans>Yes</Trans>
+                    </SelectItem>
+
+                    <SelectItem value="false">
+                      <Trans>No</Trans>
+                    </SelectItem>
+
+                    {canInherit && (
+                      <SelectItem value={'-1'}>
+                        <Trans>Inherit from organisation</Trans>
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+
+                <FormDescription>
+                  <Trans>
+                    When enabled, the signing certificate PDF will include a QR code linking to the
+                    document. Default is on. Can be overridden per document in Security settings.
                   </Trans>
                 </FormDescription>
               </FormItem>
@@ -480,35 +583,34 @@ export const DocumentPreferencesForm = ({
                   <Trans>Include the Audit Logs in the Document</Trans>
                 </FormLabel>
 
-                <FormControl>
-                  <Select
-                    {...field}
-                    value={field.value === null ? '-1' : field.value.toString()}
-                    onValueChange={(value) =>
-                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
-                    }
-                  >
+                <Select
+                  value={field.value === null ? '-1' : field.value.toString()}
+                  onValueChange={(value) =>
+                    field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                  }
+                >
+                  <FormControl>
                     <SelectTrigger className="bg-background text-muted-foreground">
                       <SelectValue />
                     </SelectTrigger>
+                  </FormControl>
 
-                    <SelectContent>
-                      <SelectItem value="true">
-                        <Trans>Yes</Trans>
+                  <SelectContent>
+                    <SelectItem value="true">
+                      <Trans>Yes</Trans>
+                    </SelectItem>
+
+                    <SelectItem value="false">
+                      <Trans>No</Trans>
+                    </SelectItem>
+
+                    {canInherit && (
+                      <SelectItem value={'-1'}>
+                        <Trans>Inherit from organisation</Trans>
                       </SelectItem>
-
-                      <SelectItem value="false">
-                        <Trans>No</Trans>
-                      </SelectItem>
-
-                      {canInherit && (
-                        <SelectItem value={'-1'}>
-                          <Trans>Inherit from organisation</Trans>
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                    )}
+                  </SelectContent>
+                </Select>
 
                 <FormDescription>
                   <Trans>
@@ -614,13 +716,14 @@ export const DocumentPreferencesForm = ({
                 </FormLabel>
 
                 <Select
-                  {...field}
                   value={field.value === null ? '-1' : field.value.toString()}
                   onValueChange={(value) => field.onChange(value === 'true' ? true : value === 'false' ? false : null)}
                 >
-                  <SelectTrigger className="bg-background text-muted-foreground">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <FormControl>
+                    <SelectTrigger className="bg-background text-muted-foreground">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
 
                   <SelectContent>
                     <SelectItem value="true">
@@ -714,35 +817,34 @@ export const DocumentPreferencesForm = ({
                     <Trans>AI Features</Trans>
                   </FormLabel>
 
-                  <FormControl>
-                    <Select
-                      {...field}
-                      value={field.value === null ? '-1' : field.value.toString()}
-                      onValueChange={(value) =>
-                        field.onChange(value === 'true' ? true : value === 'false' ? false : null)
-                      }
-                    >
+                  <Select
+                    value={field.value === null ? '-1' : field.value.toString()}
+                    onValueChange={(value) =>
+                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                    }
+                  >
+                    <FormControl>
                       <SelectTrigger className="bg-background text-muted-foreground">
                         <SelectValue />
                       </SelectTrigger>
+                    </FormControl>
 
-                      <SelectContent>
-                        <SelectItem value="true">
-                          <Trans>Enabled</Trans>
+                    <SelectContent>
+                      <SelectItem value="true">
+                        <Trans>Enabled</Trans>
+                      </SelectItem>
+
+                      <SelectItem value="false">
+                        <Trans>Disabled</Trans>
+                      </SelectItem>
+
+                      {canInherit && (
+                        <SelectItem value={'-1'}>
+                          <Trans>Inherit from organisation</Trans>
                         </SelectItem>
-
-                        <SelectItem value="false">
-                          <Trans>Disabled</Trans>
-                        </SelectItem>
-
-                        {canInherit && (
-                          <SelectItem value={'-1'}>
-                            <Trans>Inherit from organisation</Trans>
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
+                      )}
+                    </SelectContent>
+                  </Select>
 
                   <FormDescription>
                     <Trans>
@@ -755,6 +857,247 @@ export const DocumentPreferencesForm = ({
               )}
             />
           )}
+
+          <div className="border-t pt-6">
+            <h3 className="mb-4 text-lg font-medium">
+              <Trans>Knowledge-based authentication (KBA)</Trans>
+            </h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              {canInherit ? (
+                <Trans>Optional question before access. Documents can override.</Trans>
+              ) : (
+                <Trans>Default for teams that inherit. Documents can override.</Trans>
+              )}
+            </p>
+
+            {canInherit && (
+              <FormField
+                control={form.control}
+                name="kbaInheritOrganisationKbaDefaults"
+                render={({ field }) => (
+                  <FormItem className="mb-6 flex-1">
+                    <FormLabel>
+                      <Trans>Team KBA defaults</Trans>
+                    </FormLabel>
+                    <Select
+                      value={field.value ? '-1' : '0'}
+                      onValueChange={(value) => {
+                        const inherit = value === '-1';
+                        field.onChange(inherit);
+                        if (inherit) {
+                          const next = normalizeStoredKbaSettings(resolvedEffectiveKba);
+                          form.setValue('kbaMode', next.mode);
+                          form.setValue('kbaIsEnabled', next.isEnabled);
+                          form.setValue('kbaMaxAttempts', next.maxAttempts);
+                          form.setValue('kbaLockoutMinutes', next.lockoutMinutes);
+                        }
+                      }}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="bg-background text-muted-foreground">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="-1">
+                          <Trans>Inherit from organisation</Trans>
+                        </SelectItem>
+                        <SelectItem value="0">
+                          <Trans>Override organisation settings</Trans>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {canInherit && kbaInheritOrganisationKbaDefaults && (
+              <Alert variant="neutral" className="mb-6 [&>svg]:text-muted-foreground">
+                <InfoIcon className="h-5 w-5" aria-hidden />
+                <div className="min-w-0 space-y-3">
+                  <div>
+                    <AlertTitle>
+                      <Trans>Organisation KBA defaults</Trans>
+                    </AlertTitle>
+                    <AlertDescription className="mt-1 text-sm text-muted-foreground">
+                      <Trans>
+                        This team follows your organisation&apos;s document preferences. Values
+                        below are read-only here; choose &quot;Override organisation settings&quot;
+                        to set KBA only for this team.
+                      </Trans>
+                    </AlertDescription>
+                  </div>
+
+                  <div className="rounded-md border bg-background/60 p-3 text-sm">
+                    {resolvedEffectiveKba.isEnabled ? (
+                      <div className="space-y-3">
+                        <p className="font-medium text-foreground">
+                          <Trans>
+                            KBA is on for new documents — signers may be asked a question before
+                            they can open the file.
+                          </Trans>
+                        </p>
+                        <dl className="space-y-2.5 border-t border-border/60 pt-3">
+                          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                            <dt className="font-medium text-foreground">
+                              <Trans>Challenge scope</Trans>
+                            </dt>
+                            <dd className="max-w-md text-muted-foreground sm:text-right">
+                              {resolvedEffectiveKba.mode === 'PER_ENVELOPE' ? (
+                                <Trans>One question shared by everyone on the document</Trans>
+                              ) : (
+                                <Trans>Each signer gets their own question</Trans>
+                              )}
+                            </dd>
+                          </div>
+                          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                            <dt className="font-medium text-foreground">
+                              <Trans>Wrong answers before lockout</Trans>
+                            </dt>
+                            <dd className="tabular-nums text-muted-foreground sm:text-right">
+                              {resolvedEffectiveKba.maxAttempts}
+                            </dd>
+                          </div>
+                          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                            <dt className="font-medium text-foreground">
+                              <Trans>Lockout length</Trans>
+                            </dt>
+                            <dd className="tabular-nums text-muted-foreground sm:text-right">
+                              <Trans>{resolvedEffectiveKba.lockoutMinutes} minutes</Trans>
+                            </dd>
+                          </div>
+                        </dl>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="font-medium text-foreground">
+                          <Trans>KBA off at organisation level</Trans>
+                        </p>
+                        <p className="text-muted-foreground">
+                          <Trans>
+                            New documents do not get KBA by default from the organisation. If this
+                            team should use KBA anyway, switch to &quot;Override organisation
+                            settings&quot; and turn it on for the team.
+                          </Trans>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Alert>
+            )}
+
+            {(!canInherit || showTeamKbaOverrideFields) && (
+              <div className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="kbaIsEnabled"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between gap-4 rounded-lg border p-4">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <FormLabel className="text-base">
+                          <Trans>Enable KBA by default</Trans>
+                        </FormLabel>
+                        <FormDescription>
+                          <Trans>Default for new documents when on.</Trans>
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          className="shrink-0"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {showKbaTuningFields && (
+                  <div className="space-y-4 rounded-lg border p-4">
+                    <FormField
+                      control={form.control}
+                      name="kbaMode"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>
+                            <Trans>Default KBA scope</Trans>
+                          </FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger className="bg-background text-muted-foreground">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="PER_ENVELOPE">
+                                <Trans>One challenge for the whole document</Trans>
+                              </SelectItem>
+                              <SelectItem value="PER_RECIPIENT">
+                                <Trans>Separate challenge per recipient</Trans>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="kbaMaxAttempts"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>
+                            <Trans>Max attempts</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={20}
+                              value={Number.isFinite(field.value) ? String(field.value) : ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                const next = Number.parseInt(e.target.value, 10);
+                                field.onChange(Number.isFinite(next) ? next : 1);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="kbaLockoutMinutes"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>
+                            <Trans>Lockout (minutes)</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={1440}
+                              value={Number.isFinite(field.value) ? String(field.value) : ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                const next = Number.parseInt(e.target.value, 10);
+                                field.onChange(Number.isFinite(next) ? next : 1);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-row justify-end space-x-4">
             <Button type="submit" loading={form.formState.isSubmitting}>

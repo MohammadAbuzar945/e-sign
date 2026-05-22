@@ -16,12 +16,12 @@ export const TemplateAccessAuth2FA = ({
   code,
   userName,
   expiresInMinutes,
-  assetBaseUrl = 'http://localhost:3002',
+  assetBaseUrl = 'http://localhost:4002',
 }: TemplateAccessAuth2FAProps) => {
   const getAssetUrl = (path: string) => {
     return new URL(path, assetBaseUrl).toString();
   };
-
+  
   return (
     <div>
       <Img src={getAssetUrl('/static/document.png')} alt="Document" className="mx-auto h-12 w-12" />

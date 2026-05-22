@@ -1,8 +1,10 @@
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { TEAM_MEMBER_ROLE_MAP } from '@documenso/lib/constants/teams-translations';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { canExecuteTeamAction, formatTeamUrl } from '@documenso/lib/utils/teams';
+import { OrganisationMemberRole, OrganisationType } from '@documenso/prisma/generated/types';
 import type { TGetOrganisationSessionResponse } from '@documenso/trpc/server/organisation-router/get-organisation-session.types';
 import { Avatar, AvatarFallback, AvatarImage } from '@documenso/ui/primitives/avatar';
 import { Button } from '@documenso/ui/primitives/button';
@@ -34,6 +36,7 @@ export default function OrganisationSettingsTeamsPage() {
   const { t, i18n } = useLingui();
 
   const organisation = useCurrentOrganisation();
+  const { user } = useSession();
 
   // No teams view.
   if (organisation.teams.length === 0) {
@@ -55,14 +58,18 @@ export default function OrganisationSettingsTeamsPage() {
               </Trans>
             </p>
 
-            <TeamCreateDialog
-              trigger={
-                <Button className="flex items-center gap-2">
-                  <PlusIcon className="h-4 w-4" />
-                  <Trans>Create team</Trans>
-                </Button>
-              }
-            />
+            {(organisation.ownerUserId === user.id ||
+              organisation.currentOrganisationRole === OrganisationMemberRole.ADMIN ||
+              organisation.currentOrganisationRole === OrganisationMemberRole.MANAGER) && (
+              <TeamCreateDialog
+                trigger={
+                  <Button className="flex items-center gap-2">
+                    <PlusIcon className="h-4 w-4" />
+                    <Trans>Create team</Trans>
+                  </Button>
+                }
+              />
+            )}
 
             <div className="mt-12 max-w-md rounded-lg border px-8 py-6">
               <h3 className="mb-2 font-medium">
@@ -141,7 +148,7 @@ export default function OrganisationSettingsTeamsPage() {
                         <div className="truncate text-muted-foreground text-xs">{formatTeamUrl(team.url)}</div>
                       </div>
 
-                      <TeamDropdownMenu team={team} />
+                      <TeamDropdownMenu team={team} organisation={organisation} />
                     </div>
 
                     <div className="mt-2 flex items-center gap-4">
@@ -165,7 +172,15 @@ export default function OrganisationSettingsTeamsPage() {
   );
 }
 
-const TeamDropdownMenu = ({ team }: { team: TGetOrganisationSessionResponse[0]['teams'][0] }) => {
+const TeamDropdownMenu = ({
+  team,
+  organisation,
+}: {
+  team: TGetOrganisationSessionResponse[0]['teams'][0];
+  organisation: ReturnType<typeof useCurrentOrganisation>;
+}) => {
+  const isPersonalOrganisation = organisation.type === 'PERSONAL';
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

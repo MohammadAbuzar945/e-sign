@@ -12,8 +12,10 @@ import {
 } from '../constants/organisations';
 import { DEFAULT_DOCUMENT_EMAIL_SETTINGS } from '../types/document-email';
 
+import { getDefaultOrganisationKbaSettingsJson } from './kba-settings';
+
 export const isPersonalLayout = (organisations: Pick<Organisation, 'type'>[]) => {
-  return organisations.length === 1 && organisations[0].type === 'PERSONAL';
+  return false;
 };
 
 /**
@@ -114,6 +116,7 @@ export const generateDefaultOrganisationSettings = (): Omit<OrganisationGlobalSe
 
     includeSenderDetails: true,
     includeSigningCertificate: true,
+    includeQrCodeInCertificate: true,
     includeAuditLog: false,
 
     typedSignatureEnabled: true,
@@ -139,5 +142,6 @@ export const generateDefaultOrganisationSettings = (): Omit<OrganisationGlobalSe
     reminderSettings: DEFAULT_ENVELOPE_REMINDER_SETTINGS,
 
     aiFeaturesEnabled: false,
+    kbaSettings: getDefaultOrganisationKbaSettingsJson(),
   };
 };

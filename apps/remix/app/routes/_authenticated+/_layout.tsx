@@ -107,7 +107,7 @@ export default function Layout({ loaderData, params, matches }: Route.ComponentP
   return (
     <OrganisationProvider organisation={currentOrganisation}>
       <TeamProvider team={currentTeam || null}>
-        <OrganisationBillingBanner />
+        {/* <OrganisationBillingBanner /> */}
 
         {!user.emailVerified && <VerifyEmailBanner email={user.email} />}
 

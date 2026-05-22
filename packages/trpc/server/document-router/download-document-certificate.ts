@@ -2,6 +2,7 @@ import { PDF_SIZE_A4_72PPI } from '@documenso/lib/constants/pdf';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getEnvelopeWhereInput } from '@documenso/lib/server-only/envelope/get-envelope-by-id';
 import { generateCertificatePdf } from '@documenso/lib/server-only/pdf/generate-certificate-pdf';
+import { getTeamSettings } from '@documenso/lib/server-only/team/get-team-settings';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
 import { prisma } from '@documenso/prisma';
 import { EnvelopeType } from '@prisma/client';
@@ -64,6 +65,11 @@ export const downloadDocumentCertificateRoute = authenticatedProcedure
       throw new AppError('DOCUMENT_NOT_COMPLETE');
     }
 
+    const teamSettings = await getTeamSettings({
+      userId: ctx.user.id,
+      teamId: envelope.teamId,
+    });
+
     const certificatePdf = await generateCertificatePdf({
       envelope,
       recipients: envelope.recipients,
@@ -73,6 +79,8 @@ export const downloadDocumentCertificateRoute = authenticatedProcedure
         email: envelope.user.email,
         name: envelope.user.name || '',
       },
+      includeQrCodeInCertificate:
+        envelope.includeQrCodeInCertificate ?? teamSettings.includeQrCodeInCertificate ?? true,
       pageWidth: PDF_SIZE_A4_72PPI.width,
       pageHeight: PDF_SIZE_A4_72PPI.height,
     });

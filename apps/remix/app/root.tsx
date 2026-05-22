@@ -119,7 +119,13 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
   const isRecipientRoute = matches.some((m) => m.id?.startsWith('routes/_recipient+'));
 
   return (
-    <html translate="no" lang={lang} data-theme={theme} className={theme ?? ''}>
+    <html
+      translate="no"
+      lang={lang}
+      suppressHydrationWarning
+      data-theme={theme ?? undefined}
+      className={theme ?? ''}
+    >
       <head>
         <meta charSet="utf-8" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
@@ -132,6 +138,8 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
         <Links nonce={nonce(cspNonce)} />
         <meta name="google" content="notranslate" />
         <PreventFlashOnWrongTheme ssrTheme={Boolean(data.theme)} nonce={nonce(cspNonce)} />
+
+
 
         {disableAnimations && (
           <style
@@ -169,6 +177,68 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
             </TooltipProvider>
           </SessionProvider>
         </NuqsAdapter>
+
+        {/* Cleanup: remove stray "$" text nodes injected between streaming markers.
+            IMPORTANT: run only after hydration (window.load) to avoid hydration mismatches. */}
+        <script
+          nonce={nonce(cspNonce)}
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+  try {
+    const isDollarText = (n) => n && n.nodeType === Node.TEXT_NODE && /^\\s*\\$\\s*$/.test(n.nodeValue || '');
+
+    const removeDollarTextsIn = (root) => {
+      if (!root) return;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const victims = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (isDollarText(node)) victims.push(node);
+      }
+      victims.forEach((n) => n.parentNode && n.parentNode.removeChild(n));
+    };
+
+    const run = () => removeDollarTextsIn(document.body || document);
+
+    window.addEventListener(
+      'load',
+      () => {
+        try {
+          run();
+          setTimeout(run, 0);
+          setTimeout(run, 200);
+
+          // Watch briefly for post-load insertions (e.g., beacons injected after streaming completes)
+          const obs = new MutationObserver((muts) => {
+            for (const m of muts) {
+              if (isDollarText(m.target)) {
+                m.target.parentNode && m.target.parentNode.removeChild(m.target);
+                continue;
+              }
+              for (const n of m.addedNodes) {
+                if (isDollarText(n)) {
+                  n.parentNode && n.parentNode.removeChild(n);
+                } else if (n.nodeType === Node.ELEMENT_NODE) {
+                  removeDollarTextsIn(n);
+                }
+              }
+            }
+          });
+
+          obs.observe(document.documentElement, { childList: true, subtree: true });
+          setTimeout(() => {
+            try {
+              obs.disconnect();
+            } catch (_) {}
+          }, 3000);
+        } catch (_) {}
+      },
+      { once: true },
+    );
+  } catch (_) {}
+})();`,
+          }}
+        />
 
         <script
           nonce={nonce(cspNonce)}

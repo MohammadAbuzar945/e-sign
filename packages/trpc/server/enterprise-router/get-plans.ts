@@ -12,16 +12,16 @@ export const getPlansRoute = authenticatedProcedure.query(async ({ ctx }) => {
   let canCreateFreeOrganisation = false;
 
   if (IS_BILLING_ENABLED()) {
-    const numberOfFreeOrganisations = await prisma.organisation.count({
-      where: {
-        ownerUserId: userId,
-        subscription: {
-          is: null,
-        },
-      },
-    });
+    // const numberOfFreeOrganisations = await prisma.organisation.count({
+    //   where: {
+    //     ownerUserId: userId,
+    //     subscriptions: {
+    //       none: {},
+    //     },
+    //   },
+    // });
 
-    canCreateFreeOrganisation = numberOfFreeOrganisations === 0;
+    // canCreateFreeOrganisation = numberOfFreeOrganisations === 0;
   }
 
   return {

@@ -176,7 +176,16 @@ export const createEnvelopeFields = async ({
         });
       }
 
-      const matches = pdfDoc.findText(field.placeholder);
+      let matches: ReturnType<typeof pdfDoc.findText>;
+
+      try {
+        matches = pdfDoc.findText(field.placeholder);
+      } catch {
+        throw new AppError(AppErrorCode.INVALID_BODY, {
+          message:
+            'PDF could not be searched for placeholders (e.g. unsupported font encoding). Use coordinate-based field placement instead.',
+        });
+      }
 
       if (matches.length === 0) {
         throw new AppError(AppErrorCode.INVALID_BODY, {

@@ -222,7 +222,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
       }
 
       // This error is done AFTER the get envelope so we can test access controls without S3.
-      if (process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT !== 's3') {
+      if (process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT !== 'gcs') {
         return {
           status: 500,
           body: {
@@ -345,7 +345,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
     const { body } = args;
 
     try {
-      if (process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT !== 's3') {
+      if (process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT !== 'gcs') {
         return {
           status: 500,
           body: {
@@ -405,7 +405,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
       const envelope = await createEnvelope({
         userId: user.id,
         teamId: team.id,
-        internalVersion: 1,
+        internalVersion: 2,
         data: {
           title: body.title,
           type: EnvelopeType.DOCUMENT,
@@ -495,7 +495,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
     } = body;
 
     try {
-      if (process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT !== 's3') {
+      if (process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT !== 'gcs') {
         return {
           status: 500,
           body: {
@@ -542,7 +542,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
       const createdTemplate = await createEnvelope({
         userId: user.id,
         teamId: team.id,
-        internalVersion: 1,
+        internalVersion: 2,
         data: {
           type: EnvelopeType.TEMPLATE,
           envelopeItems: [
@@ -837,7 +837,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
         },
         data: {
           formValues: body.formValues,
-          authOptions: body.authOptions,
+          authOptions: body.authOptions ? { ...body.authOptions } : undefined,
         },
       });
     }
@@ -913,7 +913,9 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
           id: envelope.id,
         },
         data: {
-          authOptions: body.authOptions,
+          authOptions: {
+              ...body.authOptions,
+            },
         },
       });
     }

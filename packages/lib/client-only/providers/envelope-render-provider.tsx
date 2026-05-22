@@ -43,6 +43,7 @@ type EnvelopeRenderItem = {
   title: string;
   order: number;
   envelopeId: string;
+  documentDataId: string;
 
   /**
    * The PDF data to render.
@@ -66,6 +67,7 @@ type EnvelopeRenderProviderValue = {
 
   renderError: boolean;
   setRenderError: (renderError: boolean) => void;
+  refreshEnvelopeItems: (envelopeItemIds?: string[]) => Promise<void> | void;
   overrideSettings?: EnvelopeRenderOverrideSettings;
 };
 
@@ -149,6 +151,10 @@ export const useCurrentEnvelopeRender = () => {
   return context;
 };
 
+export const useOptionalEnvelopeRender = () => {
+  return useContext(EnvelopeRenderContext);
+};
+
 /**
  * Manages fetching the data required to render an envelope and it's items.
  */
@@ -166,6 +172,46 @@ export const EnvelopeRenderProvider = ({
 }: EnvelopeRenderProviderProps) => {
   const [renderError, setRenderError] = useState<boolean>(false);
 
+  const [refetchedPdfByItemId, setRefetchedPdfByItemId] = useState<
+    Record<string, { documentDataId: string; data: Uint8Array }>
+  >({});
+
+  const loadEnvelopeItemPdfFile = useCallback(
+    async (item: EnvelopeRenderProviderProps['envelopeItems'][number], options?: { force?: boolean }) => {
+      if (!options?.force) {
+        return;
+      }
+
+      const url = getDocumentDataUrl({
+        envelopeId: envelope.id,
+        envelopeItemId: item.id,
+        documentDataId: item.documentDataId,
+        version,
+        token,
+        presignToken,
+      });
+
+      try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`Failed to refresh PDF (${response.status})`);
+        }
+
+        const data = new Uint8Array(await response.arrayBuffer());
+
+        setRefetchedPdfByItemId((prev) => ({
+          ...prev,
+          [item.id]: { documentDataId: item.documentDataId, data },
+        }));
+      } catch (error) {
+        console.error(error);
+        setRenderError(true);
+      }
+    },
+    [envelope.id, presignToken, token, version],
+  );
+
   const envelopeItems = useMemo(
     () =>
       [...envelopeItemsFromProps]
@@ -180,14 +226,17 @@ export const EnvelopeRenderProvider = ({
             presignToken,
           });
 
-          const data = item.data || pdfUrl;
+          const refetched = refetchedPdfByItemId[item.id];
+          const useRefetch = refetched && refetched.documentDataId === item.documentDataId;
+
+          const data = useRefetch ? refetched.data : (item.data ?? pdfUrl);
 
           return {
             ...item,
             data,
           };
         }),
-    [envelopeItemsFromProps, envelope.id, token, version, presignToken],
+    [envelope.id, envelopeItemsFromProps, presignToken, refetchedPdfByItemId, token, version],
   );
 
   const [currentItemId, setCurrentItemId] = useState<string | null>(envelopeItems[0]?.id ?? null);
@@ -201,6 +250,20 @@ export const EnvelopeRenderProvider = ({
 
     setCurrentItemId(foundItem?.id ?? null);
   };
+
+  const refreshEnvelopeItems = useCallback(
+    async (envelopeItemIds?: string[]) => {
+      const targetItems =
+        envelopeItemIds && envelopeItemIds.length > 0
+          ? envelopeItems.filter((item) => envelopeItemIds.includes(item.id))
+          : envelopeItems;
+
+      for (const item of targetItems) {
+        void loadEnvelopeItemPdfFile(item, { force: true });
+      }
+    },
+    [envelopeItems, loadEnvelopeItemPdfFile],
+  );
 
   // Set the selected item to the first item if none is set.
   useEffect(() => {
@@ -235,6 +298,7 @@ export const EnvelopeRenderProvider = ({
         getRecipientColorKey,
         renderError,
         setRenderError,
+        refreshEnvelopeItems,
         overrideSettings,
       }}
     >

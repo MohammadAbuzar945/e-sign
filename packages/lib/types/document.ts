@@ -1,6 +1,6 @@
 import { DocumentDataSchema } from '@documenso/prisma/generated/zod/modelSchema/DocumentDataSchema';
 import { DocumentMetaSchema } from '@documenso/prisma/generated/zod/modelSchema/DocumentMetaSchema';
-import EnvelopeItemSchema from '@documenso/prisma/generated/zod/modelSchema/EnvelopeItemSchema';
+import { EnvelopeItemSchema } from '@documenso/prisma/generated/zod/modelSchema/EnvelopeItemSchema';
 import { FolderSchema } from '@documenso/prisma/generated/zod/modelSchema/FolderSchema';
 import { TeamSchema } from '@documenso/prisma/generated/zod/modelSchema/TeamSchema';
 import { UserSchema } from '@documenso/prisma/generated/zod/modelSchema/UserSchema';
@@ -33,6 +33,7 @@ export const ZDocumentSchema = LegacyDocumentSchema.pick({
   folderId: true,
 }).extend({
   envelopeId: z.string(),
+  includeQrCodeInCertificate: z.boolean().nullable().optional(),
   internalVersion: z.number(),
 
   // Which "Template" the document was created from.
@@ -118,6 +119,7 @@ export const ZDocumentLiteSchema = LegacyDocumentSchema.pick({
   useLegacyFieldInsertion: true,
 }).extend({
   envelopeId: z.string(),
+  includeQrCodeInCertificate: z.boolean().nullable().optional(),
   internalVersion: z.number(),
 
   // Backwards compatibility.
@@ -151,6 +153,7 @@ export const ZDocumentManySchema = LegacyDocumentSchema.pick({
   useLegacyFieldInsertion: true,
 }).extend({
   envelopeId: z.string(),
+  includeQrCodeInCertificate: z.boolean().nullable().optional(),
   internalVersion: z.number(),
 
   // Backwards compatibility.

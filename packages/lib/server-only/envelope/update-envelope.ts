@@ -9,7 +9,11 @@ import { isDeepEqual } from 'remeda';
 
 import { TEAM_DOCUMENT_VISIBILITY_MAP } from '../../constants/teams';
 import { AppError, AppErrorCode } from '../../errors/app-error';
-import type { TDocumentAccessAuthTypes, TDocumentActionAuthTypes } from '../../types/document-auth';
+import type {
+  TDocumentAccessAuthTypes,
+  TDocumentActionAuthTypes,
+} from '../../types/document-auth';
+import { ZDocumentAuthOptionsSchema } from '../../types/document-auth';
 import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../types/webhook-payload';
 import { createDocumentAuthOptions, extractDocumentAuthMethods } from '../../utils/document-auth';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
@@ -27,8 +31,11 @@ export type UpdateEnvelopeOptions = {
     folderId?: string | null;
     externalId?: string | null;
     visibility?: DocumentVisibility;
+    includeQrCodeInCertificate?: boolean | null;
     globalAccessAuth?: TDocumentAccessAuthTypes[];
     globalActionAuth?: TDocumentActionAuthTypes[];
+    /** Persisted on `authOptions` JSON when the user opts out of team default KBA in document access. */
+    kbaAccessExplicitlyDisabled?: boolean;
     publicTitle?: string;
     publicDescription?: string;
     templateType?: TemplateType;
@@ -100,12 +107,21 @@ export const updateEnvelope = async ({
     documentAuth: envelope.authOptions,
   });
 
+  const existingAuthOptions = ZDocumentAuthOptionsSchema.parse(envelope.authOptions);
+
   const documentGlobalAccessAuth = documentAuthOption?.globalAccessAuth ?? null;
   const documentGlobalActionAuth = documentAuthOption?.globalActionAuth ?? null;
 
   // If the new global auth values aren't passed in, fallback to the current document values.
-  const newGlobalAccessAuth = data?.globalAccessAuth === undefined ? documentGlobalAccessAuth : data.globalAccessAuth;
-  const newGlobalActionAuth = data?.globalActionAuth === undefined ? documentGlobalActionAuth : data.globalActionAuth;
+  const newGlobalAccessAuth =
+    data?.globalAccessAuth === undefined ? documentGlobalAccessAuth : data.globalAccessAuth;
+  const newGlobalActionAuth =
+    data?.globalActionAuth === undefined ? documentGlobalActionAuth : data.globalActionAuth;
+
+  const newKbaAccessExplicitlyDisabled =
+    data?.kbaAccessExplicitlyDisabled !== undefined
+      ? data.kbaAccessExplicitlyDisabled
+      : Boolean(existingAuthOptions.kbaAccessExplicitlyDisabled);
 
   // Check if user has permission to set the global action auth.
   if (newGlobalActionAuth.length > 0 && !envelope.team.organisation.organisationClaim.flags.cfr21) {
@@ -117,6 +133,7 @@ export const updateEnvelope = async ({
   const authOptions = createDocumentAuthOptions({
     globalAccessAuth: newGlobalAccessAuth,
     globalActionAuth: newGlobalActionAuth,
+    kbaAccessExplicitlyDisabled: newKbaAccessExplicitlyDisabled ? true : undefined,
   });
 
   const emailId = meta.emailId;
@@ -305,6 +322,7 @@ export const updateEnvelope = async ({
         title: data.title,
         externalId: data.externalId,
         visibility: data.visibility,
+        includeQrCodeInCertificate: data.includeQrCodeInCertificate,
         templateType: data.templateType,
         publicDescription: data.publicDescription,
         publicTitle: data.publicTitle,

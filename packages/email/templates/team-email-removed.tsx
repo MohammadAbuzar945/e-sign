@@ -7,6 +7,7 @@ import { Body, Container, Head, Hr, Html, Img, Preview, Section, Text } from '..
 import { useBranding } from '../providers/branding';
 import { TemplateFooter } from '../template-components/template-footer';
 import TemplateImage from '../template-components/template-image';
+import { env } from '@documenso/lib/utils/env';
 
 export type TeamEmailRemovedTemplateProps = {
   assetBaseUrl: string;
@@ -17,16 +18,16 @@ export type TeamEmailRemovedTemplateProps = {
 };
 
 export const TeamEmailRemovedTemplate = ({
-  assetBaseUrl = 'http://localhost:3002',
-  baseUrl = 'https://documenso.com',
-  teamEmail = 'example@documenso.com',
+  assetBaseUrl = 'http://localhost:4002',
+  baseUrl = env('NEXT_PUBLIC_WEBAPP_URL') ?? 'http://localhost:3000',
+  teamEmail = 'example@nomiadocs.com',
   teamName = 'Team Name',
   teamUrl = 'demo',
 }: TeamEmailRemovedTemplateProps) => {
   const { _ } = useLingui();
   const branding = useBranding();
 
-  const previewText = msg`Team email removed for ${teamName} on Documenso`;
+  const previewText = msg`Team email removed for ${teamName} on Nomia`;
 
   return (
     <Html>
@@ -37,9 +38,13 @@ export const TeamEmailRemovedTemplate = ({
         <Section className="bg-white text-slate-500">
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid px-2 pt-2 backdrop-blur-sm">
             {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-6 p-2" />
+              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
             ) : (
-              <TemplateImage assetBaseUrl={assetBaseUrl} className="mb-4 h-6 p-2" staticAsset="logo.png" />
+              <TemplateImage
+                assetBaseUrl={assetBaseUrl}
+                className="mb-4 h-16 p-2"
+                staticAsset="logo.png"
+              />
             )}
 
             <Section>

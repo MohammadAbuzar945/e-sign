@@ -1,14 +1,14 @@
-import signingCelebration from '@documenso/assets/images/signing-celebration.png';
 import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
 import { isSignupEnabledForProvider } from '@documenso/lib/constants/auth';
 import { loadRecipientBrandingByTeamId } from '@documenso/lib/server-only/branding/load-recipient-branding';
 import { getDocumentAndSenderByToken } from '@documenso/lib/server-only/document/get-document-by-token';
-import { isRecipientAuthorized } from '@documenso/lib/server-only/document/is-recipient-authorized';
 import { getFieldsForToken } from '@documenso/lib/server-only/field/get-fields-for-token';
 import { getRecipientByToken } from '@documenso/lib/server-only/recipient/get-recipient-by-token';
 import { getRecipientSignatures } from '@documenso/lib/server-only/recipient/get-recipient-signatures';
 import { getUserByEmail } from '@documenso/lib/server-only/user/get-user-by-email';
+import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
+import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
 import { trpc } from '@documenso/trpc/react';
 import { DocumentShareButton } from '@documenso/ui/components/document/document-share-button';
@@ -60,12 +60,19 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw new Response('Not Found', { status: 404 });
   }
 
-  const isDocumentAccessValid = await isRecipientAuthorized({
-    type: 'ACCESS',
-    documentAuthOptions: document.authOptions,
-    recipient,
-    userId: user?.id,
+  const { derivedRecipientAccessAuth } = extractDocumentAuthMethods({
+    documentAuth: document.authOptions,
+    recipientAuth: recipient.authOptions,
   });
+
+  // KBA is validated at link-open, so the complete page should not re-require it.
+  const isDocumentAccessValid = derivedRecipientAccessAuth.every((accessAuth) =>
+    match(accessAuth)
+      .with(DocumentAccessAuth.ACCOUNT, () => user && user.email === recipient.email)
+      .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => true)
+      .with(DocumentAccessAuth.KBA, () => true)
+      .exhaustive(),
+  );
 
   if (!isDocumentAccessValid) {
     return {
@@ -178,8 +185,7 @@ export default function CompletedSigningPage({ loaderData }: Route.ComponentProp
             <SigningCard3D
               name={recipientName}
               signature={signatures.at(0)}
-              signingCelebrationImage={signingCelebration}
-            />
+              />
 
             <h2 className="mt-6 max-w-[35ch] text-center font-semibold text-2xl leading-normal md:text-3xl lg:text-4xl">
               {recipient.role === RecipientRole.SIGNER && <Trans>Document Signed</Trans>}
@@ -248,12 +254,12 @@ export default function CompletedSigningPage({ loaderData }: Route.ComponentProp
                 </p>
               ))}
 
-            <div className="mt-8 flex w-full max-w-xs flex-col items-stretch gap-4 md:w-auto md:max-w-none md:flex-row md:items-center">
-              <DocumentShareButton
-                documentId={document.id}
-                token={recipient.token}
-                className="w-full max-w-none md:flex-1"
-              />
+          <div className="mt-8 flex w-full max-w-xs flex-col items-stretch gap-4 md:w-auto md:max-w-none md:flex-row md:items-center">
+            {/* <DocumentShareButton
+              documentId={document.id}
+              token={recipient.token}
+              className="w-full max-w-none md:flex-1"
+            /> */}
 
               {isDocumentCompleted(document) && (
                 <EnvelopeDownloadDialog

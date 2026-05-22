@@ -47,6 +47,7 @@ type GenerateCertificateOptions = {
   recipients: CertificateRecipient[];
   envelopeId: string;
   qrToken: string | null;
+  includeQrCodeInCertificate: boolean;
   hidePoweredBy: boolean;
   i18n: I18n;
   envelopeOwner: {
@@ -275,7 +276,7 @@ const renderColumnTwo = (options: RenderColumnOptions) => {
   const isRejected = Boolean(recipient.logs.rejected);
 
   if (recipient.signatureField?.secondaryId) {
-    // Signature container with green border
+    // Signature container with primary color border
     const signatureContainer = new Konva.Group({ x: 0, y: 0 });
 
     const minSignatureHeight = 40;
@@ -562,45 +563,24 @@ const renderRow = (options: RenderRowOptions) => {
   return rowGroup;
 };
 
-const renderBranding = async ({ qrToken, i18n }: { qrToken: string | null; i18n: I18n }) => {
+const renderBranding = async ({
+  qrToken,
+  includeQrCodeInCertificate,
+  i18n,
+  availableWidth,
+}: {
+  qrToken: string | null;
+  includeQrCodeInCertificate: boolean;
+  i18n: I18n;
+  availableWidth: number;
+}) => {
   const branding = new Konva.Group();
 
-  const brandingHeight = 12;
+  const qrSize = includeQrCodeInCertificate && qrToken ? 72 : 0;
+  const textGap = 8;
 
-  const text = new Konva.Text({
-    x: 0,
-    verticalAlign: 'middle',
-    text: i18n._(msg`Signing certificate provided by`) + ':',
-    fontStyle: fontMedium,
-    fontFamily: 'Inter',
-    fontSize: textSm,
-    height: brandingHeight,
-  });
-
-  const logoPath = path.join(process.cwd(), 'public/static/logo.png');
-  const logo = fs.readFileSync(logoPath);
-
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  const img = new SkiaImage(logo) as unknown as HTMLImageElement;
-
-  const documensoImage = new Konva.Image({
-    image: img,
-    height: brandingHeight,
-    width: brandingHeight * (img.width / img.height),
-    x: text.width() + 16,
-  });
-
-  const qrSize = qrToken ? 72 : 0;
-
-  const logoGroup = new Konva.Group({
-    y: qrSize + 16,
-  });
-  logoGroup.add(text);
-  logoGroup.add(documensoImage);
-
-  branding.add(logoGroup);
-
-  if (qrToken) {
+  // QR code at top-right (only when setting is enabled)
+  if (includeQrCodeInCertificate && qrToken) {
     const qrSvg = renderSVG(`${NEXT_PUBLIC_WEBAPP_URL()}/share/${qrToken}`, {
       ecc: 'Q',
     });
@@ -613,12 +593,54 @@ const renderBranding = async ({ qrToken, i18n }: { qrToken: string | null; i18n:
       image: qrSkiaImage,
       height: qrSize,
       width: qrSize,
-      x: branding.getClientRect().width - qrSize,
+      x: availableWidth - qrSize,
       y: 0,
     });
 
     branding.add(qrImage);
   }
+
+  // Divider line
+  const dividerY = qrSize + textGap;
+  const divider = new Konva.Line({
+    points: [0, 0, availableWidth, 0],
+    stroke: '#e5e7eb',
+    strokeWidth: 1,
+    x: 0,
+    y: dividerY,
+  });
+  branding.add(divider);
+
+  // Title text - right aligned, full available width
+  const titleY = dividerY + textGap;
+  const titleText = new Konva.Text({
+    x: 0,
+    y: titleY,
+    text: 'Digitally Signed & Verified',
+    fontFamily: 'Inter',
+    fontSize: textSm,
+    fontStyle: fontMedium,
+    fill: '#444',
+    width: availableWidth,
+    align: 'right',
+  });
+  branding.add(titleText);
+
+  // Body text - right aligned, full available width, smaller font
+  const bodyY = titleY + titleText.height() + 6;
+  const bodyText = new Konva.Text({
+    x: 0,
+    y: bodyY,
+    text: 'This document is digitally signed by Nomia Africa (Pty) Ltd using Adobe AATL trusted certificate issued by SSL.com. This signature includes Long-Term Validation (LTV) metadata, ensuring the document\'s authenticity and integrity can be verified for long-term archival purposes.',
+    fontFamily: 'Inter',
+    fontSize: 7,
+    fill: '#444',
+    width: availableWidth,
+    align: 'right',
+    wrap: 'word',
+    lineHeight: 1.3,
+  });
+  branding.add(bodyText);
 
   return branding;
 };
@@ -716,6 +738,7 @@ export async function renderCertificate({
   recipients,
   envelopeId,
   qrToken,
+  includeQrCodeInCertificate,
   hidePoweredBy,
   i18n,
   envelopeOwner,
@@ -751,7 +774,12 @@ export async function renderCertificate({
 
   const tables = renderTables({ groupedRows, columnWidths, i18n });
 
-  const brandingGroup = await renderBranding({ qrToken, i18n });
+  const brandingGroup = await renderBranding({
+    qrToken,
+    includeQrCodeInCertificate,
+    i18n,
+    availableWidth: tableWidth,
+  });
   const brandingRect = brandingGroup.getClientRect();
   const brandingTopPadding = 24;
 
@@ -791,7 +819,7 @@ export async function renderCertificate({
 
       if (brandingRect.height + brandingTopPadding <= remainingHeight) {
         brandingGroup.setAttrs({
-          x: pageWidth - brandingRect.width - margin,
+          x: margin,
           y: group.getClientRect().height + brandingTopPadding,
         } satisfies Partial<Konva.GroupConfig>);
 
@@ -824,7 +852,7 @@ export async function renderCertificate({
     const page = new Konva.Layer();
 
     brandingGroup.setAttrs({
-      x: pageWidth - brandingRect.width - margin,
+      x: margin,
       y: pageTopMargin / 2, // Less padding since there's nothing else on this page.
     } satisfies Partial<Konva.GroupConfig>);
 

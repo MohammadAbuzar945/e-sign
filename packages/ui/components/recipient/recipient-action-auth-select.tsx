@@ -1,5 +1,5 @@
 import { DOCUMENT_AUTH_TYPES } from '@documenso/lib/constants/document-auth';
-import { RecipientActionAuth } from '@documenso/lib/types/document-auth';
+import { DocumentAuth, RecipientActionAuth } from '@documenso/lib/types/document-auth';
 import { MultiSelect, type Option } from '@documenso/ui/primitives/multiselect';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { msg } from '@lingui/core/macro';
@@ -33,7 +33,7 @@ export const RecipientActionAuthSelect = ({
       label: _(msg`Inherit authentication method`),
     },
     ...Object.values(RecipientActionAuth)
-      .filter((auth) => auth !== RecipientActionAuth.ACCOUNT)
+      .filter((auth) => auth !== DocumentAuth.ACCOUNT && auth !== DocumentAuth.PASSKEY)
       .map((authType) => ({
         value: authType,
         label: _(DOCUMENT_AUTH_TYPES[authType].value),

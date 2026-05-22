@@ -37,7 +37,11 @@ export const SubscriptionClaimForm = ({
 }: SubscriptionClaimFormProps) => {
   const { t } = useLingui();
 
-  const hasRestrictedEnterpriseFeatures = Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).some(
+  const visibleFeatureFlags = Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).filter(
+    (flag) => flag.key === 'allowCustomBranding',
+  );
+
+  const hasRestrictedEnterpriseFeatures = visibleFeatureFlags.some(
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     (flag) => flag.isEnterprise && !licenseFlags?.[flag.key as keyof TLicenseClaim],
   );
@@ -151,8 +155,9 @@ export const SubscriptionClaimForm = ({
             </FormLabel>
 
             <div className="mt-2 space-y-2 rounded-md border p-4">
-              {Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).map(({ key, label, isEnterprise }) => {
-                const isRestrictedFeature = isEnterprise && !licenseFlags?.[key as keyof TLicenseClaim]; // eslint-disable-line @typescript-eslint/consistent-type-assertions
+              {visibleFeatureFlags.map(({ key, label, isEnterprise }) => {
+                const isRestrictedFeature =
+                  isEnterprise && !licenseFlags?.[key as keyof TLicenseClaim]; // eslint-disable-line @typescript-eslint/consistent-type-assertions
 
                 return (
                   <FormField
@@ -171,7 +176,7 @@ export const SubscriptionClaimForm = ({
                             />
 
                             <label
-                              className="ml-2 flex flex-row items-center text-muted-foreground text-sm"
+                              className="ml-2 flex flex-row items-center text-sm text-muted-foreground"
                               htmlFor={`flag-${key}`}
                             >
                               {label}
@@ -185,7 +190,7 @@ export const SubscriptionClaimForm = ({
                 );
               })}
             </div>
-
+{/* 
             {hasRestrictedEnterpriseFeatures && (
               <Alert variant="neutral" className="mt-4">
                 <AlertDescription>
@@ -200,7 +205,7 @@ export const SubscriptionClaimForm = ({
                   </Link>
                 </AlertDescription>
               </Alert>
-            )}
+            )} */}
           </div>
 
           {formSubmitTrigger}

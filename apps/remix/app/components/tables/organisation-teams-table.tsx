@@ -3,6 +3,7 @@ import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/org
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
+import { OrganisationType } from '@documenso/prisma/generated/types';
 import { trpc } from '@documenso/trpc/react';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Button } from '@documenso/ui/primitives/button';
@@ -72,6 +73,16 @@ export const OrganisationTeamsTable = () => {
         cell: ({ row }) => i18n.date(row.original.createdAt),
       },
       {
+        header: _(msg`Type`),
+        accessorKey: 'isPrivate',
+        cell: ({ row }) => (row.original.isPrivate ? _(msg`Private`) : _(msg`Public`)),
+      },
+      {
+        header: _(msg`Credits Used`),
+        accessorKey: 'creditConsumed',
+        cell: ({ row }) => row.original.creditConsumed ?? 0,
+      },
+      {
         id: 'actions',
         cell: ({ row }) => (
           <div className="flex justify-end space-x-2">
@@ -94,7 +105,7 @@ export const OrganisationTeamsTable = () => {
         ),
       },
     ] satisfies DataTableColumnDef<(typeof results)['data'][number]>[];
-  }, []);
+  }, [_, i18n]);
 
   return (
     <DataTable
@@ -127,6 +138,9 @@ export const OrganisationTeamsTable = () => {
             </TableCell>
             <TableCell>
               <Skeleton className="h-4 w-20 rounded-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-16 rounded-full" />
             </TableCell>
             <TableCell>
               <div className="flex flex-row justify-end space-x-2">

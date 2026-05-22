@@ -171,6 +171,10 @@ const BillingDialog = ({
 
   const { mutateAsync: createOrganisation, isPending: isCreatingOrganisation } = trpc.organisation.create.useMutation();
 
+  const { refetch: refetchOrganisations } = trpc.organisation.getMany.useQuery(undefined, {
+    enabled: false,
+  });
+
   const isPending = isCreatingSubscription || isCreatingOrganisation;
 
   const onSubscribeClick = async () => {
@@ -185,17 +189,34 @@ const BillingDialog = ({
 
         redirectUrl = createSubscriptionResponse.redirectUrl;
       } else {
-        const createOrganisationResponse = await createOrganisation({
+        // Create organisation first (without priceId)
+        await createOrganisation({
           name: form.getValues('name'),
+        });
+
+        // Get the newly created organisation by refetching
+        const { data: organisationsData } = await refetchOrganisations();
+
+        if (!organisationsData) {
+          throw new Error('Failed to fetch organisations');
+        }
+
+        // Find the newly created organisation (most recent one with matching name)
+        const newOrganisation = organisationsData.find(
+          (org) => org.name === form.getValues('name') && org.type === 'ORGANISATION',
+        );
+
+        if (!newOrganisation) {
+          throw new Error('Failed to find newly created organisation');
+        }
+
+        // Create subscription for the new organisation
+        const createSubscriptionResponse = await createSubscription({
+          organisationId: newOrganisation.id,
           priceId,
         });
 
-        if (!createOrganisationResponse.paymentRequired) {
-          setIsOpen(false);
-          return;
-        }
-
-        redirectUrl = createOrganisationResponse.checkoutUrl;
+        redirectUrl = createSubscriptionResponse.redirectUrl;
       }
 
       window.location.href = redirectUrl;

@@ -8,11 +8,21 @@ import { isAdmin } from '@documenso/lib/utils/is-admin';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
 import { canExecuteTeamAction } from '@documenso/lib/utils/teams';
+import { OrganisationMemberRole, OrganisationType } from '@documenso/prisma/generated/types';
 import { AnimateGenericFadeInOut } from '@documenso/ui/components/animate/animate-generic-fade-in-out';
 import { LanguageSwitcherDialog } from '@documenso/ui/components/common/language-switcher-dialog';
+import { useHydrated } from '@documenso/ui/lib/use-hydrated';
 import { cn } from '@documenso/ui/lib/utils';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Button } from '@documenso/ui/primitives/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@documenso/ui/primitives/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,8 +38,11 @@ import { Link, useLocation } from 'react-router';
 
 import { useOptionalCurrentTeam } from '~/providers/team';
 
+import { OrganisationCreateDialog } from '../dialogs/organisation-create-dialog';
+
 export const OrgMenuSwitcher = () => {
   const { _ } = useLingui();
+  const isHydrated = useHydrated();
 
   const { user, organisations } = useSession();
 
@@ -38,8 +51,45 @@ export const OrgMenuSwitcher = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [languageSwitcherOpen, setLanguageSwitcherOpen] = useState(false);
   const [hoveredOrgId, setHoveredOrgId] = useState<string | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   const isUserAdmin = isAdmin(user);
+
+  const isOrganisationOwner = organisations.some((org) => org.ownerUserId === user.id);
+
+  const ownedOrganisationsCount = organisations.filter((org) => org.ownerUserId === user.id).length;
+  const rawMax = user.maxOrganisationCount as number | string | undefined;
+  const numMax = typeof rawMax === 'number' ? rawMax : Number(rawMax);
+  const maxOrganisationCount = !Number.isNaN(numMax) && numMax >= 0 ? numMax : 1;
+
+  // Check if user can create more organisations
+  // If maxOrganisationCount is 0, it means unlimited (only for admins)
+  const canCreateOrganisation =
+    (maxOrganisationCount === 0 && isUserAdmin) ||
+    (maxOrganisationCount > 0 && ownedOrganisationsCount < maxOrganisationCount);
+
+  const handleCreateOrganisationClick = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (canCreateOrganisation) {
+      setCreateDialogOpen(true);
+      setIsOpen(false);
+    } else {
+      setContactModalOpen(true);
+    }
+  };
+
+  const sortedOrganisations = useMemo(() => {
+    const personalOwnerOrganisations = organisations.filter(
+      (org) => org.ownerUserId === user.id && org.type === OrganisationType.PERSONAL,
+    );
+
+    const otherOrganisations = organisations.filter(
+      (org) => !(org.ownerUserId === user.id && org.type === OrganisationType.PERSONAL),
+    );
+
+    return [...personalOwnerOrganisations, ...otherOrganisations];
+  }, [organisations, user.id]);
 
   const isPathOrgUrl = (orgUrl: string) => {
     if (!pathname || !pathname.startsWith(`/o/`)) {
@@ -103,6 +153,25 @@ export const OrgMenuSwitcher = () => {
     setIsOpen(open);
   };
 
+  if (!isHydrated) {
+    return (
+      <Button
+        data-testid="menu-switcher"
+        variant="none"
+        className="relative flex h-12 flex-row items-center px-0 py-2 ring-0 focus:outline-none focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-transparent md:px-2"
+      >
+        <AvatarWithText
+          avatarSrc={dropdownMenuAvatarText.avatarSrc}
+          avatarFallback={dropdownMenuAvatarText.avatarFallback}
+          primaryText={dropdownMenuAvatarText.primaryText}
+          secondaryText={dropdownMenuAvatarText.secondaryText}
+          rightSideComponent={<ChevronsUpDown className="ml-auto h-4 w-4 text-muted-foreground" />}
+          textSectionClassName="hidden lg:flex"
+        />
+      </Button>
+    );
+  }
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
@@ -137,7 +206,7 @@ export const OrgMenuSwitcher = () => {
               </h3>
             </div>
             <div className="flex-1 space-y-1 overflow-y-auto p-1.5">
-              {organisations.map((org) => (
+              {sortedOrganisations.map((org) => (
                 <div className="group relative" key={org.id} onMouseEnter={() => setHoveredOrgId(org.id)}>
                   <DropdownMenuItem
                     className={cn(
@@ -171,11 +240,15 @@ export const OrgMenuSwitcher = () => {
                 </div>
               ))}
 
-              <Button variant="ghost" className="w-full justify-start" asChild>
-                <Link to="/settings/organisations?action=add-organisation">
-                  <Plus className="mr-2 h-4 w-4" />
-                  <Trans>Create Organisation</Trans>
-                </Link>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={handleCreateOrganisationClick}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                <Trans>Create Organisation</Trans>
               </Button>
             </div>
           </div>
@@ -229,14 +302,17 @@ export const OrgMenuSwitcher = () => {
                   </div>
                 )}
 
-                {displayedOrg && (
-                  <Button variant="ghost" className="w-full justify-start" asChild>
-                    <Link to={`/o/${displayedOrg.url}/settings/teams?action=add-team`}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <Trans>Create Team</Trans>
-                    </Link>
-                  </Button>
-                )}
+                {displayedOrg &&
+                  (displayedOrg.ownerUserId === user.id ||
+                    displayedOrg.currentOrganisationRole === OrganisationMemberRole.ADMIN ||
+                    displayedOrg.currentOrganisationRole === OrganisationMemberRole.MANAGER) && (
+                    <Button variant="ghost" className="w-full justify-start" asChild>
+                      <Link to={`/o/${displayedOrg.url}/settings/teams?action=add-team`}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        <Trans>Create Team</Trans>
+                      </Link>
+                    </Button>
+                  )}
               </AnimateGenericFadeInOut>
             </div>
           </div>
@@ -259,6 +335,7 @@ export const OrgMenuSwitcher = () => {
               )}
 
               {currentOrganisation &&
+                currentOrganisation.type !== OrganisationType.PERSONAL &&
                 canExecuteOrganisationAction('MANAGE_ORGANISATION', currentOrganisation.currentOrganisationRole) && (
                   <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
                     <Link to={`/o/${currentOrganisation.url}/settings`}>
@@ -266,14 +343,6 @@ export const OrgMenuSwitcher = () => {
                     </Link>
                   </DropdownMenuItem>
                 )}
-
-              {currentTeam && canExecuteTeamAction('MANAGE_TEAM', currentTeam.currentTeamRole) && (
-                <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
-                  <Link to={`/t/${currentTeam.url}/settings`}>
-                    <Trans>Team settings</Trans>
-                  </Link>
-                </DropdownMenuItem>
-              )}
 
               <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
                 <Link to="/inbox">
@@ -287,6 +356,15 @@ export const OrgMenuSwitcher = () => {
                 </Link>
               </DropdownMenuItem>
 
+              {/* {isOrganisationOwner && (
+                <DropdownMenuItem className="text-muted-foreground px-4 py-2" asChild>
+                  <Link to="/price-plans" className="flex items-center">
+                 
+                    <Trans>Subscriptions</Trans>
+                  </Link>
+                </DropdownMenuItem>
+              )} */}
+
               <DropdownMenuItem
                 className="px-4 py-2 text-muted-foreground"
                 onClick={() => setLanguageSwitcherOpen(true)}
@@ -294,21 +372,8 @@ export const OrgMenuSwitcher = () => {
                 <Trans>Language</Trans>
               </DropdownMenuItem>
 
-              {currentOrganisation && (
-                <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
-                  <Link
-                    to={{
-                      pathname: `/o/${currentOrganisation.url}/support`,
-                      search: currentTeam ? `?team=${currentTeam.id}` : '',
-                    }}
-                  >
-                    <Trans>Support</Trans>
-                  </Link>
-                </DropdownMenuItem>
-              )}
-
               <DropdownMenuItem
-                className="hover:!text-muted-foreground px-4 py-2 text-muted-foreground"
+                className="hover:!text-destructive px-4 py-2 text-destructive/90"
                 onSelect={async () => authClient.signOut()}
               >
                 <Trans>Sign Out</Trans>
@@ -319,6 +384,44 @@ export const OrgMenuSwitcher = () => {
       </DropdownMenuContent>
 
       <LanguageSwitcherDialog open={languageSwitcherOpen} setOpen={setLanguageSwitcherOpen} />
+
+      <OrganisationCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+
+      <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
+        <DialogContent position="center">
+          <DialogHeader>
+            <DialogTitle>
+              <Trans>Create More Organisations</Trans>
+            </DialogTitle>
+            <DialogDescription>
+              <Trans>
+                Please contact us at{' '}
+                <a
+                  href="mailto:help@nomiadocs.com"
+                  className="text-primary underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  help@nomiadocs.com
+                </a>{' '}
+                to create more than {String(maxOrganisationCount)} organisation{maxOrganisationCount !== 1 ? 's' : ''}.
+              </Trans>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setContactModalOpen(false)}>
+              <Trans>Close</Trans>
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                window.location.href = 'mailto:help@nomiadocs.com';
+              }}
+            >
+              <Trans>Contact Us</Trans>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DropdownMenu>
   );
 };

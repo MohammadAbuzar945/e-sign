@@ -15,6 +15,7 @@ import { AUTH_SESSION_LIFETIME } from '../../config';
 export type SessionUser = Pick<
   User,
   'id' | 'name' | 'email' | 'emailVerified' | 'avatarImageId' | 'twoFactorEnabled' | 'roles' | 'signature'
+  | 'maxOrganisationCount'
 >;
 
 export type SessionValidationResult =
@@ -86,6 +87,7 @@ export const validateSessionToken = async (token: string): Promise<SessionValida
           twoFactorEnabled: true,
           roles: true,
           signature: true,
+          maxOrganisationCount: true,
         },
       },
     },

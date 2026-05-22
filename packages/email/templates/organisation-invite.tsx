@@ -2,6 +2,7 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 
+import { env } from '@documenso/lib/utils/env';
 import { Body, Button, Container, Head, Hr, Html, Img, Preview, Section, Text } from '../components';
 import { useBranding } from '../providers/branding';
 import { TemplateFooter } from '../template-components/template-footer';
@@ -16,8 +17,8 @@ export type OrganisationInviteEmailProps = {
 };
 
 export const OrganisationInviteEmailTemplate = ({
-  assetBaseUrl = 'http://localhost:3002',
-  baseUrl = 'https://documenso.com',
+  assetBaseUrl = 'http://localhost:4002',
+  baseUrl = env('NEXT_PUBLIC_WEBAPP_URL') ?? 'http://localhost:3000',
   senderName = 'John Doe',
   organisationName = 'Organisation Name',
   token = '',
@@ -25,7 +26,7 @@ export const OrganisationInviteEmailTemplate = ({
   const { _ } = useLingui();
   const branding = useBranding();
 
-  const previewText = msg`Accept invitation to join an organisation on Documenso`;
+  const previewText = msg`Accept invitation to join an organisation on Nomia`;
 
   return (
     <Html>
@@ -36,9 +37,13 @@ export const OrganisationInviteEmailTemplate = ({
         <Section className="bg-white text-slate-500">
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid p-2 backdrop-blur-sm">
             {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-6 p-2" />
+              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
             ) : (
-              <TemplateImage assetBaseUrl={assetBaseUrl} className="mb-4 h-6 p-2" staticAsset="logo.png" />
+              <TemplateImage
+                assetBaseUrl={assetBaseUrl}
+                className="mb-4 h-16 p-2"
+                staticAsset="logo.png"
+              />
             )}
 
             <Section>
@@ -47,7 +52,7 @@ export const OrganisationInviteEmailTemplate = ({
 
             <Section className="p-2 text-slate-500">
               <Text className="text-center font-medium text-black text-lg">
-                <Trans>Join {organisationName} on Documenso</Trans>
+                <Trans>Join {organisationName} on Nomia</Trans>
               </Text>
 
               <Text className="my-1 text-center text-base">

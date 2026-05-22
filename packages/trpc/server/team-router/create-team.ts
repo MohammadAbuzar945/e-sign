@@ -8,7 +8,8 @@ export const createTeamRoute = authenticatedProcedure
   .input(ZCreateTeamRequestSchema)
   .output(ZCreateTeamResponseSchema)
   .mutation(async ({ input, ctx }) => {
-    const { teamName, teamUrl, organisationId, inheritMembers } = input;
+    const { teamName, teamUrl, organisationId, inheritMembers, isPrivate, organisationMemberId } =
+      input;
     const { user } = ctx;
 
     ctx.logger.info({
@@ -23,5 +24,8 @@ export const createTeamRoute = authenticatedProcedure
       teamUrl,
       organisationId,
       inheritMembers,
+      isPrivate,
+      organisationMemberId,
+      metadata: ctx.metadata,
     });
   });

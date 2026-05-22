@@ -1,3 +1,14 @@
+import type { DocumentMeta, DocumentVisibility, TemplateType, Prisma } from '@prisma/client';
+import {
+  DocumentSource,
+  EnvelopeType,
+  FolderType,
+  RecipientRole,
+  SendStatus,
+  SigningStatus,
+  WebhookTriggerEvents,
+} from '@prisma/client';
+
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { PlaceholderInfo } from '@documenso/lib/server-only/pdf/auto-place-fields';
 import { convertPlaceholdersToFieldInputs } from '@documenso/lib/server-only/pdf/auto-place-fields';
@@ -9,16 +20,7 @@ import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-reques
 import { nanoid, prefixedId } from '@documenso/lib/universal/id';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
-import type { DocumentMeta, DocumentVisibility, TemplateType } from '@prisma/client';
-import {
-  DocumentSource,
-  EnvelopeType,
-  FolderType,
-  RecipientRole,
-  SendStatus,
-  SigningStatus,
-  WebhookTriggerEvents,
-} from '@prisma/client';
+
 
 import type {
   TDocumentAccessAuthTypes,
@@ -26,6 +28,7 @@ import type {
   TRecipientAccessAuthTypes,
   TRecipientActionAuthTypes,
 } from '../../types/document-auth';
+import { DocumentAccessAuth } from '../../types/document-auth';
 import type { TDocumentFormValues } from '../../types/document-form-values';
 import type { TEnvelopeAttachmentType } from '../../types/envelope-attachment';
 import type { TFieldAndMeta } from '../../types/field-meta';
@@ -34,10 +37,38 @@ import { getFileServerSide } from '../../universal/upload/get-file.server';
 import { putPdfFileServerSide } from '../../universal/upload/put-file.server';
 import { extractDerivedDocumentMeta } from '../../utils/document';
 import { createDocumentAuthOptions, createRecipientAuthOptions } from '../../utils/document-auth';
-import { buildTeamWhereQuery } from '../../utils/teams';
+import { normalizeStoredKbaSettings } from '../../utils/kba-settings';
+import { buildTeamWhereQuery, extractDerivedTeamSettings } from '../../utils/teams';
 import { incrementDocumentId, incrementTemplateId } from '../envelope/increment-id';
-import { getTeamSettings } from '../team/get-team-settings';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
+
+const NOMIA_PREFIX = 'NomiaSigns-';
+
+export type ProcessExternalIdResult = {
+  processedExternalId: string | undefined;
+  fromNomia: boolean;
+};
+
+export const processExternalId = (externalId: string | undefined): ProcessExternalIdResult => {
+  if (!externalId) {
+    return {
+      processedExternalId: undefined,
+      fromNomia: false,
+    };
+  }
+
+  if (externalId.startsWith(NOMIA_PREFIX)) {
+    return {
+      processedExternalId: externalId.replace(NOMIA_PREFIX, ''),
+      fromNomia: true,
+    };
+  }
+
+  return {
+    processedExternalId: externalId,
+    fromNomia: false,
+  };
+};
 
 type CreateEnvelopeRecipientFieldOptions = TFieldAndMeta & {
   documentDataId: string;
@@ -74,6 +105,7 @@ export type CreateEnvelopeOptions = {
       placeholders?: PlaceholderInfo[];
     }[];
     formValues?: TDocumentFormValues;
+    fromNomia?: boolean;
 
     userTimezone?: string;
 
@@ -82,6 +114,7 @@ export type CreateEnvelopeOptions = {
     publicDescription?: string;
 
     visibility?: DocumentVisibility;
+    includeQrCodeInCertificate?: boolean | null;
     globalAccessAuth?: TDocumentAccessAuthTypes[];
     globalActionAuth?: TDocumentActionAuthTypes[];
     recipients?: CreateEnvelopeRecipientOptions[];
@@ -121,6 +154,7 @@ export const createEnvelope = async ({
     title,
     externalId,
     formValues,
+    
     userTimezone,
     folderId,
     templateType,
@@ -129,6 +163,7 @@ export const createEnvelope = async ({
     publicTitle,
     publicDescription,
     visibility: visibilityOverride,
+    includeQrCodeInCertificate,
     delegatedDocumentOwner,
   } = data;
 
@@ -136,10 +171,12 @@ export const createEnvelope = async ({
     where: buildTeamWhereQuery({ teamId, userId }),
     include: {
       organisation: {
-        select: {
+        include: {
           organisationClaim: true,
+          organisationGlobalSettings: true,
         },
       },
+      teamGlobalSettings: true,
     },
   });
 
@@ -148,6 +185,11 @@ export const createEnvelope = async ({
       message: 'Team not found',
     });
   }
+
+  const settings = extractDerivedTeamSettings(
+    team.organisation.organisationGlobalSettings,
+    team.teamGlobalSettings,
+  );
 
   // Verify that the folder exists and is associated with the team.
   if (folderId) {
@@ -165,11 +207,6 @@ export const createEnvelope = async ({
       });
     }
   }
-
-  const settings = await getTeamSettings({
-    userId,
-    teamId,
-  });
 
   if (data.envelopeItems.length !== 1 && internalVersion === 1) {
     throw new AppError(AppErrorCode.INVALID_BODY, {
@@ -218,8 +255,19 @@ export const createEnvelope = async ({
     );
   }
 
+  const derivedKbaForAccess = normalizeStoredKbaSettings(
+    (settings as { kbaSettings?: unknown }).kbaSettings,
+  );
+  const initialGlobalAccessAuth: TDocumentAccessAuthTypes[] = [...(globalAccessAuth || [])];
+  if (
+    derivedKbaForAccess.isEnabled &&
+    !initialGlobalAccessAuth.includes(DocumentAccessAuth.KBA)
+  ) {
+    initialGlobalAccessAuth.push(DocumentAccessAuth.KBA);
+  }
+
   const authOptions = createDocumentAuthOptions({
-    globalAccessAuth: globalAccessAuth || [],
+    globalAccessAuth: initialGlobalAccessAuth,
     globalActionAuth: globalActionAuth || [],
   });
 
@@ -228,9 +276,10 @@ export const createEnvelope = async ({
   );
 
   // Check if user has permission to set the global action auth.
+  const claimFlags = team.organisation?.organisationClaim?.flags as { cfr21?: boolean } | null;
   if (
     (authOptions.globalActionAuth.length > 0 || recipientsHaveActionAuth) &&
-    !team.organisation.organisationClaim.flags.cfr21
+    !claimFlags?.cfr21
   ) {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {
       message: 'You do not have permission to set the action auth',
@@ -260,6 +309,8 @@ export const createEnvelope = async ({
   // userTimezone is last because it's always passed in regardless of the organisation/team settings
   // for uploads from the frontend
   const timezoneToUse = meta?.timezone || settings.documentTimezone || userTimezone;
+
+
 
   const getValidatedDelegatedOwner = async () => {
     if (!settings.delegateDocumentOwnership || !delegatedDocumentOwner || requestMetadata.source === 'app') {
@@ -305,6 +356,8 @@ export const createEnvelope = async ({
   ]);
   const envelopeOwnerId = delegatedOwner?.id ?? userId;
 
+  const { processedExternalId, fromNomia } = processExternalId(externalId);
+
   const createdEnvelope = await prisma.$transaction(async (tx) => {
     const envelope = await tx.envelope.create({
       data: {
@@ -314,7 +367,8 @@ export const createEnvelope = async ({
         type,
         title,
         qrToken: prefixedId('qr'),
-        externalId,
+        externalId: processedExternalId,
+        fromNomia,
         envelopeItems: {
           createMany: {
             data: envelopeItems.map((item, i) => ({
@@ -337,6 +391,7 @@ export const createEnvelope = async ({
         userId: envelopeOwnerId,
         teamId,
         authOptions,
+        includeQrCodeInCertificate: includeQrCodeInCertificate ?? null,
         visibility,
         folderId,
         formValues,
@@ -347,7 +402,7 @@ export const createEnvelope = async ({
         templateType: type === EnvelopeType.TEMPLATE ? templateType : undefined,
         publicTitle: type === EnvelopeType.TEMPLATE ? publicTitle : undefined,
         publicDescription: type === EnvelopeType.TEMPLATE ? publicDescription : undefined,
-      },
+      } as any,
       include: {
         envelopeItems: true,
       },
@@ -463,7 +518,7 @@ export const createEnvelope = async ({
 
         const placeholderRecipients = Array.from(uniqueRecipientRefs.entries(), ([recipientIndex, name]) => ({
           envelopeId: envelope.id,
-          email: `recipient.${recipientIndex}@documenso.com`,
+          email: `recipient.${recipientIndex}@nomiadocs.com`,
           name,
           role: RecipientRole.SIGNER,
           signingOrder: recipientIndex,
@@ -580,7 +635,6 @@ export const createEnvelope = async ({
         }),
       });
 
-      // Create audit log for delegated owner if validation passed
       if (delegatedOwner) {
         await tx.documentAuditLog.create({
           data: createDocumentAuditLogData({

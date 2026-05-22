@@ -32,6 +32,8 @@ import { DocumentDataType, EnvelopeType } from '@prisma/client';
 
 import { ZGenericSuccessResponse, ZSuccessResponseSchema } from '../schema';
 import { authenticatedProcedure, maybeAuthenticatedProcedure, router } from '../trpc';
+import { templateAccessAuthGetKbaChallengeRoute } from './access-auth-get-kba-challenge';
+import { templateAccessAuthVerifyKbaRoute } from './access-auth-verify-kba';
 import { getTemplatesByIdsRoute } from './get-templates-by-ids';
 import {
   ZBulkSendTemplateMutationSchema,
@@ -63,6 +65,11 @@ import {
 import { searchTemplateRoute } from './search-template';
 
 export const templateRouter = router({
+  accessAuth: router({
+    getKbaChallenge: templateAccessAuthGetKbaChallengeRoute,
+    verifyKba: templateAccessAuthVerifyKbaRoute,
+  }),
+
   /**
    * @public
    */

@@ -53,6 +53,8 @@ export function TrpcProvider({ children, headers }: TrpcProviderProps) {
               url: `${getBaseUrl()}/api/trpc`,
               headers,
               transformer: dataTransformer,
+              // Prevent proxy/server 414s by splitting large batches into smaller requests.
+              maxURLLength: 2048,
             }),
           }),
         ],

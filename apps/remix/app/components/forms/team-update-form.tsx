@@ -3,6 +3,7 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { ZUpdateTeamRequestSchema } from '@documenso/trpc/server/team-router/update-team.types';
 import { Button } from '@documenso/ui/primitives/button';
+import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
@@ -19,16 +20,27 @@ export type UpdateTeamDialogProps = {
   teamId: number;
   teamName: string;
   teamUrl: string;
+  organisationId: string;
+  isPrivate: boolean;
+  isOrganisationOwner: boolean;
 };
 
 const ZTeamUpdateFormSchema = ZUpdateTeamRequestSchema.shape.data.pick({
   name: true,
   url: true,
+  isPrivate: true,
 });
 
 type TTeamUpdateFormSchema = z.infer<typeof ZTeamUpdateFormSchema>;
 
-export const TeamUpdateForm = ({ teamId, teamName, teamUrl }: UpdateTeamDialogProps) => {
+export const TeamUpdateForm = ({
+  teamId,
+  teamName,
+  teamUrl,
+  organisationId,
+  isPrivate,
+  isOrganisationOwner,
+}: UpdateTeamDialogProps) => {
   const navigate = useNavigate();
   const { _ } = useLingui();
   const { toast } = useToast();
@@ -37,18 +49,22 @@ export const TeamUpdateForm = ({ teamId, teamName, teamUrl }: UpdateTeamDialogPr
     resolver: zodResolver(ZTeamUpdateFormSchema),
     defaultValues: {
       name: teamName,
-      url: teamUrl,
+      url: teamUrl.startsWith(`${organisationId.slice(-5)}-`)
+        ? teamUrl.slice(organisationId.slice(-5).length + 1)
+        : teamUrl,
+      isPrivate,
     },
   });
 
   const { mutateAsync: updateTeam } = trpc.team.update.useMutation();
 
-  const onFormSubmit = async ({ name, url }: TTeamUpdateFormSchema) => {
+  const onFormSubmit = async ({ name, url, isPrivate: isPrivateValue }: TTeamUpdateFormSchema) => {
     try {
       await updateTeam({
         data: {
           name,
           url,
+          isPrivate: isPrivateValue,
         },
         teamId,
       });
@@ -62,18 +78,44 @@ export const TeamUpdateForm = ({ teamId, teamName, teamUrl }: UpdateTeamDialogPr
       form.reset({
         name,
         url,
+        isPrivate: isPrivateValue,
       });
 
       if (url !== teamUrl) {
-        await navigate(`/t/${url}/settings`);
+        const organisationSuffix = organisationId.slice(-5);
+        const organisationScopedTeamUrl = `${organisationSuffix}-${url}`;
+        await navigate(`/t/${organisationScopedTeamUrl}/settings`);
       }
     } catch (err) {
       const error = AppError.parseError(err);
 
       if (error.code === AppErrorCode.ALREADY_EXISTS) {
-        form.setError('url', {
-          type: 'manual',
-          message: _(msg`This URL is already in use.`),
+        const message = error.message ?? '';
+
+        if (message.toLowerCase().includes('name')) {
+          form.setError('name', {
+            type: 'manual',
+            message: _(msg`This team name is already in use in this organisation.`),
+          });
+        } else {
+          form.setError('url', {
+            type: 'manual',
+            message: _(msg`This URL is already in use.`),
+          });
+        }
+
+        return;
+      }
+
+      if (error.code === AppErrorCode.INVALID_BODY) {
+        toast({
+          title: _(msg`Unable to update team`),
+          description:
+            error.message ??
+            _(
+              msg`We were unable to update your team with the requested changes. Please review your settings and try again.`,
+            ),
+          variant: 'destructive',
         });
 
         return;
@@ -88,6 +130,9 @@ export const TeamUpdateForm = ({ teamId, teamName, teamUrl }: UpdateTeamDialogPr
       });
     }
   };
+
+  const organisationSuffix = organisationId.slice(-5);
+  const hasOrganisationScopedUrl = teamUrl.startsWith(`${organisationSuffix}-`);
 
   return (
     <Form {...form}>
@@ -123,13 +168,34 @@ export const TeamUpdateForm = ({ teamId, teamName, teamUrl }: UpdateTeamDialogPr
                 {!form.formState.errors.url && (
                   <span className="font-normal text-foreground/50 text-xs">
                     {field.value ? (
-                      `${NEXT_PUBLIC_WEBAPP_URL()}/t/${field.value}`
+                      `${NEXT_PUBLIC_WEBAPP_URL()}/t/${
+                        hasOrganisationScopedUrl ? `${organisationSuffix}-${field.value}` : field.value
+                      }`
                     ) : (
                       <Trans>A unique URL to identify your team</Trans>
                     )}
                   </span>
                 )}
 
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="isPrivate"
+            render={({ field }) => (
+              <FormItem className="mt-4 flex items-center space-x-2">
+                <FormControl>
+                  <div className="flex items-center">
+                    <Checkbox id="is-private" checked={field.value} onCheckedChange={field.onChange} />
+
+                    <label className="ml-2 text-muted-foreground text-sm" htmlFor="is-private">
+                      <Trans>Private Team - only members can see documents</Trans>
+                    </label>
+                  </div>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

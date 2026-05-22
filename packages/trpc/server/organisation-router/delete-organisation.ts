@@ -5,6 +5,7 @@ import {
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { jobs } from '@documenso/lib/jobs/client';
 import { orphanEnvelopes } from '@documenso/lib/server-only/envelope/orphan-envelopes';
+import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
 
@@ -33,6 +34,7 @@ export const deleteOrganisationRoute = authenticatedProcedure
       }),
       select: {
         id: true,
+        type: true,
         owner: {
           select: {
             id: true,
@@ -43,17 +45,18 @@ export const deleteOrganisationRoute = authenticatedProcedure
             id: true,
           },
         },
-        subscription: {
-          select: {
-            planId: true,
-          },
-        },
       },
     });
 
     if (!organisation) {
       throw new AppError(AppErrorCode.UNAUTHORIZED, {
         message: 'You are not authorized to delete this organisation',
+      });
+    }
+
+    if (organisation.type === 'PERSONAL') {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: 'Personal organisations cannot be deleted',
       });
     }
 
@@ -79,11 +82,15 @@ export const deleteOrganisationRoute = authenticatedProcedure
     // cancelled at the end of the current billing period. The job runs
     // asynchronously so a Stripe outage doesn't block deletion, and is
     // retried by the job runner if Stripe is temporarily unavailable.
-    if (organisation.subscription) {
+    const currentSubscription = await getCurrentSubscriptionByOrganisationId({
+      organisationId: organisation.id,
+    });
+
+    if (currentSubscription) {
       await jobs.triggerJob({
         name: 'internal.cancel-organisation-subscription',
         payload: {
-          stripeSubscriptionId: organisation.subscription.planId,
+          stripeSubscriptionId: currentSubscription.planId,
           organisationId: organisation.id,
         },
       });

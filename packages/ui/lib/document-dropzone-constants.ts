@@ -113,7 +113,7 @@ export const DocumentDropzoneDisabledCardCenterVariants: Variants = {
     y: 0,
   },
   hover: {
-    x: [-15, -10, -5, -10],
+    x: -10,
     y: 0,
     transition: { type: 'spring', duration: 0.3, stiffness: 1000 },
   },

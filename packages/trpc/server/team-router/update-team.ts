@@ -11,7 +11,7 @@ export const updateTeamRoute = authenticatedProcedure
   .mutation(async ({ input, ctx }) => {
     const { teamId, data } = input;
 
-    const { name, url, profileBio, profileEnabled } = data;
+    const { name, url, isPrivate, profileBio, profileEnabled } = data;
 
     ctx.logger.info({
       input: {
@@ -19,14 +19,16 @@ export const updateTeamRoute = authenticatedProcedure
       },
     });
 
-    if (name || url) {
+    if (name || url || isPrivate !== undefined) {
       await updateTeam({
         userId: ctx.user.id,
         teamId,
         data: {
           name,
           url,
+          isPrivate,
         },
+        metadata: ctx.metadata,
       });
     }
 

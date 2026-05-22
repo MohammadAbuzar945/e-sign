@@ -15,6 +15,7 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { AlertTriangle, Building2Icon, Globe2Icon, InfoIcon, Link2Icon, Loader, LockIcon } from 'lucide-react';
+import { DateTime } from 'luxon';
 import { useMemo, useTransition } from 'react';
 import { Link } from 'react-router';
 
@@ -96,7 +97,7 @@ export const TemplatesTable = ({
       {
         header: _(msg`Created`),
         accessorKey: 'createdAt',
-        cell: ({ row }) => i18n.date(row.original.createdAt),
+        cell: ({ row }) => DateTime.fromJSDate(row.original.createdAt).toFormat('yyyy-MM-dd hh:mm:ss a'),
       },
       {
         header: _(msg`Title`),
@@ -253,7 +254,10 @@ export const TemplatesTable = ({
           <AlertDescription className="mt-2">
             <Trans>
               You have reached your document limit.{' '}
-              <Link className="underline underline-offset-4" to={`/o/${organisation.url}/settings/billing`}>
+              <Link
+                className="underline underline-offset-4"
+                to={organisation ? `/o/${organisation.url}/price-plan` : `/price-plans`}
+              >
                 Upgrade your account to continue!
               </Link>
             </Trans>

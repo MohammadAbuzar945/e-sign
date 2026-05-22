@@ -10,8 +10,8 @@ import { TemplateForgotPassword } from '../template-components/template-forgot-p
 export type ForgotPasswordTemplateProps = Partial<TemplateForgotPasswordProps>;
 
 export const ForgotPasswordTemplate = ({
-  resetPasswordLink = 'https://documenso.com',
-  assetBaseUrl = 'http://localhost:3002',
+    resetPasswordLink = 'https://e-sign.nomiadocs.com',
+  assetBaseUrl = 'http://localhost:4002',
 }: ForgotPasswordTemplateProps) => {
   const { _ } = useLingui();
   const branding = useBranding();
@@ -32,9 +32,13 @@ export const ForgotPasswordTemplate = ({
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid p-4 backdrop-blur-sm">
             <Section>
               {branding.brandingEnabled && branding.brandingLogo ? (
-                <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-6" />
+                <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20" />  
               ) : (
-                <Img src={getAssetUrl('/static/logo.png')} alt="Documenso Logo" className="mb-4 h-6" />
+                <Img
+                  src={getAssetUrl('/static/logo.png')}
+                  alt="Nomia Logo"
+                  className="mb-4 h-16"
+                />
               )}
 
               <TemplateForgotPassword resetPasswordLink={resetPasswordLink} assetBaseUrl={assetBaseUrl} />

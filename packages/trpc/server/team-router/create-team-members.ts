@@ -1,7 +1,11 @@
 import { TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
+import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
+import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { generateDatabaseId } from '@documenso/lib/universal/id';
+import type { CreateTeamAuditLogDataResponse } from '@documenso/lib/utils/team-audit-logs';
+import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
 import { OrganisationGroupType, TeamMemberRole } from '@prisma/client';
@@ -28,6 +32,7 @@ export const createTeamMembersRoute = authenticatedProcedure
       userId: user.id,
       teamId,
       membersToCreate: organisationMembers,
+      metadata: ctx.metadata,
     });
   });
 
@@ -38,9 +43,10 @@ type CreateTeamMembersOptions = {
     organisationMemberId: string;
     teamRole: TeamMemberRole;
   }[];
+  metadata?: ApiRequestMetadata;
 };
 
-export const createTeamMembers = async ({ userId, teamId, membersToCreate }: CreateTeamMembersOptions) => {
+export const createTeamMembers = async ({ userId, teamId, membersToCreate, metadata }: CreateTeamMembersOptions) => {
   const team = await prisma.team.findFirst({
     where: buildTeamWhereQuery({
       teamId,
@@ -53,6 +59,14 @@ export const createTeamMembers = async ({ userId, teamId, membersToCreate }: Cre
           members: {
             select: {
               id: true,
+              userId: true,
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -182,4 +196,37 @@ export const createTeamMembers = async ({ userId, teamId, membersToCreate }: Cre
       groupId: teamRoleGroupId(member.teamRole),
     })),
   });
+
+  const auditLogs: CreateTeamAuditLogDataResponse[] = [];
+
+  for (const member of membersToCreate) {
+    const organisationMember = team.organisation.members.find(({ id }) => id === member.organisationMemberId);
+
+    if (!organisationMember || !organisationMember.user) {
+      continue;
+    }
+
+    auditLogs.push(
+      createTeamAuditLogData({
+        teamId: team.id,
+        type: TEAM_AUDIT_LOG_TYPE.TEAM_MEMBER_ADDED,
+        data: {
+          memberUserId: organisationMember.user.id,
+          memberEmail: organisationMember.user.email,
+          teamRole: member.teamRole,
+          source: 'MANUAL',
+        },
+        user: {
+          id: userId,
+        },
+        metadata,
+      }),
+    );
+  }
+
+  if (auditLogs.length > 0) {
+    await (prisma as any).teamAuditLog.createMany({
+      data: auditLogs,
+    });
+  }
 };

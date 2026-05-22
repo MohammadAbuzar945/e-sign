@@ -14,6 +14,7 @@ import { Trans } from '@lingui/react/macro';
 import { useEffect, useState } from 'react';
 import { Link, redirect, useSearchParams } from 'react-router';
 
+import { BrandingLogo } from '~/components/general/branding-logo';
 import { SignInForm } from '~/components/forms/signin';
 import { SIGNUP_ERROR_MESSAGES } from '~/components/forms/signup';
 import { appMetaTags } from '~/utils/meta';

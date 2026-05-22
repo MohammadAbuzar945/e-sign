@@ -1,5 +1,8 @@
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
 import { prisma } from '@documenso/prisma';
+
+import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 
 import { adminProcedure } from '../trpc';
 import {
@@ -53,7 +56,6 @@ export const getAdminOrganisation = async ({ organisationId }: GetOrganisationOp
           },
         },
       },
-      subscription: true,
     },
   });
 
@@ -63,5 +65,20 @@ export const getAdminOrganisation = async ({ organisationId }: GetOrganisationOp
     });
   }
 
-  return organisation;
+  const subscription = await getCurrentSubscriptionByOrganisationId({
+    organisationId: organisation.id,
+  });
+
+  let credits = 0;
+  try {
+    credits = await getOrganisationCredits(organisation.id);
+  } catch {
+    // Credits feature may be unavailable (e.g. missing UserCredits table)
+  }
+
+  return {
+    ...organisation,
+    subscription,
+    credits,
+  };
 };

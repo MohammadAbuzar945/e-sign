@@ -1,4 +1,3 @@
-import { SUPPORT_EMAIL } from '@documenso/lib/constants/app';
 import { Button } from '@documenso/ui/primitives/button';
 import { Trans } from '@lingui/react/macro';
 import { Link } from 'react-router';
@@ -16,8 +15,8 @@ export default function SignatureDisclosure() {
         </h2>
         <p>
           <Trans>
-            Thank you for using Documenso to perform your electronic document signing. The purpose of this disclosure is
-            to inform you about the process, legality, and your rights regarding the use of electronic signatures on our
+            Thank you for using Nomia to perform your electronic document signing. The purpose of this disclosure is to
+            inform you about the process, legality, and your rights regarding the use of electronic signatures on our
             platform. By opting to use an electronic signature, you are agreeing to the terms and conditions outlined
             below.
           </Trans>
@@ -29,8 +28,8 @@ export default function SignatureDisclosure() {
         <p>
           <Trans>
             When you use our platform to affix your electronic signature to documents, you are consenting to do so under
-            the Electronic Signatures in Global and National Commerce Act (E-Sign Act) and other applicable laws. This
-            action indicates your agreement to use electronic means to sign documents and receive notifications.
+            the Electronic Communications and Transactions Act and other applicable laws. This action indicates your
+            agreement to use electronic means to sign documents and receive notifications.
           </Trans>
         </p>
 
@@ -95,8 +94,8 @@ export default function SignatureDisclosure() {
           <Trans>
             You have the right to withdraw your consent to use electronic signatures at any time before completing the
             signing process. To withdraw your consent, please contact the sender of the document. In failing to contact
-            the sender you may reach out to <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> for assistance. Be
-            aware that withdrawing consent may delay or halt the completion of the related transaction or service.
+            the sender you may reach out to <a href="mailto:help@nomiadocs.com">help@nomiadocs.com</a> for assistance.
+            Be aware that withdrawing consent may delay or halt the completion of the related transaction or service.
           </Trans>
         </p>
 
@@ -127,8 +126,8 @@ export default function SignatureDisclosure() {
         </h2>
         <p>
           <Trans>
-            By proceeding to use the electronic signature service provided by Documenso, you affirm that you have read
-            and understood this disclosure. You agree to all terms and conditions related to the use of electronic
+            By proceeding to use the electronic signature service provided by Nomia, you affirm that you have read and
+            understood this disclosure. You agree to all terms and conditions related to the use of electronic
             signatures and electronic transactions as outlined herein.
           </Trans>
         </p>
@@ -139,7 +138,7 @@ export default function SignatureDisclosure() {
         <p>
           <Trans>
             For any questions regarding this disclosure, electronic signatures, or any related process, please contact
-            us at: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+            us at: <a href="mailto:help@nomiadocs.com">help@nomiadocs.com</a>
           </Trans>
         </p>
       </article>

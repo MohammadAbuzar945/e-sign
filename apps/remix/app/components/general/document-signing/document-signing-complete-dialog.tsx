@@ -152,7 +152,6 @@ export const DocumentSigningCompleteDialog = ({
         recipientOverridePayload = recipientPayload;
       }
 
-      // Check if 2FA is required
       if (completionRequires2FA && !data.accessAuthOptions) {
         setShowTwoFactorForm(true);
         return;
@@ -166,9 +165,8 @@ export const DocumentSigningCompleteDialog = ({
       const err = AppError.parseError(error);
 
       if (AppErrorCode.TWO_FACTOR_AUTH_FAILED === err.code) {
-        // This was a 2FA validation failure - show the 2FA dialog again with error
+        // This was an access auth validation failure - show the matching auth dialog again with error.
         form.setValue('accessAuthOptions', undefined);
-
         setTwoFactorValidationError('Invalid verification code. Please try again.');
         setShowTwoFactorForm(true);
 
@@ -379,6 +377,7 @@ export const DocumentSigningCompleteDialog = ({
             onSubmit={onTwoFactorFormSubmit}
           />
         )}
+
       </DialogContent>
     </Dialog>
   );

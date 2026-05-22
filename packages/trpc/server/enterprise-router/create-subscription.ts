@@ -36,7 +36,6 @@ export const createSubscriptionRoute = authenticatedProcedure
         roles: ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_BILLING'],
       }),
       include: {
-        subscription: true,
         owner: {
           select: {
             email: true,

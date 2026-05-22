@@ -1,3 +1,4 @@
+
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { formatDocumentAuditLogAction } from '@documenso/lib/utils/document-audit-logs';
@@ -19,11 +20,6 @@ import { UAParser } from 'ua-parser-js';
 export type DocumentLogsTableProps = {
   documentId: number;
   userId?: number;
-};
-
-const dateFormat: DateTimeFormatOptions = {
-  ...DateTime.DATETIME_SHORT,
-  hourCycle: 'h12',
 };
 
 export const DocumentLogsTable = ({ documentId, userId }: DocumentLogsTableProps) => {
@@ -66,7 +62,8 @@ export const DocumentLogsTable = ({ documentId, userId }: DocumentLogsTableProps
       {
         header: _(msg`Time`),
         accessorKey: 'createdAt',
-        cell: ({ row }) => i18n.date(row.original.createdAt, dateFormat),
+        cell: ({ row }) =>
+          DateTime.fromJSDate(row.original.createdAt).toFormat('yyyy-MM-dd hh:mm:ss a'),
       },
       {
         header: _(msg`User`),

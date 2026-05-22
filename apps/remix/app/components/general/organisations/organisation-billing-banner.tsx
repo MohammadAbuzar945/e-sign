@@ -1,3 +1,4 @@
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { useOptionalCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { SUPPORT_EMAIL } from '@documenso/lib/constants/app';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
@@ -30,6 +31,7 @@ export const OrganisationBillingBanner = () => {
 
   const [isOpen, setIsOpen] = useState(false);
 
+  const { user } = useSession();
   const organisation = useOptionalCurrentOrganisation();
 
   const { mutateAsync: manageSubscription, isPending } = trpc.enterprise.billing.subscription.manage.useMutation();
@@ -54,6 +56,7 @@ export const OrganisationBillingBanner = () => {
   };
 
   const subscriptionStatus = organisation?.subscription?.status;
+  const isOrganisationOwner = organisation?.ownerUserId === user.id;
 
   if (!organisation || subscriptionStatus === undefined || subscriptionStatus === SubscriptionStatus.ACTIVE) {
     return null;
@@ -108,7 +111,11 @@ export const OrganisationBillingBanner = () => {
                 </DialogDescription>
               </DialogHeader>
 
-              {canExecuteOrganisationAction('MANAGE_BILLING', organisation.currentOrganisationRole) && (
+              {canExecuteOrganisationAction(
+                'MANAGE_BILLING',
+                organisation.currentOrganisationRole,
+              ) &&
+                isOrganisationOwner && (
                 <DialogFooter>
                   <Button loading={isPending} onClick={async () => handleCreatePortal(organisation.id)}>
                     <Trans>Resolve payment</Trans>
@@ -126,7 +133,8 @@ export const OrganisationBillingBanner = () => {
 
                 <DialogDescription>
                   <Trans>
-                    Your plan is no longer valid. Please subscribe to a new plan to continue using Documenso.
+                    Your plan is no longer valid. Please subscribe to a new plan to continue using
+                    Nomia.
                   </Trans>
                 </DialogDescription>
               </DialogHeader>
@@ -140,11 +148,15 @@ export const OrganisationBillingBanner = () => {
                 </AlertDescription>
               </Alert>
 
-              {canExecuteOrganisationAction('MANAGE_BILLING', organisation.currentOrganisationRole) && (
+              {canExecuteOrganisationAction(
+                'MANAGE_BILLING',
+                organisation.currentOrganisationRole,
+              ) &&
+                isOrganisationOwner && (
                 <DialogFooter>
                   <DialogClose asChild>
                     <Button asChild>
-                      <Link to={`/o/${organisation.url}/settings/billing`}>
+                      <Link to={`/o/${organisation.url}/price-plan`}>
                         <Trans>Manage Billing</Trans>
                       </Link>
                     </Button>

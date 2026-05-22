@@ -135,7 +135,10 @@ export const DocumentSigningPageViewV1 = ({
   }
 
   const selectedSigner = allRecipients?.find((r) => r.id === selectedSignerId);
-  const targetSigner = recipient.role === RecipientRole.ASSISTANT && selectedSigner ? selectedSigner : null;
+  const targetSigner =
+    recipient.role === RecipientRole.ASSISTANT && selectedSigner ? selectedSigner : null;
+
+    console.log("targetSigner", targetSigner);
 
   const nextRecipient = useMemo(() => {
     if (!documentMeta?.signingOrder || documentMeta.signingOrder !== 'SEQUENTIAL') {
@@ -171,11 +174,12 @@ export const DocumentSigningPageViewV1 = ({
   return (
     <DocumentSigningRecipientProvider recipient={recipient} targetSigner={targetSigner}>
       <div className="mx-auto w-full max-w-screen-xl sm:px-6">
-        {document.team.teamGlobalSettings.brandingEnabled && document.team.teamGlobalSettings.brandingLogo && (
+        {document.team.teamGlobalSettings.brandingEnabled &&
+        document.team.teamGlobalSettings.brandingLogo && (
           <img
             src={`/api/branding/logo/team/${document.teamId}`}
             alt={`${document.team.name}'s Logo`}
-            className="mb-4 h-12 w-12 md:mb-2"
+            className="mb-4 h-10 w-10 md:mb-2 md:h-12 md:w-12"
           />
         )}
         <h1
@@ -386,6 +390,9 @@ export const DocumentSigningPageViewV1 = ({
         />
 
         {recipient.role !== RecipientRole.ASSISTANT && (
+
+
+          // console.log('fields', fields);
           <DocumentSigningAutoSign recipient={recipient} fields={fields} />
         )}
 

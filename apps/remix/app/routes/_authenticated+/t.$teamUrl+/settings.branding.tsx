@@ -112,39 +112,31 @@ export default function TeamsSettingsPage() {
         subtitle={t`Here you can set preferences and defaults for branding.`}
       />
 
-      <section>
-        <BrandingPreferencesForm
-          canInherit={true}
-          hasAdvancedBranding={canCustomBranding}
-          context="Team"
-          settings={teamWithSettings.teamSettings}
-          onFormSubmit={onBrandingPreferencesFormSubmit}
-        />
-
-        {cssWarnings.length > 0 && (
-          <Alert variant="warning" className="mt-6">
+      {organisation.organisationClaim.flags.allowCustomBranding ? (
+        <section>
+          <BrandingPreferencesForm
+            canInherit={true}
+            context="Team"
+            hasAdvancedBranding={
+              organisation.organisationClaim.flags.embedSigningWhiteLabel === true || !IS_BILLING_ENABLED()
+            }
+            settings={teamWithSettings.teamSettings}
+            onFormSubmit={onBrandingPreferencesFormSubmit}
+          />
+        </section>
+      ) : (
+        <Alert className="mt-8 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
+          <div className="mb-4 sm:mb-0">
             <AlertTitle>
-              <Trans>CSS rules were dropped during sanitisation</Trans>
+              <Trans>Branding Preferences</Trans>
             </AlertTitle>
 
-            <AlertDescription>
-              <ul className="list-disc pl-5">
-                {cssWarnings.map((warning, index) => (
-                  <li key={index}>
-                    {warning.detail}
-                    {warning.line !== undefined && (
-                      <span className="text-muted-foreground">
-                        {' '}
-                        <Trans>(line {warning.line})</Trans>
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+            <AlertDescription className="mr-2">
+              <Trans>Branding is not enabled for your current plan.</Trans>
             </AlertDescription>
-          </Alert>
-        )}
-      </section>
+          </div>
+        </Alert>
+      )}
     </div>
   );
 }

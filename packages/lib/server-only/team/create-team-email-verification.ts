@@ -139,7 +139,9 @@ export const sendTeamEmailVerificationEmail = async (email: string, token: strin
   await mailer.sendMail({
     to: email,
     from: senderEmail,
-    subject: i18n._(msg`A request to use your email has been initiated by ${team.name} on Documenso`),
+    subject: i18n._(
+      msg`A request to use your email has been initiated by ${team.name} on Nomia`,
+    ),
     html,
     text,
   });

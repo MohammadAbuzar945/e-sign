@@ -102,15 +102,11 @@ export default function DocumentsLogsPage({ loaderData }: Route.ComponentProps) 
     },
     {
       description: msg`Date created`,
-      value: DateTime.fromJSDate(document.createdAt)
-        .setLocale(i18n.locales?.[0] || i18n.locale)
-        .toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS),
+      value: DateTime.fromJSDate(document.createdAt).toFormat('yyyy-MM-dd hh:mm:ss a'),
     },
     {
       description: msg`Last updated`,
-      value: DateTime.fromJSDate(document.updatedAt)
-        .setLocale(i18n.locales?.[0] || i18n.locale)
-        .toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS),
+      value: DateTime.fromJSDate(document.updatedAt).toFormat('yyyy-MM-dd hh:mm:ss a'),
     },
     {
       description: msg`Time zone`,

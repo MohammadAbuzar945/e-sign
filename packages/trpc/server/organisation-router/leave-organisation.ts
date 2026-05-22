@@ -1,6 +1,8 @@
 import { syncMemberCountWithStripeSeatPlan } from '@documenso/ee/server-only/stripe/update-subscription-item-quantity';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { jobs } from '@documenso/lib/jobs/client';
+import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
+import { validateIfSubscriptionIsRequired } from '@documenso/lib/utils/billing';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
 import { OrganisationMemberInviteStatus } from '@documenso/prisma/client';
@@ -25,12 +27,6 @@ export const leaveOrganisationRoute = authenticatedProcedure
       where: buildOrganisationWhereQuery({ organisationId, userId }),
       include: {
         organisationClaim: true,
-        subscription: true,
-        teams: {
-          select: {
-            id: true,
-          },
-        },
         invites: {
           where: {
             status: OrganisationMemberInviteStatus.PENDING,
@@ -44,6 +40,11 @@ export const leaveOrganisationRoute = authenticatedProcedure
             id: true,
           },
         },
+        teams: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
@@ -53,13 +54,19 @@ export const leaveOrganisationRoute = authenticatedProcedure
 
     const { organisationClaim } = organisation;
 
+    const currentSubscription = await getCurrentSubscriptionByOrganisationId({
+      organisationId: organisation.id,
+    });
+
+    const subscription = validateIfSubscriptionIsRequired(currentSubscription);
+
     const inviteCount = organisation.invites.length;
     const newMemberCount = organisation.members.length + inviteCount - 1;
 
     // Leaving is a reducing operation, so we don't gate it on the subscription
     // being present. Sync Stripe only when one exists.
-    if (organisation.subscription) {
-      await syncMemberCountWithStripeSeatPlan(organisation.subscription, organisationClaim, newMemberCount);
+    if (subscription) {
+      await syncMemberCountWithStripeSeatPlan(subscription, organisationClaim, newMemberCount);
     }
 
     const teamIds = organisation.teams.map((team) => team.id);

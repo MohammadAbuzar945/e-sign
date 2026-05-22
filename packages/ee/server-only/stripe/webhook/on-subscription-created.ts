@@ -84,7 +84,7 @@ export const onSubscriptionCreated = async ({ subscription }: OnSubscriptionCrea
 
   await prisma.subscription.upsert({
     where: {
-      organisationId,
+      planId: subscription.id,
     },
     create: {
       organisationId,
@@ -96,6 +96,7 @@ export const onSubscriptionCreated = async ({ subscription }: OnSubscriptionCrea
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
     },
     update: {
+      organisationId,
       status,
       customerId,
       planId: subscription.id,
@@ -159,7 +160,6 @@ const handleOrganisationUpdate = async ({ customerId, claim }: HandleOrganisatio
       customerId,
     },
     include: {
-      subscription: true,
       organisationClaim: true,
     },
   });
@@ -174,19 +174,8 @@ const handleOrganisationUpdate = async ({ customerId, claim }: HandleOrganisatio
     );
   }
 
-  // Todo: logging
-  if (organisation.subscription && organisation.subscription.status !== SubscriptionStatus.INACTIVE) {
-    console.error('Organisation already has an active subscription');
-
-    // This should never happen
-    throw Response.json(
-      {
-        success: false,
-        message: `Organisation already has an active subscription`,
-      } satisfies StripeWebhookResponse,
-      { status: 500 },
-    );
-  }
+  // We allow multiple subscription records per organisation for history/auditing.
+  // Stripe can also generate overlapping subscriptions during plan changes.
 
   let newOrganisationType: OrganisationType = OrganisationType.ORGANISATION;
 

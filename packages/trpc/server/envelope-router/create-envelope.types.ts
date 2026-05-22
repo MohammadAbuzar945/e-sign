@@ -37,6 +37,7 @@ export const ZCreateEnvelopePayloadSchema = z.object({
   delegatedDocumentOwner: zEmail().describe('The email of the user who will own the document.').optional(),
   externalId: ZDocumentExternalIdSchema.optional(),
   visibility: ZDocumentVisibilitySchema.optional(),
+  includeQrCodeInCertificate: z.boolean().nullish(),
   globalAccessAuth: z.array(ZDocumentAccessAuthTypesSchema).optional(),
   globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional(),
   formValues: ZDocumentFormValuesSchema.optional(),

@@ -4,6 +4,7 @@ import { ZEnvelopeReminderSettings } from '@documenso/lib/constants/envelope-rem
 import { SUPPORTED_LANGUAGE_CODES } from '@documenso/lib/constants/i18n';
 import { ZCssVarsSchema } from '@documenso/lib/types/css-vars';
 import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';
+import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';
 import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';
 import { ZDocumentMetaDateFormatSchema, ZDocumentMetaTimezoneSchema } from '@documenso/lib/types/document-meta';
 import { DocumentVisibility } from '@documenso/lib/types/document-visibility';
@@ -25,6 +26,7 @@ export const ZUpdateTeamSettingsRequestSchema = z.object({
     documentDateFormat: ZDocumentMetaDateFormatSchema.nullish(),
     includeSenderDetails: z.boolean().nullish(),
     includeSigningCertificate: z.boolean().nullish(),
+    includeQrCodeInCertificate: z.boolean().nullish(),
     includeAuditLog: z.boolean().nullish(),
     typedSignatureEnabled: z.boolean().nullish(),
     uploadSignatureEnabled: z.boolean().nullish(),
@@ -51,6 +53,9 @@ export const ZUpdateTeamSettingsRequestSchema = z.object({
     defaultRecipients: ZDefaultRecipientsSchema.nullish(),
     // AI features settings.
     aiFeaturesEnabled: z.boolean().nullish(),
+
+    /// Null = inherit organisation KBA defaults.
+    kbaSettings: ZDocumentKbaSettingsSchema.nullish(),
   }),
 });
 

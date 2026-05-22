@@ -8,6 +8,7 @@ import {
   TEAM_MEMBER_ROLE_HIERARCHY,
   TEAM_MEMBER_ROLE_PERMISSIONS_MAP,
 } from '../constants/teams';
+import { normalizeStoredKbaSettings } from './kba-settings';
 import type { TEAM_MEMBER_ROLE_MAP } from '../constants/teams-translations';
 
 /**
@@ -127,44 +128,54 @@ export const buildTeamWhereQuery = ({
   userId,
   roles,
 }: BuildTeamWhereQueryOptions): Prisma.TeamWhereUniqueInput => {
-  // Note: Not using inline ternary since typesafety breaks for some reason.
-  if (!roles) {
-    return {
-      id: teamId,
-      teamGroups: {
-        some: {
-          organisationGroup: {
-            organisationGroupMembers: {
-              some: {
-                organisationMember: {
-                  userId,
+  const baseTeamGroupCondition: Prisma.TeamWhereInput =
+    !roles
+      ? {
+          teamGroups: {
+            some: {
+              organisationGroup: {
+                organisationGroupMembers: {
+                  some: {
+                    organisationMember: {
+                      userId,
+                    },
+                  },
                 },
               },
             },
           },
-        },
-      },
-    };
-  }
-
-  return {
-    id: teamId,
-    teamGroups: {
-      some: {
-        organisationGroup: {
-          organisationGroupMembers: {
+        }
+      : {
+          teamGroups: {
             some: {
-              organisationMember: {
-                userId,
+              organisationGroup: {
+                organisationGroupMembers: {
+                  some: {
+                    organisationMember: {
+                      userId,
+                    },
+                  },
+                },
+              },
+              teamRole: {
+                in: roles,
               },
             },
           },
-        },
-        teamRole: {
-          in: roles,
+        };
+
+  return {
+    id: teamId,
+    OR: [
+      // User is a member of the team (with optional role filter).
+      baseTeamGroupCondition,
+      // Or the user is the owner of the organisation the team belongs to.
+      {
+        organisation: {
+          ownerUserId: userId,
         },
       },
-    },
+    ],
   };
 };
 
@@ -181,6 +192,7 @@ export const generateDefaultTeamSettings = (): Omit<TeamGlobalSettings, 'id' | '
 
     includeSenderDetails: null,
     includeSigningCertificate: null,
+    includeQrCodeInCertificate: null,
     includeAuditLog: null,
 
     typedSignatureEnabled: null,
@@ -206,6 +218,7 @@ export const generateDefaultTeamSettings = (): Omit<TeamGlobalSettings, 'id' | '
     reminderSettings: null,
 
     aiFeaturesEnabled: null,
+    kbaSettings: null,
   };
 };
 
@@ -225,6 +238,10 @@ export const extractDerivedTeamSettings = (
 
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   for (const key of Object.keys(derivedSettings) as (keyof typeof derivedSettings)[]) {
+    if (key === 'kbaSettings') {
+      continue;
+    }
+
     const teamValue = teamSettings[key];
 
     if (teamValue !== null) {
@@ -233,5 +250,13 @@ export const extractDerivedTeamSettings = (
     }
   }
 
-  return derivedSettings;
+  const mergedKba =
+    teamSettings.kbaSettings !== null && teamSettings.kbaSettings !== undefined
+      ? teamSettings.kbaSettings
+      : derivedSettings.kbaSettings;
+
+  return {
+    ...derivedSettings,
+    kbaSettings: normalizeStoredKbaSettings(mergedKba),
+  };
 };

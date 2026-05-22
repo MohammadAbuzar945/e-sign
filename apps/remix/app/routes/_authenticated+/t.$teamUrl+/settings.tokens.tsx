@@ -33,11 +33,12 @@ export default function ApiTokensPage() {
             On this page, you can create and manage API tokens. See our{' '}
             <a
               className="text-primary underline"
-              href={'https://docs.documenso.com/developers/public-api'}
+              href="/reference"
               target="_blank"
-              rel="noopener"
+              rel="noopener noreferrer"
+            
             >
-              Documentation
+              API Reference
             </a>{' '}
             for more information.
           </Trans>

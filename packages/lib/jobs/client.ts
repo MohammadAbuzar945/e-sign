@@ -11,9 +11,11 @@ import { SEND_RECIPIENT_SIGNED_EMAIL_JOB_DEFINITION } from './definitions/emails
 import { SEND_SIGNING_REJECTION_EMAILS_JOB_DEFINITION } from './definitions/emails/send-rejection-emails';
 import { SEND_SIGNING_EMAIL_JOB_DEFINITION } from './definitions/emails/send-signing-email';
 import { SEND_TEAM_DELETED_EMAIL_JOB_DEFINITION } from './definitions/emails/send-team-deleted-email';
+import { SEND_TEAM_AUDIT_LOGS_EXPORT_EMAIL_JOB_DEFINITION } from './definitions/emails/send-team-audit-logs-export-email';
 import { ADMIN_DELETE_ORGANISATION_JOB_DEFINITION } from './definitions/internal/admin-delete-organisation';
 import { BACKPORT_SUBSCRIPTION_CLAIM_JOB_DEFINITION } from './definitions/internal/backport-subscription-claims';
 import { BULK_SEND_TEMPLATE_JOB_DEFINITION } from './definitions/internal/bulk-send-template';
+import { EXPORT_TEAM_AUDIT_LOGS_CSV_JOB_DEFINITION } from './definitions/internal/export-team-audit-logs-csv';
 import { CANCEL_ORGANISATION_SUBSCRIPTION_JOB_DEFINITION } from './definitions/internal/cancel-organisation-subscription';
 import { CLEANUP_RATE_LIMITS_JOB_DEFINITION } from './definitions/internal/cleanup-rate-limits';
 import { EXECUTE_WEBHOOK_JOB_DEFINITION } from './definitions/internal/execute-webhook';
@@ -36,7 +38,9 @@ export const jobsClient = new JobClient([
   SEND_ORGANISATION_MEMBER_JOINED_EMAIL_JOB_DEFINITION,
   SEND_ORGANISATION_MEMBER_LEFT_EMAIL_JOB_DEFINITION,
   SEND_TEAM_DELETED_EMAIL_JOB_DEFINITION,
+  SEND_TEAM_AUDIT_LOGS_EXPORT_EMAIL_JOB_DEFINITION,
   SEAL_DOCUMENT_JOB_DEFINITION,
+  EXPORT_TEAM_AUDIT_LOGS_CSV_JOB_DEFINITION,
   SEAL_DOCUMENT_SWEEP_JOB_DEFINITION,
   SEND_PASSWORD_RESET_SUCCESS_EMAIL_JOB_DEFINITION,
   SEND_SIGNING_REJECTION_EMAILS_JOB_DEFINITION,

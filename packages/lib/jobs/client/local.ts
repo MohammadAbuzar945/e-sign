@@ -193,12 +193,16 @@ export class LocalJobProvider extends BaseJobProvider {
   public async triggerJob(options: SimpleTriggerJobOptions) {
     const eligibleJobs = Object.values(this._jobDefinitions).filter((job) => job.trigger.name === options.name);
 
+    const requestedJobId =
+      typeof options.id === 'string' && eligibleJobs.length === 1 ? options.id : undefined;
+
     await Promise.all(
       eligibleJobs.map(async (job) => {
         // Ideally we will change this to a createMany with returning later once we upgrade Prisma
         // @see: https://github.com/prisma/prisma/releases/tag/5.14.0
         const pendingJob = await prisma.backgroundJob.create({
           data: {
+            id: requestedJobId,
             jobId: job.id,
             name: job.name,
             version: job.version,
@@ -296,16 +300,24 @@ export class LocalJobProvider extends BaseJobProvider {
           io: this.createJobRunIO(jobId),
         });
 
-        backgroundJob = await prisma.backgroundJob.update({
-          where: {
-            id: jobId,
-            status: BackgroundJobStatus.PROCESSING,
-          },
-          data: {
-            status: BackgroundJobStatus.COMPLETED,
-            completedAt: new Date(),
-          },
-        });
+        backgroundJob =
+          (await prisma.backgroundJob
+            .update({
+              where: {
+                id: jobId,
+                status: BackgroundJobStatus.PROCESSING,
+              },
+              data: {
+                status: BackgroundJobStatus.COMPLETED,
+                completedAt: new Date(),
+              },
+            })
+            .catch((err: { code?: string }) => {
+              if (err?.code === 'P2025') {
+                return null;
+              }
+              throw err;
+            })) ?? backgroundJob;
       } catch (error) {
         console.log(`[JOBS]: Job ${options.name} failed`, error);
 
@@ -313,37 +325,43 @@ export class LocalJobProvider extends BaseJobProvider {
         const jobHasExceededRetries =
           backgroundJob.retried >= backgroundJob.maxRetries && !(error instanceof BackgroundTaskFailedError);
 
+        const updateJobInCatch = async (data: { status: BackgroundJobStatus; completedAt?: Date }) =>
+          prisma.backgroundJob
+            .update({
+              where: {
+                id: jobId,
+                status: BackgroundJobStatus.PROCESSING,
+              },
+              data,
+            })
+            .catch((err: { code?: string }) => {
+              if (err?.code === 'P2025') {
+                return null;
+              }
+              throw err;
+            });
+
         if (taskHasExceededRetries || jobHasExceededRetries) {
-          backgroundJob = await prisma.backgroundJob.update({
-            where: {
-              id: jobId,
-              status: BackgroundJobStatus.PROCESSING,
-            },
-            data: {
-              status: BackgroundJobStatus.FAILED,
-              completedAt: new Date(),
-            },
-          });
+          backgroundJob = (await updateJobInCatch({
+            status: BackgroundJobStatus.FAILED,
+            completedAt: new Date(),
+          })) ?? backgroundJob;
 
           return c.text('Task exceeded retries', 500);
         }
 
-        backgroundJob = await prisma.backgroundJob.update({
-          where: {
-            id: jobId,
-            status: BackgroundJobStatus.PROCESSING,
-          },
-          data: {
-            status: BackgroundJobStatus.PENDING,
-          },
-        });
+        backgroundJob = (await updateJobInCatch({
+          status: BackgroundJobStatus.PENDING,
+        })) ?? backgroundJob;
 
-        await this.submitJobToEndpoint({
-          jobId,
-          jobDefinitionId: backgroundJob.jobId,
-          data: options,
-          isRetry: true,
-        });
+        if (backgroundJob) {
+          await this.submitJobToEndpoint({
+            jobId,
+            jobDefinitionId: backgroundJob.jobId,
+            data: options,
+            isRetry: true,
+          });
+        }
       }
 
       return c.text('OK', 200);

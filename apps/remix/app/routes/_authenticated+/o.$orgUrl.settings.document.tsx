@@ -2,6 +2,7 @@ import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/org
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { IS_AI_FEATURES_CONFIGURED } from '@documenso/lib/constants/app';
 import { DocumentSignatureType } from '@documenso/lib/constants/document';
+import { ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import { useToast } from '@documenso/ui/primitives/use-toast';
@@ -53,6 +54,7 @@ export default function OrganisationSettingsDocumentPage() {
         documentDateFormat,
         includeSenderDetails,
         includeSigningCertificate,
+        includeQrCodeInCertificate,
         includeAuditLog,
         signatureTypes,
         defaultRecipients,
@@ -60,6 +62,10 @@ export default function OrganisationSettingsDocumentPage() {
         aiFeaturesEnabled,
         envelopeExpirationPeriod,
         reminderSettings,
+        kbaMode,
+        kbaIsEnabled,
+        kbaMaxAttempts,
+        kbaLockoutMinutes,
       } = data;
 
       if (
@@ -68,6 +74,7 @@ export default function OrganisationSettingsDocumentPage() {
         documentDateFormat === null ||
         includeSenderDetails === null ||
         includeSigningCertificate === null ||
+        includeQrCodeInCertificate === null ||
         includeAuditLog === null ||
         aiFeaturesEnabled === null
       ) {
@@ -83,6 +90,7 @@ export default function OrganisationSettingsDocumentPage() {
           documentDateFormat,
           includeSenderDetails,
           includeSigningCertificate,
+          includeQrCodeInCertificate,
           includeAuditLog,
           defaultRecipients,
           typedSignatureEnabled: signatureTypes.includes(DocumentSignatureType.TYPE),
@@ -92,6 +100,12 @@ export default function OrganisationSettingsDocumentPage() {
           aiFeaturesEnabled,
           envelopeExpirationPeriod: envelopeExpirationPeriod ?? undefined,
           reminderSettings: reminderSettings ?? undefined,
+          kbaSettings: ZDocumentKbaSettingsSchema.parse({
+            mode: kbaMode,
+            isEnabled: kbaIsEnabled,
+            maxAttempts: kbaMaxAttempts,
+            lockoutMinutes: kbaLockoutMinutes,
+          }),
         },
       });
 

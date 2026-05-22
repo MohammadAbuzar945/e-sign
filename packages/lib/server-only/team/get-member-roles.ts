@@ -1,3 +1,5 @@
+import { TeamMemberRole } from '@prisma/client';
+
 import { prisma } from '@documenso/prisma';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
@@ -33,6 +35,11 @@ export const getMemberRoles = async ({ teamId, reference }: GetMemberRolesOption
       id: teamId,
     },
     include: {
+      organisation: {
+        select: {
+          ownerUserId: true,
+        },
+      },
       teamGroups: {
         where: {
           organisationGroup: {
@@ -54,7 +61,22 @@ export const getMemberRoles = async ({ teamId, reference }: GetMemberRolesOption
     },
   });
 
-  if (!team || team.teamGroups.length === 0) {
+  if (!team) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'Roles not found',
+    });
+  }
+
+  const isOrganisationOwner =
+    reference.type === 'User' && team.organisation.ownerUserId === reference.id;
+
+  if (isOrganisationOwner) {
+    return {
+      teamRole: TeamMemberRole.ADMIN,
+    };
+  }
+
+  if (team.teamGroups.length === 0) {
     throw new AppError(AppErrorCode.NOT_FOUND, {
       message: 'Roles not found',
     });

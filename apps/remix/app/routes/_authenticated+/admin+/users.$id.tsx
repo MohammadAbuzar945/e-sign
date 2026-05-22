@@ -13,9 +13,7 @@ import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { useForm } from 'react-hook-form';
 import { Link, useRevalidator } from 'react-router';
-import type { z } from 'zod';
-
-import { AdminOrganisationCreateDialog } from '~/components/dialogs/admin-organisation-create-dialog';
+import type z from 'zod';
 import { AdminUserDeleteDialog } from '~/components/dialogs/admin-user-delete-dialog';
 import { AdminUserDisableDialog } from '~/components/dialogs/admin-user-disable-dialog';
 import { AdminUserEnableDialog } from '~/components/dialogs/admin-user-enable-dialog';
@@ -23,7 +21,6 @@ import { AdminUserResetTwoFactorDialog } from '~/components/dialogs/admin-user-r
 import { GenericErrorLayout } from '~/components/general/generic-error-layout';
 import { AdminOrganisationsTable } from '~/components/tables/admin-organisations-table';
 import { AdminUserTeamsTable } from '~/components/tables/admin-user-teams-table';
-
 import { MultiSelectRoleCombobox } from '../../../components/general/multiselect-role-combobox';
 
 const ZUserFormSchema = ZUpdateUserRequestSchema.omit({ id: true });
@@ -85,16 +82,18 @@ const AdminUserPage = ({ user }: { user: TGetUserResponse }) => {
       name: user?.name ?? '',
       email: user?.email ?? '',
       roles: user?.roles ?? [],
+      maxOrganisationCount: user?.maxOrganisationCount ?? 1,
     },
   });
 
-  const onSubmit = async ({ name, email, roles }: TUserFormSchema) => {
+  const onSubmit = async ({ name, email, roles, maxOrganisationCount }: TUserFormSchema) => {
     try {
       await updateUserMutation({
         id: Number(user?.id),
         name,
         email,
         roles,
+        maxOrganisationCount,
       });
 
       await revalidate();
@@ -170,6 +169,34 @@ const AdminUserPage = ({ user }: { user: TGetUserResponse }) => {
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="maxOrganisationCount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-muted-foreground">
+                    <Trans>Max Organisation Count</Trans>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      {...field}
+                      value={field.value ?? 1}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? 1 : Number.parseInt(e.target.value) || 0;
+                        field.onChange(value < 0 ? 0 : value);
+                      }}
+                    />
+                  </FormControl>
+                  <p className="text-muted-foreground text-sm">
+                    <Trans>Set to 0 for unlimited (admin only). Default is 1.</Trans>
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="mt-4">
               <Button type="submit" loading={form.formState.isSubmitting}>
                 <Trans>Update user</Trans>
@@ -191,15 +218,6 @@ const AdminUserPage = ({ user }: { user: TGetUserResponse }) => {
               <Trans>Organisations that the user is a member of.</Trans>
             </p>
           </div>
-
-          <AdminOrganisationCreateDialog
-            ownerUserId={user.id}
-            trigger={
-              <Button variant="outline" size="sm">
-                <Trans>Create Organisation</Trans>
-              </Button>
-            }
-          />
         </div>
 
         <AdminOrganisationsTable memberUserId={user.id} showOwnerColumn={false} hidePaginationUntilOverflow />

@@ -65,6 +65,9 @@ export default defineConfig({
   ],
   ssr: {
     noExternal: ['react-dropzone', 'plausible-tracker'],
+    optimizeDeps: {
+      include: ['autolinker'],
+    },
     external: [
       '@napi-rs/canvas',
       '@node-rs/bcrypt',
@@ -79,8 +82,20 @@ export default defineConfig({
     ],
   },
   optimizeDeps: {
-    entries: ['./app/**/*', '../../packages/ui/**/*', '../../packages/lib/**/*'],
-    include: ['prop-types', 'file-selector', 'attr-accept'],
+    entries: [
+      './app/**/*',
+      '../../packages/ui/**/*',
+      '../../packages/lib/client-only/**/*',
+      '../../packages/lib/server-only/**/*',
+      '../../packages/lib/universal/**/*',
+    ],
+    include: [
+      'prop-types',
+      'file-selector',
+      'attr-accept',
+      // autolinker (via swagger-ui-react → remarkable) ships sourcemaps that reference unpublished .ts sources; pre-bundle to avoid Vite warnings.
+      'autolinker',
+    ],
     exclude: [
       'node_modules',
       '@napi-rs/canvas',
@@ -91,6 +106,8 @@ export default defineConfig({
       '@playwright/browser-chromium',
       'lightningcss',
       'fsevents',
+      // Pre-bundling pulls swagger-client + apidom + syntax-highlighter; nested CJS/ESM and hoisting often break esbuild on Windows.
+      'swagger-ui-react',
     ],
   },
   resolve: {

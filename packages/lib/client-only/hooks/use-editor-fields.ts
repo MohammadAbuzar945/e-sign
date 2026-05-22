@@ -18,11 +18,11 @@ export const ZLocalFieldSchema = z.object({
   envelopeItemId: z.string(),
   type: z.nativeEnum(FieldType),
   recipientId: z.number(),
-  page: z.number().min(1),
-  positionX: z.number().min(0),
-  positionY: z.number().min(0),
-  width: z.number().min(0),
-  height: z.number().min(0),
+  page: z.coerce.number().min(1),
+  positionX: z.coerce.number().min(0),
+  positionY: z.coerce.number().min(0),
+  width: z.coerce.number().min(0),
+  height: z.coerce.number().min(0),
   fieldMeta: ZFieldMetaSchema,
 });
 
@@ -41,6 +41,7 @@ type EditorFieldsProps = {
 
 type UseEditorFieldsResponse = {
   localFields: TLocalField[];
+  getAllFields: () => TLocalField[];
 
   // Selected field
   selectedField: TLocalField | undefined;
@@ -62,29 +63,42 @@ type UseEditorFieldsResponse = {
   selectedRecipient: TEditorEnvelope['recipients'][number] | null;
   setSelectedRecipient: (recipientId: number | null) => void;
 
-  resetForm: (fields?: Field[]) => void;
+  resetForm: (fields?: Field[] | TLocalField[]) => void;
 };
 
 export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsProps): UseEditorFieldsResponse => {
   const [selectedFieldFormId, setSelectedFieldFormId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(null);
 
-  const generateDefaultValues = (fields?: Field[]) => {
-    const formFields = (fields || envelope.fields).map(
-      (field): TLocalField => ({
-        id: field.id,
-        formId: nanoid(),
-        envelopeItemId: field.envelopeItemId,
-        page: field.page,
-        type: field.type,
-        positionX: Number(field.positionX),
-        positionY: Number(field.positionY),
-        width: Number(field.width),
-        height: Number(field.height),
-        recipientId: field.recipientId,
-        fieldMeta: field.fieldMeta ? ZFieldMetaSchema.parse(field.fieldMeta) : undefined,
-      }),
-    );
+  const generateDefaultValues = (fields?: Field[] | TLocalField[]) => {
+    const normalizedFields = fields ?? envelope.fields;
+
+    const formFields = normalizedFields.map((field): TLocalField => {
+      const baseField =
+        'formId' in field
+          ? field
+          : {
+              id: field.id,
+              formId: nanoid(),
+              envelopeItemId: field.envelopeItemId,
+              page: field.page,
+              type: field.type,
+              positionX: field.positionX,
+              positionY: field.positionY,
+              width: field.width,
+              height: field.height,
+              recipientId: field.recipientId,
+              fieldMeta: field.fieldMeta,
+            };
+
+      const dimensions = normalizeFieldDimensions(baseField);
+
+      return {
+        ...baseField,
+        ...dimensions,
+        fieldMeta: baseField.fieldMeta ? ZFieldMetaSchema.parse(baseField.fieldMeta) : undefined,
+      };
+    });
 
     return {
       fields: formFields,
@@ -107,9 +121,20 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
     keyName: 'react-hook-form-id',
   });
 
-  const triggerFieldsUpdate = () => {
-    void handleFieldsUpdate(form.getValues().fields);
+  const triggerFieldsUpdate = (fields = form.getValues().fields) => {
+    void handleFieldsUpdate(
+      fields.map((field) => ({
+        ...field,
+        page: Number(field.page),
+        recipientId: Number(field.recipientId),
+        ...restrictFieldPosValues(field),
+      })),
+    );
   };
+
+  const getAllFields = useCallback((): TLocalField[] => {
+    return form.getValues().fields;
+  }, [form]);
 
   const setSelectedField = (formId: string | null, bypassCheck = false) => {
     if (!formId) {
@@ -140,26 +165,32 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
         ...restrictFieldPosValues(fieldData),
       };
 
+      const nextFields = [...form.getValues().fields, field];
+
       append(field);
-      triggerFieldsUpdate();
+      triggerFieldsUpdate(nextFields);
       setSelectedField(field.formId, true);
       return field;
     },
-    [append, triggerFieldsUpdate, setSelectedField],
+    [append, form, triggerFieldsUpdate, setSelectedField],
   );
 
   const removeFieldsByFormId = useCallback(
     (formIds: string[]) => {
+      const currentFields = form.getValues().fields;
       const indexes = formIds
-        .map((formId) => localFields.findIndex((field) => field.formId === formId))
+        .map((formId) => currentFields.findIndex((field) => field.formId === formId))
         .filter((index) => index !== -1);
 
       if (indexes.length > 0) {
+        const formIdSet = new Set(formIds);
+        const nextFields = currentFields.filter((field) => !formIdSet.has(field.formId));
+
         remove(indexes);
-        triggerFieldsUpdate();
+        triggerFieldsUpdate(nextFields);
       }
     },
-    [localFields, remove, triggerFieldsUpdate],
+    [form, remove, triggerFieldsUpdate],
   );
 
   const setFieldId = (formId: string, id: number) => {
@@ -177,22 +208,29 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
 
   const updateFieldByFormId = useCallback(
     (formId: string, updates: Partial<TLocalField>) => {
-      const index = localFields.findIndex((field) => field.formId === formId);
+      const currentFields = form.getValues().fields;
+      const index = currentFields.findIndex((field) => field.formId === formId);
 
       if (index !== -1) {
         const updatedField = {
-          ...localFields[index],
+          ...currentFields[index],
           ...updates,
         };
 
-        update(index, {
+        const restrictedField = {
           ...updatedField,
           ...restrictFieldPosValues(updatedField),
-        });
-        triggerFieldsUpdate();
+        };
+
+        const nextFields = currentFields.map((field, fieldIndex) =>
+          fieldIndex === index ? restrictedField : field,
+        );
+
+        update(index, restrictedField);
+        triggerFieldsUpdate(nextFields);
       }
     },
-    [localFields, update, triggerFieldsUpdate],
+    [form, update, triggerFieldsUpdate],
   );
 
   const duplicateField = useCallback(
@@ -206,11 +244,13 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
         positionY: field.positionY + 3,
       };
 
+      const nextFields = [...form.getValues().fields, newField];
+
       append(newField);
-      triggerFieldsUpdate();
+      triggerFieldsUpdate(nextFields);
       return newField;
     },
-    [append, triggerFieldsUpdate],
+    [append, form, triggerFieldsUpdate],
   );
 
   const duplicateFieldToAllPages = useCallback(
@@ -234,14 +274,17 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
           page: pageNumber,
         };
 
-        append(newField);
         newFields.push(newField);
       }
 
-      triggerFieldsUpdate();
+      if (newFields.length > 0) {
+        append(newFields);
+      }
+
+      triggerFieldsUpdate([...form.getValues().fields, ...newFields]);
       return newFields;
     },
-    [append, triggerFieldsUpdate],
+    [append, form, triggerFieldsUpdate],
   );
 
   const getFieldByFormId = useCallback(
@@ -280,13 +323,14 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
     setSelectedRecipientId(foundRecipient?.id ?? null);
   };
 
-  const resetForm = (fields?: Field[]) => {
+  const resetForm = (fields?: Field[] | TLocalField[]) => {
     form.reset(generateDefaultValues(fields));
   };
 
   return {
     // Core state
     localFields,
+    getAllFields,
 
     // Field operations
     addField,
@@ -312,11 +356,25 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
   };
 };
 
+const normalizeFieldDimensions = (field: {
+  positionX: unknown;
+  positionY: unknown;
+  width: unknown;
+  height: unknown;
+}) => ({
+  positionX: Number(field.positionX),
+  positionY: Number(field.positionY),
+  width: Number(field.width),
+  height: Number(field.height),
+});
+
 const restrictFieldPosValues = (field: Pick<TLocalField, 'positionX' | 'positionY' | 'width' | 'height'>) => {
+  const { positionX, positionY, width, height } = normalizeFieldDimensions(field);
+
   return {
-    positionX: Math.max(0, Math.min(100, field.positionX)),
-    positionY: Math.max(0, Math.min(100, field.positionY)),
-    width: Math.max(0, Math.min(100, field.width)),
-    height: Math.max(0, Math.min(100, field.height)),
+    positionX: Math.max(0, Math.min(100, positionX)),
+    positionY: Math.max(0, Math.min(100, positionY)),
+    width: Math.max(0, Math.min(100, width)),
+    height: Math.max(0, Math.min(100, height)),
   };
 };

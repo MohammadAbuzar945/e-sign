@@ -34,6 +34,7 @@ export const ZCreateDocumentPayloadSchema = z.object({
   title: ZDocumentTitleSchema,
   externalId: ZDocumentExternalIdSchema.optional(),
   visibility: ZDocumentVisibilitySchema.optional(),
+  includeQrCodeInCertificate: z.boolean().nullish(),
   globalAccessAuth: z.array(ZDocumentAccessAuthTypesSchema).optional(),
   globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional(),
   formValues: ZDocumentFormValuesSchema.optional(),

@@ -45,7 +45,7 @@ export const UserOrganisationsTable = () => {
         accessorKey: 'name',
         cell: ({ row }) => (
           <Link
-            to={isPersonalLayoutMode ? `/settings/organisations` : `/o/${row.original.url}`}
+            to={isPersonalLayoutMode ? `/o/${row.original.url}` : `/o/${row.original.url}`}
             preventScrollReset={true}
           >
             <AvatarWithText

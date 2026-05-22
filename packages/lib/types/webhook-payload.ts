@@ -14,6 +14,7 @@ import {
 } from '@prisma/client';
 import { z } from 'zod';
 
+import { NEXT_PUBLIC_WEBAPP_URL } from '../constants/app';
 import { mapSecondaryIdToDocumentId, mapSecondaryIdToTemplateId } from '../utils/envelope';
 
 /**
@@ -75,6 +76,7 @@ export const ZWebhookDocumentSchema = z.object({
   updatedAt: z.coerce.date(),
   completedAt: z.coerce.date().nullable(),
   deletedAt: z.coerce.date().nullable(),
+  shareQrCodeLink: z.string().nullable(),
   teamId: z.number().nullable(),
   templateId: z.number().nullable(),
   source: z.nativeEnum(DocumentSource),
@@ -148,6 +150,10 @@ export const mapEnvelopeToWebhookDocumentPayload = (
     updatedAt: envelope.updatedAt,
     completedAt: envelope.completedAt,
     deletedAt: envelope.deletedAt,
+    shareQrCodeLink:
+      envelope.status === DocumentStatus.COMPLETED && envelope.qrToken
+        ? `${NEXT_PUBLIC_WEBAPP_URL()}/share/${envelope.qrToken}`
+        : null,
     teamId: envelope.teamId,
     templateId: envelope.templateId,
     source: envelope.source,

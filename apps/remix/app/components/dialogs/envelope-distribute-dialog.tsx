@@ -1,6 +1,25 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useLingui } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import {
+  DocumentDistributionMethod,
+  DocumentStatus,
+  EnvelopeType,
+  RecipientRole,
+} from '@prisma/client';
+import { AnimatePresence, motion } from 'framer-motion';
+import { InfoIcon } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router';
+import { match } from 'ts-pattern';
+import * as z from 'zod';
+
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
+import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { getRecipientsWithMissingFields } from '@documenso/lib/utils/recipients';
 import { zEmail } from '@documenso/lib/utils/zod';
@@ -23,20 +42,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@documenso/ui/primitives/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { SpinnerBox } from '@documenso/ui/primitives/spinner';
-import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 import { Textarea } from '@documenso/ui/primitives/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { DocumentDistributionMethod, DocumentStatus, EnvelopeType } from '@prisma/client';
-import { AnimatePresence, motion } from 'framer-motion';
-import { InfoIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router';
-import { match } from 'ts-pattern';
-import * as z from 'zod';
 
 export type EnvelopeDistributeDialogProps = {
   onDistribute?: () => Promise<void>;
@@ -73,6 +81,10 @@ export const EnvelopeDistributeDialog = ({
   const [isSyncing, setIsSyncing] = useState(false);
 
   const { mutateAsync: distributeEnvelope } = trpcReact.envelope.distribute.useMutation();
+
+  const { data: kbaConfig } = trpcReact.envelope.getKba.useQuery({
+    envelopeId: envelope.id,
+  });
 
   const form = useForm<TEnvelopeDistributeFormSchema>({
     defaultValues: {
@@ -136,6 +148,43 @@ export const EnvelopeDistributeDialog = ({
     });
   }, [recipientsWithIndex, envelope.authOptions]);
 
+  const isKbaSendBlocked = useMemo(() => {
+    const auth = extractDocumentAuthMethods({
+      documentAuth: envelope.authOptions,
+    });
+
+    if (!auth.documentAuthOption.globalAccessAuth.includes(DocumentAccessAuth.KBA)) {
+      return false;
+    }
+
+    if (!kbaConfig?.settings?.isEnabled) {
+      return true;
+    }
+
+    if (kbaConfig.settings.mode === 'PER_ENVELOPE') {
+      const challenge = kbaConfig.envelopeChallenge;
+
+      return (
+        !challenge?.question?.trim() ||
+        challenge.isAnswerConfigured !== true
+      );
+    }
+
+    const recipientsNeedingChallenges = envelope.recipients.filter(
+      (recipient) => recipient.role !== RecipientRole.CC,
+    );
+
+    for (const recipient of recipientsNeedingChallenges) {
+      const challenge = kbaConfig.recipientChallenges.find((c) => c.recipientId === recipient.id);
+
+      if (!challenge?.question?.trim() || challenge.isAnswerConfigured !== true) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [envelope.authOptions, envelope.recipients, kbaConfig]);
+
   const invalidEnvelopeCode = useMemo(() => {
     if (recipientsMissingSignatureFields.length > 0) {
       return 'MISSING_SIGNATURES';
@@ -149,8 +198,17 @@ export const EnvelopeDistributeDialog = ({
       return 'MISSING_REQUIRED_EMAIL';
     }
 
+    if (isKbaSendBlocked) {
+      return 'KBA_INCOMPLETE';
+    }
+
     return null;
-  }, [envelope.recipients, recipientsMissingRequiredEmail, recipientsMissingSignatureFields]);
+  }, [
+    envelope.recipients,
+    isKbaSendBlocked,
+    recipientsMissingRequiredEmail,
+    recipientsMissingSignatureFields,
+  ]);
 
   const onFormSubmit = async ({ meta }: TEnvelopeDistributeFormSchema) => {
     try {
@@ -158,11 +216,7 @@ export const EnvelopeDistributeDialog = ({
 
       await onDistribute?.();
 
-      let redirectPath = `${documentRootPath}/${envelope.id}`;
-
-      if (meta.distributionMethod === DocumentDistributionMethod.NONE) {
-        redirectPath += '?action=copy-links';
-      }
+      const redirectPath = `${documentRootPath}/${envelope.id}`;
 
       await navigate(redirectPath);
 
@@ -206,6 +260,23 @@ export const EnvelopeDistributeDialog = ({
     }
   }, [isOpen]);
 
+  // Reset form with current envelope document meta when dialog opens so that
+  // subject/message/reply-to set in document settings are shown in the send dialog.
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({
+        meta: {
+          emailId: envelope.documentMeta?.emailId ?? null,
+          emailReplyTo: envelope.documentMeta?.emailReplyTo || undefined,
+          subject: envelope.documentMeta?.subject ?? '',
+          message: envelope.documentMeta?.message ?? '',
+          distributionMethod:
+            envelope.documentMeta?.distributionMethod || DocumentDistributionMethod.EMAIL,
+        },
+      });
+    }
+  }, [isOpen]);
+
   if (envelope.status !== DocumentStatus.DRAFT || envelope.type !== EnvelopeType.DOCUMENT) {
     return null;
   }
@@ -229,24 +300,6 @@ export const EnvelopeDistributeDialog = ({
           <Form {...form}>
             <form onSubmit={handleSubmit(onFormSubmit)}>
               <fieldset disabled={isSubmitting}>
-                <Tabs
-                  onValueChange={(value) =>
-                    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-                    setValue('meta.distributionMethod', value as DocumentDistributionMethod)
-                  }
-                  value={distributionMethod}
-                  className="mb-2"
-                >
-                  <TabsList className="w-full">
-                    <TabsTrigger className="w-full" value={DocumentDistributionMethod.EMAIL}>
-                      <Trans>Email</Trans>
-                    </TabsTrigger>
-                    <TabsTrigger className="w-full" value={DocumentDistributionMethod.NONE}>
-                      <Trans>None</Trans>
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-
                 <div
                   className={cn('min-h-72', {
                     'min-h-[23rem]': organisation.organisationClaim.flags.emailDomains,
@@ -262,7 +315,7 @@ export const EnvelopeDistributeDialog = ({
                       >
                         <SpinnerBox spinnerProps={{ size: 'sm' }} className="h-72" />
                       </motion.div>
-                    ) : distributionMethod === DocumentDistributionMethod.EMAIL ? (
+                    ) : (
                       <motion.div
                         key={'Emails'}
                         initial={{ opacity: 0, y: 5 }}
@@ -300,7 +353,7 @@ export const EnvelopeDistributeDialog = ({
                                             </SelectItem>
                                           ))}
 
-                                          <SelectItem value={'-1'}>Documenso</SelectItem>
+                                          <SelectItem value={'-1'}>Nomia</SelectItem>
                                         </SelectContent>
                                       </Select>
                                     </FormControl>
@@ -383,28 +436,7 @@ export const EnvelopeDistributeDialog = ({
                           </fieldset>
                         </Form>
                       </motion.div>
-                    ) : distributionMethod === DocumentDistributionMethod.NONE ? (
-                      <motion.div
-                        key={'Links'}
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0, transition: { duration: 0.3 } }}
-                        exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                        className="min-h-60 rounded-lg border"
-                      >
-                        <div className="py-24 text-center text-muted-foreground text-sm">
-                          <p>
-                            <Trans>We won't send anything to notify recipients.</Trans>
-                          </p>
-
-                          <p className="mt-2">
-                            <Trans>
-                              We will generate signing links for you, which you can send to the recipients through your
-                              method of choice.
-                            </Trans>
-                          </p>
-                        </div>
-                      </motion.div>
-                    ) : null}
+                    )}
                   </AnimatePresence>
                 </div>
 
@@ -416,11 +448,7 @@ export const EnvelopeDistributeDialog = ({
                   </DialogClose>
 
                   <Button loading={isSubmitting} disabled={isSyncing} type="submit">
-                    {distributionMethod === DocumentDistributionMethod.EMAIL ? (
-                      <Trans>Send</Trans>
-                    ) : (
-                      <Trans>Generate Links</Trans>
-                    )}
+                    <Trans>Send</Trans>
                   </Button>
                 </DialogFooter>
               </fieldset>
@@ -459,6 +487,15 @@ export const EnvelopeDistributeDialog = ({
                         </li>
                       ))}
                     </ul>
+                  </AlertDescription>
+                ))
+                .with('KBA_INCOMPLETE', () => (
+                  <AlertDescription>
+                    <Trans>
+                      Security question (KBA) is turned on for this document, but the question,
+                      answer, or multiple-choice options are not saved yet. Open Document Settings,
+                      go to Security, finish KBA setup, then try sending again.
+                    </Trans>
                   </AlertDescription>
                 ))
                 .exhaustive()}

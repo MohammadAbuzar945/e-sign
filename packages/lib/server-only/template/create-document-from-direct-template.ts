@@ -41,6 +41,7 @@ import {
 import { mapSecondaryIdToTemplateId } from '../../utils/envelope';
 import { sendDocument } from '../document/send-document';
 import { validateFieldAuth } from '../document/validate-field-auth';
+import { processExternalId } from '../envelope/create-envelope';
 import { incrementDocumentId } from '../envelope/increment-id';
 import { getTeamSettings } from '../team/get-team-settings';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
@@ -169,6 +170,7 @@ export const createDocumentFromDirectTemplate = async ({
   const isAccessAuthValid = match(derivedRecipientAccessAuth.at(0))
     .with(DocumentAccessAuth.ACCOUNT, () => user && user?.email === directRecipientEmail)
     .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => false) // Not supported for direct templates
+    .with(DocumentAccessAuth.KBA, () => true)
     .with(undefined, () => true)
     .exhaustive();
 
@@ -215,6 +217,7 @@ export const createDocumentFromDirectTemplate = async ({
       const derivedRecipientActionAuth = await validateFieldAuth({
         documentAuthOptions: directTemplateEnvelope.authOptions,
         recipient: {
+          id: directTemplateRecipient.id,
           authOptions: directTemplateRecipient.authOptions,
           email: directRecipientEmail,
           envelopeId: directTemplateEnvelope.id,
@@ -307,6 +310,8 @@ export const createDocumentFromDirectTemplate = async ({
 
   const incrementedDocumentId = await incrementDocumentId();
 
+  const { processedExternalId, fromNomia } = processExternalId(directTemplateExternalId);
+
   const { createdEnvelope, recipientId, token } = await prisma.$transaction(async (tx) => {
     // Create the envelope and non direct template recipients.
     const createdEnvelope = await tx.envelope.create({
@@ -323,7 +328,8 @@ export const createDocumentFromDirectTemplate = async ({
         title: directTemplateEnvelope.title,
         createdAt: initialRequestTime,
         status: DocumentStatus.PENDING,
-        externalId: directTemplateExternalId,
+        externalId: processedExternalId,
+        fromNomia,
         visibility: settings.documentVisibility,
         envelopeItems: {
           createMany: {

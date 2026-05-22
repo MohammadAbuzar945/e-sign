@@ -1,15 +1,16 @@
-import LogoImage from '@documenso/assets/logo.png';
 import { authClient } from '@documenso/auth/client';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import { Sheet, SheetContent } from '@documenso/ui/primitives/sheet';
 import { ThemeSwitcher } from '@documenso/ui/primitives/theme-switcher';
-import { Trans, useLingui } from '@lingui/react/macro';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 import { ReadStatus } from '@prisma/client';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
-
+import { BrandingLogo } from '~/components/general/branding-logo';
 import { useOptionalCurrentTeam } from '~/providers/team';
 
 export type AppNavMobileProps = {
@@ -18,7 +19,7 @@ export type AppNavMobileProps = {
 };
 
 export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps) => {
-  const { t } = useLingui();
+  const { _ } = useLingui();
 
   const { organisations } = useSession();
 
@@ -48,11 +49,11 @@ export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps
       return [
         {
           href: '/inbox',
-          text: t`Inbox`,
+          text: _(msg`Inbox`),
         },
         {
           href: '/settings/profile',
-          text: t`Settings`,
+          text: _(msg`Settings`),
         },
       ];
     }
@@ -60,19 +61,19 @@ export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps
     return [
       {
         href: `/t/${teamUrl}/documents`,
-        text: t`Documents`,
+        text: _(msg`Documents`),
       },
       {
         href: `/t/${teamUrl}/templates`,
-        text: t`Templates`,
+        text: _(msg`Templates`),
       },
       {
         href: '/inbox',
-        text: t`Inbox`,
+        text: _(msg`Inbox`),
       },
       {
         href: '/settings/profile',
-        text: t`Settings`,
+        text: _(msg`Settings`),
       },
     ];
   }, [currentTeam, organisations]);
@@ -81,7 +82,7 @@ export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps
     <Sheet open={isMenuOpen} onOpenChange={onMenuOpenChange}>
       <SheetContent className="flex w-full max-w-[350px] flex-col">
         <Link to="/" onClick={handleMenuItemClick}>
-          <img src={LogoImage} alt="Documenso Logo" className="dark:invert" width={170} height={25} />
+          <BrandingLogo alt="Nomia Logo" className="h-6 w-auto" />
         </Link>
 
         <div className="mt-8 flex w-full flex-col items-start gap-y-4">
@@ -115,9 +116,7 @@ export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps
           </div>
 
           <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} Documenso, Inc.
-            <br />
-            <Trans>All rights reserved.</Trans>
+            © {new Date().getFullYear()} Nomia Pvt Ltd. <br /> All rights reserved.
           </p>
         </div>
       </SheetContent>

@@ -5,6 +5,7 @@ import { findFolders } from '@documenso/lib/server-only/folder/find-folders';
 import { findFoldersInternal } from '@documenso/lib/server-only/folder/find-folders-internal';
 import { getFolderBreadcrumbs } from '@documenso/lib/server-only/folder/get-folder-breadcrumbs';
 import { getFolderById } from '@documenso/lib/server-only/folder/get-folder-by-id';
+import { getTeamFolders } from '@documenso/lib/server-only/folder/get-team-folders';
 import { updateFolder } from '@documenso/lib/server-only/folder/update-folder';
 
 import { ZGenericSuccessResponse, ZSuccessResponseSchema } from '../schema';
@@ -19,6 +20,8 @@ import {
   ZFindFoldersResponseSchema,
   ZGetFoldersResponseSchema,
   ZGetFoldersSchema,
+  ZGetTeamFoldersRequestSchema,
+  ZGetTeamFoldersResponseSchema,
   ZUpdateFolderRequestSchema,
   ZUpdateFolderResponseSchema,
 } from './schema';
@@ -261,5 +264,40 @@ export const folderRouter = router({
       });
 
       return ZGenericSuccessResponse;
+    }),
+
+  /**
+   * @public
+   */
+  getTeamFolders: authenticatedProcedure
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/team/folders',
+        summary: 'Get team folders',
+        description: 'Returns the ID and name of all folders belonging to the team. Requires a team API token.',
+        tags: ['Folder'],
+      },
+    })
+    .input(ZGetTeamFoldersRequestSchema)
+    .output(ZGetTeamFoldersResponseSchema)
+    .query(async ({ ctx }) => {
+      const { teamId } = ctx;
+
+      if (!teamId || teamId === -1) {
+        throw new AppError(AppErrorCode.UNAUTHORIZED, {
+          message: 'A team API token is required to access this endpoint.',
+        });
+      }
+
+      ctx.logger.info({
+        input: {
+          teamId,
+        },
+      });
+
+      const folders = await getTeamFolders({ teamId });
+
+      return { folders };
     }),
 });

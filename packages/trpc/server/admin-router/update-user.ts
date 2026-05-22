@@ -7,14 +7,15 @@ export const updateUserRoute = adminProcedure
   .input(ZUpdateUserRequestSchema)
   .output(ZUpdateUserResponseSchema)
   .mutation(async ({ input, ctx }) => {
-    const { id, name, email, roles } = input;
+    const { id, name, email, roles, maxOrganisationCount } = input;
 
     ctx.logger.info({
       input: {
         id,
         roles,
+        maxOrganisationCount,
       },
     });
 
-    await updateUser({ id, name, email, roles });
+    await updateUser({ id, name, email, roles, maxOrganisationCount });
   });

@@ -536,7 +536,14 @@ WITH personal_organisations AS (
     t."createdAt",
     NOW(),
     'PERSONAL'::"OrganisationType",
-    'Personal Organisation',
+    COALESCE(
+      CASE 
+        WHEN u."name" IS NOT NULL AND TRIM(SPLIT_PART(u."name", ' ', 1)) != '' 
+        THEN TRIM(SPLIT_PART(u."name", ' ', 1)) || '''s Organisation'
+        ELSE NULL
+      END,
+      'Personal Organisation'
+    ),
     u."url",
     t."avatarImageId",
     t."ownerUserId",
@@ -632,6 +639,17 @@ UPDATE "Subscription" s
 SET "organisationId" = o."id"
 FROM new_orgs o
 WHERE s."userId" = o."ownerUserId";
+
+-- [CUSTOM_CHANGE] Attach orphaned teams to their owner's personal organisation
+-- Orphaned teams are: non-personal teams without subscriptions, owned by users without subscriptions
+UPDATE "Team" t
+SET "organisationId" = o."id"
+FROM "Organisation" o
+WHERE 
+  t."organisationId" IS NULL
+  AND t."isPersonal" = FALSE
+  AND o."type" = 'PERSONAL'::"OrganisationType"
+  AND o."ownerUserId" = t."ownerUserId";
 
 -- Create 3 internal groups for each organisation (ADMIN, MANAGER, MEMBER)
 WITH org_groups AS (
@@ -763,6 +781,7 @@ WITH team_internal_groups AS (
         'MEMBER'::"TeamMemberRole"
       ]) as team_role
   FROM "Team" t
+  WHERE t."organisationId" IS NOT NULL  -- [CUSTOM_CHANGE] Filter out teams without organisations
 ),
 created_org_groups AS (
   -- Step 2: Create OrganisationGroups with temp data

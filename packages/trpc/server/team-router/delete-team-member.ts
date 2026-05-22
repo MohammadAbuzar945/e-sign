@@ -1,9 +1,11 @@
 import { TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
+import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
+import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
-import { OrganisationGroupType } from '@prisma/client';
+import { OrganisationGroupType, TeamMemberRole } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
 import { ZDeleteTeamMemberRequestSchema, ZDeleteTeamMemberResponseSchema } from './delete-team-member.types';
@@ -24,11 +26,24 @@ export const deleteTeamMemberRoute = authenticatedProcedure
     });
 
     const team = await prisma.team.findFirst({
-      where: buildTeamWhereQuery({
-        teamId,
-        userId: user.id,
-        roles: TEAM_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_TEAM'],
-      }),
+      where: {
+        AND: [
+          buildTeamWhereQuery({
+            teamId,
+            userId: user.id,
+            roles: TEAM_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_TEAM'],
+          }),
+          {
+            organisation: {
+              members: {
+                some: {
+                  id: memberId,
+                },
+              },
+            },
+          },
+        ],
+      },
       include: {
         organisation: {
           select: {
@@ -39,13 +54,6 @@ export const deleteTeamMemberRoute = authenticatedProcedure
           where: {
             organisationGroup: {
               type: OrganisationGroupType.INTERNAL_TEAM,
-              organisationGroupMembers: {
-                some: {
-                  organisationMember: {
-                    id: memberId,
-                  },
-                },
-              },
             },
           },
           include: {
@@ -67,6 +75,12 @@ export const deleteTeamMemberRoute = authenticatedProcedure
       throw new AppError(AppErrorCode.UNAUTHORIZED);
     }
 
+    if (team.teamGroups.length === 0) {
+      throw new AppError(AppErrorCode.UNKNOWN_ERROR, {
+        message: 'Team has no internal team groups',
+      });
+    }
+
     const { teamRole: currentUserTeamRole } = await getMemberRoles({
       teamId,
       reference: {
@@ -82,6 +96,31 @@ export const deleteTeamMemberRoute = authenticatedProcedure
         id: memberId,
       },
     });
+
+    const internalTeamGroupToRemoveMemberFrom = team.teamGroups.find((group) =>
+      group.organisationGroup.organisationGroupMembers.some(
+        (groupMember) => groupMember.organisationMember.id === memberId,
+      ),
+    );
+
+    if (!internalTeamGroupToRemoveMemberFrom) {
+      throw new AppError(AppErrorCode.UNAUTHORIZED, {
+        message:
+          'This member cannot be removed directly because their access is granted via an organisation group. Remove them from the group (or detach the group from the team) instead.',
+      });
+    }
+
+    const organisationMemberToDelete =
+      internalTeamGroupToRemoveMemberFrom.organisationGroup.organisationGroupMembers.find(
+        (groupMember) => groupMember.organisationMember.id === memberId,
+      )?.organisationMember;
+
+    // Prevent admins from removing themselves from the team.
+    if (organisationMemberToDelete?.userId === user.id && currentMemberToDeleteTeamRole === TeamMemberRole.ADMIN) {
+      throw new AppError(AppErrorCode.UNAUTHORIZED, {
+        message: 'Admins cannot remove themselves from the team.',
+      });
+    }
 
     // Check role permissions.
     if (!isTeamRoleWithinUserHierarchy(currentUserTeamRole, currentMemberToDeleteTeamRole)) {
@@ -136,9 +175,42 @@ export const deleteTeamMemberRoute = authenticatedProcedure
         where: {
           organisationMemberId_groupId: {
             organisationMemberId: memberId,
-            groupId: teamGroupToRemoveMemberFrom.organisationGroupId,
+            groupId: internalTeamGroupToRemoveMemberFrom.organisationGroupId,
           },
         },
       });
     });
+
+    if (organisationMemberToDelete) {
+      const memberUser = await prisma.user.findUnique({
+        where: {
+          id: organisationMemberToDelete.userId,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+      });
+
+      if (memberUser) {
+        await prisma.teamAuditLog.create({
+          data: createTeamAuditLogData({
+            teamId,
+            type: TEAM_AUDIT_LOG_TYPE.TEAM_MEMBER_REMOVED,
+            data: {
+              memberUserId: memberUser.id,
+              memberEmail: memberUser.email,
+              previousRole: currentMemberToDeleteTeamRole,
+            },
+            user: {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+            },
+            metadata: ctx.metadata,
+          }),
+        });
+      }
+    }
   });

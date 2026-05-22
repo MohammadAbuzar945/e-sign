@@ -576,29 +576,27 @@ export const EnvelopeEditorRecipientForm = () => {
         </div>
 
         <div className="flex flex-row items-center space-x-2">
-          {editorConfig.recipients?.allowAIDetection && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  type="button"
-                  size="sm"
-                  disabled={isSubmitting}
-                  onClick={onDetectRecipientsClick}
-                >
-                  <SparklesIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
+          {/* <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                type="button"
+                size="sm"
+                disabled={isSubmitting}
+                onClick={onDetectRecipientsClick}
+              >
+                <SparklesIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
 
-              <TooltipContent>
-                {team.preferences.aiFeaturesEnabled ? (
-                  <Trans>Detect recipients with AI</Trans>
-                ) : (
-                  <Trans>Enable AI detection</Trans>
-                )}
-              </TooltipContent>
-            </Tooltip>
-          )}
+            <TooltipContent>
+              {team.preferences.aiFeaturesEnabled ? (
+                <Trans>Detect recipients with AI</Trans>
+              ) : (
+                <Trans>Enable AI detection</Trans>
+              )}
+            </TooltipContent>
+          </Tooltip> */}
 
           {(!isEmbedded || hasCurrentEditorInfo) && (
             <Button

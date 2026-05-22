@@ -586,6 +586,34 @@ export const formatDocumentAuditLogAction = (i18n: I18n, auditLog: TDocumentAudi
       you: msg`Signing window expired for ${data.recipientName || data.recipientEmail}`,
       user: msg`Signing window expired for ${data.recipientName || data.recipientEmail}`,
     }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_KBA_CONFIG_UPDATED }, () => ({
+      anonymous: msg({
+        message: `KBA settings updated`,
+        context: `Audit log format`,
+      }),
+      you: msg`You updated the KBA settings`,
+      user: msg`${user} updated the KBA settings`,
+    }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_CHALLENGE_VIEWED }, ({ data }) => ({
+      anonymous: msg`KBA challenge viewed by ${data.recipientName || data.recipientEmail}`,
+      you: msg`You viewed the KBA challenge`,
+      user: msg`${data.recipientName || data.recipientEmail} viewed the KBA challenge`,
+    }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_VALIDATED }, ({ data }) => ({
+      anonymous: msg`KBA validated for ${data.recipientName || data.recipientEmail}`,
+      you: msg`You passed the KBA challenge`,
+      user: msg`${data.recipientName || data.recipientEmail} passed the KBA challenge`,
+    }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_FAILED }, ({ data }) => ({
+      anonymous: msg`KBA failed for ${data.recipientName || data.recipientEmail}`,
+      you: msg`You failed the KBA challenge`,
+      user: msg`${data.recipientName || data.recipientEmail} failed the KBA challenge`,
+    }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_LOCKED }, ({ data }) => ({
+      anonymous: msg`KBA locked for ${data.recipientName || data.recipientEmail}`,
+      you: msg`You were locked out of the KBA challenge`,
+      user: msg`${data.recipientName || data.recipientEmail} was locked out of the KBA challenge`,
+    }))
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_DELEGATED_OWNER_CREATED }, ({ data }) => {
       const message = msg({
         message: `The document ownership was delegated to ${data.delegatedOwnerName || data.delegatedOwnerEmail} on behalf of ${data.teamName}`,

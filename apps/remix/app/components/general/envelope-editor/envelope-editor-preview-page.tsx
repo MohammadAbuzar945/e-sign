@@ -4,7 +4,10 @@ import {
   useCurrentEnvelopeRender,
 } from '@documenso/lib/client-only/providers/envelope-render-provider';
 import { PDF_VIEWER_ERROR_MESSAGES } from '@documenso/lib/constants/pdf-viewer-i18n';
-import { ZFieldAndMetaSchema } from '@documenso/lib/types/field-meta';
+import {
+  FIELD_META_DEFAULT_VALUES,
+  ZEnvelopeFieldAndMetaSchema,
+} from '@documenso/lib/types/field-meta';
 import { extractFieldInsertionValues } from '@documenso/lib/utils/envelope-signing';
 import { toCheckboxCustomText } from '@documenso/lib/utils/fields';
 import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
@@ -48,7 +51,24 @@ export const EnvelopeEditorPreviewPage = () => {
 
     const faker = fakerInstance;
     return fields.map((field) => {
-      const fieldMeta = ZFieldAndMetaSchema.parse(field);
+      // Use schema that applies default meta values per field type so that
+      // legacy / null metadata is normalized instead of rejected.
+      const parsedFieldMeta = ZEnvelopeFieldAndMetaSchema.safeParse({
+        type: field.type,
+        fieldMeta: field.fieldMeta ?? FIELD_META_DEFAULT_VALUES[field.type],
+      });
+
+      if (!parsedFieldMeta.success) {
+        // eslint-disable-next-line no-console
+        console.warn('Invalid field meta in EnvelopeEditorPreviewPage, using raw field value', {
+          fieldId: field.id,
+          error: parsedFieldMeta.error,
+        });
+
+        return field;
+      }
+
+      const fieldMeta = parsedFieldMeta.data;
 
       const recipient = envelope.recipients.find((recipient) => recipient.id === field.recipientId);
 

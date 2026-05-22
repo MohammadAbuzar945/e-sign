@@ -78,6 +78,7 @@ export const putFileServerSide = async (file: File) => {
 
   return await match(NEXT_PUBLIC_UPLOAD_TRANSPORT)
     .with('s3', async () => putFileInS3(file))
+    .with('gcs', async () => putFileInGCS(file))
     .otherwise(async () => putFileInDatabase(file));
 };
 
@@ -95,6 +96,23 @@ const putFileInDatabase = async (file: File) => {
 };
 
 const putFileInS3 = async (file: File) => {
+  const buffer = await file.arrayBuffer();
+
+  const blob = new Blob([buffer], { type: file.type });
+
+  const newFile = new File([blob], file.name, {
+    type: file.type,
+  });
+
+  const { key } = await uploadS3File(newFile);
+
+  return {
+    type: DocumentDataType.S3_PATH,
+    data: key,
+  };
+};
+
+const putFileInGCS = async (file: File) => {
   const buffer = await file.arrayBuffer();
 
   const blob = new Blob([buffer], { type: file.type });

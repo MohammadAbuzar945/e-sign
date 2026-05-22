@@ -31,6 +31,7 @@ import { resetTwoFactorRoute } from './reset-two-factor-authentication';
 import { resyncLicenseRoute } from './resync-license';
 import { swapOrganisationSubscriptionRoute } from './swap-organisation-subscription';
 import { updateAdminOrganisationRoute } from './update-admin-organisation';
+import { updateAdminOrganisationCreditsRoute } from './update-admin-organisation-credits';
 import { updateOrganisationMemberRoleRoute } from './update-organisation-member-role';
 import { updateRecipientRoute } from './update-recipient';
 import { updateSiteSettingRoute } from './update-site-setting';
@@ -43,6 +44,7 @@ export const adminRouter = router({
     get: getAdminOrganisationRoute,
     create: createAdminOrganisationRoute,
     update: updateAdminOrganisationRoute,
+    updateCredits: updateAdminOrganisationCreditsRoute,
     delete: deleteOrganisationRoute,
     swapSubscription: swapOrganisationSubscriptionRoute,
   },
