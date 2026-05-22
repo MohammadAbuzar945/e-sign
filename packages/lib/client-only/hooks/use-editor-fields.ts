@@ -18,11 +18,11 @@ export const ZLocalFieldSchema = z.object({
   envelopeItemId: z.string(),
   type: z.nativeEnum(FieldType),
   recipientId: z.number(),
-  page: z.number().min(1),
-  positionX: z.number().min(0),
-  positionY: z.number().min(0),
-  width: z.number().min(0),
-  height: z.number().min(0),
+  page: z.coerce.number().min(1),
+  positionX: z.coerce.number().min(0),
+  positionY: z.coerce.number().min(0),
+  width: z.coerce.number().min(0),
+  height: z.coerce.number().min(0),
   fieldMeta: ZFieldMetaSchema,
 });
 
@@ -74,25 +74,29 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
     const normalizedFields = fields ?? envelope.fields;
 
     const formFields = normalizedFields.map((field): TLocalField => {
-      if ('formId' in field) {
-        return {
-          ...field,
-          fieldMeta: field.fieldMeta ? ZFieldMetaSchema.parse(field.fieldMeta) : undefined,
-        };
-      }
+      const baseField =
+        'formId' in field
+          ? field
+          : {
+              id: field.id,
+              formId: nanoid(),
+              envelopeItemId: field.envelopeItemId,
+              page: field.page,
+              type: field.type,
+              positionX: field.positionX,
+              positionY: field.positionY,
+              width: field.width,
+              height: field.height,
+              recipientId: field.recipientId,
+              fieldMeta: field.fieldMeta,
+            };
+
+      const dimensions = normalizeFieldDimensions(baseField);
 
       return {
-        id: field.id,
-        formId: nanoid(),
-        envelopeItemId: field.envelopeItemId,
-        page: field.page,
-        type: field.type,
-        positionX: Number(field.positionX),
-        positionY: Number(field.positionY),
-        width: Number(field.width),
-        height: Number(field.height),
-        recipientId: field.recipientId,
-        fieldMeta: field.fieldMeta ? ZFieldMetaSchema.parse(field.fieldMeta) : undefined,
+        ...baseField,
+        ...dimensions,
+        fieldMeta: baseField.fieldMeta ? ZFieldMetaSchema.parse(baseField.fieldMeta) : undefined,
       };
     });
 
@@ -118,7 +122,14 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
   });
 
   const triggerFieldsUpdate = (fields = form.getValues().fields) => {
-    void handleFieldsUpdate(fields);
+    void handleFieldsUpdate(
+      fields.map((field) => ({
+        ...field,
+        page: Number(field.page),
+        recipientId: Number(field.recipientId),
+        ...restrictFieldPosValues(field),
+      })),
+    );
   };
 
   const getAllFields = useCallback((): TLocalField[] => {
@@ -345,11 +356,25 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
   };
 };
 
+const normalizeFieldDimensions = (field: {
+  positionX: unknown;
+  positionY: unknown;
+  width: unknown;
+  height: unknown;
+}) => ({
+  positionX: Number(field.positionX),
+  positionY: Number(field.positionY),
+  width: Number(field.width),
+  height: Number(field.height),
+});
+
 const restrictFieldPosValues = (field: Pick<TLocalField, 'positionX' | 'positionY' | 'width' | 'height'>) => {
+  const { positionX, positionY, width, height } = normalizeFieldDimensions(field);
+
   return {
-    positionX: Math.max(0, Math.min(100, field.positionX)),
-    positionY: Math.max(0, Math.min(100, field.positionY)),
-    width: Math.max(0, Math.min(100, field.width)),
-    height: Math.max(0, Math.min(100, field.height)),
+    positionX: Math.max(0, Math.min(100, positionX)),
+    positionY: Math.max(0, Math.min(100, positionY)),
+    width: Math.max(0, Math.min(100, width)),
+    height: Math.max(0, Math.min(100, height)),
   };
 };

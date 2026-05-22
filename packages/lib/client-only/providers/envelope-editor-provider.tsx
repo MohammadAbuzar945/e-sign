@@ -448,6 +448,9 @@ export const EnvelopeEditorProvider = ({
   };
 
   const flushAutosave = async (): Promise<TEditorEnvelope> => {
+    // Queue the latest editor state so step navigation cannot skip in-flight debounced saves.
+    setFieldsDebounced(editorFields.getAllFields());
+
     await Promise.all([flushSetFields(), flushSetRecipients(), flushUpdateEnvelope()]);
 
     // Flush all registered external flushes (e.g., upload page's debounced item updates).

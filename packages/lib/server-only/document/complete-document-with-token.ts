@@ -121,10 +121,6 @@ export const completeDocumentWithToken = async ({
     },
   });
 
-  if (fieldsContainUnsignedRequiredField(fields)) {
-    throw new Error(`Recipient ${recipient.id} has unsigned fields`);
-  }
-
   let recipientName = recipient.name;
   let recipientEmail = recipient.email;
 
@@ -213,10 +209,10 @@ export const completeDocumentWithToken = async ({
     });
   }
 
-  // This should be scoped to the current recipient.
+  // Auto-insert date fields before validating completion. The signing UI prefills
+  // dates client-side (see prefillDateFields) without persisting until complete.
   const uninsertedDateFields = fields.filter((field) => field.type === FieldType.DATE && !field.inserted);
 
-  // Auto-insert all un-inserted date fields for V2 envelopes at completion time.
   if (envelope.internalVersion === 2 && uninsertedDateFields.length > 0) {
     const formattedDate = DateTime.now()
       .setZone(envelope.documentMeta?.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE)
@@ -278,7 +274,10 @@ export const completeDocumentWithToken = async ({
   }
 
   if (fieldsContainUnsignedRequiredField(fields)) {
-    throw new Error(`Recipient ${recipient.id} has unsigned fields`);
+    throw new AppError(AppErrorCode.INVALID_BODY, {
+      message: `Recipient ${recipient.id} has unsigned fields`,
+      statusCode: 400,
+    });
   }
 
   await prisma.$transaction(async (tx) => {

@@ -27,20 +27,18 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { match } from 'ts-pattern';
-
 import { EnvelopeDeleteDialog } from '~/components/dialogs/envelope-delete-dialog';
 import { EnvelopeDistributeDialog } from '~/components/dialogs/envelope-distribute-dialog';
-import { EnvelopeDuplicateDialog } from '~/components/dialogs/envelope-duplicate-dialog';
 import { EnvelopeDownloadDialog } from '~/components/dialogs/envelope-download-dialog';
+import { EnvelopeDuplicateDialog } from '~/components/dialogs/envelope-duplicate-dialog';
 import { EnvelopeRedistributeDialog } from '~/components/dialogs/envelope-redistribute-dialog';
 import { EnvelopeSaveAsTemplateDialog } from '~/components/dialogs/envelope-save-as-template-dialog';
 import { TemplateDirectLinkDialog } from '~/components/dialogs/template-direct-link-dialog';
+import { EnvelopeEditorFieldsPage } from '~/components/general/envelope-editor/envelope-editor-fields-page';
+import { EnvelopeEditorPreviewPage } from '~/components/general/envelope-editor/envelope-editor-preview-page';
 import { EnvelopeEditorSettingsDialog } from '~/components/general/envelope-editor/envelope-editor-settings-dialog';
-
-import { EnvelopeEditorFieldsPage } from './envelope-editor-fields-page';
+import { EnvelopeEditorUploadPage } from '~/components/general/envelope-editor/envelope-editor-upload-page';
 import EnvelopeEditorHeader from './envelope-editor-header';
-import { EnvelopeEditorPreviewPage } from './envelope-editor-preview-page';
-import { EnvelopeEditorUploadPage } from './envelope-editor-upload-page';
 
 type EnvelopeEditorStepData = {
   id: string;
@@ -166,11 +164,11 @@ export const EnvelopeEditor = () => {
 
     const foundStep = envelopeEditorSteps.find((step) => step.id === stepParam);
 
-    if (foundStep && foundStep.id !== pageToRender) {
+    if (foundStep && pageToRender !== 'loading' && pageToRender !== foundStep.id) {
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
       void handleStepChange(foundStep.id as EnvelopeEditorStep);
     }
-  }, [searchParams]);
+  }, [searchParams, pageToRender, envelopeEditorSteps]);
 
   const currentStepData = envelopeEditorSteps.find((step) => step.id === searchParamsStep) || envelopeEditorSteps[0];
 
