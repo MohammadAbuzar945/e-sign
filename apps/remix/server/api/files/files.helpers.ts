@@ -1,22 +1,22 @@
+import {
+  type DocumentDataType,
+  DocumentStatus,
+  type EnvelopeType,
+  type RecipientRole,
+  type SigningStatus,
+  type TemplateType,
+} from '@prisma/client';
+import { EnvelopeType as EnvelopeTypeEnum, TemplateType as TemplateTypeEnum } from '@prisma/client';
+import contentDisposition from 'content-disposition';
+import { type Context } from 'hono';
+import { match } from 'ts-pattern';
+
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { generatePartialSignedPdf } from '@documenso/lib/server-only/pdf/generate-partial-signed-pdf';
 import { getTeamById } from '@documenso/lib/server-only/team/get-team';
 import { sha256 } from '@documenso/lib/universal/crypto';
 import { getFileServerSide } from '@documenso/lib/universal/upload/get-file.server';
 import { prisma } from '@documenso/prisma';
-import {
-  type DocumentDataType,
-  DocumentStatus,
-  type EnvelopeType,
-  EnvelopeType as EnvelopeTypeEnum,
-  type RecipientRole,
-  type SigningStatus,
-  type TemplateType,
-  TemplateType as TemplateTypeEnum,
-} from '@prisma/client';
-import contentDisposition from 'content-disposition';
-import type { Context } from 'hono';
-import { match } from 'ts-pattern';
 
 import type { HonoEnv } from '../../router';
 
@@ -66,7 +66,9 @@ type HandleEnvelopeItemFileRequestOptions = {
  * - `signed` / `original`: returns the stored PDF bytes as-is.
  * - `pending`: generates an on-demand PDF with all currently-inserted fields burned in.
  */
-export const handleEnvelopeItemFileRequest = async (options: HandleEnvelopeItemFileRequestOptions) => {
+export const handleEnvelopeItemFileRequest = async (
+  options: HandleEnvelopeItemFileRequestOptions,
+) => {
   if (options.version === 'pending') {
     return handlePendingFileRequest(options);
   }
@@ -74,7 +76,10 @@ export const handleEnvelopeItemFileRequest = async (options: HandleEnvelopeItemF
   return handleStaticFileRequest(options);
 };
 
-type StaticFileRequestOptions = Extract<HandleEnvelopeItemFileRequestOptions, { version: 'signed' | 'original' }>;
+type StaticFileRequestOptions = Extract<
+  HandleEnvelopeItemFileRequestOptions,
+  { version: 'signed' | 'original' }
+>;
 
 const handleStaticFileRequest = async ({
   title,
@@ -133,7 +138,10 @@ const handleStaticFileRequest = async ({
   return c.body(file);
 };
 
-type PendingFileRequestOptions = Extract<HandleEnvelopeItemFileRequestOptions, { version: 'pending' }>;
+type PendingFileRequestOptions = Extract<
+  HandleEnvelopeItemFileRequestOptions,
+  { version: 'pending' }
+>;
 
 const handlePendingFileRequest = async ({
   title,
@@ -260,7 +268,10 @@ export const checkEnvelopeFileAccess = async ({
     return true;
   }
 
-  if (envelopeType === EnvelopeTypeEnum.TEMPLATE && templateType === TemplateTypeEnum.ORGANISATION) {
+  if (
+    envelopeType === EnvelopeTypeEnum.TEMPLATE &&
+    templateType === TemplateTypeEnum.ORGANISATION
+  ) {
     const orgAccess = await prisma.team.findFirst({
       where: {
         id: teamId,

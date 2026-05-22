@@ -1,3 +1,6 @@
+import { RecipientRole } from '@prisma/client';
+import { z } from 'zod';
+
 import { isTemplateRecipientEmailPlaceholder } from '@documenso/lib/constants/template';
 import {
   ZRecipientAccessAuthSchema,
@@ -7,8 +10,6 @@ import {
 } from '@documenso/lib/types/document-auth';
 import { ZRecipientLiteSchema, ZRecipientSchema } from '@documenso/lib/types/recipient';
 import { zEmail } from '@documenso/lib/utils/zod';
-import { RecipientRole } from '@prisma/client';
-import { z } from 'zod';
 
 export const ZGetRecipientRequestSchema = z.object({
   recipientId: z.number(),
@@ -176,7 +177,9 @@ export const ZCompleteDocumentWithTokenMutationSchema = z.object({
     .optional(),
 });
 
-export type TCompleteDocumentWithTokenMutationSchema = z.infer<typeof ZCompleteDocumentWithTokenMutationSchema>;
+export type TCompleteDocumentWithTokenMutationSchema = z.infer<
+  typeof ZCompleteDocumentWithTokenMutationSchema
+>;
 
 export const ZRejectDocumentWithTokenMutationSchema = z.object({
   token: z.string(),
@@ -185,4 +188,6 @@ export const ZRejectDocumentWithTokenMutationSchema = z.object({
   authOptions: ZRecipientActionAuthSchema.optional(),
 });
 
-export type TRejectDocumentWithTokenMutationSchema = z.infer<typeof ZRejectDocumentWithTokenMutationSchema>;
+export type TRejectDocumentWithTokenMutationSchema = z.infer<
+  typeof ZRejectDocumentWithTokenMutationSchema
+>;

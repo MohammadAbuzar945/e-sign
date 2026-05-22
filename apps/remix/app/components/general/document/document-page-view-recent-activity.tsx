@@ -1,37 +1,49 @@
-import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
-import { formatDocumentAuditLogAction } from '@documenso/lib/utils/document-audit-logs';
-import { trpc } from '@documenso/trpc/react';
-import { AnimateGenericFadeInOut } from '@documenso/ui/components/animate/animate-generic-fade-in-out';
-import { cn } from '@documenso/ui/lib/utils';
+import { useMemo } from 'react';
+
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { AlertTriangle, CheckCheckIcon, CheckIcon, Loader, MailOpen } from 'lucide-react';
 import { DateTime } from 'luxon';
-import { useMemo } from 'react';
 import { match } from 'ts-pattern';
+
+import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
+import { formatDocumentAuditLogAction } from '@documenso/lib/utils/document-audit-logs';
+import { trpc } from '@documenso/trpc/react';
+import { AnimateGenericFadeInOut } from '@documenso/ui/components/animate/animate-generic-fade-in-out';
+import { cn } from '@documenso/ui/lib/utils';
 
 export type DocumentPageViewRecentActivityProps = {
   documentId: number;
   userId: number;
 };
 
-export const DocumentPageViewRecentActivity = ({ documentId, userId }: DocumentPageViewRecentActivityProps) => {
+export const DocumentPageViewRecentActivity = ({
+  documentId,
+  userId,
+}: DocumentPageViewRecentActivityProps) => {
   const { _, i18n } = useLingui();
 
-  const { data, isLoading, isLoadingError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    trpc.document.auditLog.find.useInfiniteQuery(
-      {
-        documentId,
-        filterForRecentActivity: true,
-        orderByColumn: 'createdAt',
-        orderByDirection: 'asc',
-        perPage: 10,
-      },
-      {
-        getNextPageParam: (lastPage) => lastPage.nextCursor,
-      },
-    );
+  const {
+    data,
+    isLoading,
+    isLoadingError,
+    refetch,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = trpc.document.auditLog.find.useInfiniteQuery(
+    {
+      documentId,
+      filterForRecentActivity: true,
+      orderByColumn: 'createdAt',
+      orderByDirection: 'asc',
+      perPage: 10,
+    },
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+    },
+  );
 
   const documentAuditLogs = useMemo(() => (data?.pages ?? []).flatMap((page) => page.data), [data]);
 
@@ -53,12 +65,12 @@ export const DocumentPageViewRecentActivity = ({ documentId, userId }: DocumentP
 
       {isLoadingError && (
         <div className="flex h-full flex-col items-center justify-center py-16">
-          <p className="text-foreground/80 text-sm">
+          <p className="text-sm text-foreground/80">
             <Trans>Unable to load document history</Trans>
           </p>
           <button
             onClick={async () => refetch()}
-            className="mt-2 text-foreground/70 text-sm hover:text-muted-foreground"
+            className="mt-2 text-sm text-foreground/70 hover:text-muted-foreground"
           >
             <Trans>Click here to retry</Trans>
           </button>
@@ -70,7 +82,7 @@ export const DocumentPageViewRecentActivity = ({ documentId, userId }: DocumentP
           <ul role="list" className="space-y-6 p-4">
             {hasNextPage && (
               <li className="relative flex gap-x-4">
-                <div className="absolute top-0 -bottom-6 left-0 flex w-6 justify-center">
+                <div className="absolute -bottom-6 left-0 top-0 flex w-6 justify-center">
                   <div className="w-px bg-border" />
                 </div>
 
@@ -80,7 +92,7 @@ export const DocumentPageViewRecentActivity = ({ documentId, userId }: DocumentP
 
                 <button
                   onClick={async () => fetchNextPage()}
-                  className="text-foreground/70 text-xs hover:text-muted-foreground"
+                  className="text-xs text-foreground/70 hover:text-muted-foreground"
                 >
                   {isFetchingNextPage ? _(msg`Loading...`) : _(msg`Load older activity`)}
                 </button>
@@ -89,7 +101,7 @@ export const DocumentPageViewRecentActivity = ({ documentId, userId }: DocumentP
 
             {documentAuditLogs.length === 0 && (
               <div className="flex items-center justify-center py-4">
-                <p className="text-muted-foreground/70 text-sm">
+                <p className="text-sm text-muted-foreground/70">
                   <Trans>No recent activity</Trans>
                 </p>
               </div>
@@ -100,7 +112,7 @@ export const DocumentPageViewRecentActivity = ({ documentId, userId }: DocumentP
                 <div
                   className={cn(
                     auditLogIndex === documentAuditLogs.length - 1 ? 'h-6' : '-bottom-6',
-                    'absolute top-0 left-0 flex w-6 justify-center',
+                    'absolute left-0 top-0 flex w-6 justify-center',
                   )}
                 >
                   <div className="w-px bg-border" />
@@ -134,13 +146,13 @@ export const DocumentPageViewRecentActivity = ({ documentId, userId }: DocumentP
                 </div>
 
                 <p
-                  className="flex-auto truncate py-0.5 text-muted-foreground text-xs leading-5 dark:text-muted-foreground/70"
+                  className="flex-auto truncate py-0.5 text-xs leading-5 text-muted-foreground dark:text-muted-foreground/70"
                   title={formatDocumentAuditLogAction(i18n, auditLog, userId).description}
                 >
                   {formatDocumentAuditLogAction(i18n, auditLog, userId).description}
                 </p>
 
-                <time className="flex-none py-0.5 text-muted-foreground text-xs leading-5 dark:text-muted-foreground/70">
+                <time className="flex-none py-0.5 text-xs leading-5 text-muted-foreground dark:text-muted-foreground/70">
                   {DateTime.fromJSDate(auditLog.createdAt).toRelative({ style: 'short' })}
                 </time>
               </li>

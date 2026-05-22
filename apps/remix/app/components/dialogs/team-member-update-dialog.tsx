@@ -1,3 +1,14 @@
+import { useEffect, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { TeamMemberRole } from '@prisma/client';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { TEAM_MEMBER_ROLE_HIERARCHY } from '@documenso/lib/constants/teams';
 import { EXTENDED_TEAM_MEMBER_ROLE_MAP } from '@documenso/lib/constants/teams-translations';
 import { isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
@@ -12,18 +23,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { TeamMemberRole } from '@prisma/client';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 export type TeamMemberUpdateDialogProps = {
   currentUserTeamRole: TeamMemberRole;
@@ -110,7 +125,11 @@ export const TeamMemberUpdateDialog = ({
   }, [open, currentUserTeamRole, memberTeamRole, form, toast]);
 
   return (
-    <Dialog {...props} open={open} onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}>
+    <Dialog
+      {...props}
+      open={open}
+      onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}
+    >
       <DialogTrigger onClick={(e) => e.stopPropagation()} asChild>
         {trigger ?? (
           <Button variant="secondary">

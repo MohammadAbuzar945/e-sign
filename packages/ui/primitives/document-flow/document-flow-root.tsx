@@ -1,10 +1,11 @@
+import type { HTMLAttributes } from 'react';
+import React from 'react';
+
 import type { MessageDescriptor } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { motion } from 'framer-motion';
-import type React from 'react';
-import type { HTMLAttributes } from 'react';
 
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
@@ -38,16 +39,19 @@ export type DocumentFlowFormContainerHeaderProps = {
   description: MessageDescriptor;
 };
 
-export const DocumentFlowFormContainerHeader = ({ title, description }: DocumentFlowFormContainerHeaderProps) => {
+export const DocumentFlowFormContainerHeader = ({
+  title,
+  description,
+}: DocumentFlowFormContainerHeaderProps) => {
   const { _ } = useLingui();
 
   return (
     <>
-      <h3 className="font-semibold text-2xl text-foreground">{_(title)}</h3>
+      <h3 className="text-2xl font-semibold text-foreground">{_(title)}</h3>
 
-      <p className="mt-2 text-muted-foreground text-sm">{_(description)}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{_(description)}</p>
 
-      <hr className="mt-4 mb-8 border-border" />
+      <hr className="mb-8 mt-4 border-border" />
     </>
   );
 };
@@ -89,10 +93,13 @@ export type DocumentFlowFormContainerStepProps = {
   maxStep: number;
 };
 
-export const DocumentFlowFormContainerStep = ({ step, maxStep }: DocumentFlowFormContainerStepProps) => {
+export const DocumentFlowFormContainerStep = ({
+  step,
+  maxStep,
+}: DocumentFlowFormContainerStepProps) => {
   return (
     <div>
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-muted-foreground">
         <Trans>
           Step <span>{`${step} of ${maxStep}`}</span>
         </Trans>

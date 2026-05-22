@@ -1,3 +1,14 @@
+import { useMemo } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { EmailDomainStatus } from '@prisma/client';
+import { CheckCircle2Icon, ClockIcon, CopyIcon, RotateCcwIcon } from 'lucide-react';
+import { DateTime } from 'luxon';
+import { Link, redirect } from 'react-router';
+import { match } from 'ts-pattern';
+
 import { generateEmailDomainRecords } from '@documenso/lib/utils/email-domains';
 import { trpc } from '@documenso/trpc/react';
 import {
@@ -16,15 +27,6 @@ import { Button } from '@documenso/ui/primitives/button';
 import type { DataTableColumnDef } from '@documenso/ui/primitives/data-table';
 import { DataTable } from '@documenso/ui/primitives/data-table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { EmailDomainStatus } from '@prisma/client';
-import { CheckCircle2Icon, ClockIcon, CopyIcon, RotateCcwIcon } from 'lucide-react';
-import { DateTime } from 'luxon';
-import { useMemo } from 'react';
-import { Link, redirect } from 'react-router';
-import { match } from 'ts-pattern';
 
 import type { Route } from './+types/email-domains.$id';
 
@@ -44,27 +46,32 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
   const { _, i18n } = useLingui();
   const { toast } = useToast();
 
-  const { data: emailDomain, isPending: isLoading, refetch } = trpc.admin.emailDomain.get.useQuery({ emailDomainId });
+  const {
+    data: emailDomain,
+    isPending: isLoading,
+    refetch,
+  } = trpc.admin.emailDomain.get.useQuery({ emailDomainId });
 
-  const { mutate: reregisterDomain, isPending: isReregistering } = trpc.admin.emailDomain.reregister.useMutation({
-    onSuccess: () => {
-      toast({
-        title: _(msg`Domain re-registered`),
-        description: _(
-          msg`The SES identity has been deleted and recreated with the same keys. DNS records remain unchanged.`,
-        ),
-      });
+  const { mutate: reregisterDomain, isPending: isReregistering } =
+    trpc.admin.emailDomain.reregister.useMutation({
+      onSuccess: () => {
+        toast({
+          title: _(msg`Domain re-registered`),
+          description: _(
+            msg`The SES identity has been deleted and recreated with the same keys. DNS records remain unchanged.`,
+          ),
+        });
 
-      void refetch();
-    },
-    onError: () => {
-      toast({
-        title: _(msg`Error`),
-        description: _(msg`Failed to re-register email domain`),
-        variant: 'destructive',
-      });
-    },
-  });
+        void refetch();
+      },
+      onError: () => {
+        toast({
+          title: _(msg`Error`),
+          description: _(msg`Failed to re-register email domain`),
+          variant: 'destructive',
+        });
+      },
+    });
 
   const dnsRecords = useMemo(() => {
     if (!emailDomain) {
@@ -103,7 +110,7 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
   if (isLoading || !emailDomain) {
     return (
       <div>
-        <h2 className="font-semibold text-4xl">
+        <h2 className="text-4xl font-semibold">
           <Trans>Email Domain</Trans>
         </h2>
         <p className="mt-4 text-muted-foreground">
@@ -122,7 +129,7 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
     <div>
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-x-4">
-          <h2 className="font-semibold text-2xl">{emailDomain.domain}</h2>
+          <h2 className="text-2xl font-semibold">{emailDomain.domain}</h2>
 
           {match(emailDomain.status)
             .with(EmailDomainStatus.ACTIVE, () => (
@@ -141,13 +148,16 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
         </div>
       </div>
 
-      <div className="mt-4 text-muted-foreground text-sm">
+      <div className="mt-4 text-sm text-muted-foreground">
         <div>
           <Trans>ID</Trans>: {emailDomain.id}
         </div>
         <div>
           <Trans>Organisation</Trans>:{' '}
-          <Link to={`/admin/organisations/${emailDomain.organisation.id}`} className="hover:underline">
+          <Link
+            to={`/admin/organisations/${emailDomain.organisation.id}`}
+            className="hover:underline"
+          >
             {emailDomain.organisation.name}
           </Link>
         </div>
@@ -159,7 +169,9 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
         </div>
         <div>
           <Trans>Last Verified</Trans>:{' '}
-          {emailDomain.lastVerifiedAt ? i18n.date(emailDomain.lastVerifiedAt, DateTime.DATETIME_MED) : '-'}
+          {emailDomain.lastVerifiedAt
+            ? i18n.date(emailDomain.lastVerifiedAt, DateTime.DATETIME_MED)
+            : '-'}
         </div>
         {pendingDuration && (
           <div className="mt-1 text-yellow-600 dark:text-yellow-400">
@@ -170,7 +182,7 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
 
       <hr className="my-4" />
 
-      <h3 className="font-semibold text-lg">
+      <h3 className="text-lg font-semibold">
         <Trans>Admin Actions</Trans>
       </h3>
 
@@ -191,9 +203,10 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
 
               <AlertDialogDescription>
                 <Trans>
-                  This will delete the existing SES identity for <strong>{emailDomain.domain}</strong> and recreate it
-                  using the same DKIM keys. The user will not need to update their DNS records. The domain status will
-                  be reset to Pending.
+                  This will delete the existing SES identity for{' '}
+                  <strong>{emailDomain.domain}</strong> and recreate it using the same DKIM keys.
+                  The user will not need to update their DNS records. The domain status will be
+                  reset to Pending.
                 </Trans>
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -203,7 +216,9 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
                 <Trans>Cancel</Trans>
               </AlertDialogCancel>
 
-              <AlertDialogAction onClick={() => reregisterDomain({ emailDomainId: emailDomain.id })}>
+              <AlertDialogAction
+                onClick={() => reregisterDomain({ emailDomainId: emailDomain.id })}
+              >
                 <Trans>Re-register</Trans>
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -213,7 +228,7 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
 
       <hr className="my-4" />
 
-      <h3 className="font-semibold text-lg">
+      <h3 className="text-lg font-semibold">
         <Trans>DNS Records</Trans>
       </h3>
 
@@ -221,11 +236,15 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
         {dnsRecords.map((record, index) => (
           <div key={index} className="rounded-lg border p-4">
             <div className="flex items-center justify-between">
-              <div className="font-medium text-sm">
+              <div className="text-sm font-medium">
                 {record.type} <Trans>Record</Trans>
               </div>
 
-              <Button variant="ghost" size="sm" onClick={() => void onCopyToClipboard(record.value)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void onCopyToClipboard(record.value)}
+              >
                 <CopyIcon className="mr-2 h-4 w-4" />
                 <Trans>Copy Value</Trans>
               </Button>
@@ -251,7 +270,7 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
 
       <hr className="my-4" />
 
-      <h3 className="font-semibold text-lg">
+      <h3 className="text-lg font-semibold">
         <Trans>Emails</Trans> ({emailDomain.emails.length})
       </h3>
 
@@ -266,7 +285,7 @@ export default function AdminEmailDomainDetailPage({ loaderData }: Route.Compone
             onPaginationChange={() => {}}
           />
         ) : (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             <Trans>No emails configured for this domain.</Trans>
           </p>
         )}

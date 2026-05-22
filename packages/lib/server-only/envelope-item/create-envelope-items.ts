@@ -1,3 +1,5 @@
+import type { Envelope, EnvelopeItem, Recipient } from '@prisma/client';
+
 import {
   convertPlaceholdersToFieldInputs,
   extractPdfPlaceholders,
@@ -11,7 +13,6 @@ import { prefixedId } from '@documenso/lib/universal/id';
 import { putPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
-import type { Envelope, EnvelopeItem, Recipient } from '@prisma/client';
 
 type UnsafeCreateEnvelopeItemsOptions = {
   files: {
@@ -42,7 +43,8 @@ export const UNSAFE_createEnvelopeItems = async ({
   user,
   apiRequestMetadata,
 }: UnsafeCreateEnvelopeItemsOptions) => {
-  const currentHighestOrderValue = envelope.envelopeItems[envelope.envelopeItems.length - 1]?.order ?? 1;
+  const currentHighestOrderValue =
+    envelope.envelopeItems[envelope.envelopeItems.length - 1]?.order ?? 1;
 
   // For each file: normalize, extract & clean placeholders, then upload.
   const envelopeItemsToCreate = await Promise.all(
@@ -126,7 +128,9 @@ export const UNSAFE_createEnvelopeItems = async ({
           continue;
         }
 
-        const createdItem = createdItems.find((ci) => ci.documentDataId === uploadedItem.documentDataId);
+        const createdItem = createdItems.find(
+          (ci) => ci.documentDataId === uploadedItem.documentDataId,
+        );
 
         if (!createdItem) {
           continue;
@@ -135,7 +139,12 @@ export const UNSAFE_createEnvelopeItems = async ({
         const fieldsToCreate = convertPlaceholdersToFieldInputs(
           uploadedItem.placeholders,
           (recipientPlaceholder, placeholder) =>
-            findRecipientByPlaceholder(recipientPlaceholder, placeholder, orderedRecipients, orderedRecipients),
+            findRecipientByPlaceholder(
+              recipientPlaceholder,
+              placeholder,
+              orderedRecipients,
+              orderedRecipients,
+            ),
           createdItem.id,
         );
 

@@ -1,3 +1,7 @@
+import { expect, test } from '@playwright/test';
+import { DocumentSigningOrder, RecipientRole } from '@prisma/client';
+import { customAlphabet } from 'nanoid';
+
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { createDocumentAuthOptions } from '@documenso/lib/utils/document-auth';
 import { mapSecondaryIdToTemplateId } from '@documenso/lib/utils/envelope';
@@ -6,9 +10,6 @@ import { prisma } from '@documenso/prisma';
 import { seedTeam } from '@documenso/prisma/seed/teams';
 import { seedDirectTemplate, seedTemplate } from '@documenso/prisma/seed/templates';
 import { seedTestEmail, seedUser } from '@documenso/prisma/seed/users';
-import { expect, test } from '@playwright/test';
-import { DocumentSigningOrder, RecipientRole } from '@prisma/client';
-import { customAlphabet } from 'nanoid';
 
 import { apiSignin } from '../fixtures/authentication';
 
@@ -138,7 +139,9 @@ test('[DIRECT_TEMPLATES]: V1 direct template link auth access', async ({ page })
     },
   });
 
-  const directTemplatePath = formatDirectTemplatePath(directTemplateWithAuth.directLink?.token || '');
+  const directTemplatePath = formatDirectTemplatePath(
+    directTemplateWithAuth.directLink?.token || '',
+  );
 
   await page.goto(directTemplatePath);
 
@@ -178,7 +181,9 @@ test('[DIRECT_TEMPLATES]: V2 direct template link auth access', async ({ page })
     },
   });
 
-  const directTemplatePath = formatDirectTemplatePath(directTemplateWithAuth.directLink?.token || '');
+  const directTemplatePath = formatDirectTemplatePath(
+    directTemplateWithAuth.directLink?.token || '',
+  );
 
   await page.goto(directTemplatePath);
 
@@ -307,7 +312,9 @@ test('[DIRECT_TEMPLATES]: V1 use direct template link with 2 recipients with nex
     },
   });
 
-  const updatedSecondRecipient = createdEnvelopeRecipients.find((recipient) => recipient.signingOrder === 2);
+  const updatedSecondRecipient = createdEnvelopeRecipients.find(
+    (recipient) => recipient.signingOrder === 2,
+  );
 
   expect(updatedSecondRecipient?.name).toBe(newName);
   expect(updatedSecondRecipient?.email).toBe(newSecondSignerEmail);
@@ -392,7 +399,9 @@ test('[DIRECT_TEMPLATES]: V2 use direct template link with 2 recipients with nex
     },
   });
 
-  const updatedSecondRecipient = createdEnvelopeRecipients.find((recipient) => recipient.signingOrder === 2);
+  const updatedSecondRecipient = createdEnvelopeRecipients.find(
+    (recipient) => recipient.signingOrder === 2,
+  );
 
   expect(updatedSecondRecipient?.name).toBe(newName);
   expect(updatedSecondRecipient?.email).toBe(newSecondSignerEmail);

@@ -1,3 +1,11 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { File as FileIcon, Upload, X } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
@@ -12,13 +20,6 @@ import {
 } from '@documenso/ui/primitives/dialog';
 import { Form, FormControl, FormField, FormItem } from '@documenso/ui/primitives/form/form';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { File as FileIcon, Upload, X } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 import { useCurrentTeam } from '~/providers/team';
 
@@ -36,7 +37,12 @@ export type TemplateBulkSendDialogProps = {
   onSuccess?: () => void;
 };
 
-export const TemplateBulkSendDialog = ({ templateId, recipients, trigger, onSuccess }: TemplateBulkSendDialogProps) => {
+export const TemplateBulkSendDialog = ({
+  templateId,
+  recipients,
+  trigger,
+  onSuccess,
+}: TemplateBulkSendDialogProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
 
@@ -52,7 +58,10 @@ export const TemplateBulkSendDialog = ({ templateId, recipients, trigger, onSucc
   const { mutateAsync: uploadBulkSend } = trpc.template.uploadBulkSend.useMutation();
 
   const onDownloadTemplate = () => {
-    const headers = recipients.flatMap((_, index) => [`recipient_${index + 1}_email`, `recipient_${index + 1}_name`]);
+    const headers = recipients.flatMap((_, index) => [
+      `recipient_${index + 1}_email`,
+      `recipient_${index + 1}_name`,
+    ]);
 
     const exampleRow = recipients.flatMap((recipient) => [recipient.email, recipient.name || '']);
 
@@ -83,7 +92,9 @@ export const TemplateBulkSendDialog = ({ templateId, recipients, trigger, onSucc
 
       toast({
         title: _(msg`Success`),
-        description: _(msg`Your bulk send has been initiated. You will receive an email notification upon completion.`),
+        description: _(
+          msg`Your bulk send has been initiated. You will receive an email notification upon completion.`,
+        ),
       });
 
       form.reset();
@@ -118,8 +129,8 @@ export const TemplateBulkSendDialog = ({ templateId, recipients, trigger, onSucc
 
           <DialogDescription>
             <Trans>
-              Upload a CSV file to create multiple documents from this template. Each row represents one document with
-              its recipient details.
+              Upload a CSV file to create multiple documents from this template. Each row represents
+              one document with its recipient details.
             </Trans>
           </DialogDescription>
         </DialogHeader>
@@ -127,14 +138,14 @@ export const TemplateBulkSendDialog = ({ templateId, recipients, trigger, onSucc
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-y-4">
             <div className="rounded-lg border bg-muted/70 p-4">
-              <h3 className="font-medium text-sm">
+              <h3 className="text-sm font-medium">
                 <Trans>CSV Structure</Trans>
               </h3>
 
-              <p className="mt-1 text-muted-foreground text-sm">
+              <p className="mt-1 text-sm text-muted-foreground">
                 <Trans>
-                  For each recipient, provide their email (required) and name (optional) in separate columns. Download
-                  the template CSV below for the correct format.
+                  For each recipient, provide their email (required) and name (optional) in separate
+                  columns. Download the template CSV below for the correct format.
                 </Trans>
               </p>
 
@@ -142,9 +153,11 @@ export const TemplateBulkSendDialog = ({ templateId, recipients, trigger, onSucc
                 <Trans>Current recipients:</Trans>
               </p>
 
-              <ul className="mt-2 list-inside list-disc text-muted-foreground text-sm">
+              <ul className="mt-2 list-inside list-disc text-sm text-muted-foreground">
                 {recipients.map((recipient, index) => (
-                  <li key={index}>{recipient.name ? `${recipient.name} (${recipient.email})` : recipient.email}</li>
+                  <li key={index}>
+                    {recipient.name ? `${recipient.name} (${recipient.email})` : recipient.email}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -154,7 +167,7 @@ export const TemplateBulkSendDialog = ({ templateId, recipients, trigger, onSucc
                 <Trans>Download Template CSV</Trans>
               </Button>
 
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 <Trans>Pre-formatted CSV template with example data.</Trans>
               </p>
             </div>
@@ -194,7 +207,7 @@ export const TemplateBulkSendDialog = ({ templateId, recipients, trigger, onSucc
                         <Button
                           type="button"
                           variant="link"
-                          className="p-0 text-destructive text-xs hover:text-destructive"
+                          className="p-0 text-xs text-destructive hover:text-destructive"
                           onClick={() => onChange(null)}
                           disabled={form.formState.isSubmitting}
                         >
@@ -207,11 +220,12 @@ export const TemplateBulkSendDialog = ({ templateId, recipients, trigger, onSucc
                     )}
                   </FormControl>
 
-                  {error && <p className="text-destructive text-sm">{error.message}</p>}
+                  {error && <p className="text-sm text-destructive">{error.message}</p>}
 
-                  <p className="text-muted-foreground text-xs">
+                  <p className="text-xs text-muted-foreground">
                     <Trans>
-                      Maximum file size: 4MB. Maximum 100 rows per upload. Blank values will use template defaults.
+                      Maximum file size: 4MB. Maximum 100 rows per upload. Blank values will use
+                      template defaults.
                     </Trans>
                   </p>
                 </FormItem>
@@ -225,11 +239,15 @@ export const TemplateBulkSendDialog = ({ templateId, recipients, trigger, onSucc
                 <FormItem className="flex items-center space-x-2">
                   <FormControl>
                     <div className="flex items-center">
-                      <Checkbox id="send-immediately" checked={field.value} onCheckedChange={field.onChange} />
+                      <Checkbox
+                        id="send-immediately"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
 
                       <label
                         htmlFor="send-immediately"
-                        className="ml-2 flex items-center text-muted-foreground text-sm"
+                        className="ml-2 flex items-center text-sm text-muted-foreground"
                       >
                         <Trans>Send documents to recipients immediately</Trans>
                       </label>

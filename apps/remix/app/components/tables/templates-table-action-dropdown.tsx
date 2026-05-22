@@ -1,3 +1,20 @@
+import { useState } from 'react';
+
+import { Trans } from '@lingui/react/macro';
+import { DocumentStatus, EnvelopeType, type TemplateDirectLink } from '@prisma/client';
+import {
+  Copy,
+  Download,
+  Edit,
+  FolderIcon,
+  MoreHorizontal,
+  Pencil,
+  Share2Icon,
+  Trash2,
+  Upload,
+} from 'lucide-react';
+import { Link } from 'react-router';
+
 import type { TRecipientLite } from '@documenso/lib/types/recipient';
 import { trpc as trpcReact } from '@documenso/trpc/react';
 import {
@@ -7,11 +24,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@documenso/ui/primitives/dropdown-menu';
-import { Trans } from '@lingui/react/macro';
-import { DocumentStatus, EnvelopeType, type TemplateDirectLink } from '@prisma/client';
-import { Copy, Download, Edit, FolderIcon, MoreHorizontal, Pencil, Share2Icon, Trash2, Upload } from 'lucide-react';
-import { useState } from 'react';
-import { Link } from 'react-router';
 
 import { EnvelopeDeleteDialog } from '../dialogs/envelope-delete-dialog';
 import { EnvelopeDownloadDialog } from '../dialogs/envelope-download-dialog';

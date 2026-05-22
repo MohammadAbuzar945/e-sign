@@ -1,8 +1,3 @@
-import { getSession } from '@documenso/auth/server/lib/utils/get-session';
-import { LicenseClient } from '@documenso/lib/server-only/license/license-client';
-import { isAdmin } from '@documenso/lib/utils/is-admin';
-import { cn } from '@documenso/ui/lib/utils';
-import { Button } from '@documenso/ui/primitives/button';
 import { msg } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import {
@@ -17,6 +12,12 @@ import {
   Wallet2,
 } from 'lucide-react';
 import { Link, Outlet, redirect, useLocation } from 'react-router';
+
+import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import { LicenseClient } from '@documenso/lib/server-only/license/license-client';
+import { isAdmin } from '@documenso/lib/utils/is-admin';
+import { cn } from '@documenso/ui/lib/utils';
+import { Button } from '@documenso/ui/primitives/button';
 
 import { AdminLicenseStatusBanner } from '~/components/general/admin-license-status-banner';
 import { appMetaTags } from '~/utils/meta';
@@ -49,7 +50,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
     <div className="mx-auto w-full max-w-screen-xl px-4 md:px-8">
       <AdminLicenseStatusBanner license={license} />
 
-      <h1 className="font-semibold text-4xl">
+      <h1 className="text-4xl font-semibold">
         <Trans>Admin Panel</Trans>
       </h1>
 
@@ -61,7 +62,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
         >
           <Button
             variant="ghost"
-            className={cn('justify-start md:w-full', pathname?.startsWith('/admin/stats') && 'bg-secondary')}
+            className={cn(
+              'justify-start md:w-full',
+              pathname?.startsWith('/admin/stats') && 'bg-secondary',
+            )}
             asChild
           >
             <Link to="/admin/stats">
@@ -72,7 +76,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
 
           <Button
             variant="ghost"
-            className={cn('justify-start md:w-full', pathname?.startsWith('/admin/organisations') && 'bg-secondary')}
+            className={cn(
+              'justify-start md:w-full',
+              pathname?.startsWith('/admin/organisations') && 'bg-secondary',
+            )}
             asChild
           >
             <Link to="/admin/organisations">
@@ -83,7 +90,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
 
           <Button
             variant="ghost"
-            className={cn('justify-start md:w-full', pathname?.startsWith('/admin/claims') && 'bg-secondary')}
+            className={cn(
+              'justify-start md:w-full',
+              pathname?.startsWith('/admin/claims') && 'bg-secondary',
+            )}
             asChild
           >
             <Link to="/admin/claims">
@@ -94,7 +104,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
 
           <Button
             variant="ghost"
-            className={cn('justify-start md:w-full', pathname?.startsWith('/admin/users') && 'bg-secondary')}
+            className={cn(
+              'justify-start md:w-full',
+              pathname?.startsWith('/admin/users') && 'bg-secondary',
+            )}
             asChild
           >
             <Link to="/admin/users">
@@ -105,7 +118,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
 
           <Button
             variant="ghost"
-            className={cn('justify-start md:w-full', pathname?.startsWith('/admin/documents') && 'bg-secondary')}
+            className={cn(
+              'justify-start md:w-full',
+              pathname?.startsWith('/admin/documents') && 'bg-secondary',
+            )}
             asChild
           >
             <Link to="/admin/documents">
@@ -130,7 +146,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
 
           <Button
             variant="ghost"
-            className={cn('justify-start md:w-full', pathname?.startsWith('/admin/email-domains') && 'bg-secondary')}
+            className={cn(
+              'justify-start md:w-full',
+              pathname?.startsWith('/admin/email-domains') && 'bg-secondary',
+            )}
             asChild
           >
             <Link to="/admin/email-domains">
@@ -155,7 +174,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
 
           <Button
             variant="ghost"
-            className={cn('justify-start md:w-full', pathname?.startsWith('/admin/site-settings') && 'bg-secondary')}
+            className={cn(
+              'justify-start md:w-full',
+              pathname?.startsWith('/admin/site-settings') && 'bg-secondary',
+            )}
             asChild
           >
             <Link to="/admin/site-settings">

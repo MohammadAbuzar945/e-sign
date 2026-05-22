@@ -14,9 +14,13 @@ export const ZDownloadEnvelopeItemRequestQuerySchema = z.object({
     ),
 });
 
-export type TDownloadEnvelopeItemRequestParams = z.infer<typeof ZDownloadEnvelopeItemRequestParamsSchema>;
+export type TDownloadEnvelopeItemRequestParams = z.infer<
+  typeof ZDownloadEnvelopeItemRequestParamsSchema
+>;
 
-export type TDownloadEnvelopeItemRequestQuery = z.infer<typeof ZDownloadEnvelopeItemRequestQuerySchema>;
+export type TDownloadEnvelopeItemRequestQuery = z.infer<
+  typeof ZDownloadEnvelopeItemRequestQuerySchema
+>;
 
 export const ZDownloadDocumentRequestParamsSchema = z.object({
   documentId: z.coerce.number().describe('The ID of the document to download.'),

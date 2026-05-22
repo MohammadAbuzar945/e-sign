@@ -1,3 +1,13 @@
+import { useEffect, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans, useLingui } from '@lingui/react/macro';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { Plus } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { useRevalidator } from 'react-router';
+import type { z } from 'zod';
+
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { ZCreateTeamEmailVerificationMutationSchema } from '@documenso/trpc/server/team-router/schema';
@@ -11,17 +21,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useRevalidator } from 'react-router';
-import type { z } from 'zod';
 
 export type TeamEmailAddDialogProps = {
   teamId: number;
@@ -50,7 +59,8 @@ export const TeamEmailAddDialog = ({ teamId, trigger, ...props }: TeamEmailAddDi
     },
   });
 
-  const { mutateAsync: sendTeamEmailVerification, isPending } = trpc.team.email.verification.send.useMutation();
+  const { mutateAsync: sendTeamEmailVerification, isPending } =
+    trpc.team.email.verification.send.useMutation();
 
   const onFormSubmit = async ({ name, email }: TCreateTeamEmailFormSchema) => {
     try {
@@ -96,11 +106,15 @@ export const TeamEmailAddDialog = ({ teamId, trigger, ...props }: TeamEmailAddDi
   }, [open, form]);
 
   return (
-    <Dialog {...props} open={open} onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}>
+    <Dialog
+      {...props}
+      open={open}
+      onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}
+    >
       <DialogTrigger onClick={(e) => e.stopPropagation()} asChild={true}>
         {trigger ?? (
           <Button variant="outline" loading={isPending} className="bg-background">
-            <Plus className="mr-1 -ml-1 h-5 w-5" />
+            <Plus className="-ml-1 mr-1 h-5 w-5" />
             <Trans>Add email</Trans>
           </Button>
         )}
@@ -119,7 +133,10 @@ export const TeamEmailAddDialog = ({ teamId, trigger, ...props }: TeamEmailAddDi
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onFormSubmit)}>
-            <fieldset className="flex h-full flex-col space-y-4" disabled={form.formState.isSubmitting}>
+            <fieldset
+              className="flex h-full flex-col space-y-4"
+              disabled={form.formState.isSubmitting}
+            >
               <FormField
                 control={form.control}
                 name="name"
@@ -145,7 +162,11 @@ export const TeamEmailAddDialog = ({ teamId, trigger, ...props }: TeamEmailAddDi
                       <Trans>Email</Trans>
                     </FormLabel>
                     <FormControl>
-                      <Input className="bg-background" placeholder="example@example.com" {...field} />
+                      <Input
+                        className="bg-background"
+                        placeholder="example@example.com"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

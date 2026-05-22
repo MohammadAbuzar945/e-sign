@@ -1,4 +1,7 @@
-import { ZCreateEnvelopeRequestSchema, ZCreateEnvelopeResponseSchema } from '../envelope-router/create-envelope.types';
+import {
+  ZCreateEnvelopeRequestSchema,
+  ZCreateEnvelopeResponseSchema,
+} from '../envelope-router/create-envelope.types';
 
 export const ZCreateEmbeddingEnvelopeRequestSchema = ZCreateEnvelopeRequestSchema;
 

@@ -1,9 +1,10 @@
+import type { Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
 import { getTemplateById } from '@documenso/lib/server-only/template/get-template-by-id';
 import { mapSecondaryIdToTemplateId } from '@documenso/lib/utils/envelope';
 import { seedBlankTemplate } from '@documenso/prisma/seed/templates';
 import { seedUser } from '@documenso/prisma/seed/users';
-import type { Page } from '@playwright/test';
-import { expect, test } from '@playwright/test';
 
 import { apiSignin } from '../fixtures/authentication';
 
@@ -49,7 +50,9 @@ test.describe('AutoSave Settings Step - Templates', () => {
         teamId: team.id,
       });
 
-      await expect(page.getByRole('textbox', { name: 'Title *' })).toHaveValue(retrievedTemplate.title);
+      await expect(page.getByRole('textbox', { name: 'Title *' })).toHaveValue(
+        retrievedTemplate.title,
+      );
     }).toPass();
   });
 

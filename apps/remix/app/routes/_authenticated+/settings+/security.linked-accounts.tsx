@@ -1,3 +1,11 @@
+import { useMemo, useState } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { useQuery } from '@tanstack/react-query';
+import { DateTime } from 'luxon';
+
 import { authClient } from '@documenso/auth/client';
 import { Button } from '@documenso/ui/primitives/button';
 import type { DataTableColumnDef } from '@documenso/ui/primitives/data-table';
@@ -14,11 +22,6 @@ import {
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { useQuery } from '@tanstack/react-query';
-import { DateTime } from 'luxon';
-import { useMemo, useState } from 'react';
 
 import { SettingsHeader } from '~/components/general/settings-header';
 import { appMetaTags } from '~/utils/meta';
@@ -48,12 +51,18 @@ export default function SettingsSecurityLinkedAccounts() {
         header: t`Linked At`,
         accessorKey: 'createdAt',
         cell: ({ row }) =>
-          row.original.createdAt ? DateTime.fromJSDate(row.original.createdAt).toRelative() : t`Unknown`,
+          row.original.createdAt
+            ? DateTime.fromJSDate(row.original.createdAt).toRelative()
+            : t`Unknown`,
       },
       {
         id: 'actions',
         cell: ({ row }) => (
-          <AccountUnlinkDialog accountId={row.original.id} provider={row.original.provider} onSuccess={refetch} />
+          <AccountUnlinkDialog
+            accountId={row.original.id}
+            provider={row.original.provider}
+            onSuccess={refetch}
+          />
         ),
       },
     ] satisfies DataTableColumnDef<(typeof results)[number]>[];
@@ -150,8 +159,8 @@ const AccountUnlinkDialog = ({ accountId, onSuccess, provider }: AccountUnlinkDi
 
           <DialogDescription className="mt-4">
             <Trans>
-              You are about to remove the <span className="font-semibold">{provider}</span> login method from your
-              account.
+              You are about to remove the <span className="font-semibold">{provider}</span> login
+              method from your account.
             </Trans>
           </DialogDescription>
         </DialogHeader>

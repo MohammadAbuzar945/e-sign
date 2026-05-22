@@ -7,5 +7,9 @@ export const ZSwapOrganisationSubscriptionRequestSchema = z.object({
 
 export const ZSwapOrganisationSubscriptionResponseSchema = z.void();
 
-export type TSwapOrganisationSubscriptionRequest = z.infer<typeof ZSwapOrganisationSubscriptionRequestSchema>;
-export type TSwapOrganisationSubscriptionResponse = z.infer<typeof ZSwapOrganisationSubscriptionResponseSchema>;
+export type TSwapOrganisationSubscriptionRequest = z.infer<
+  typeof ZSwapOrganisationSubscriptionRequestSchema
+>;
+export type TSwapOrganisationSubscriptionResponse = z.infer<
+  typeof ZSwapOrganisationSubscriptionResponseSchema
+>;

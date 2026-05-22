@@ -1,7 +1,8 @@
+import * as React from 'react';
+
 import { Trans } from '@lingui/react/macro';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import * as React from 'react';
 
 import { cn } from '../lib/utils';
 
@@ -38,7 +39,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      'data-[state=closed]:fade-out data-[state=open]:fade-in fixed inset-0 z-50 bg-background/80 backdrop-blur-sm transition-all duration-100 data-[state=closed]:animate-out',
+      'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm transition-all duration-100 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in',
       className,
     )}
     {...props}
@@ -55,36 +56,41 @@ const DialogContent = React.forwardRef<
     /* Below prop is to add additional classes to the overlay */
     overlayClassName?: string;
   }
->(({ className, children, overlayClassName, position = 'start', hideClose = false, ...props }, ref) => (
-  <DialogPortal position={position}>
-    <DialogOverlay className={cn(overlayClassName)} />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        'data-[state=open]:fade-in-90 data-[state=open]:slide-in-from-bottom-10 sm:zoom-in-90 data-[state=open]:sm:slide-in-from-bottom-0 fixed z-50 grid w-full animate-in gap-4 border bg-background p-6 shadow-lg sm:max-w-lg sm:rounded-lg',
-        {
-          'rounded-b-xl': position === 'start',
-          'rounded-t-xl': position === 'end',
-        },
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      {!hideClose && (
-        <DialogPrimitive.Close
-          data-testid="btn-dialog-close"
-          className="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
-        >
-          <X className="h-4 w-4" />
-          <span className="sr-only">
-            <Trans>Close</Trans>
-          </span>
-        </DialogPrimitive.Close>
-      )}
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
+>(
+  (
+    { className, children, overlayClassName, position = 'start', hideClose = false, ...props },
+    ref,
+  ) => (
+    <DialogPortal position={position}>
+      <DialogOverlay className={cn(overlayClassName)} />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          'fixed z-50 grid w-full gap-4 border bg-background p-6 shadow-lg animate-in data-[state=open]:fade-in-90 data-[state=open]:slide-in-from-bottom-10 sm:max-w-lg sm:rounded-lg sm:zoom-in-90 data-[state=open]:sm:slide-in-from-bottom-0',
+          {
+            'rounded-b-xl': position === 'start',
+            'rounded-t-xl': position === 'end',
+          },
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        {!hideClose && (
+          <DialogPrimitive.Close
+            data-testid="btn-dialog-close"
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">
+              <Trans>Close</Trans>
+            </span>
+          </DialogPrimitive.Close>
+        )}
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  ),
+);
 
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
@@ -112,7 +118,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn('truncate font-semibold text-lg tracking-tight', className)}
+    className={cn('truncate text-lg font-semibold tracking-tight', className)}
     {...props}
   />
 ));
@@ -123,20 +129,24 @@ const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description ref={ref} className={cn('text-muted-foreground text-sm', className)} {...props} />
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn('text-sm text-muted-foreground', className)}
+    {...props}
+  />
 ));
 
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
 export {
   Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogOverlay,
-  DialogPortal,
-  DialogTitle,
   DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogOverlay,
+  DialogTitle,
+  DialogDescription,
+  DialogPortal,
+  DialogClose,
 };

@@ -1,13 +1,14 @@
-import { RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-roles';
-import { isTemplateRecipientEmailPlaceholder } from '@documenso/lib/constants/template';
-import type { TRecipientLite } from '@documenso/lib/types/recipient';
-import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
-import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { PenIcon, PlusIcon } from 'lucide-react';
 import { Link } from 'react-router';
+
+import { RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-roles';
+import { isTemplateRecipientEmailPlaceholder } from '@documenso/lib/constants/template';
+import type { TRecipientLite } from '@documenso/lib/types/recipient';
+import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
+import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 
 export type TemplatePageViewRecipientsProps = {
   recipients: TRecipientLite[];
@@ -37,7 +38,11 @@ export const TemplatePageViewRecipients = ({
             title={_(msg`Modify recipients`)}
             className="flex flex-row items-center justify-between"
           >
-            {recipients.length === 0 ? <PlusIcon className="ml-2 h-4 w-4" /> : <PenIcon className="ml-2 h-3 w-3" />}
+            {recipients.length === 0 ? (
+              <PlusIcon className="ml-2 h-4 w-4" />
+            ) : (
+              <PenIcon className="ml-2 h-3 w-3" />
+            )}
           </Link>
         )}
       </div>
@@ -59,13 +64,13 @@ export const TemplatePageViewRecipients = ({
               }
               primaryText={
                 isTemplateRecipientEmailPlaceholder(recipient.email) ? (
-                  <p className="text-muted-foreground text-sm">{recipient.name}</p>
+                  <p className="text-sm text-muted-foreground">{recipient.name}</p>
                 ) : (
-                  <p className="text-muted-foreground text-sm">{recipient.email}</p>
+                  <p className="text-sm text-muted-foreground">{recipient.email}</p>
                 )
               }
               secondaryText={
-                <p className="text-muted-foreground/70 text-xs">
+                <p className="text-xs text-muted-foreground/70">
                   {_(RECIPIENT_ROLES_DESCRIPTION[recipient.role].roleName)}
                 </p>
               }

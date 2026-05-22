@@ -5,7 +5,10 @@ type SaveRequest<T, R> = {
   onResponse?: (response: R) => void;
 };
 
-export const useAutoSave = <T, R = void>(onSave: (data: T) => Promise<R>, options: { delay?: number } = {}) => {
+export const useAutoSave = <T, R = void>(
+  onSave: (data: T) => Promise<R>,
+  options: { delay?: number } = {},
+) => {
   const { delay = 2000 } = options;
 
   const saveTimeoutRef = useRef<NodeJS.Timeout>();

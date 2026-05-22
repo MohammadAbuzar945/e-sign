@@ -6,4 +6,6 @@ export const ZAcceptOrganisationMemberInviteRequestSchema = z.object({
 
 export const ZAcceptOrganisationMemberInviteResponseSchema = z.void();
 
-export type TAcceptOrganisationMemberInviteResponse = z.infer<typeof ZAcceptOrganisationMemberInviteResponseSchema>;
+export type TAcceptOrganisationMemberInviteResponse = z.infer<
+  typeof ZAcceptOrganisationMemberInviteResponseSchema
+>;

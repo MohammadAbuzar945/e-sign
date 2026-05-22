@@ -1,3 +1,14 @@
+import { useEffect, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { ArrowLeftIcon, KeyIcon, MailIcon } from 'lucide-react';
+import { DateTime } from 'luxon';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import type { TRecipientAccessAuth } from '@documenso/lib/types/document-auth';
 import { trpc } from '@documenso/trpc/react';
 import { cn } from '@documenso/ui/lib/utils';
@@ -6,15 +17,6 @@ import { Button } from '@documenso/ui/primitives/button';
 import { Form, FormField, FormItem } from '@documenso/ui/primitives/form/form';
 import { PinInput, PinInputGroup, PinInputSlot } from '@documenso/ui/primitives/pin-input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { ArrowLeftIcon, KeyIcon, MailIcon } from 'lucide-react';
-import { DateTime } from 'luxon';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 
@@ -146,7 +148,7 @@ export const AccessAuth2FAForm = ({ onSubmit, token, error }: AccessAuth2FAFormP
       {step === 'method-selection' && (
         <div className="space-y-4">
           <div>
-            <h3 className="font-semibold text-lg">
+            <h3 className="text-lg font-semibold">
               <Trans>Choose verification method</Trans>
             </h3>
             <p className="text-muted-foreground text-sm">
@@ -209,7 +211,7 @@ export const AccessAuth2FAForm = ({ onSubmit, token, error }: AccessAuth2FAFormP
               <ArrowLeftIcon className="h-4 w-4" />
             </Button>
 
-            <h3 className="font-semibold text-lg">
+            <h3 className="text-lg font-semibold">
               <Trans>Enter verification code</Trans>
             </h3>
           </div>
@@ -217,15 +219,22 @@ export const AccessAuth2FAForm = ({ onSubmit, token, error }: AccessAuth2FAFormP
           <div className="text-muted-foreground text-sm">
             {selectedMethod === 'email' ? (
               <Trans>
-                We've sent a 6-digit verification code to your email. Please enter it below to complete the document.
+                We've sent a 6-digit verification code to your email. Please enter it below to
+                complete the document.
               </Trans>
             ) : (
-              <Trans>Please open your authenticator app and enter the 6-digit code for this document.</Trans>
+              <Trans>
+                Please open your authenticator app and enter the 6-digit code for this document.
+              </Trans>
             )}
           </div>
 
           <Form {...form}>
-            <form id="access-auth-2fa-form" className="space-y-4" onSubmit={form.handleSubmit(onFormSubmit)}>
+            <form
+              id="access-auth-2fa-form"
+              className="space-y-4"
+              onSubmit={form.handleSubmit(onFormSubmit)}
+            >
               <fieldset disabled={isRequesting2FAEmail || form.formState.isSubmitting}>
                 <FormField
                   control={form.control}
@@ -253,12 +262,15 @@ export const AccessAuth2FAForm = ({ onSubmit, token, error }: AccessAuth2FAFormP
 
                       {expiresAt && millisecondsRemaining !== null && (
                         <div
-                          className={cn('mt-2 text-center text-muted-foreground text-sm', {
+                          className={cn('text-muted-foreground mt-2 text-center text-sm', {
                             'text-destructive': millisecondsRemaining <= 0,
                           })}
                         >
                           <Trans>
-                            Expires in {DateTime.fromMillis(Math.max(millisecondsRemaining, 0)).toFormat('mm:ss')}
+                            Expires in{' '}
+                            {DateTime.fromMillis(Math.max(millisecondsRemaining, 0)).toFormat(
+                              'mm:ss',
+                            )}
                           </Trans>
                         </div>
                       )}

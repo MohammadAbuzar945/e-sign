@@ -13,7 +13,10 @@ import {
 
 import type { WebhookPayload } from '../../../types/webhook-payload';
 
-export const generateSampleWebhookPayload = (event: WebhookTriggerEvents, webhookUrl: string): WebhookPayload => {
+export const generateSampleWebhookPayload = (
+  event: WebhookTriggerEvents,
+  webhookUrl: string,
+): WebhookPayload => {
   const now = new Date();
   const basePayload = {
     id: 10,

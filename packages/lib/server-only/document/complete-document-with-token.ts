@@ -1,10 +1,3 @@
-import { DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
-import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones';
-import { DOCUMENT_AUDIT_LOG_TYPE, RECIPIENT_DIFF_TYPE } from '@documenso/lib/types/document-audit-logs';
-import type { RequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
-import { fieldsContainUnsignedRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
-import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
-import { prisma } from '@documenso/prisma';
 import {
   DocumentSigningOrder,
   DocumentStatus,
@@ -17,11 +10,25 @@ import {
 } from '@prisma/client';
 import { DateTime } from 'luxon';
 
+import { DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
+import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones';
+import {
+  DOCUMENT_AUDIT_LOG_TYPE,
+  RECIPIENT_DIFF_TYPE,
+} from '@documenso/lib/types/document-audit-logs';
+import type { RequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
+import { fieldsContainUnsignedRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
+import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
+import { prisma } from '@documenso/prisma';
+
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { jobs } from '../../jobs/client';
 import type { TRecipientAccessAuth } from '../../types/document-auth';
 import { DocumentAuth } from '../../types/document-auth';
-import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../types/webhook-payload';
+import {
+  ZWebhookDocumentSchema,
+  mapEnvelopeToWebhookDocumentPayload,
+} from '../../types/webhook-payload';
 import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { mapSecondaryIdToDocumentId, unsafeBuildEnvelopeIdQuery } from '../../utils/envelope';
@@ -110,7 +117,9 @@ export const completeDocumentWithToken = async ({
     });
 
     if (!isRecipientsTurn) {
-      throw new Error(`Recipient ${recipient.id} attempted to complete the document before it was their turn`);
+      throw new Error(
+        `Recipient ${recipient.id} attempted to complete the document before it was their turn`,
+      );
     }
   }
 
@@ -180,7 +189,9 @@ export const completeDocumentWithToken = async ({
   });
 
   // This should be scoped to the current recipient.
-  const uninsertedDateFields = fields.filter((field) => field.type === FieldType.DATE && !field.inserted);
+  const uninsertedDateFields = fields.filter(
+    (field) => field.type === FieldType.DATE && !field.inserted,
+  );
 
   let recipientName = recipient.name;
   let recipientEmail = recipient.email;

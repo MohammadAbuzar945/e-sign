@@ -1,3 +1,15 @@
+import { useEffect, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useLingui } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { OrganisationMemberRole } from '@prisma/client';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router';
+import { match } from 'ts-pattern';
+import { z } from 'zod';
+
 import { getHighestOrganisationRoleInGroup } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import type { TGetAdminOrganisationResponse } from '@documenso/trpc/server/admin-router/get-admin-organisation.types';
@@ -11,18 +23,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { OrganisationMemberRole } from '@prisma/client';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router';
-import { match } from 'ts-pattern';
-import { z } from 'zod';
 
 export type AdminOrganisationMemberUpdateDialogProps = {
   trigger?: React.ReactNode;
@@ -53,7 +69,9 @@ export const AdminOrganisationMemberUpdateDialog = ({
   // Determine the current role value for the form
   const currentRoleValue = isOwner
     ? 'OWNER'
-    : getHighestOrganisationRoleInGroup(organisationMember.organisationGroupMembers.map((ogm) => ogm.group));
+    : getHighestOrganisationRoleInGroup(
+        organisationMember.organisationGroupMembers.map((ogm) => ogm.group),
+      );
   const organisationMemberName = organisationMember.user.name ?? organisationMember.user.email;
 
   const form = useForm<ZUpdateOrganisationMemberSchema>({
@@ -63,7 +81,8 @@ export const AdminOrganisationMemberUpdateDialog = ({
     },
   });
 
-  const { mutateAsync: updateOrganisationMemberRole } = trpc.admin.organisationMember.updateRole.useMutation();
+  const { mutateAsync: updateOrganisationMemberRole } =
+    trpc.admin.organisationMember.updateRole.useMutation();
 
   const onFormSubmit = async ({ role }: ZUpdateOrganisationMemberSchema) => {
     try {
@@ -116,7 +135,11 @@ export const AdminOrganisationMemberUpdateDialog = ({
   }, [open, currentRoleValue, form]);
 
   return (
-    <Dialog {...props} open={open} onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}>
+    <Dialog
+      {...props}
+      open={open}
+      onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}
+    >
       <DialogTrigger onClick={(e) => e.stopPropagation()} asChild>
         {trigger ?? (
           <Button variant="secondary">
@@ -133,7 +156,8 @@ export const AdminOrganisationMemberUpdateDialog = ({
 
           <DialogDescription className="mt-4">
             <Trans>
-              You are currently updating <span className="font-bold">{organisationMemberName}</span>.
+              You are currently updating <span className="font-bold">{organisationMemberName}</span>
+              .
             </Trans>
           </DialogDescription>
         </DialogHeader>

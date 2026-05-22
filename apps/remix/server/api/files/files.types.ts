@@ -1,5 +1,6 @@
-import DocumentDataSchema from '@documenso/prisma/generated/zod/modelSchema/DocumentDataSchema';
 import { z } from 'zod';
+
+import DocumentDataSchema from '@documenso/prisma/generated/zod/modelSchema/DocumentDataSchema';
 
 export const ZUploadPdfRequestSchema = z.object({
   file: z.instanceof(File),
@@ -31,20 +32,26 @@ export const ZGetEnvelopeItemFileRequestParamsSchema = z.object({
   envelopeItemId: z.string().min(1),
 });
 
-export type TGetEnvelopeItemFileRequestParams = z.infer<typeof ZGetEnvelopeItemFileRequestParamsSchema>;
+export type TGetEnvelopeItemFileRequestParams = z.infer<
+  typeof ZGetEnvelopeItemFileRequestParamsSchema
+>;
 
 export const ZGetEnvelopeItemFileRequestQuerySchema = z.object({
   token: z.string().optional(),
 });
 
-export type TGetEnvelopeItemFileRequestQuery = z.infer<typeof ZGetEnvelopeItemFileRequestQuerySchema>;
+export type TGetEnvelopeItemFileRequestQuery = z.infer<
+  typeof ZGetEnvelopeItemFileRequestQuerySchema
+>;
 
 export const ZGetEnvelopeItemFileTokenRequestParamsSchema = z.object({
   token: z.string().min(1),
   envelopeItemId: z.string().min(1),
 });
 
-export type TGetEnvelopeItemFileTokenRequestParams = z.infer<typeof ZGetEnvelopeItemFileTokenRequestParamsSchema>;
+export type TGetEnvelopeItemFileTokenRequestParams = z.infer<
+  typeof ZGetEnvelopeItemFileTokenRequestParamsSchema
+>;
 
 export const ZGetEnvelopeItemFileDownloadRequestParamsSchema = z.object({
   envelopeId: z.string().min(1),
@@ -52,7 +59,9 @@ export const ZGetEnvelopeItemFileDownloadRequestParamsSchema = z.object({
   version: z.enum(['signed', 'original', 'pending']).default('signed'),
 });
 
-export type TGetEnvelopeItemFileDownloadRequestParams = z.infer<typeof ZGetEnvelopeItemFileDownloadRequestParamsSchema>;
+export type TGetEnvelopeItemFileDownloadRequestParams = z.infer<
+  typeof ZGetEnvelopeItemFileDownloadRequestParamsSchema
+>;
 
 export const ZGetEnvelopeItemFileTokenDownloadRequestParamsSchema = z.object({
   token: z.string().min(1),

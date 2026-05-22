@@ -1,6 +1,7 @@
-import { NEXT_PRIVATE_SIGNING_TIMESTAMP_AUTHORITY } from '@documenso/lib/constants/app';
 import { HttpTimestampAuthority } from '@libpdf/core';
 import { once } from 'remeda';
+
+import { NEXT_PRIVATE_SIGNING_TIMESTAMP_AUTHORITY } from '@documenso/lib/constants/app';
 
 const setupTimestampAuthorities = once(() => {
   const timestampAuthority = NEXT_PRIVATE_SIGNING_TIMESTAMP_AUTHORITY();

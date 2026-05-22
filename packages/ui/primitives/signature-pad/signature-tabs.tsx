@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion';
 import * as React from 'react';
+
+import { motion } from 'framer-motion';
 
 import { cn } from '../../lib/utils';
 
@@ -25,7 +26,14 @@ function useTabs() {
   return context;
 }
 
-export function Tabs({ defaultValue, value, onValueChange, children, className, ...props }: TabsProps) {
+export function Tabs({
+  defaultValue,
+  value,
+  onValueChange,
+  children,
+  className,
+  ...props
+}: TabsProps) {
   const [tabValue, setTabValue] = React.useState(defaultValue || '');
 
   const handleValueChange = React.useCallback(
@@ -59,7 +67,11 @@ interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function TabsList({ children, className, ...props }: TabsListProps) {
   return (
-    <div className={cn('flex flex-wrap border-border border-b', className)} role="tabslist" {...props}>
+    <div
+      className={cn('border-border flex flex-wrap border-b', className)}
+      role="tabslist"
+      {...props}
+    >
       {children}
     </div>
   );
@@ -83,8 +95,8 @@ export function TabsTrigger({ value, icon, children, className, ...props }: Tabs
       data-state={isSelected ? 'active' : 'inactive'}
       onClick={() => onValueChange(value)}
       className={cn(
-        'relative flex items-center px-4 py-3 font-medium text-sm transition-all',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'relative flex items-center px-4 py-3 text-sm font-medium transition-all',
+        'focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
         isSelected ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
         className,
       )}
@@ -95,7 +107,7 @@ export function TabsTrigger({ value, icon, children, className, ...props }: Tabs
       {isSelected && (
         <motion.div
           layoutId="activeTabIndicator"
-          className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-foreground/40"
+          className="bg-foreground/40 absolute bottom-0 left-0 h-0.5 w-full rounded-full"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{
@@ -123,7 +135,12 @@ export function TabsContent({ value, children, className, ...props }: TabsConten
   }
 
   return (
-    <div role="tabpanel" data-state={isSelected ? 'active' : 'inactive'} className={cn('mt-4', className)} {...props}>
+    <div
+      role="tabpanel"
+      data-state={isSelected ? 'active' : 'inactive'}
+      className={cn('mt-4', className)}
+      {...props}
+    >
       {children}
     </div>
   );

@@ -1,5 +1,6 @@
-import { kyselyPrisma, sql } from '@documenso/prisma';
 import { DateTime } from 'luxon';
+
+import { kyselyPrisma, sql } from '@documenso/prisma';
 
 import { addZeroMonth } from '../add-zero-month';
 
@@ -25,7 +26,9 @@ export const getUserMonthlyGrowth = async (type: 'count' | 'cumulative' = 'count
     datasets: [
       {
         label: type === 'count' ? 'New Users' : 'Total Users',
-        data: result.map((row) => (type === 'count' ? Number(row.count) : Number(row.cume_count))).reverse(),
+        data: result
+          .map((row) => (type === 'count' ? Number(row.count) : Number(row.cume_count)))
+          .reverse(),
       },
     ],
   };

@@ -1,10 +1,18 @@
-import { ZDocumentAccessAuthTypesSchema, ZDocumentActionAuthTypesSchema } from '@documenso/lib/types/document-auth';
-import { ZDocumentMetaUpdateSchema } from '@documenso/lib/types/document-meta';
-import { ZEnvelopeLiteSchema } from '@documenso/lib/types/envelope';
 import { TemplateType } from '@prisma/client';
 import { z } from 'zod';
 
-import { ZDocumentExternalIdSchema, ZDocumentTitleSchema, ZDocumentVisibilitySchema } from '../document-router/schema';
+import {
+  ZDocumentAccessAuthTypesSchema,
+  ZDocumentActionAuthTypesSchema,
+} from '@documenso/lib/types/document-auth';
+import { ZDocumentMetaUpdateSchema } from '@documenso/lib/types/document-meta';
+import { ZEnvelopeLiteSchema } from '@documenso/lib/types/envelope';
+
+import {
+  ZDocumentExternalIdSchema,
+  ZDocumentTitleSchema,
+  ZDocumentVisibilitySchema,
+} from '../document-router/schema';
 import type { TrpcRouteMeta } from '../trpc';
 
 export const updateEnvelopeMeta: TrpcRouteMeta = {

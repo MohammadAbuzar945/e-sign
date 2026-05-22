@@ -1,3 +1,11 @@
+import { useMemo } from 'react';
+
+import { Trans, useLingui } from '@lingui/react/macro';
+import { EmailDomainStatus } from '@prisma/client';
+import { CheckCircle2Icon, ClockIcon } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router';
+import { match } from 'ts-pattern';
+
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
@@ -12,12 +20,6 @@ import { DataTablePagination } from '@documenso/ui/primitives/data-table-paginat
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { EmailDomainStatus } from '@prisma/client';
-import { CheckCircle2Icon, ClockIcon } from 'lucide-react';
-import { useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router';
-import { match } from 'ts-pattern';
 
 import { OrganisationEmailDomainDeleteDialog } from '../dialogs/organisation-email-domain-delete-dialog';
 
@@ -41,17 +43,18 @@ export const OrganisationEmailDomainsDataTable = () => {
       },
     });
 
-  const { data, isLoading, isLoadingError } = trpc.enterprise.organisation.emailDomain.find.useQuery(
-    {
-      organisationId: organisation.id,
-      query: parsedSearchParams.query,
-      page: parsedSearchParams.page,
-      perPage: parsedSearchParams.perPage,
-    },
-    {
-      placeholderData: (previousData) => previousData,
-    },
-  );
+  const { data, isLoading, isLoadingError } =
+    trpc.enterprise.organisation.emailDomain.find.useQuery(
+      {
+        organisationId: organisation.id,
+        query: parsedSearchParams.query,
+        page: parsedSearchParams.page,
+        perPage: parsedSearchParams.perPage,
+      },
+      {
+        placeholderData: (previousData) => previousData,
+      },
+    );
 
   const onPaginationChange = (page: number, perPage: number) => {
     updateSearchParams({
@@ -102,7 +105,9 @@ export const OrganisationEmailDomainsDataTable = () => {
         cell: ({ row }) => (
           <div className="flex justify-end space-x-2">
             <Button asChild variant="outline">
-              <Link to={`/o/${organisation.url}/settings/email-domains/${row.original.id}`}>Manage</Link>
+              <Link to={`/o/${organisation.url}/settings/email-domains/${row.original.id}`}>
+                Manage
+              </Link>
             </Button>
 
             <OrganisationEmailDomainDeleteDialog
@@ -157,20 +162,27 @@ export const OrganisationEmailDomainsDataTable = () => {
         }}
       >
         {(table) =>
-          results.totalPages > 1 && <DataTablePagination additionalInformation="VisibleCount" table={table} />
+          results.totalPages > 1 && (
+            <DataTablePagination additionalInformation="VisibleCount" table={table} />
+          )
         }
       </DataTable>
 
       <AnimateGenericFadeInOut key={results.data.length}>
         {results.data.length > 0 && (
-          <Alert className="mt-2 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
+          <Alert
+            className="mt-2 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
+            variant="neutral"
+          >
             <div className="mb-4 sm:mb-0">
               <AlertTitle>
                 <Trans>Sync Email Domains</Trans>
               </AlertTitle>
 
               <AlertDescription className="mr-2">
-                <Trans>This will check and sync the status of all email domains for this organisation</Trans>
+                <Trans>
+                  This will check and sync the status of all email domains for this organisation
+                </Trans>
               </AlertDescription>
             </div>
 

@@ -1,6 +1,7 @@
 import type { Context as HonoContext } from 'hono';
-import type { Context, Handler, InngestFunction, Logger } from 'inngest';
+import type { Context, Handler, InngestFunction } from 'inngest';
 import { Inngest as InngestClient } from 'inngest';
+import type { Logger } from 'inngest';
 import { serve as createHonoPagesRoute } from 'inngest/hono';
 
 import { env } from '../../utils/env';
@@ -11,7 +12,8 @@ export class InngestJobProvider extends BaseJobProvider {
   private static _instance: InngestJobProvider;
 
   private _client: InngestClient;
-  private _functions: Array<InngestFunction<InngestFunction.Options, Handler.Any, Handler.Any>> = [];
+  private _functions: Array<InngestFunction<InngestFunction.Options, Handler.Any, Handler.Any>> =
+    [];
 
   private constructor(options: { client: InngestClient }) {
     super();
@@ -20,17 +22,17 @@ export class InngestJobProvider extends BaseJobProvider {
   }
 
   static getInstance() {
-    if (!InngestJobProvider._instance) {
+    if (!this._instance) {
       const client = new InngestClient({
         id: env('NEXT_PRIVATE_INNGEST_APP_ID') || 'documenso-app',
         eventKey: env('INNGEST_EVENT_KEY') || env('NEXT_PRIVATE_INNGEST_EVENT_KEY'),
         logger: console,
       });
 
-      InngestJobProvider._instance = new InngestJobProvider({ client });
+      this._instance = new InngestJobProvider({ client });
     }
 
-    return InngestJobProvider._instance;
+    return this._instance;
   }
 
   public defineJob<N extends string, T>(job: JobDefinition<N, T>): void {

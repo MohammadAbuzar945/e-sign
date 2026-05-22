@@ -1,10 +1,14 @@
-import { trpc } from '@documenso/trpc/react';
-import { SpinnerBox } from '@documenso/ui/primitives/spinner';
-import { useToast } from '@documenso/ui/primitives/use-toast';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 
-import { EmailPreferencesForm, type TEmailPreferencesFormSchema } from '~/components/forms/email-preferences-form';
+import { trpc } from '@documenso/trpc/react';
+import { SpinnerBox } from '@documenso/ui/primitives/spinner';
+import { useToast } from '@documenso/ui/primitives/use-toast';
+
+import {
+  EmailPreferencesForm,
+  type TEmailPreferencesFormSchema,
+} from '~/components/forms/email-preferences-form';
 import { SettingsHeader } from '~/components/general/settings-header';
 import { useCurrentTeam } from '~/providers/team';
 import { appMetaTags } from '~/utils/meta';
@@ -58,7 +62,10 @@ export default function TeamEmailSettingsGeneral() {
 
   return (
     <div className="max-w-2xl">
-      <SettingsHeader title={t`Email Preferences`} subtitle={t`You can manage your email preferences here.`} />
+      <SettingsHeader
+        title={t`Email Preferences`}
+        subtitle={t`You can manage your email preferences here.`}
+      />
 
       <section>
         <EmailPreferencesForm

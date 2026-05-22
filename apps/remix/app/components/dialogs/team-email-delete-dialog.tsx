@@ -1,3 +1,11 @@
+import { useState } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import type { Prisma } from '@prisma/client';
+import { useRevalidator } from 'react-router';
+
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
 import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
 import { trpc } from '@documenso/trpc/react';
@@ -14,12 +22,6 @@ import {
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import type { Prisma } from '@prisma/client';
-import { useState } from 'react';
-import { useRevalidator } from 'react-router';
 
 export type TeamEmailDeleteDialogProps = {
   trigger?: React.ReactNode;
@@ -45,23 +47,24 @@ export const TeamEmailDeleteDialog = ({ trigger, teamName, team }: TeamEmailDele
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
 
-  const { mutateAsync: deleteTeamEmail, isPending: isDeletingTeamEmail } = trpc.team.email.delete.useMutation({
-    onSuccess: () => {
-      toast({
-        title: _(msg`Success`),
-        description: _(msg`Team email has been removed`),
-        duration: 5000,
-      });
-    },
-    onError: () => {
-      toast({
-        title: _(msg`Something went wrong`),
-        description: _(msg`Unable to remove team email at this time. Please try again.`),
-        variant: 'destructive',
-        duration: 10000,
-      });
-    },
-  });
+  const { mutateAsync: deleteTeamEmail, isPending: isDeletingTeamEmail } =
+    trpc.team.email.delete.useMutation({
+      onSuccess: () => {
+        toast({
+          title: _(msg`Success`),
+          description: _(msg`Team email has been removed`),
+          duration: 5000,
+        });
+      },
+      onError: () => {
+        toast({
+          title: _(msg`Something went wrong`),
+          description: _(msg`Unable to remove team email at this time. Please try again.`),
+          variant: 'destructive',
+          duration: 10000,
+        });
+      },
+    });
 
   const { mutateAsync: deleteTeamEmailVerification, isPending: isDeletingTeamEmailVerification } =
     trpc.team.email.verification.delete.useMutation({
@@ -112,7 +115,8 @@ export const TeamEmailDeleteDialog = ({ trigger, teamName, team }: TeamEmailDele
 
           <DialogDescription className="mt-4">
             <Trans>
-              You are about to delete the following team email from <span className="font-semibold">{teamName}</span>.
+              You are about to delete the following team email from{' '}
+              <span className="font-semibold">{teamName}</span>.
             </Trans>
           </DialogDescription>
         </DialogHeader>
@@ -121,13 +125,19 @@ export const TeamEmailDeleteDialog = ({ trigger, teamName, team }: TeamEmailDele
           <AvatarWithText
             avatarClass="h-12 w-12"
             avatarSrc={formatAvatarUrl(team.avatarImageId)}
-            avatarFallback={extractInitials((team.teamEmail?.name || team.emailVerification?.name) ?? '')}
+            avatarFallback={extractInitials(
+              (team.teamEmail?.name || team.emailVerification?.name) ?? '',
+            )}
             primaryText={
-              <span className="font-semibold text-foreground/80 text-sm">
+              <span className="text-foreground/80 text-sm font-semibold">
                 {team.teamEmail?.name || team.emailVerification?.name}
               </span>
             }
-            secondaryText={<span className="text-sm">{team.teamEmail?.email || team.emailVerification?.email}</span>}
+            secondaryText={
+              <span className="text-sm">
+                {team.teamEmail?.email || team.emailVerification?.email}
+              </span>
+            }
           />
         </Alert>
 

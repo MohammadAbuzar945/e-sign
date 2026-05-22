@@ -1,7 +1,8 @@
-import { AppError } from '@documenso/lib/errors/app-error';
-import { prisma } from '@documenso/prisma';
 import type { Session } from '@prisma/client';
 import type { Context } from 'hono';
+
+import { AppError } from '@documenso/lib/errors/app-error';
+import { prisma } from '@documenso/prisma';
 
 import { AuthenticationErrorCode } from '../errors/error-codes';
 import type { SessionValidationResult } from '../session/session';
@@ -22,7 +23,9 @@ export const getSession = async (c: Context | Request) => {
   throw new AppError(AuthenticationErrorCode.Unauthorized);
 };
 
-export const getOptionalSession = async (c: Context | Request): Promise<SessionValidationResult> => {
+export const getOptionalSession = async (
+  c: Context | Request,
+): Promise<SessionValidationResult> => {
   const sessionId = await getSessionCookie(mapRequestToContextForCookie(c));
 
   if (!sessionId) {

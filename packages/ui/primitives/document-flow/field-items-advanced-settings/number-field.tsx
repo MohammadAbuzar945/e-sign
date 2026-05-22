@@ -1,13 +1,21 @@
+import { useState } from 'react';
+
+import { Trans, useLingui } from '@lingui/react/macro';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+
 import { validateNumberField } from '@documenso/lib/advanced-fields-validation/validate-number';
-import type { TNumberFieldMeta as NumberFieldMeta } from '@documenso/lib/types/field-meta';
+import { type TNumberFieldMeta as NumberFieldMeta } from '@documenso/lib/types/field-meta';
 import { Button } from '@documenso/ui/primitives/button';
 import { Input } from '@documenso/ui/primitives/input';
 import { Label } from '@documenso/ui/primitives/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 import { Switch } from '@documenso/ui/primitives/switch';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
 
 import { numberFormatValues } from './constants';
 
@@ -57,7 +65,7 @@ export const NumberFieldAdvancedSettings = ({
         </Label>
         <Input
           id="label"
-          className="mt-2 bg-background"
+          className="bg-background mt-2"
           placeholder={t`Label`}
           value={fieldState.label}
           onChange={(e) => handleFieldChange('label', e.target.value)}
@@ -69,7 +77,7 @@ export const NumberFieldAdvancedSettings = ({
         </Label>
         <Input
           id="placeholder"
-          className="mt-2 bg-background"
+          className="bg-background mt-2"
           placeholder={t`Placeholder`}
           value={fieldState.placeholder}
           onChange={(e) => handleFieldChange('placeholder', e.target.value)}
@@ -81,7 +89,7 @@ export const NumberFieldAdvancedSettings = ({
         </Label>
         <Input
           id="value"
-          className="mt-2 bg-background"
+          className="bg-background mt-2"
           placeholder={t`Value`}
           value={fieldState.value}
           onChange={(e) => handleInput('value', e.target.value)}
@@ -91,8 +99,11 @@ export const NumberFieldAdvancedSettings = ({
         <Label>
           <Trans>Number format</Trans>
         </Label>
-        <Select value={fieldState.numberFormat ?? ''} onValueChange={(val) => handleInput('numberFormat', val)}>
-          <SelectTrigger className="mt-2 w-full bg-background text-muted-foreground">
+        <Select
+          value={fieldState.numberFormat ?? ''}
+          onValueChange={(val) => handleInput('numberFormat', val)}
+        >
+          <SelectTrigger className="text-muted-foreground bg-background mt-2 w-full">
             <SelectValue placeholder={t`Field format`} />
           </SelectTrigger>
           <SelectContent position="popper">
@@ -112,7 +123,7 @@ export const NumberFieldAdvancedSettings = ({
         <Input
           id="fontSize"
           type="number"
-          className="mt-2 bg-background"
+          className="bg-background mt-2"
           placeholder={t`Field font size`}
           value={fieldState.fontSize}
           onChange={(e) => handleInput('fontSize', e.target.value)}
@@ -126,8 +137,11 @@ export const NumberFieldAdvancedSettings = ({
           <Trans>Text Align</Trans>
         </Label>
 
-        <Select value={fieldState.textAlign} onValueChange={(value) => handleInput('textAlign', value)}>
-          <SelectTrigger className="mt-2 bg-background">
+        <Select
+          value={fieldState.textAlign}
+          onValueChange={(value) => handleInput('textAlign', value)}
+        >
+          <SelectTrigger className="bg-background mt-2">
             <SelectValue placeholder={t`Select text align`} />
           </SelectTrigger>
 
@@ -162,7 +176,7 @@ export const NumberFieldAdvancedSettings = ({
         </div>
       </div>
       <Button
-        className="mt-2 border border-foreground/10 bg-foreground/10 hover:bg-foreground/5"
+        className="bg-foreground/10 hover:bg-foreground/5 border-foreground/10 mt-2 border"
         variant="outline"
         onClick={() => setShowValidation((prev) => !prev)}
       >
@@ -181,7 +195,7 @@ export const NumberFieldAdvancedSettings = ({
             </Label>
             <Input
               id="minValue"
-              className="mt-2 bg-background"
+              className="bg-background mt-2"
               placeholder={t`E.g. 0`}
               value={fieldState.minValue ?? ''}
               onChange={(e) => handleInput('minValue', e.target.value)}
@@ -193,7 +207,7 @@ export const NumberFieldAdvancedSettings = ({
             </Label>
             <Input
               id="maxValue"
-              className="mt-2 bg-background"
+              className="bg-background mt-2"
               placeholder={t`E.g. 100`}
               value={fieldState.maxValue ?? ''}
               onChange={(e) => handleInput('maxValue', e.target.value)}

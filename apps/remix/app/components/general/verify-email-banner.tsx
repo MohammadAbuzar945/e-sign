@@ -1,13 +1,20 @@
-import { authClient } from '@documenso/auth/client';
-import { ONE_DAY, ONE_SECOND } from '@documenso/lib/constants/time';
-import { Button } from '@documenso/ui/primitives/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@documenso/ui/primitives/dialog';
-import { useToast } from '@documenso/ui/primitives/use-toast';
+import { useEffect, useState } from 'react';
+
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { AlertTriangle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+
+import { authClient } from '@documenso/auth/client';
+import { ONE_DAY, ONE_SECOND } from '@documenso/lib/constants/time';
+import { Button } from '@documenso/ui/primitives/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@documenso/ui/primitives/dialog';
+import { useToast } from '@documenso/ui/primitives/use-toast';
 
 export type VerifyEmailBannerProps = {
   email: string;
@@ -59,7 +66,9 @@ export const VerifyEmailBanner = ({ email }: VerifyEmailBannerProps) => {
     // Check localStorage to see if we've recently automatically displayed the dialog
     // if it was within the past 24 hours, don't show it again
     // otherwise, show it again and update the localStorage timestamp
-    const emailVerificationDialogLastShown = localStorage.getItem('emailVerificationDialogLastShown');
+    const emailVerificationDialogLastShown = localStorage.getItem(
+      'emailVerificationDialogLastShown',
+    );
 
     if (emailVerificationDialogLastShown) {
       const lastShownTimestamp = parseInt(emailVerificationDialogLastShown);
@@ -77,7 +86,7 @@ export const VerifyEmailBanner = ({ email }: VerifyEmailBannerProps) => {
   return (
     <>
       <div className="bg-yellow-200 dark:bg-yellow-400">
-        <div className="mx-auto flex max-w-screen-xl items-center justify-center gap-x-4 px-4 py-2 font-medium text-sm text-yellow-900">
+        <div className="mx-auto flex max-w-screen-xl items-center justify-center gap-x-4 px-4 py-2 text-sm font-medium text-yellow-900">
           <div className="flex items-center">
             <AlertTriangle className="mr-2.5 h-5 w-5" />
             <Trans>Verify your email address to unlock all features.</Trans>
@@ -91,7 +100,11 @@ export const VerifyEmailBanner = ({ email }: VerifyEmailBannerProps) => {
               onClick={() => setIsOpen(true)}
               size="sm"
             >
-              {isButtonDisabled ? <Trans>Verification Email Sent</Trans> : <Trans>Verify Now</Trans>}
+              {isButtonDisabled ? (
+                <Trans>Verification Email Sent</Trans>
+              ) : (
+                <Trans>Verify Now</Trans>
+              )}
             </Button>
           </div>
         </div>
@@ -105,13 +118,17 @@ export const VerifyEmailBanner = ({ email }: VerifyEmailBannerProps) => {
 
           <DialogDescription>
             <Trans>
-              We've sent a confirmation email to <strong>{email}</strong>. Please check your inbox and click the link in
-              the email to verify your account.
+              We've sent a confirmation email to <strong>{email}</strong>. Please check your inbox
+              and click the link in the email to verify your account.
             </Trans>
           </DialogDescription>
 
           <div>
-            <Button disabled={isButtonDisabled} loading={isPending} onClick={onResendConfirmationEmail}>
+            <Button
+              disabled={isButtonDisabled}
+              loading={isPending}
+              onClick={onResendConfirmationEmail}
+            >
               {isPending ? <Trans>Sending...</Trans> : <Trans>Resend Confirmation Email</Trans>}
             </Button>
           </div>

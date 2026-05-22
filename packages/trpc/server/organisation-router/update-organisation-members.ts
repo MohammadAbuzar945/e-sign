@@ -1,3 +1,5 @@
+import { OrganisationGroupType } from '@prisma/client';
+
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { generateDatabaseId } from '@documenso/lib/universal/id';
@@ -7,7 +9,6 @@ import {
   isOrganisationRoleWithinUserHierarchy,
 } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
-import { OrganisationGroupType } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
 import {
@@ -67,7 +68,9 @@ export const updateOrganisationMemberRoute = authenticatedProcedure
 
     const currentUser = organisation.members.find((member) => member.userId === userId);
 
-    const organisationMemberToUpdate = organisation.members.find((member) => member.id === organisationMemberId);
+    const organisationMemberToUpdate = organisation.members.find(
+      (member) => member.id === organisationMemberId,
+    );
 
     if (!organisationMemberToUpdate || !currentUser) {
       throw new AppError(AppErrorCode.NOT_FOUND, { message: 'Organisation member does not exist' });
@@ -118,7 +121,9 @@ export const updateOrganisationMemberRoute = authenticatedProcedure
       (group) => group.organisationRole === currentMemberToUpdateOrganisationRole,
     );
 
-    const newMemberGroup = organisation.groups.find((group) => group.organisationRole === data.role);
+    const newMemberGroup = organisation.groups.find(
+      (group) => group.organisationRole === data.role,
+    );
 
     if (!currentMemberGroup) {
       console.error('[CRITICAL]: Missing internal group');

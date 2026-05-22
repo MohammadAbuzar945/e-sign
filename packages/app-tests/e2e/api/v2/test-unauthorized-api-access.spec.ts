@@ -1,9 +1,15 @@
+import { expect, test } from '@playwright/test';
+import type { Team, User } from '@prisma/client';
 import fs from 'node:fs';
 import path from 'node:path';
+
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { createApiToken } from '@documenso/lib/server-only/public-api/create-api-token';
 import { nanoid } from '@documenso/lib/universal/id';
-import { mapSecondaryIdToDocumentId, mapSecondaryIdToTemplateId } from '@documenso/lib/utils/envelope';
+import {
+  mapSecondaryIdToDocumentId,
+  mapSecondaryIdToTemplateId,
+} from '@documenso/lib/utils/envelope';
 import { prisma } from '@documenso/prisma';
 import {
   DocumentStatus,
@@ -34,8 +40,6 @@ import type {
   TUseEnvelopePayload,
   TUseEnvelopeResponse,
 } from '@documenso/trpc/server/envelope-router/use-envelope.types';
-import { expect, test } from '@playwright/test';
-import type { Team, User } from '@prisma/client';
 
 import { apiSignin } from '../../fixtures/authentication';
 
@@ -186,7 +190,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document distribute endpoint', () => {
-    test('should block unauthorized access to document distribute endpoint', async ({ request }) => {
+    test('should block unauthorized access to document distribute endpoint', async ({
+      request,
+    }) => {
       const doc = await seedDraftDocument(userA, teamA.id, ['test@example.com']);
 
       // Get the recipient created during seeding.
@@ -262,7 +268,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document redistribute endpoint', () => {
-    test('should block unauthorized access to document redistribute endpoint', async ({ request }) => {
+    test('should block unauthorized access to document redistribute endpoint', async ({
+      request,
+    }) => {
       const doc = await seedPendingDocument(userA, teamA.id, []);
 
       const userRecipient = await prisma.recipient.create({
@@ -311,7 +319,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(500);
     });
 
-    test('should allow authorized access to document redistribute endpoint', async ({ request }) => {
+    test('should allow authorized access to document redistribute endpoint', async ({
+      request,
+    }) => {
       const doc = await seedPendingDocument(userA, teamA.id, []);
 
       const userRecipient = await prisma.recipient.create({
@@ -464,7 +474,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document field create endpoint', () => {
-    test('should block unauthorized access to document field create endpoint', async ({ request }) => {
+    test('should block unauthorized access to document field create endpoint', async ({
+      request,
+    }) => {
       const { user: userRecipient } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -494,7 +506,9 @@ test.describe('Document API V2', () => {
       expect([404, 401, 500]).toContain(res.status());
     });
 
-    test('should allow authorized access to document field create endpoint', async ({ request }) => {
+    test('should allow authorized access to document field create endpoint', async ({
+      request,
+    }) => {
       const { user: userRecipient } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -526,7 +540,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document field create-many endpoint', () => {
-    test('should block unauthorized access to document field create-many endpoint', async ({ request }) => {
+    test('should block unauthorized access to document field create-many endpoint', async ({
+      request,
+    }) => {
       const { user: userRecipient } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -568,7 +584,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to document field create-many endpoint', async ({ request }) => {
+    test('should allow authorized access to document field create-many endpoint', async ({
+      request,
+    }) => {
       const { user: userRecipient } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -612,7 +630,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document field update endpoint', () => {
-    test('should block unauthorized access to document field update endpoint', async ({ request }) => {
+    test('should block unauthorized access to document field update endpoint', async ({
+      request,
+    }) => {
       const { user: userRecipient } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -654,7 +674,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to document field update endpoint', async ({ request }) => {
+    test('should allow authorized access to document field update endpoint', async ({
+      request,
+    }) => {
       const { user: userRecipient } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -698,7 +720,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document field update-many endpoint', () => {
-    test('should block unauthorized access to document field update-many endpoint', async ({ request }) => {
+    test('should block unauthorized access to document field update-many endpoint', async ({
+      request,
+    }) => {
       const { user: userRecipient } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -763,7 +787,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to document field update-many endpoint', async ({ request }) => {
+    test('should allow authorized access to document field update-many endpoint', async ({
+      request,
+    }) => {
       const { user: userRecipient } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -830,7 +856,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document field delete endpoint', () => {
-    test('should block unauthorized access to document field delete endpoint', async ({ request }) => {
+    test('should block unauthorized access to document field delete endpoint', async ({
+      request,
+    }) => {
       const { user: userRecipient } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -865,7 +893,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to document field delete endpoint', async ({ request }) => {
+    test('should allow authorized access to document field delete endpoint', async ({
+      request,
+    }) => {
       const { user: userRecipient } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -902,7 +932,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template field create endpoint', () => {
-    test('should block unauthorized access to template field create endpoint', async ({ request }) => {
+    test('should block unauthorized access to template field create endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -939,7 +971,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template field create endpoint', async ({ request }) => {
+    test('should allow authorized access to template field create endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -978,7 +1012,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template field GET endpoint', () => {
-    test('should block unauthorized access to template field get field endpoint', async ({ request }) => {
+    test('should block unauthorized access to template field get field endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1019,7 +1055,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template field get field endpoint', async ({ request }) => {
+    test('should allow authorized access to template field get field endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1062,7 +1100,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template field create-many endpoint', () => {
-    test('should block unauthorized access to template field create-many endpoint', async ({ request }) => {
+    test('should block unauthorized access to template field create-many endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1124,7 +1164,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template field create-many endpoint', async ({ request }) => {
+    test('should allow authorized access to template field create-many endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1188,7 +1230,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template field update endpoint', () => {
-    test('should block unauthorized access to template field update endpoint', async ({ request }) => {
+    test('should block unauthorized access to template field update endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1237,7 +1281,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template field update endpoint', async ({ request }) => {
+    test('should allow authorized access to template field update endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1288,7 +1334,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template field update-many endpoint', () => {
-    test('should block unauthorized access to template field update-many endpoint', async ({ request }) => {
+    test('should block unauthorized access to template field update-many endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1360,7 +1408,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template field update-many endpoint', async ({ request }) => {
+    test('should allow authorized access to template field update-many endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1434,7 +1484,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template field delete endpoint', () => {
-    test('should block unauthorized access to template field delete endpoint', async ({ request }) => {
+    test('should block unauthorized access to template field delete endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1476,7 +1528,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template field delete endpoint', async ({ request }) => {
+    test('should allow authorized access to template field delete endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1520,7 +1574,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document recipient GET endpoint', () => {
-    test('should block unauthorized access to document recipient get endpoint', async ({ request }) => {
+    test('should block unauthorized access to document recipient get endpoint', async ({
+      request,
+    }) => {
       const { user: recipientUser } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [recipientUser]);
@@ -1529,15 +1585,20 @@ test.describe('Document API V2', () => {
         where: { envelopeId: doc.id },
       });
 
-      const res = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/${recipient!.id}`, {
-        headers: { Authorization: `Bearer ${tokenB}` },
-      });
+      const res = await request.get(
+        `${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/${recipient!.id}`,
+        {
+          headers: { Authorization: `Bearer ${tokenB}` },
+        },
+      );
 
       expect(res.ok()).toBeFalsy();
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to document recipient get endpoint', async ({ request }) => {
+    test('should allow authorized access to document recipient get endpoint', async ({
+      request,
+    }) => {
       const { user: recipientUser } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [recipientUser]);
@@ -1546,9 +1607,12 @@ test.describe('Document API V2', () => {
         where: { envelopeId: doc.id },
       });
 
-      const res = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/${recipient!.id}`, {
-        headers: { Authorization: `Bearer ${tokenA}` },
-      });
+      const res = await request.get(
+        `${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/${recipient!.id}`,
+        {
+          headers: { Authorization: `Bearer ${tokenA}` },
+        },
+      );
 
       expect(res.ok()).toBeTruthy();
       expect(res.status()).toBe(200);
@@ -1556,7 +1620,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document recipient create endpoint', () => {
-    test('should block unauthorized access to document recipient create endpoint', async ({ request }) => {
+    test('should block unauthorized access to document recipient create endpoint', async ({
+      request,
+    }) => {
       const doc = await seedDraftDocument(userA, teamA.id, []);
 
       const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/create`, {
@@ -1575,7 +1641,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to document recipient create endpoint', async ({ request }) => {
+    test('should allow authorized access to document recipient create endpoint', async ({
+      request,
+    }) => {
       const doc = await seedDraftDocument(userA, teamA.id, []);
 
       const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/create`, {
@@ -1596,53 +1664,63 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document recipient create-many endpoint', () => {
-    test('should block unauthorized access to document recipient create-many endpoint', async ({ request }) => {
+    test('should block unauthorized access to document recipient create-many endpoint', async ({
+      request,
+    }) => {
       const doc = await seedDraftDocument(userA, teamA.id, []);
 
-      const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/create-many`, {
-        headers: { Authorization: `Bearer ${tokenB}` },
-        data: {
-          documentId: mapSecondaryIdToDocumentId(doc.secondaryId),
-          recipients: [
-            {
-              name: 'Test',
-              email: 'test@example.com',
-              role: RecipientRole.SIGNER,
-            },
-            {
-              name: 'Test 2',
-              email: 'test2@example.com',
-              role: RecipientRole.SIGNER,
-            },
-          ],
+      const res = await request.post(
+        `${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/create-many`,
+        {
+          headers: { Authorization: `Bearer ${tokenB}` },
+          data: {
+            documentId: mapSecondaryIdToDocumentId(doc.secondaryId),
+            recipients: [
+              {
+                name: 'Test',
+                email: 'test@example.com',
+                role: RecipientRole.SIGNER,
+              },
+              {
+                name: 'Test 2',
+                email: 'test2@example.com',
+                role: RecipientRole.SIGNER,
+              },
+            ],
+          },
         },
-      });
+      );
 
       expect(res.ok()).toBeFalsy();
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to document recipient create-many endpoint', async ({ request }) => {
+    test('should allow authorized access to document recipient create-many endpoint', async ({
+      request,
+    }) => {
       const doc = await seedDraftDocument(userA, teamA.id, []);
 
-      const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/create-many`, {
-        headers: { Authorization: `Bearer ${tokenA}` },
-        data: {
-          documentId: mapSecondaryIdToDocumentId(doc.secondaryId),
-          recipients: [
-            {
-              name: 'Test',
-              email: 'test@example.com',
-              role: RecipientRole.SIGNER,
-            },
-            {
-              name: 'Test 2',
-              email: 'test2@example.com',
-              role: RecipientRole.SIGNER,
-            },
-          ],
+      const res = await request.post(
+        `${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/create-many`,
+        {
+          headers: { Authorization: `Bearer ${tokenA}` },
+          data: {
+            documentId: mapSecondaryIdToDocumentId(doc.secondaryId),
+            recipients: [
+              {
+                name: 'Test',
+                email: 'test@example.com',
+                role: RecipientRole.SIGNER,
+              },
+              {
+                name: 'Test 2',
+                email: 'test2@example.com',
+                role: RecipientRole.SIGNER,
+              },
+            ],
+          },
         },
-      });
+      );
 
       expect(res.ok()).toBeTruthy();
       expect(res.status()).toBe(200);
@@ -1650,7 +1728,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document recipient update endpoint', () => {
-    test('should block unauthorized access to document recipient update endpoint', async ({ request }) => {
+    test('should block unauthorized access to document recipient update endpoint', async ({
+      request,
+    }) => {
       const { user: recipientUser } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [recipientUser]);
@@ -1674,7 +1754,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to document recipient update endpoint', async ({ request }) => {
+    test('should allow authorized access to document recipient update endpoint', async ({
+      request,
+    }) => {
       const { user: recipientUser } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [recipientUser]);
@@ -1700,7 +1782,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document recipient update-many endpoint', () => {
-    test('should block unauthorized access to document recipient update-many endpoint', async ({ request }) => {
+    test('should block unauthorized access to document recipient update-many endpoint', async ({
+      request,
+    }) => {
       const { user: firstRecipient } = await seedUser();
       const { user: secondRecipient } = await seedUser();
 
@@ -1720,28 +1804,33 @@ test.describe('Document API V2', () => {
         },
       });
 
-      const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/update-many`, {
-        headers: { Authorization: `Bearer ${tokenB}` },
-        data: {
-          documentId: mapSecondaryIdToDocumentId(doc.secondaryId),
-          recipients: [
-            {
-              id: firstDocumentRecipient!.id,
-              name: 'Updated first recipient',
-            },
-            {
-              id: secondDocumentRecipient!.id,
-              name: 'Updated second recipient',
-            },
-          ],
+      const res = await request.post(
+        `${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/update-many`,
+        {
+          headers: { Authorization: `Bearer ${tokenB}` },
+          data: {
+            documentId: mapSecondaryIdToDocumentId(doc.secondaryId),
+            recipients: [
+              {
+                id: firstDocumentRecipient!.id,
+                name: 'Updated first recipient',
+              },
+              {
+                id: secondDocumentRecipient!.id,
+                name: 'Updated second recipient',
+              },
+            ],
+          },
         },
-      });
+      );
 
       expect(res.ok()).toBeFalsy();
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to document recipient update-many endpoint', async ({ request }) => {
+    test('should allow authorized access to document recipient update-many endpoint', async ({
+      request,
+    }) => {
       const { user: firstRecipient } = await seedUser();
       const { user: secondRecipient } = await seedUser();
 
@@ -1761,22 +1850,25 @@ test.describe('Document API V2', () => {
         },
       });
 
-      const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/update-many`, {
-        headers: { Authorization: `Bearer ${tokenA}` },
-        data: {
-          documentId: mapSecondaryIdToDocumentId(doc.secondaryId),
-          recipients: [
-            {
-              id: firstDocumentRecipient!.id,
-              name: 'Updated first recipient',
-            },
-            {
-              id: secondDocumentRecipient!.id,
-              name: 'Updated second recipient',
-            },
-          ],
+      const res = await request.post(
+        `${WEBAPP_BASE_URL}/api/v2-beta/document/recipient/update-many`,
+        {
+          headers: { Authorization: `Bearer ${tokenA}` },
+          data: {
+            documentId: mapSecondaryIdToDocumentId(doc.secondaryId),
+            recipients: [
+              {
+                id: firstDocumentRecipient!.id,
+                name: 'Updated first recipient',
+              },
+              {
+                id: secondDocumentRecipient!.id,
+                name: 'Updated second recipient',
+              },
+            ],
+          },
         },
-      });
+      );
 
       expect(res.ok()).toBeTruthy();
       expect(res.status()).toBe(200);
@@ -1784,7 +1876,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Document recipient delete endpoint', () => {
-    test('should block unauthorized access to document recipient delete endpoint', async ({ request }) => {
+    test('should block unauthorized access to document recipient delete endpoint', async ({
+      request,
+    }) => {
       const { user: recipientUser } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [recipientUser]);
@@ -1802,7 +1896,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to document recipient delete endpoint', async ({ request }) => {
+    test('should allow authorized access to document recipient delete endpoint', async ({
+      request,
+    }) => {
       const { user: recipientUser } = await seedUser();
 
       const doc = await seedDraftDocument(userA, teamA.id, [recipientUser]);
@@ -1822,7 +1918,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template recipient GET endpoint', () => {
-    test('should block unauthorized access to template recipient get endpoint', async ({ request }) => {
+    test('should block unauthorized access to template recipient get endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const templateRecipient = await prisma.recipient.create({
@@ -1838,15 +1936,20 @@ test.describe('Document API V2', () => {
         },
       });
 
-      const res = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/${templateRecipient.id}`, {
-        headers: { Authorization: `Bearer ${tokenB}` },
-      });
+      const res = await request.get(
+        `${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/${templateRecipient.id}`,
+        {
+          headers: { Authorization: `Bearer ${tokenB}` },
+        },
+      );
 
       expect(res.ok()).toBeFalsy();
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template recipient get endpoint', async ({ request }) => {
+    test('should allow authorized access to template recipient get endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const templateRecipient = await prisma.recipient.create({
@@ -1862,9 +1965,12 @@ test.describe('Document API V2', () => {
         },
       });
 
-      const res = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/${templateRecipient.id}`, {
-        headers: { Authorization: `Bearer ${tokenA}` },
-      });
+      const res = await request.get(
+        `${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/${templateRecipient.id}`,
+        {
+          headers: { Authorization: `Bearer ${tokenA}` },
+        },
+      );
 
       expect(res.ok()).toBeTruthy();
       expect(res.status()).toBe(200);
@@ -1872,7 +1978,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template recipient create endpoint', () => {
-    test('should block unauthorized access to template recipient create endpoint', async ({ request }) => {
+    test('should block unauthorized access to template recipient create endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/create`, {
@@ -1891,7 +1999,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template recipient create endpoint', async ({ request }) => {
+    test('should allow authorized access to template recipient create endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/create`, {
@@ -1912,53 +2022,63 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template recipient create-many endpoint', () => {
-    test('should block unauthorized access to template recipient create-many endpoint', async ({ request }) => {
+    test('should block unauthorized access to template recipient create-many endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
-      const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/create-many`, {
-        headers: { Authorization: `Bearer ${tokenB}` },
-        data: {
-          templateId: mapSecondaryIdToTemplateId(template.secondaryId),
-          recipients: [
-            {
-              name: 'Test first recipient',
-              email: 'test-first-recipient@example.com',
-              role: RecipientRole.SIGNER,
-            },
-            {
-              name: 'Test second recipient',
-              email: 'test-second-recipient@example.com',
-              role: RecipientRole.SIGNER,
-            },
-          ],
+      const res = await request.post(
+        `${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/create-many`,
+        {
+          headers: { Authorization: `Bearer ${tokenB}` },
+          data: {
+            templateId: mapSecondaryIdToTemplateId(template.secondaryId),
+            recipients: [
+              {
+                name: 'Test first recipient',
+                email: 'test-first-recipient@example.com',
+                role: RecipientRole.SIGNER,
+              },
+              {
+                name: 'Test second recipient',
+                email: 'test-second-recipient@example.com',
+                role: RecipientRole.SIGNER,
+              },
+            ],
+          },
         },
-      });
+      );
 
       expect(res.ok()).toBeFalsy();
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template recipient create-many endpoint', async ({ request }) => {
+    test('should allow authorized access to template recipient create-many endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
-      const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/create-many`, {
-        headers: { Authorization: `Bearer ${tokenA}` },
-        data: {
-          templateId: mapSecondaryIdToTemplateId(template.secondaryId),
-          recipients: [
-            {
-              name: 'Test first recipient',
-              email: 'test-first-recipient@example.com',
-              role: RecipientRole.SIGNER,
-            },
-            {
-              name: 'Test second recipient',
-              email: 'test-second-recipient@example.com',
-              role: RecipientRole.SIGNER,
-            },
-          ],
+      const res = await request.post(
+        `${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/create-many`,
+        {
+          headers: { Authorization: `Bearer ${tokenA}` },
+          data: {
+            templateId: mapSecondaryIdToTemplateId(template.secondaryId),
+            recipients: [
+              {
+                name: 'Test first recipient',
+                email: 'test-first-recipient@example.com',
+                role: RecipientRole.SIGNER,
+              },
+              {
+                name: 'Test second recipient',
+                email: 'test-second-recipient@example.com',
+                role: RecipientRole.SIGNER,
+              },
+            ],
+          },
         },
-      });
+      );
 
       expect(res.ok()).toBeTruthy();
       expect(res.status()).toBe(200);
@@ -1966,7 +2086,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template recipient update endpoint', () => {
-    test('should block unauthorized access to template recipient update endpoint', async ({ request }) => {
+    test('should block unauthorized access to template recipient update endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -1997,7 +2119,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template recipient update endpoint', async ({ request }) => {
+    test('should allow authorized access to template recipient update endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -2030,7 +2154,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template recipient update-many endpoint', () => {
-    test('should block unauthorized access to template recipient update-many endpoint', async ({ request }) => {
+    test('should block unauthorized access to template recipient update-many endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipients = await prisma.recipient.createManyAndReturn({
@@ -2056,28 +2182,33 @@ test.describe('Document API V2', () => {
         ],
       });
 
-      const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/update-many`, {
-        headers: { Authorization: `Bearer ${tokenB}` },
-        data: {
-          templateId: mapSecondaryIdToTemplateId(template.secondaryId),
-          recipients: [
-            {
-              id: recipients[0].id,
-              name: 'Updated test first recipient name',
-            },
-            {
-              id: recipients[1].id,
-              name: 'Updated test second recipient name',
-            },
-          ],
+      const res = await request.post(
+        `${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/update-many`,
+        {
+          headers: { Authorization: `Bearer ${tokenB}` },
+          data: {
+            templateId: mapSecondaryIdToTemplateId(template.secondaryId),
+            recipients: [
+              {
+                id: recipients[0].id,
+                name: 'Updated test first recipient name',
+              },
+              {
+                id: recipients[1].id,
+                name: 'Updated test second recipient name',
+              },
+            ],
+          },
         },
-      });
+      );
 
       expect(res.ok()).toBeFalsy();
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template recipient update-many endpoint', async ({ request }) => {
+    test('should allow authorized access to template recipient update-many endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipients = await prisma.recipient.createManyAndReturn({
@@ -2103,22 +2234,25 @@ test.describe('Document API V2', () => {
         ],
       });
 
-      const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/update-many`, {
-        headers: { Authorization: `Bearer ${tokenA}` },
-        data: {
-          templateId: mapSecondaryIdToTemplateId(template.secondaryId),
-          recipients: [
-            {
-              id: recipients[0].id,
-              name: 'Updated test first recipient name',
-            },
-            {
-              id: recipients[1].id,
-              name: 'Updated test second recipient name',
-            },
-          ],
+      const res = await request.post(
+        `${WEBAPP_BASE_URL}/api/v2-beta/template/recipient/update-many`,
+        {
+          headers: { Authorization: `Bearer ${tokenA}` },
+          data: {
+            templateId: mapSecondaryIdToTemplateId(template.secondaryId),
+            recipients: [
+              {
+                id: recipients[0].id,
+                name: 'Updated test first recipient name',
+              },
+              {
+                id: recipients[1].id,
+                name: 'Updated test second recipient name',
+              },
+            ],
+          },
         },
-      });
+      );
 
       expect(res.ok()).toBeTruthy();
       expect(res.status()).toBe(200);
@@ -2126,7 +2260,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template recipient delete endpoint', () => {
-    test('should block unauthorized access to template recipient delete endpoint', async ({ request }) => {
+    test('should block unauthorized access to template recipient delete endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -2151,7 +2287,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template recipient delete endpoint', async ({ request }) => {
+    test('should allow authorized access to template recipient delete endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -2473,7 +2611,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template direct create endpoint', () => {
-    test('should block unauthorized access to template direct create endpoint', async ({ request }) => {
+    test('should block unauthorized access to template direct create endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/template/direct/create`, {
@@ -2485,7 +2625,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template direct create endpoint', async ({ request }) => {
+    test('should allow authorized access to template direct create endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/template/direct/create`, {
@@ -2499,7 +2641,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template direct delete endpoint', () => {
-    test('should block unauthorized access to template direct delete endpoint', async ({ request }) => {
+    test('should block unauthorized access to template direct delete endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -2529,7 +2673,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template direct delete endpoint', async ({ request }) => {
+    test('should allow authorized access to template direct delete endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -2561,7 +2707,9 @@ test.describe('Document API V2', () => {
   });
 
   test.describe('Template direct toggle endpoint', () => {
-    test('should block unauthorized access to template direct toggle endpoint', async ({ request }) => {
+    test('should block unauthorized access to template direct toggle endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -2591,7 +2739,9 @@ test.describe('Document API V2', () => {
       expect(res.status()).toBe(404);
     });
 
-    test('should allow authorized access to template direct toggle endpoint', async ({ request }) => {
+    test('should allow authorized access to template direct toggle endpoint', async ({
+      request,
+    }) => {
       const template = await seedBlankTemplate(userA, teamA.id);
 
       const recipient = await prisma.recipient.create({
@@ -2898,7 +3048,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope get-many endpoint', () => {
-      test('should block unauthorized access to envelope get-many endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope get-many endpoint', async ({
+        request,
+      }) => {
         const doc1 = await seedBlankDocument(userA, teamA.id);
         const doc2 = await seedBlankDocument(userA, teamA.id);
 
@@ -2941,7 +3093,9 @@ test.describe('Document API V2', () => {
         expect(data.map((d: { id: string }) => d.id).sort()).toEqual([doc1.id, doc2.id].sort());
       });
 
-      test('should only return authorized envelopes when mixing owned and unowned', async ({ request }) => {
+      test('should only return authorized envelopes when mixing owned and unowned', async ({
+        request,
+      }) => {
         const docA = await seedBlankDocument(userA, teamA.id);
         const docB = await seedBlankDocument(userB, teamB.id);
 
@@ -2972,7 +3126,10 @@ test.describe('Document API V2', () => {
           data: {
             ids: {
               type: 'documentId',
-              ids: [mapSecondaryIdToDocumentId(doc1.secondaryId), mapSecondaryIdToDocumentId(doc2.secondaryId)],
+              ids: [
+                mapSecondaryIdToDocumentId(doc1.secondaryId),
+                mapSecondaryIdToDocumentId(doc2.secondaryId),
+              ],
             },
           },
         });
@@ -2993,7 +3150,10 @@ test.describe('Document API V2', () => {
           data: {
             ids: {
               type: 'documentId',
-              ids: [mapSecondaryIdToDocumentId(doc1.secondaryId), mapSecondaryIdToDocumentId(doc2.secondaryId)],
+              ids: [
+                mapSecondaryIdToDocumentId(doc1.secondaryId),
+                mapSecondaryIdToDocumentId(doc2.secondaryId),
+              ],
             },
           },
         });
@@ -3072,7 +3232,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope get-many tRPC endpoint (teamId manipulation)', () => {
-      test('should block access when user manipulates x-team-id to another team', async ({ page }) => {
+      test('should block access when user manipulates x-team-id to another team', async ({
+        page,
+      }) => {
         // Create documents for userA in teamA
         const doc1 = await seedBlankDocument(userA, teamA.id);
         const doc2 = await seedBlankDocument(userA, teamA.id);
@@ -3080,19 +3242,21 @@ test.describe('Document API V2', () => {
         // Sign in as userB
         await apiSignin({ page, email: userB.email });
 
-        const res = await page.context().request.post(`${WEBAPP_BASE_URL}/api/trpc/envelope.getMany`, {
-          headers: {
-            'x-team-id': String(teamA.id),
-          },
-          data: {
-            json: {
-              ids: {
-                type: 'envelopeId',
-                ids: [doc1.id, doc2.id],
+        const res = await page
+          .context()
+          .request.post(`${WEBAPP_BASE_URL}/api/trpc/envelope.getMany`, {
+            headers: {
+              'x-team-id': String(teamA.id),
+            },
+            data: {
+              json: {
+                ids: {
+                  type: 'envelopeId',
+                  ids: [doc1.id, doc2.id],
+                },
               },
             },
-          },
-        });
+          });
 
         // Make tRPC request with manipulated x-team-id pointing to teamA (which userB doesn't belong to)
         expect(res.ok()).toBeFalsy();
@@ -3108,20 +3272,22 @@ test.describe('Document API V2', () => {
         // Sign in as userA
         await apiSignin({ page, email: userA.email });
 
-        const res = await page.context().request.post(`${WEBAPP_BASE_URL}/api/trpc/envelope.getMany`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-team-id': String(teamA.id),
-          },
-          data: {
-            json: {
-              ids: {
-                type: 'envelopeId',
-                ids: [doc1.id, doc2.id],
+        const res = await page
+          .context()
+          .request.post(`${WEBAPP_BASE_URL}/api/trpc/envelope.getMany`, {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-team-id': String(teamA.id),
+            },
+            data: {
+              json: {
+                ids: {
+                  type: 'envelopeId',
+                  ids: [doc1.id, doc2.id],
+                },
               },
             },
-          },
-        });
+          });
 
         expect(res.ok()).toBeTruthy();
         expect(res.status()).toBe(200);
@@ -3134,7 +3300,9 @@ test.describe('Document API V2', () => {
         expect(items.map((d: { id: string }) => d.id).sort()).toEqual([doc1.id, doc2.id].sort());
       });
 
-      test('should block access when switching team id mid-request to access other team data', async ({ page }) => {
+      test('should block access when switching team id mid-request to access other team data', async ({
+        page,
+      }) => {
         // Create a document for userA in teamA
         const docA = await seedBlankDocument(userA, teamA.id);
         // Create a document for userB in teamB
@@ -3143,19 +3311,21 @@ test.describe('Document API V2', () => {
         // Sign in as userB
         await apiSignin({ page, email: userB.email });
 
-        const res = await page.context().request.post(`${WEBAPP_BASE_URL}/api/trpc/envelope.getMany`, {
-          headers: {
-            'x-team-id': String(teamA.id),
-          },
-          data: {
-            json: {
-              ids: {
-                type: 'envelopeId',
-                ids: [docA.id, docB.id],
+        const res = await page
+          .context()
+          .request.post(`${WEBAPP_BASE_URL}/api/trpc/envelope.getMany`, {
+            headers: {
+              'x-team-id': String(teamA.id),
+            },
+            data: {
+              json: {
+                ids: {
+                  type: 'envelopeId',
+                  ids: [docA.id, docB.id],
+                },
               },
             },
-          },
-        });
+          });
 
         // UserB tries to access both documents by manipulating teamId to teamA
         // Should fail - userB is not a member of teamA
@@ -3312,22 +3482,32 @@ test.describe('Document API V2', () => {
           },
         });
 
-        const resWithFolder = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/envelope?folderId=${folder.id}`, {
-          headers: { Authorization: `Bearer ${tokenA}` },
-        });
+        const resWithFolder = await request.get(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope?folderId=${folder.id}`,
+          {
+            headers: { Authorization: `Bearer ${tokenA}` },
+          },
+        );
 
         expect(resWithFolder.ok()).toBeTruthy();
         const dataWithFolder = (await resWithFolder.json()) as TFindEnvelopesResponse;
         expect(dataWithFolder.data.every((doc) => doc.folderId === folder.id)).toBe(true);
         expect(dataWithFolder.data.some((doc) => doc.title === 'Document in Folder')).toBe(true);
 
-        const resUnauthorized = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/envelope?folderId=${folder.id}`, {
-          headers: { Authorization: `Bearer ${tokenB}` },
-        });
+        const resUnauthorized = await request.get(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope?folderId=${folder.id}`,
+          {
+            headers: { Authorization: `Bearer ${tokenB}` },
+          },
+        );
 
         expect(resUnauthorized.ok()).toBeTruthy();
         const dataUnauthorized = (await resUnauthorized.json()) as TFindEnvelopesResponse;
-        expect(dataUnauthorized.data.every((doc) => doc.folderId !== folder.id || doc.userId !== userA.id)).toBe(true);
+        expect(
+          dataUnauthorized.data.every(
+            (doc) => doc.folderId !== folder.id || doc.userId !== userA.id,
+          ),
+        ).toBe(true);
       });
 
       test('should filter envelopes by type with authorization', async ({ request }) => {
@@ -3412,9 +3592,12 @@ test.describe('Document API V2', () => {
           },
         });
 
-        const res = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/envelope?query=Unique%20Searchable`, {
-          headers: { Authorization: `Bearer ${tokenA}` },
-        });
+        const res = await request.get(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope?query=Unique%20Searchable`,
+          {
+            headers: { Authorization: `Bearer ${tokenA}` },
+          },
+        );
 
         expect(res.ok()).toBeTruthy();
         const data = (await res.json()) as TFindEnvelopesResponse;
@@ -3485,7 +3668,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope duplicate endpoint', () => {
-      test('should block unauthorized access to envelope duplicate endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope duplicate endpoint', async ({
+        request,
+      }) => {
         const doc = await seedBlankDocument(userA, teamA.id);
 
         const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/duplicate`, {
@@ -3607,7 +3792,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope distribute endpoint', () => {
-      test('should block unauthorized access to envelope distribute endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope distribute endpoint', async ({
+        request,
+      }) => {
         const doc = await seedDraftDocument(userA, teamA.id, ['test@example.com']);
 
         const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/distribute`, {
@@ -3619,7 +3806,9 @@ test.describe('Document API V2', () => {
         expect(res.status()).toBe(500);
       });
 
-      test('should allow authorized access to envelope distribute endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope distribute endpoint', async ({
+        request,
+      }) => {
         const doc = await seedDraftDocument(userA, teamA.id, ['test@example.com']);
 
         // Get the recipient created during seeding.
@@ -3658,7 +3847,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope redistribute endpoint', () => {
-      test('should block unauthorized access to envelope redistribute endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope redistribute endpoint', async ({
+        request,
+      }) => {
         const doc = await seedPendingDocument(userA, teamA.id, []);
 
         const userRecipient = await prisma.recipient.create({
@@ -3707,7 +3898,9 @@ test.describe('Document API V2', () => {
         expect(res.status()).toBe(500);
       });
 
-      test('should allow authorized access to envelope redistribute endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope redistribute endpoint', async ({
+        request,
+      }) => {
         const doc = await seedPendingDocument(userA, teamA.id, []);
 
         const userRecipient = await prisma.recipient.create({
@@ -3758,7 +3951,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope field get endpoint', () => {
-      test('should block unauthorized access to envelope field get endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope field get endpoint', async ({
+        request,
+      }) => {
         const { user: userRecipient } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -3834,7 +4029,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope field create-many endpoint', () => {
-      test('should block unauthorized access to envelope field create-many endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope field create-many endpoint', async ({
+        request,
+      }) => {
         const { user: userRecipient } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -3843,42 +4040,47 @@ test.describe('Document API V2', () => {
           where: { envelopeId: doc.id },
         });
 
-        const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/field/create-many`, {
-          headers: { Authorization: `Bearer ${tokenB}` },
-          data: {
-            envelopeId: doc.id,
-            data: [
-              {
-                recipientId: recipient!.id,
-                envelopeItemId: doc.envelopeItems[0].id,
-                type: 'TEXT',
-                page: 791.77,
-                positionX: 0,
-                positionY: 0,
-                width: 5,
-                height: 5,
-                fieldMeta: { type: 'text', label: 'First test field' },
-              },
-              {
-                recipientId: recipient!.id,
-                envelopeItemId: doc.envelopeItems[0].id,
-                type: 'TEXT',
-                page: 791.77,
-                positionX: 0,
-                positionY: 0,
-                width: 5,
-                height: 5,
-                fieldMeta: { type: 'text', label: 'Second test field' },
-              },
-            ],
+        const res = await request.post(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/field/create-many`,
+          {
+            headers: { Authorization: `Bearer ${tokenB}` },
+            data: {
+              envelopeId: doc.id,
+              data: [
+                {
+                  recipientId: recipient!.id,
+                  envelopeItemId: doc.envelopeItems[0].id,
+                  type: 'TEXT',
+                  page: 791.77,
+                  positionX: 0,
+                  positionY: 0,
+                  width: 5,
+                  height: 5,
+                  fieldMeta: { type: 'text', label: 'First test field' },
+                },
+                {
+                  recipientId: recipient!.id,
+                  envelopeItemId: doc.envelopeItems[0].id,
+                  type: 'TEXT',
+                  page: 791.77,
+                  positionX: 0,
+                  positionY: 0,
+                  width: 5,
+                  height: 5,
+                  fieldMeta: { type: 'text', label: 'Second test field' },
+                },
+              ],
+            },
           },
-        });
+        );
 
         expect(res.ok()).toBeFalsy();
         expect(res.status()).toBe(404);
       });
 
-      test('should allow authorized access to envelope field create-many endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope field create-many endpoint', async ({
+        request,
+      }) => {
         const { user: userRecipient } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -3887,36 +4089,39 @@ test.describe('Document API V2', () => {
           where: { envelopeId: doc.id },
         });
 
-        const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/field/create-many`, {
-          headers: { Authorization: `Bearer ${tokenA}` },
-          data: {
-            envelopeId: doc.id,
-            data: [
-              {
-                recipientId: recipient!.id,
-                envelopeItemId: doc.envelopeItems[0].id,
-                type: 'TEXT',
-                page: 791.77,
-                positionX: 0,
-                positionY: 0,
-                width: 5,
-                height: 5,
-                fieldMeta: { type: 'text', label: 'First test field' },
-              },
-              {
-                recipientId: recipient!.id,
-                envelopeItemId: doc.envelopeItems[0].id,
-                type: 'TEXT',
-                page: 791.77,
-                positionX: 0,
-                positionY: 0,
-                width: 5,
-                height: 5,
-                fieldMeta: { type: 'text', label: 'Second test field' },
-              },
-            ],
+        const res = await request.post(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/field/create-many`,
+          {
+            headers: { Authorization: `Bearer ${tokenA}` },
+            data: {
+              envelopeId: doc.id,
+              data: [
+                {
+                  recipientId: recipient!.id,
+                  envelopeItemId: doc.envelopeItems[0].id,
+                  type: 'TEXT',
+                  page: 791.77,
+                  positionX: 0,
+                  positionY: 0,
+                  width: 5,
+                  height: 5,
+                  fieldMeta: { type: 'text', label: 'First test field' },
+                },
+                {
+                  recipientId: recipient!.id,
+                  envelopeItemId: doc.envelopeItems[0].id,
+                  type: 'TEXT',
+                  page: 791.77,
+                  positionX: 0,
+                  positionY: 0,
+                  width: 5,
+                  height: 5,
+                  fieldMeta: { type: 'text', label: 'Second test field' },
+                },
+              ],
+            },
           },
-        });
+        );
 
         expect(res.ok()).toBeTruthy();
         expect(res.status()).toBe(200);
@@ -3924,7 +4129,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope field update-many endpoint', () => {
-      test('should block unauthorized access to envelope field update-many endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope field update-many endpoint', async ({
+        request,
+      }) => {
         const { user: userRecipient } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -3966,30 +4173,35 @@ test.describe('Document API V2', () => {
           ],
         });
 
-        const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/field/update-many`, {
-          headers: { Authorization: `Bearer ${tokenB}` },
-          data: {
-            envelopeId: doc.id,
-            data: [
-              {
-                id: fields[0].id,
-                type: FieldType.TEXT,
-                fieldMeta: { type: 'text', label: 'Updated first test field' },
-              },
-              {
-                id: fields[1].id,
-                type: FieldType.NUMBER,
-                fieldMeta: { type: 'number', label: 'Updated second test field' },
-              },
-            ],
+        const res = await request.post(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/field/update-many`,
+          {
+            headers: { Authorization: `Bearer ${tokenB}` },
+            data: {
+              envelopeId: doc.id,
+              data: [
+                {
+                  id: fields[0].id,
+                  type: FieldType.TEXT,
+                  fieldMeta: { type: 'text', label: 'Updated first test field' },
+                },
+                {
+                  id: fields[1].id,
+                  type: FieldType.NUMBER,
+                  fieldMeta: { type: 'number', label: 'Updated second test field' },
+                },
+              ],
+            },
           },
-        });
+        );
 
         expect(res.ok()).toBeFalsy();
         expect(res.status()).toBe(404);
       });
 
-      test('should allow authorized access to envelope field update-many endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope field update-many endpoint', async ({
+        request,
+      }) => {
         const { user: userRecipient } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -4031,24 +4243,27 @@ test.describe('Document API V2', () => {
           ],
         });
 
-        const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/field/update-many`, {
-          headers: { Authorization: `Bearer ${tokenA}` },
-          data: {
-            envelopeId: doc.id,
-            data: [
-              {
-                id: fields[0].id,
-                type: FieldType.TEXT,
-                fieldMeta: { type: 'text', label: 'Updated first test field' },
-              },
-              {
-                id: fields[1].id,
-                type: FieldType.NUMBER,
-                fieldMeta: { type: 'number', label: 'Updated second test field' },
-              },
-            ],
+        const res = await request.post(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/field/update-many`,
+          {
+            headers: { Authorization: `Bearer ${tokenA}` },
+            data: {
+              envelopeId: doc.id,
+              data: [
+                {
+                  id: fields[0].id,
+                  type: FieldType.TEXT,
+                  fieldMeta: { type: 'text', label: 'Updated first test field' },
+                },
+                {
+                  id: fields[1].id,
+                  type: FieldType.NUMBER,
+                  fieldMeta: { type: 'number', label: 'Updated second test field' },
+                },
+              ],
+            },
           },
-        });
+        );
 
         expect(res.ok()).toBeTruthy();
         expect(res.status()).toBe(200);
@@ -4056,7 +4271,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope field delete endpoint', () => {
-      test('should block unauthorized access to envelope field delete endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope field delete endpoint', async ({
+        request,
+      }) => {
         const { user: userRecipient } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -4091,7 +4308,9 @@ test.describe('Document API V2', () => {
         expect(res.status()).toBe(404);
       });
 
-      test('should allow authorized access to envelope field delete endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope field delete endpoint', async ({
+        request,
+      }) => {
         const { user: userRecipient } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [userRecipient.email]);
@@ -4128,7 +4347,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope recipient get endpoint', () => {
-      test('should block unauthorized access to envelope recipient get endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope recipient get endpoint', async ({
+        request,
+      }) => {
         const { user: recipientUser } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [recipientUser]);
@@ -4137,15 +4358,20 @@ test.describe('Document API V2', () => {
           where: { envelopeId: doc.id },
         });
 
-        const res = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/${recipient!.id}`, {
-          headers: { Authorization: `Bearer ${tokenB}` },
-        });
+        const res = await request.get(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/${recipient!.id}`,
+          {
+            headers: { Authorization: `Bearer ${tokenB}` },
+          },
+        );
 
         expect(res.ok()).toBeFalsy();
         expect(res.status()).toBe(404);
       });
 
-      test('should allow authorized access to envelope recipient get endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope recipient get endpoint', async ({
+        request,
+      }) => {
         const { user: recipientUser } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [recipientUser]);
@@ -4154,9 +4380,12 @@ test.describe('Document API V2', () => {
           where: { envelopeId: doc.id },
         });
 
-        const res = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/${recipient!.id}`, {
-          headers: { Authorization: `Bearer ${tokenA}` },
-        });
+        const res = await request.get(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/${recipient!.id}`,
+          {
+            headers: { Authorization: `Bearer ${tokenA}` },
+          },
+        );
 
         expect(res.ok()).toBeTruthy();
         expect(res.status()).toBe(200);
@@ -4164,53 +4393,63 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope recipient create-many endpoint', () => {
-      test('should block unauthorized access to envelope recipient create-many endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope recipient create-many endpoint', async ({
+        request,
+      }) => {
         const doc = await seedDraftDocument(userA, teamA.id, []);
 
-        const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/create-many`, {
-          headers: { Authorization: `Bearer ${tokenB}` },
-          data: {
-            envelopeId: doc.id,
-            data: [
-              {
-                name: 'Test',
-                email: 'test@example.com',
-                role: RecipientRole.SIGNER,
-              },
-              {
-                name: 'Test 2',
-                email: 'test2@example.com',
-                role: RecipientRole.SIGNER,
-              },
-            ],
+        const res = await request.post(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/create-many`,
+          {
+            headers: { Authorization: `Bearer ${tokenB}` },
+            data: {
+              envelopeId: doc.id,
+              data: [
+                {
+                  name: 'Test',
+                  email: 'test@example.com',
+                  role: RecipientRole.SIGNER,
+                },
+                {
+                  name: 'Test 2',
+                  email: 'test2@example.com',
+                  role: RecipientRole.SIGNER,
+                },
+              ],
+            },
           },
-        });
+        );
 
         expect(res.ok()).toBeFalsy();
         expect(res.status()).toBe(404);
       });
 
-      test('should allow authorized access to envelope recipient create-many endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope recipient create-many endpoint', async ({
+        request,
+      }) => {
         const doc = await seedDraftDocument(userA, teamA.id, []);
 
-        const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/create-many`, {
-          headers: { Authorization: `Bearer ${tokenA}` },
-          data: {
-            envelopeId: doc.id,
-            data: [
-              {
-                name: 'Test',
-                email: 'test@example.com',
-                role: RecipientRole.SIGNER,
-              },
-              {
-                name: 'Test 2',
-                email: 'test2@example.com',
-                role: RecipientRole.SIGNER,
-              },
-            ],
+        const res = await request.post(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/create-many`,
+          {
+            headers: { Authorization: `Bearer ${tokenA}` },
+            data: {
+              envelopeId: doc.id,
+              data: [
+                {
+                  name: 'Test',
+                  email: 'test@example.com',
+                  role: RecipientRole.SIGNER,
+                },
+                {
+                  name: 'Test 2',
+                  email: 'test2@example.com',
+                  role: RecipientRole.SIGNER,
+                },
+              ],
+            },
           },
-        });
+        );
 
         expect(res.ok()).toBeTruthy();
         expect(res.status()).toBe(200);
@@ -4218,7 +4457,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope recipient update-many endpoint', () => {
-      test('should block unauthorized access to envelope recipient update-many endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope recipient update-many endpoint', async ({
+        request,
+      }) => {
         const { user: firstRecipient } = await seedUser();
         const { user: secondRecipient } = await seedUser();
 
@@ -4238,28 +4479,33 @@ test.describe('Document API V2', () => {
           },
         });
 
-        const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/update-many`, {
-          headers: { Authorization: `Bearer ${tokenB}` },
-          data: {
-            envelopeId: doc.id,
-            data: [
-              {
-                id: firstDocumentRecipient!.id,
-                name: 'Updated first recipient',
-              },
-              {
-                id: secondDocumentRecipient!.id,
-                name: 'Updated second recipient',
-              },
-            ],
+        const res = await request.post(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/update-many`,
+          {
+            headers: { Authorization: `Bearer ${tokenB}` },
+            data: {
+              envelopeId: doc.id,
+              data: [
+                {
+                  id: firstDocumentRecipient!.id,
+                  name: 'Updated first recipient',
+                },
+                {
+                  id: secondDocumentRecipient!.id,
+                  name: 'Updated second recipient',
+                },
+              ],
+            },
           },
-        });
+        );
 
         expect(res.ok()).toBeFalsy();
         expect(res.status()).toBe(404);
       });
 
-      test('should allow authorized access to envelope recipient update-many endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope recipient update-many endpoint', async ({
+        request,
+      }) => {
         const { user: firstRecipient } = await seedUser();
         const { user: secondRecipient } = await seedUser();
 
@@ -4279,22 +4525,25 @@ test.describe('Document API V2', () => {
           },
         });
 
-        const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/update-many`, {
-          headers: { Authorization: `Bearer ${tokenA}` },
-          data: {
-            envelopeId: doc.id,
-            data: [
-              {
-                id: firstDocumentRecipient!.id,
-                name: 'Updated first recipient',
-              },
-              {
-                id: secondDocumentRecipient!.id,
-                name: 'Updated second recipient',
-              },
-            ],
+        const res = await request.post(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/recipient/update-many`,
+          {
+            headers: { Authorization: `Bearer ${tokenA}` },
+            data: {
+              envelopeId: doc.id,
+              data: [
+                {
+                  id: firstDocumentRecipient!.id,
+                  name: 'Updated first recipient',
+                },
+                {
+                  id: secondDocumentRecipient!.id,
+                  name: 'Updated second recipient',
+                },
+              ],
+            },
           },
-        });
+        );
 
         expect(res.ok()).toBeTruthy();
         expect(res.status()).toBe(200);
@@ -4302,7 +4551,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope recipient delete endpoint', () => {
-      test('should block unauthorized access to envelope recipient delete endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope recipient delete endpoint', async ({
+        request,
+      }) => {
         const { user: recipientUser } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [recipientUser]);
@@ -4320,7 +4571,9 @@ test.describe('Document API V2', () => {
         expect(res.status()).toBe(404);
       });
 
-      test('should allow authorized access to envelope recipient delete endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope recipient delete endpoint', async ({
+        request,
+      }) => {
         const { user: recipientUser } = await seedUser();
 
         const doc = await seedDraftDocument(userA, teamA.id, [recipientUser]);
@@ -4340,10 +4593,14 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope item create-many endpoint', () => {
-      test('should block unauthorized access to envelope item create-many endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope item create-many endpoint', async ({
+        request,
+      }) => {
         const doc = await seedBlankDocument(userA, teamA.id);
 
-        const fieldMetaPdf = fs.readFileSync(path.join(__dirname, '../../../../../assets/field-meta.pdf'));
+        const fieldMetaPdf = fs.readFileSync(
+          path.join(__dirname, '../../../../../assets/field-meta.pdf'),
+        );
 
         const createEnvelopeItemsPayload: TCreateEnvelopeItemsPayload = {
           envelopeId: doc.id,
@@ -4351,7 +4608,10 @@ test.describe('Document API V2', () => {
 
         const formData = new FormData();
         formData.append('payload', JSON.stringify(createEnvelopeItemsPayload));
-        formData.append('files', new File([fieldMetaPdf], 'field-meta.pdf', { type: 'application/pdf' }));
+        formData.append(
+          'files',
+          new File([fieldMetaPdf], 'field-meta.pdf', { type: 'application/pdf' }),
+        );
 
         const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/item/create-many`, {
           headers: { Authorization: `Bearer ${tokenB}` },
@@ -4362,10 +4622,14 @@ test.describe('Document API V2', () => {
         expect(res.status()).toBe(404);
       });
 
-      test('should allow authorized access to envelope item create-many endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope item create-many endpoint', async ({
+        request,
+      }) => {
         const doc = await seedBlankDocument(userA, teamA.id);
 
-        const fieldMetaPdf = fs.readFileSync(path.join(__dirname, '../../../../../assets/field-meta.pdf'));
+        const fieldMetaPdf = fs.readFileSync(
+          path.join(__dirname, '../../../../../assets/field-meta.pdf'),
+        );
 
         const createEnvelopeItemsPayload: TCreateEnvelopeItemsPayload = {
           envelopeId: doc.id,
@@ -4373,8 +4637,14 @@ test.describe('Document API V2', () => {
 
         const formData = new FormData();
         formData.append('payload', JSON.stringify(createEnvelopeItemsPayload));
-        formData.append('files', new File([fieldMetaPdf], 'field-meta-1.pdf', { type: 'application/pdf' }));
-        formData.append('files', new File([fieldMetaPdf], 'field-meta-2.pdf', { type: 'application/pdf' }));
+        formData.append(
+          'files',
+          new File([fieldMetaPdf], 'field-meta-1.pdf', { type: 'application/pdf' }),
+        );
+        formData.append(
+          'files',
+          new File([fieldMetaPdf], 'field-meta-2.pdf', { type: 'application/pdf' }),
+        );
 
         const res = await request.post(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/item/create-many`, {
           headers: { Authorization: `Bearer ${tokenA}` },
@@ -4407,7 +4677,9 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope item update-many endpoint', () => {
-      test('should block unauthorized access to envelope item update-many endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope item update-many endpoint', async ({
+        request,
+      }) => {
         const doc = await seedBlankDocument(userA, teamA.id);
 
         const envelopeItem = await prisma.envelopeItem.findFirstOrThrow({
@@ -4431,7 +4703,9 @@ test.describe('Document API V2', () => {
         expect(res.status()).toBe(404);
       });
 
-      test('should allow authorized access to envelope item update-many endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope item update-many endpoint', async ({
+        request,
+      }) => {
         const doc = await seedBlankDocument(userA, teamA.id);
 
         const envelopeItem = await prisma.envelopeItem.findFirstOrThrow({
@@ -4457,18 +4731,25 @@ test.describe('Document API V2', () => {
     });
 
     test.describe('Envelope audit logs endpoint', () => {
-      test('should block unauthorized access to envelope audit logs endpoint', async ({ request }) => {
+      test('should block unauthorized access to envelope audit logs endpoint', async ({
+        request,
+      }) => {
         const doc = await seedBlankDocument(userA, teamA.id);
 
-        const res = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/${doc.id}/audit-log`, {
-          headers: { Authorization: `Bearer ${tokenB}` },
-        });
+        const res = await request.get(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/${doc.id}/audit-log`,
+          {
+            headers: { Authorization: `Bearer ${tokenB}` },
+          },
+        );
 
         expect(res.ok()).toBeFalsy();
         expect(res.status()).toBe(404);
       });
 
-      test('should allow authorized access to envelope audit logs endpoint', async ({ request }) => {
+      test('should allow authorized access to envelope audit logs endpoint', async ({
+        request,
+      }) => {
         const doc = await seedBlankDocument(userA, teamA.id);
 
         // Add a recipient which will trigger an audit log.
@@ -4486,9 +4767,12 @@ test.describe('Document API V2', () => {
           },
         });
 
-        const res = await request.get(`${WEBAPP_BASE_URL}/api/v2-beta/envelope/${doc.id}/audit-log`, {
-          headers: { Authorization: `Bearer ${tokenA}` },
-        });
+        const res = await request.get(
+          `${WEBAPP_BASE_URL}/api/v2-beta/envelope/${doc.id}/audit-log`,
+          {
+            headers: { Authorization: `Bearer ${tokenA}` },
+          },
+        );
 
         expect(res.ok()).toBeTruthy();
         expect(res.status()).toBe(200);

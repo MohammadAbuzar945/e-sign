@@ -1,3 +1,12 @@
+import { useMemo } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { AlertTriangleIcon, Loader } from 'lucide-react';
+import { DateTime } from 'luxon';
+import { Link, useSearchParams } from 'react-router';
+
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { trpc } from '@documenso/trpc/react';
 import { Badge } from '@documenso/ui/primitives/badge';
@@ -6,13 +15,6 @@ import type { DataTableColumnDef } from '@documenso/ui/primitives/data-table';
 import { DataTable } from '@documenso/ui/primitives/data-table';
 import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { AlertTriangleIcon, Loader } from 'lucide-react';
-import { DateTime } from 'luxon';
-import { useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router';
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 
@@ -40,15 +42,16 @@ export default function AdminUnsealedDocumentsPage() {
     },
   );
 
-  const { mutateAsync: resealDocument, isPending: isResealing } = trpc.admin.document.reseal.useMutation({
-    onSuccess: () => {
-      toast({ title: _(msg`Seal job triggered`), variant: 'default' });
-      void refetch();
-    },
-    onError: () => {
-      toast({ title: _(msg`Failed to trigger seal`), variant: 'destructive' });
-    },
-  });
+  const { mutateAsync: resealDocument, isPending: isResealing } =
+    trpc.admin.document.reseal.useMutation({
+      onSuccess: () => {
+        toast({ title: _(msg`Seal job triggered`), variant: 'default' });
+        void refetch();
+      },
+      onError: () => {
+        toast({ title: _(msg`Failed to trigger seal`), variant: 'destructive' });
+      },
+    });
 
   const results = findUnsealedData ?? {
     data: [],
@@ -77,7 +80,7 @@ export default function AdminUnsealedDocumentsPage() {
         header: _(msg`Owner`),
         accessorKey: 'ownerEmail',
         cell: ({ row }) => (
-          <div className="text-muted-foreground text-sm">
+          <div className="text-sm text-muted-foreground">
             <div>{row.original.ownerName}</div>
             <div>{row.original.ownerEmail}</div>
           </div>
@@ -148,15 +151,15 @@ export default function AdminUnsealedDocumentsPage() {
     <div>
       <div className="flex items-center gap-3">
         <AlertTriangleIcon className="h-8 w-8 text-destructive" />
-        <h2 className="font-semibold text-4xl">
+        <h2 className="text-4xl font-semibold">
           <Trans>Unsealed Documents</Trans>
         </h2>
       </div>
 
-      <p className="mt-2 text-muted-foreground text-sm">
+      <p className="mt-2 text-sm text-muted-foreground">
         <Trans>
-          Documents where all recipients have signed but the document has not been sealed. Documents stuck for more than
-          6 hours are no longer retried by the sweep job.
+          Documents where all recipients have signed but the document has not been sealed. Documents
+          stuck for more than 6 hours are no longer retried by the sweep job.
         </Trans>
       </p>
 

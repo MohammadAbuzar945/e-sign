@@ -6,7 +6,10 @@ import { prisma } from '@documenso/prisma';
 import { OrganisationMemberInviteStatus } from '@documenso/prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
-import { ZLeaveOrganisationRequestSchema, ZLeaveOrganisationResponseSchema } from './leave-organisation.types';
+import {
+  ZLeaveOrganisationRequestSchema,
+  ZLeaveOrganisationResponseSchema,
+} from './leave-organisation.types';
 
 export const leaveOrganisationRoute = authenticatedProcedure
   .input(ZLeaveOrganisationRequestSchema)
@@ -59,7 +62,11 @@ export const leaveOrganisationRoute = authenticatedProcedure
     // Leaving is a reducing operation, so we don't gate it on the subscription
     // being present. Sync Stripe only when one exists.
     if (organisation.subscription) {
-      await syncMemberCountWithStripeSeatPlan(organisation.subscription, organisationClaim, newMemberCount);
+      await syncMemberCountWithStripeSeatPlan(
+        organisation.subscription,
+        organisationClaim,
+        newMemberCount,
+      );
     }
 
     const teamIds = organisation.teams.map((team) => team.id);

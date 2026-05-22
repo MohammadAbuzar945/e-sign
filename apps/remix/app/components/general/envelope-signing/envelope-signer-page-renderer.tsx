@@ -1,3 +1,18 @@
+import { useEffect, useMemo } from 'react';
+
+import { Trans, useLingui } from '@lingui/react/macro';
+import {
+  type Field,
+  FieldType,
+  type Recipient,
+  RecipientRole,
+  type Signature,
+  SigningStatus,
+} from '@prisma/client';
+import type Konva from 'konva';
+import type { KonvaEventObject } from 'konva/lib/Node';
+import { match } from 'ts-pattern';
+
 import { usePageRenderer } from '@documenso/lib/client-only/hooks/use-page-renderer';
 import {
   type PageRenderData,
@@ -18,12 +33,6 @@ import type { TSignEnvelopeFieldValue } from '@documenso/trpc/server/envelope-ro
 import { EnvelopeRecipientFieldTooltip } from '@documenso/ui/components/document/envelope-recipient-field-tooltip';
 import { EnvelopeFieldToolTip } from '@documenso/ui/components/field/envelope-field-tooltip';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { type Field, FieldType, type Recipient, RecipientRole, type Signature, SigningStatus } from '@prisma/client';
-import type Konva from 'konva';
-import type { KonvaEventObject } from 'konva/lib/Node';
-import { useEffect, useMemo } from 'react';
-import { match } from 'ts-pattern';
 
 import { useEmbedSigningContext } from '~/components/embed/embed-signing-context';
 import { handleCheckboxFieldClick } from '~/utils/field-signing/checkbox-field';
@@ -158,9 +167,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
       const currentTarget = e.currentTarget as Konva.Group;
       const target = e.target as Konva.Shape;
 
-      const fieldRect = fieldGroup.findOne('.field-rect');
-      const fieldWidth = fieldRect ? fieldRect.width() : fieldGroup.width();
-      const fieldHeight = fieldRect ? fieldRect.height() : fieldGroup.height();
+      const { width: fieldWidth, height: fieldHeight } = fieldGroup.getClientRect();
 
       const foundField = localPageFields.find((f) => f.id === unparsedField.id);
       const foundLoadingGroup = currentTarget.findOne('.loading-spinner-group');
@@ -188,8 +195,8 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
       }
 
       const loadingSpinnerGroup = createSpinner({
-        fieldWidth,
-        fieldHeight,
+        fieldWidth: fieldWidth / scale,
+        fieldHeight: fieldHeight / scale,
       });
 
       const parsedFoundField = ZFullFieldSchema.parse(foundField);
@@ -230,7 +237,8 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
           fieldGroup.add(loadingSpinnerGroup);
 
           // Uncheck the value if it's already pressed.
-          const value = field.inserted && selectedRadioIndex === fieldCustomText ? null : selectedRadioIndex;
+          const value =
+            field.inserted && selectedRadioIndex === fieldCustomText ? null : selectedRadioIndex;
 
           void signField(field.id, {
             type: FieldType.RADIO,
@@ -334,8 +342,6 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
                 fieldGroup.add(loadingSpinnerGroup);
                 await signField(field.id, payload);
               }
-
-              loadingSpinnerGroup.destroy();
             })
             .finally(() => {
               loadingSpinnerGroup.destroy();
@@ -446,7 +452,11 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     }
   };
 
-  const signField = async (fieldId: number, payload: TSignEnvelopeFieldValue, authOptions?: TRecipientActionAuth) => {
+  const signField = async (
+    fieldId: number,
+    payload: TSignEnvelopeFieldValue,
+    authOptions?: TRecipientActionAuth,
+  ) => {
     try {
       const { inserted } = await signFieldInternal(fieldId, payload, authOptions);
 

@@ -2,7 +2,10 @@ import { adminSuperDeleteDocument } from '@documenso/lib/server-only/admin/admin
 import { sendDeleteEmail } from '@documenso/lib/server-only/document/send-delete-email';
 
 import { adminProcedure } from '../trpc';
-import { ZDeleteDocumentRequestSchema, ZDeleteDocumentResponseSchema } from './delete-document.types';
+import {
+  ZDeleteDocumentRequestSchema,
+  ZDeleteDocumentResponseSchema,
+} from './delete-document.types';
 
 export const deleteDocumentRoute = adminProcedure
   .input(ZDeleteDocumentRequestSchema)

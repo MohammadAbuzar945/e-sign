@@ -1,6 +1,11 @@
+import { expect, test } from '@playwright/test';
+
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { createApiToken } from '@documenso/lib/server-only/public-api/create-api-token';
-import { mapSecondaryIdToDocumentId, mapSecondaryIdToTemplateId } from '@documenso/lib/utils/envelope';
+import {
+  mapSecondaryIdToDocumentId,
+  mapSecondaryIdToTemplateId,
+} from '@documenso/lib/utils/envelope';
 import { prisma } from '@documenso/prisma';
 import { DocumentDataType, FieldType } from '@documenso/prisma/client';
 import {
@@ -11,7 +16,6 @@ import {
 } from '@documenso/prisma/seed/documents';
 import { seedBlankTemplate, seedTemplate } from '@documenso/prisma/seed/templates';
 import { seedUser } from '@documenso/prisma/seed/users';
-import { expect, test } from '@playwright/test';
 
 const WEBAPP_BASE_URL = NEXT_PUBLIC_WEBAPP_URL();
 
@@ -21,7 +25,9 @@ test.describe.configure({
 
 test.describe('Document Access API V1', () => {
   test.describe('Document GET endpoint', () => {
-    test('should block unauthorized access to documents not owned by the user', async ({ request }) => {
+    test('should block unauthorized access to documents not owned by the user', async ({
+      request,
+    }) => {
       const { user: userA, team: teamA } = await seedUser();
 
       const { user: userB, team: teamB } = await seedUser();
@@ -313,7 +319,9 @@ test.describe('Document Access API V1', () => {
   });
 
   test.describe('Document recipients POST endpoint', () => {
-    test('should block unauthorized access to document recipients endpoint', async ({ request }) => {
+    test('should block unauthorized access to document recipients endpoint', async ({
+      request,
+    }) => {
       const { user: userA, team: teamA } = await seedUser();
 
       const { user: userB, team: teamB } = await seedUser();
@@ -363,7 +371,9 @@ test.describe('Document Access API V1', () => {
   });
 
   test.describe('Document recipients PATCH endpoint', () => {
-    test('should block unauthorized access to PATCH on recipients endpoint', async ({ request }) => {
+    test('should block unauthorized access to PATCH on recipients endpoint', async ({
+      request,
+    }) => {
       const { user: userA, team: teamA } = await seedUser();
 
       const { user: userB, team: teamB } = await seedUser();
@@ -449,7 +459,9 @@ test.describe('Document Access API V1', () => {
   });
 
   test.describe('Document recipients DELETE endpoint', () => {
-    test('should block unauthorized access to DELETE on recipients endpoint', async ({ request }) => {
+    test('should block unauthorized access to DELETE on recipients endpoint', async ({
+      request,
+    }) => {
       const { user: userA, team: teamA } = await seedUser();
 
       const { user: userB, team: teamB } = await seedUser();
@@ -960,7 +972,9 @@ test.describe('Document Access API V1', () => {
 
       expect(resB.ok()).toBeTruthy();
       expect(resB.status()).toBe(200);
-      expect(reqData.documents.every((doc: { userId: number }) => doc.userId !== userA.id)).toBe(true);
+      expect(reqData.documents.every((doc: { userId: number }) => doc.userId !== userA.id)).toBe(
+        true,
+      );
       expect(reqData.documents.length).toBe(0);
       expect(reqData.totalPages).toBe(0);
     });
@@ -985,7 +999,9 @@ test.describe('Document Access API V1', () => {
       expect(resA.ok()).toBeTruthy();
       expect(resA.status()).toBe(200);
       expect(reqData.documents.length).toBeGreaterThan(0);
-      expect(reqData.documents.every((doc: { userId: number }) => doc.userId === userA.id)).toBe(true);
+      expect(reqData.documents.every((doc: { userId: number }) => doc.userId === userA.id)).toBe(
+        true,
+      );
     });
   });
 
@@ -1011,7 +1027,9 @@ test.describe('Document Access API V1', () => {
 
       expect(resB.ok()).toBeTruthy();
       expect(resB.status()).toBe(200);
-      expect(reqData.templates.every((tpl: { userId: number }) => tpl.userId !== userA.id)).toBe(true);
+      expect(reqData.templates.every((tpl: { userId: number }) => tpl.userId !== userA.id)).toBe(
+        true,
+      );
       expect(reqData.templates.length).toBe(0);
       expect(reqData.totalPages).toBe(0);
     });
@@ -1036,12 +1054,16 @@ test.describe('Document Access API V1', () => {
       expect(resA.ok()).toBeTruthy();
       expect(resA.status()).toBe(200);
       expect(reqData.templates.length).toBeGreaterThan(0);
-      expect(reqData.templates.every((tpl: { userId: number }) => tpl.userId === userA.id)).toBe(true);
+      expect(reqData.templates.every((tpl: { userId: number }) => tpl.userId === userA.id)).toBe(
+        true,
+      );
     });
   });
 
   test.describe('Create document from template endpoint', () => {
-    test('should block unauthorized access to create-document-from-template endpoint', async ({ request }) => {
+    test('should block unauthorized access to create-document-from-template endpoint', async ({
+      request,
+    }) => {
       const { user: userA, team: teamA } = await seedUser();
 
       const { user: userB, team: teamB } = await seedUser();
@@ -1082,7 +1104,9 @@ test.describe('Document Access API V1', () => {
       expect(resB.status()).toBe(401);
     });
 
-    test('should allow authorized access to create-document-from-template endpoint', async ({ request }) => {
+    test('should allow authorized access to create-document-from-template endpoint', async ({
+      request,
+    }) => {
       const { user: userA, team: teamA } = await seedUser();
       const { token: tokenA } = await createApiToken({
         userId: userA.id,

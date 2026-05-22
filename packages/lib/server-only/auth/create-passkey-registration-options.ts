@@ -1,8 +1,9 @@
-import { prisma } from '@documenso/prisma';
-import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import { generateRegistrationOptions } from '@simplewebauthn/server';
+import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import { DateTime } from 'luxon';
+
+import { prisma } from '@documenso/prisma';
 
 import { PASSKEY_TIMEOUT } from '../../constants/auth';
 import { getAuthenticatorOptions } from '../../utils/authenticator';
@@ -11,7 +12,9 @@ type CreatePasskeyRegistrationOptions = {
   userId: number;
 };
 
-export const createPasskeyRegistrationOptions = async ({ userId }: CreatePasskeyRegistrationOptions) => {
+export const createPasskeyRegistrationOptions = async ({
+  userId,
+}: CreatePasskeyRegistrationOptions) => {
   const user = await prisma.user.findFirstOrThrow({
     where: {
       id: userId,

@@ -1,8 +1,15 @@
-import { mapSecondaryIdToDocumentId, mapSecondaryIdToTemplateId } from '@documenso/lib/utils/envelope';
-import { prisma } from '@documenso/prisma';
-import { seedTeamDocumentWithMeta, seedTeamTemplateWithMeta } from '@documenso/prisma/seed/documents';
-import { seedUser } from '@documenso/prisma/seed/users';
 import { expect, test } from '@playwright/test';
+
+import {
+  mapSecondaryIdToDocumentId,
+  mapSecondaryIdToTemplateId,
+} from '@documenso/lib/utils/envelope';
+import { prisma } from '@documenso/prisma';
+import {
+  seedTeamDocumentWithMeta,
+  seedTeamTemplateWithMeta,
+} from '@documenso/prisma/seed/documents';
+import { seedUser } from '@documenso/prisma/seed/users';
 
 import { apiSignin } from '../fixtures/authentication';
 
@@ -18,7 +25,9 @@ test('[TEAMS]: check that default team signature settings are all enabled', asyn
   const document = await seedTeamDocumentWithMeta(team);
 
   // Create a document and check the settings
-  await page.goto(`/t/${team.url}/documents/${mapSecondaryIdToDocumentId(document.secondaryId)}/edit`);
+  await page.goto(
+    `/t/${team.url}/documents/${mapSecondaryIdToDocumentId(document.secondaryId)}/edit`,
+  );
 
   // Verify that the settings match
   await page.getByRole('button', { name: 'Advanced Options' }).click();

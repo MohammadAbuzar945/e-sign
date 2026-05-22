@@ -5,7 +5,10 @@ import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations'
 import { prisma } from '@documenso/prisma';
 
 import { authenticatedProcedure } from '../trpc';
-import { ZUpdateOrganisationRequestSchema, ZUpdateOrganisationResponseSchema } from './update-organisation.types';
+import {
+  ZUpdateOrganisationRequestSchema,
+  ZUpdateOrganisationResponseSchema,
+} from './update-organisation.types';
 
 export const updateOrganisationRoute = authenticatedProcedure
   //   .meta(updateOrganisationMeta)

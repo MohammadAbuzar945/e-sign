@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-namespace */
 import type { TDefaultRecipient } from '@documenso/lib/types/default-recipients';
-import type { TDocumentAuthOptions, TRecipientAuthOptions } from '@documenso/lib/types/document-auth';
+import type {
+  TDocumentAuthOptions,
+  TRecipientAuthOptions,
+} from '@documenso/lib/types/document-auth';
 import type { TDocumentEmailSettings } from '@documenso/lib/types/document-email';
 import type { TDocumentFormValues } from '@documenso/lib/types/document-form-values';
 import type { TEnvelopeAttachmentType } from '@documenso/lib/types/envelope-attachment';
@@ -28,3 +31,5 @@ declare global {
     type DefaultRecipient = TDefaultRecipient;
   }
 }
+
+export {};

@@ -1,7 +1,20 @@
+import { useEffect } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { DocumentVisibility, TeamMemberRole, TemplateType } from '@prisma/client';
+import { DocumentDistributionMethod, type Field } from '@prisma/client';
+import { InfoIcon } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { match } from 'ts-pattern';
+
 import { useAutoSave } from '@documenso/lib/client-only/hooks/use-autosave';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { DATE_FORMATS, DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
-import { DOCUMENT_DISTRIBUTION_METHODS, DOCUMENT_SIGNATURE_TYPES } from '@documenso/lib/constants/document';
+import {
+  DOCUMENT_DISTRIBUTION_METHODS,
+  DOCUMENT_SIGNATURE_TYPES,
+} from '@documenso/lib/constants/document';
 import { SUPPORTED_LANGUAGES } from '@documenso/lib/constants/i18n';
 import { DEFAULT_DOCUMENT_TIME_ZONE, TIME_ZONES } from '@documenso/lib/constants/time-zones';
 import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';
@@ -24,25 +37,30 @@ import {
   DocumentVisibilitySelect,
   DocumentVisibilityTooltip,
 } from '@documenso/ui/components/document/document-visibility-select';
-import { TemplateTypeSelect, TemplateTypeTooltip } from '@documenso/ui/components/template/template-type-select';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@documenso/ui/primitives/accordion';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
 import {
-  DocumentDistributionMethod,
-  DocumentVisibility,
-  type Field,
-  TeamMemberRole,
-  TemplateType,
-} from '@prisma/client';
-import { InfoIcon } from 'lucide-react';
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { match } from 'ts-pattern';
+  TemplateTypeSelect,
+  TemplateTypeTooltip,
+} from '@documenso/ui/components/template/template-type-select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@documenso/ui/primitives/accordion';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
 
 import { DocumentEmailCheckboxes } from '../../components/document/document-email-checkboxes';
-import { DocumentReadOnlyFields, mapFieldsWithRecipients } from '../../components/document/document-read-only-fields';
+import {
+  DocumentReadOnlyFields,
+  mapFieldsWithRecipients,
+} from '../../components/document/document-read-only-fields';
 import { DocumentSignatureSettingsTooltip } from '../../components/document/document-signature-settings-tooltip';
 import { Combobox } from '../combobox';
 import {
@@ -105,8 +123,10 @@ export const AddTemplateSettingsFormPartial = ({
         message: template.templateMeta?.message ?? '',
         timezone: template.templateMeta?.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE,
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        dateFormat: (template.templateMeta?.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT) as TDocumentMetaDateFormat,
-        distributionMethod: template.templateMeta?.distributionMethod || DocumentDistributionMethod.EMAIL,
+        dateFormat: (template.templateMeta?.dateFormat ??
+          DEFAULT_DOCUMENT_DATE_FORMAT) as TDocumentMetaDateFormat,
+        distributionMethod:
+          template.templateMeta?.distributionMethod || DocumentDistributionMethod.EMAIL,
         redirectUrl: template.templateMeta?.redirectUrl ?? '',
         language: template.templateMeta?.language ?? 'en',
         emailId: template.templateMeta?.emailId ?? null,
@@ -122,10 +142,11 @@ export const AddTemplateSettingsFormPartial = ({
   const distributionMethod = form.watch('meta.distributionMethod');
   const emailSettings = form.watch('meta.emailSettings');
 
-  const { data: emailData, isLoading: isLoadingEmails } = trpc.enterprise.organisation.email.find.useQuery({
-    organisationId: organisation.id,
-    perPage: 100,
-  });
+  const { data: emailData, isLoading: isLoadingEmails } =
+    trpc.enterprise.organisation.email.find.useQuery({
+      organisationId: organisation.id,
+      perPage: 100,
+    });
 
   const emails = emailData?.data || [];
 
@@ -171,7 +192,10 @@ export const AddTemplateSettingsFormPartial = ({
 
   return (
     <>
-      <DocumentFlowFormContainerHeader title={documentFlow.title} description={documentFlow.description} />
+      <DocumentFlowFormContainerHeader
+        title={documentFlow.title}
+        description={documentFlow.description}
+      />
 
       <DocumentFlowFormContainerContent>
         {isDocumentPdfLoaded && (
@@ -183,7 +207,10 @@ export const AddTemplateSettingsFormPartial = ({
         )}
 
         <Form {...form}>
-          <fieldset className="flex h-full flex-col space-y-6" disabled={form.formState.isSubmitting}>
+          <fieldset
+            className="flex h-full flex-col space-y-6"
+            disabled={form.formState.isSubmitting}
+          >
             <FormField
               control={form.control}
               name="title"
@@ -194,7 +221,12 @@ export const AddTemplateSettingsFormPartial = ({
                   </FormLabel>
 
                   <FormControl>
-                    <Input className="bg-background" {...field} maxLength={255} onBlur={handleAutoSave} />
+                    <Input
+                      className="bg-background"
+                      {...field}
+                      maxLength={255}
+                      onBlur={handleAutoSave}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -214,8 +246,9 @@ export const AddTemplateSettingsFormPartial = ({
                       </TooltipTrigger>
 
                       <TooltipContent className="max-w-md space-y-2 p-4 text-foreground">
-                        Controls the language for the document, including the language to be used for email
-                        notifications, and the final certificate that is generated and attached to the document.
+                        Controls the language for the document, including the language to be used
+                        for email notifications, and the final certificate that is generated and
+                        attached to the document.
                       </TooltipContent>
                     </Tooltip>
                   </FormLabel>
@@ -342,27 +375,30 @@ export const AddTemplateSettingsFormPartial = ({
 
                         <p>
                           <Trans>
-                            This is how the document will reach the recipients once the document is ready for signing.
+                            This is how the document will reach the recipients once the document is
+                            ready for signing.
                           </Trans>
                         </p>
 
                         <ul className="ml-3.5 list-outside list-disc space-y-0.5 py-2">
                           <li>
                             <Trans>
-                              <strong>Email</strong> - The recipient will be emailed the document to sign, approve, etc.
+                              <strong>Email</strong> - The recipient will be emailed the document to
+                              sign, approve, etc.
                             </Trans>
                           </li>
                           <li>
                             <Trans>
-                              <strong>None</strong> - We will generate links which you can send to the recipients
-                              manually.
+                              <strong>None</strong> - We will generate links which you can send to
+                              the recipients manually.
                             </Trans>
                           </li>
                         </ul>
 
                         <Trans>
-                          <strong>Note</strong> - If you use Links in combination with direct templates, you will need
-                          to manually send the links to the remaining recipients.
+                          <strong>Note</strong> - If you use Links in combination with direct
+                          templates, you will need to manually send the links to the remaining
+                          recipients.
                         </Trans>
                       </TooltipContent>
                     </Tooltip>
@@ -381,11 +417,13 @@ export const AddTemplateSettingsFormPartial = ({
                       </SelectTrigger>
 
                       <SelectContent position="popper">
-                        {Object.values(DOCUMENT_DISTRIBUTION_METHODS).map(({ value, description }) => (
-                          <SelectItem key={value} value={value}>
-                            {t(description)}
-                          </SelectItem>
-                        ))}
+                        {Object.values(DOCUMENT_DISTRIBUTION_METHODS).map(
+                          ({ value, description }) => (
+                            <SelectItem key={value} value={value}>
+                              {t(description)}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                   </FormControl>
@@ -458,7 +496,7 @@ export const AddTemplateSettingsFormPartial = ({
                     <Trans>Email Options</Trans>
                   </AccordionTrigger>
 
-                  <AccordionContent className="-mx-1 px-1 pt-4 text-muted-foreground text-sm leading-relaxed [&>div]:pb-0">
+                  <AccordionContent className="-mx-1 px-1 pt-4 text-sm leading-relaxed text-muted-foreground [&>div]:pb-0">
                     <div className="flex flex-col space-y-6">
                       {organisation.organisationClaim.flags.emailDomains && (
                         <FormField
@@ -474,9 +512,14 @@ export const AddTemplateSettingsFormPartial = ({
                                 <Select
                                   {...field}
                                   value={field.value === null ? '-1' : field.value}
-                                  onValueChange={(value) => field.onChange(value === '-1' ? null : value)}
+                                  onValueChange={(value) =>
+                                    field.onChange(value === '-1' ? null : value)
+                                  }
                                 >
-                                  <SelectTrigger loading={isLoadingEmails} className="bg-background">
+                                  <SelectTrigger
+                                    loading={isLoadingEmails}
+                                    className="bg-background"
+                                  >
                                     <SelectValue />
                                   </SelectTrigger>
 
@@ -505,7 +548,8 @@ export const AddTemplateSettingsFormPartial = ({
                           <FormItem>
                             <FormLabel>
                               <Trans>
-                                Reply To Email <span className="text-muted-foreground">(Optional)</span>
+                                Reply To Email{' '}
+                                <span className="text-muted-foreground">(Optional)</span>
                               </Trans>
                             </FormLabel>
 
@@ -592,7 +636,7 @@ export const AddTemplateSettingsFormPartial = ({
                   <Trans>Advanced Options</Trans>
                 </AccordionTrigger>
 
-                <AccordionContent className="-mx-1 px-1 pt-4 text-muted-foreground text-sm leading-relaxed">
+                <AccordionContent className="-mx-1 px-1 pt-4 text-sm leading-relaxed text-muted-foreground">
                   <div className="flex flex-col space-y-6">
                     <FormField
                       control={form.control}
@@ -608,14 +652,20 @@ export const AddTemplateSettingsFormPartial = ({
 
                               <TooltipContent className="max-w-xs text-muted-foreground">
                                 <Trans>
-                                  Add an external ID to the template. This can be used to identify in external systems.
+                                  Add an external ID to the template. This can be used to identify
+                                  in external systems.
                                 </Trans>
                               </TooltipContent>
                             </Tooltip>
                           </FormLabel>
 
                           <FormControl>
-                            <Input className="bg-background" {...field} maxLength={255} onBlur={handleAutoSave} />
+                            <Input
+                              className="bg-background"
+                              {...field}
+                              maxLength={255}
+                              onBlur={handleAutoSave}
+                            />
                           </FormControl>
 
                           <FormMessage />
@@ -698,13 +748,20 @@ export const AddTemplateSettingsFormPartial = ({
                               </TooltipTrigger>
 
                               <TooltipContent className="max-w-xs text-muted-foreground">
-                                <Trans>Add a URL to redirect the user to once the document is signed</Trans>
+                                <Trans>
+                                  Add a URL to redirect the user to once the document is signed
+                                </Trans>
                               </TooltipContent>
                             </Tooltip>
                           </FormLabel>
 
                           <FormControl>
-                            <Input className="bg-background" {...field} maxLength={255} onBlur={handleAutoSave} />
+                            <Input
+                              className="bg-background"
+                              {...field}
+                              maxLength={255}
+                              onBlur={handleAutoSave}
+                            />
                           </FormControl>
 
                           <FormMessage />

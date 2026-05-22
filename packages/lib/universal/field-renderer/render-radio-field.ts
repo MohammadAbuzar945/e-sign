@@ -10,8 +10,8 @@ import {
   upsertFieldGroup,
   upsertFieldRect,
 } from './field-generic-items';
-import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
 import { calculateFieldPosition, calculateMultiItemPosition } from './field-renderer';
+import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
 
 // Do not change any of these values without consulting with the team.
 const radioFieldPadding = 8;
@@ -21,7 +21,10 @@ const calculateRadioSize = (fontSize: number) => {
   return fontSize;
 };
 
-export const renderRadioFieldElement = (field: FieldToRender, options: RenderFieldElementOptions) => {
+export const renderRadioFieldElement = (
+  field: FieldToRender,
+  options: RenderFieldElementOptions,
+) => {
   const { pageWidth, pageHeight, pageLayer, mode, color } = options;
 
   const radioMeta: TRadioFieldMeta | null = (field.fieldMeta as TRadioFieldMeta) || null;
@@ -70,17 +73,18 @@ export const renderRadioFieldElement = (field: FieldToRender, options: RenderFie
     groupedItems.forEach((item, i) => {
       const { circleElement, checkmarkElement, textElement } = item;
 
-      const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } = calculateMultiItemPosition({
-        fieldWidth: rectWidth,
-        fieldHeight: rectHeight,
-        itemCount: radioValues.length,
-        itemIndex: i,
-        itemSize: calculateRadioSize(fontSize),
-        spacingBetweenItemAndText: spacingBetweenRadioAndText,
-        fieldPadding: radioFieldPadding,
-        type: 'radio',
-        direction: radioMeta?.direction || 'vertical',
-      });
+      const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } =
+        calculateMultiItemPosition({
+          fieldWidth: rectWidth,
+          fieldHeight: rectHeight,
+          itemCount: radioValues.length,
+          itemIndex: i,
+          itemSize: calculateRadioSize(fontSize),
+          spacingBetweenItemAndText: spacingBetweenRadioAndText,
+          fieldPadding: radioFieldPadding,
+          type: 'radio',
+          direction: radioMeta?.direction || 'vertical',
+        });
 
       circleElement.setAttrs({
         x: itemInputX,
@@ -133,17 +137,18 @@ export const renderRadioFieldElement = (field: FieldToRender, options: RenderFie
       })
       .exhaustive();
 
-    const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } = calculateMultiItemPosition({
-      fieldWidth,
-      fieldHeight,
-      itemCount: radioValues.length,
-      itemIndex: index,
-      itemSize: calculateRadioSize(fontSize),
-      spacingBetweenItemAndText: spacingBetweenRadioAndText,
-      fieldPadding: radioFieldPadding,
-      type: 'radio',
-      direction: radioMeta?.direction || 'vertical',
-    });
+    const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } =
+      calculateMultiItemPosition({
+        fieldWidth,
+        fieldHeight,
+        itemCount: radioValues.length,
+        itemIndex: index,
+        itemSize: calculateRadioSize(fontSize),
+        spacingBetweenItemAndText: spacingBetweenRadioAndText,
+        fieldPadding: radioFieldPadding,
+        type: 'radio',
+        direction: radioMeta?.direction || 'vertical',
+      });
 
     // Circle which represents the radio button.
     const circle = new Konva.Circle({

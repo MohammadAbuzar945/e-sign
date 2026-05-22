@@ -1,6 +1,8 @@
-import { Button } from '@documenso/ui/primitives/button';
-import { Trans, useLingui } from '@lingui/react/macro';
+import { useLingui } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
 import { FolderInputIcon, Trash2Icon, XIcon } from 'lucide-react';
+
+import { Button } from '@documenso/ui/primitives/button';
 
 export type EnvelopesTableBulkActionBarProps = {
   selectedCount: number;
@@ -23,7 +25,7 @@ export const EnvelopesTableBulkActionBar = ({
 
   return (
     <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-x-4 rounded-lg border border-border bg-background px-4 py-3 shadow-lg">
-      <span className="font-medium text-sm">
+      <span className="text-sm font-medium">
         <Trans>{selectedCount} selected</Trans>
       </span>
 

@@ -1,10 +1,17 @@
+import {
+  DocumentStatus,
+  EnvelopeType,
+  RecipientRole,
+  SigningStatus,
+  TeamMemberRole,
+} from '@prisma/client';
+import type { Expression, ExpressionBuilder, SelectQueryBuilder, SqlBool } from 'kysely';
+import { DateTime } from 'luxon';
+
 import type { PeriodSelectorValue } from '@documenso/lib/server-only/document/find-documents';
 import { kyselyPrisma, prisma, sql } from '@documenso/prisma';
 import type { DB } from '@documenso/prisma/generated/types';
 import { ExtendedDocumentStatus } from '@documenso/prisma/types/extended-document-status';
-import { DocumentStatus, EnvelopeType, RecipientRole, SigningStatus, TeamMemberRole } from '@prisma/client';
-import type { Expression, ExpressionBuilder, SelectQueryBuilder, SqlBool } from 'kysely';
-import { DateTime } from 'luxon';
 
 import { STATS_COUNT_CAP } from '../../constants/document';
 import { TEAM_DOCUMENT_VISIBILITY_MAP } from '../../constants/teams';
@@ -80,7 +87,14 @@ const cappedCount = async (qb: EnvelopeQueryBuilder): Promise<number> => {
   return Math.min(Number(result.total ?? 0), STATS_COUNT_CAP);
 };
 
-export const getStats = async ({ userId, teamId, period, search = '', folderId, senderIds }: GetStatsInput) => {
+export const getStats = async ({
+  userId,
+  teamId,
+  period,
+  search = '',
+  folderId,
+  senderIds,
+}: GetStatsInput) => {
   const user = await prisma.user.findFirstOrThrow({
     where: { id: userId },
     select: { id: true, email: true },
@@ -99,14 +113,18 @@ export const getStats = async ({ userId, teamId, period, search = '', folderId, 
   // ─── Base query builder ──────────────────────────────────────────────
 
   const buildBaseQuery = (): EnvelopeQueryBuilder => {
-    let qb: EnvelopeQueryBuilder = kyselyPrisma.$kysely.selectFrom('Envelope').select('Envelope.id');
+    let qb: EnvelopeQueryBuilder = kyselyPrisma.$kysely
+      .selectFrom('Envelope')
+      .select('Envelope.id');
 
     // Type = DOCUMENT
     qb = qb.where('Envelope.type', '=', sql.lit(EnvelopeType.DOCUMENT));
 
     // Folder filter
     qb =
-      folderId !== undefined ? qb.where('Envelope.folderId', '=', folderId) : qb.where('Envelope.folderId', 'is', null);
+      folderId !== undefined
+        ? qb.where('Envelope.folderId', '=', folderId)
+        : qb.where('Envelope.folderId', 'is', null);
 
     // Period filter
     if (period) {
@@ -163,11 +181,15 @@ export const getStats = async ({ userId, teamId, period, search = '', folderId, 
     ]);
 
   const teamDeletedFilter = (eb: EnvelopeExpressionBuilder) => {
-    const branches = [eb.and([eb('Envelope.teamId', '=', team.id), eb('Envelope.deletedAt', 'is', null)])];
+    const branches = [
+      eb.and([eb('Envelope.teamId', '=', team.id), eb('Envelope.deletedAt', 'is', null)]),
+    ];
 
     if (teamEmail) {
       branches.push(eb.and([senderEmailIs(eb, teamEmail), eb('Envelope.deletedAt', 'is', null)]));
-      branches.push(recipientExists(eb, teamEmail, (reb) => reb('Recipient.documentDeletedAt', 'is', null)));
+      branches.push(
+        recipientExists(eb, teamEmail, (reb) => reb('Recipient.documentDeletedAt', 'is', null)),
+      );
     }
 
     return eb.or(branches);
@@ -232,7 +254,9 @@ export const getStats = async ({ userId, teamId, period, search = '', folderId, 
       if (teamEmail) {
         accessBranches.push(senderEmailIs(eb, teamEmail));
         accessBranches.push(
-          recipientExists(eb, teamEmail, (reb) => reb('Recipient.signingStatus', '=', sql.lit(SigningStatus.REJECTED))),
+          recipientExists(eb, teamEmail, (reb) =>
+            reb('Recipient.signingStatus', '=', sql.lit(SigningStatus.REJECTED)),
+          ),
         );
       }
 

@@ -1,8 +1,9 @@
-import type { TRecipientColor } from '@documenso/ui/lib/recipient-colors';
 import type { Signature } from '@prisma/client';
 import { type Field, FieldType } from '@prisma/client';
 import type Konva from 'konva';
 import { match } from 'ts-pattern';
+
+import type { TRecipientColor } from '@documenso/ui/lib/recipient-colors';
 
 import type { TFieldMetaSchema } from '../../types/field-meta';
 import { renderCheckboxFieldElement } from './render-checkbox-field';
@@ -78,8 +79,14 @@ export const renderField = ({
 
   // If the generic text field element array changes, update the `GenericTextFieldTypeMetas` type
   return match(field.type)
-    .with(FieldType.INITIALS, FieldType.NAME, FieldType.EMAIL, FieldType.DATE, FieldType.TEXT, FieldType.NUMBER, () =>
-      renderGenericTextFieldElement(field, options),
+    .with(
+      FieldType.INITIALS,
+      FieldType.NAME,
+      FieldType.EMAIL,
+      FieldType.DATE,
+      FieldType.TEXT,
+      FieldType.NUMBER,
+      () => renderGenericTextFieldElement(field, options),
     )
     .with(FieldType.CHECKBOX, () => renderCheckboxFieldElement(field, options))
     .with(FieldType.RADIO, () => renderRadioFieldElement(field, options))

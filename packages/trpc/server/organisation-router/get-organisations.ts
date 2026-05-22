@@ -2,7 +2,10 @@ import { getHighestOrganisationRoleInGroup } from '@documenso/lib/utils/organisa
 import { prisma } from '@documenso/prisma';
 
 import { authenticatedProcedure } from '../trpc';
-import { ZGetOrganisationsRequestSchema, ZGetOrganisationsResponseSchema } from './get-organisations.types';
+import {
+  ZGetOrganisationsRequestSchema,
+  ZGetOrganisationsResponseSchema,
+} from './get-organisations.types';
 
 export const getOrganisationsRoute = authenticatedProcedure
   //   .meta(getOrganisationsMeta)

@@ -1,5 +1,6 @@
-import { prisma } from '@documenso/prisma';
 import type { TeamGroup } from '@prisma/client';
+
+import { prisma } from '@documenso/prisma';
 
 export type GetUserTeamIdsOptions = {
   userId: number;
@@ -12,7 +13,9 @@ export type GetUserTeamIdsOptions = {
  * This is significantly cheaper than joining team groups inline in a Prisma `findMany`
  * because it avoids deep EXISTS subqueries and redundant LEFT JOINs per row.
  */
-export const getUserTeamGroups = async ({ userId }: GetUserTeamIdsOptions): Promise<Map<number, TeamGroup[]>> => {
+export const getUserTeamGroups = async ({
+  userId,
+}: GetUserTeamIdsOptions): Promise<Map<number, TeamGroup[]>> => {
   const teamGroups = await prisma.teamGroup.findMany({
     where: {
       organisationGroup: {

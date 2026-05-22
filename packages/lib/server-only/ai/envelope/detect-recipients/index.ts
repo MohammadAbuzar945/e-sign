@@ -73,7 +73,10 @@ export type DetectRecipientsFromPdfOptions = {
   onProgress?: (progress: DetectRecipientsProgress) => void;
 };
 
-export const detectRecipientsFromPdf = async ({ pdfBytes, onProgress }: DetectRecipientsFromPdfOptions) => {
+export const detectRecipientsFromPdf = async ({
+  pdfBytes,
+  onProgress,
+}: DetectRecipientsFromPdfOptions) => {
   const pageImages = await pdfToImages(pdfBytes);
 
   if (pageImages.length === 0) {
@@ -102,7 +105,10 @@ const formatDetectedRecipients = (recipients: TDetectedRecipientSchema[]) => {
   return `\n\nRecipients detected so far:\n${formatted}`;
 };
 
-const isDuplicateRecipient = (recipient: TDetectedRecipientSchema, existing: TDetectedRecipientSchema) => {
+const isDuplicateRecipient = (
+  recipient: TDetectedRecipientSchema,
+  existing: TDetectedRecipientSchema,
+) => {
   if (recipient.email && existing.email) {
     return recipient.email.toLowerCase() === existing.email.toLowerCase();
   }
@@ -114,7 +120,10 @@ const isDuplicateRecipient = (recipient: TDetectedRecipientSchema, existing: TDe
   return false;
 };
 
-const mergeRecipients = (existingRecipients: TDetectedRecipientSchema[], newRecipients: TDetectedRecipientSchema[]) => {
+const mergeRecipients = (
+  existingRecipients: TDetectedRecipientSchema[],
+  newRecipients: TDetectedRecipientSchema[],
+) => {
   const merged = [...existingRecipients];
 
   for (const recipient of newRecipients) {
@@ -160,7 +169,10 @@ Please analyze these pages and submit any recipients you find using the tool. I 
 Please analyze these pages and submit any NEW recipients you find (not already listed above) using the tool.`;
 };
 
-const detectRecipientsFromImages = async ({ images, onProgress }: DetectRecipientsFromImagesOptions) => {
+const detectRecipientsFromImages = async ({
+  images,
+  onProgress,
+}: DetectRecipientsFromImagesOptions) => {
   const imageChunks = chunk(images, MAX_PAGES_PER_CHUNK);
 
   const totalChunks = imageChunks.length;

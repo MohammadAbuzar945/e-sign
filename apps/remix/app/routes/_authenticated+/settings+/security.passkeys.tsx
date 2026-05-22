@@ -15,7 +15,11 @@ export default function SettingsPasskeys() {
 
   return (
     <div>
-      <SettingsHeader title={_(msg`Passkeys`)} subtitle={_(msg`Manage your passkeys.`)} hideDivider={true}>
+      <SettingsHeader
+        title={_(msg`Passkeys`)}
+        subtitle={_(msg`Manage your passkeys.`)}
+        hideDivider={true}
+      >
         <PasskeyCreateDialog />
       </SettingsHeader>
 

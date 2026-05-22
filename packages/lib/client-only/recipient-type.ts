@@ -1,5 +1,11 @@
 import type { Recipient } from '@prisma/client';
-import { DocumentDistributionMethod, ReadStatus, RecipientRole, SendStatus, SigningStatus } from '@prisma/client';
+import {
+  DocumentDistributionMethod,
+  ReadStatus,
+  RecipientRole,
+  SendStatus,
+  SigningStatus,
+} from '@prisma/client';
 
 type RecipientForType = Pick<Recipient, 'role' | 'signingStatus' | 'readStatus' | 'sendStatus'>;
 
@@ -23,7 +29,10 @@ export const getRecipientType = (
     return RecipientStatusType.REJECTED;
   }
 
-  if (recipient.readStatus === ReadStatus.OPENED && recipient.signingStatus === SigningStatus.NOT_SIGNED) {
+  if (
+    recipient.readStatus === ReadStatus.OPENED &&
+    recipient.signingStatus === SigningStatus.NOT_SIGNED
+  ) {
     return RecipientStatusType.OPENED;
   }
 

@@ -6,4 +6,6 @@ export const ZDeclineLinkOrganisationAccountRequestSchema = z.object({
 
 export const ZDeclineLinkOrganisationAccountResponseSchema = z.void();
 
-export type TDeclineLinkOrganisationAccountRequest = z.infer<typeof ZDeclineLinkOrganisationAccountRequestSchema>;
+export type TDeclineLinkOrganisationAccountRequest = z.infer<
+  typeof ZDeclineLinkOrganisationAccountRequestSchema
+>;

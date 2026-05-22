@@ -1,5 +1,9 @@
 import { getHighestOrganisationRoleInGroup } from '@documenso/lib/utils/organisations';
-import { buildTeamWhereQuery, extractDerivedTeamSettings, getHighestTeamRoleInGroup } from '@documenso/lib/utils/teams';
+import {
+  buildTeamWhereQuery,
+  extractDerivedTeamSettings,
+  getHighestTeamRoleInGroup,
+} from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
 
 import { authenticatedProcedure } from '../trpc';
@@ -75,7 +79,10 @@ export const getOrganisationSession = async ({
     return {
       ...organisation,
       teams: organisation.teams.map((team) => {
-        const derivedSettings = extractDerivedTeamSettings(organisationGlobalSettings, team.teamGlobalSettings);
+        const derivedSettings = extractDerivedTeamSettings(
+          organisationGlobalSettings,
+          team.teamGlobalSettings,
+        );
 
         return {
           ...team,

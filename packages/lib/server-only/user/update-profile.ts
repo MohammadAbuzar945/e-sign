@@ -1,5 +1,6 @@
-import { prisma } from '@documenso/prisma';
 import { UserSecurityAuditLogType } from '@prisma/client';
+
+import { prisma } from '@documenso/prisma';
 
 import type { RequestMetadata } from '../../universal/extract-request-metadata';
 
@@ -10,7 +11,12 @@ export type UpdateProfileOptions = {
   requestMetadata?: RequestMetadata;
 };
 
-export const updateProfile = async ({ userId, name, signature, requestMetadata }: UpdateProfileOptions) => {
+export const updateProfile = async ({
+  userId,
+  name,
+  signature,
+  requestMetadata,
+}: UpdateProfileOptions) => {
   // Existence check
   await prisma.user.findFirstOrThrow({
     where: {

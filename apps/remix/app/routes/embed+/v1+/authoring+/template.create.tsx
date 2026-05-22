@@ -1,3 +1,8 @@
+import { useLayoutEffect, useState } from 'react';
+
+import { useLingui } from '@lingui/react';
+import { useNavigate } from 'react-router';
+
 import {
   type TBaseEmbedAuthoringSchema,
   ZBaseEmbedAuthoringSchema,
@@ -6,9 +11,6 @@ import { putPdfFile } from '@documenso/lib/universal/upload/put-file';
 import { trpc } from '@documenso/trpc/react';
 import { Stepper } from '@documenso/ui/primitives/stepper';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { useLingui } from '@lingui/react';
-import { useLayoutEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
 
 import { ConfigureDocumentProvider } from '~/components/embed/authoring/configure-document-context';
 import { ConfigureDocumentView } from '~/components/embed/authoring/configure-document-view';
@@ -27,7 +29,8 @@ export default function EmbeddingAuthoringTemplateCreatePage() {
   const [externalId, setExternalId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
 
-  const { mutateAsync: createEmbeddingTemplate } = trpc.embeddingPresign.createEmbeddingTemplate.useMutation();
+  const { mutateAsync: createEmbeddingTemplate } =
+    trpc.embeddingPresign.createEmbeddingTemplate.useMutation();
 
   const handleConfigurePageViewSubmit = (data: TConfigureEmbedFormSchema) => {
     // Store the configuration data and move to the field placement stage
@@ -127,7 +130,9 @@ export default function EmbeddingAuthoringTemplateCreatePage() {
     try {
       const hash = window.location.hash.slice(1);
 
-      const result = ZBaseEmbedAuthoringSchema.safeParse(JSON.parse(decodeURIComponent(atob(hash))));
+      const result = ZBaseEmbedAuthoringSchema.safeParse(
+        JSON.parse(decodeURIComponent(atob(hash))),
+      );
 
       if (!result.success) {
         return;

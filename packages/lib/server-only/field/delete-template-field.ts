@@ -1,5 +1,6 @@
-import { prisma } from '@documenso/prisma';
 import { EnvelopeType } from '@prisma/client';
+
+import { prisma } from '@documenso/prisma';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { buildTeamWhereQuery } from '../../utils/teams';
@@ -11,7 +12,11 @@ export interface DeleteTemplateFieldOptions {
   fieldId: number;
 }
 
-export const deleteTemplateField = async ({ userId, teamId, fieldId }: DeleteTemplateFieldOptions): Promise<void> => {
+export const deleteTemplateField = async ({
+  userId,
+  teamId,
+  fieldId,
+}: DeleteTemplateFieldOptions): Promise<void> => {
   const field = await prisma.field.findFirst({
     where: {
       id: fieldId,

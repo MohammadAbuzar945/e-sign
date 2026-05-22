@@ -1,9 +1,13 @@
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { prisma } from '@documenso/prisma';
 import { EnvelopeType } from '@prisma/client';
 
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { prisma } from '@documenso/prisma';
+
 import { authenticatedProcedure } from '../trpc';
-import { ZGetDocumentByTokenRequestSchema, ZGetDocumentByTokenResponseSchema } from './get-document-by-token.types';
+import {
+  ZGetDocumentByTokenRequestSchema,
+  ZGetDocumentByTokenResponseSchema,
+} from './get-document-by-token.types';
 
 export const getDocumentByTokenRoute = authenticatedProcedure
   .input(ZGetDocumentByTokenRequestSchema)

@@ -1,11 +1,12 @@
-import { Button } from '@documenso/ui/primitives/button';
+import { useEffect, useState } from 'react';
 
 import { Plural, Trans } from '@lingui/react/macro';
 import { RecipientRole } from '@prisma/client';
 import { motion } from 'framer-motion';
 import { LucideChevronDown, LucideChevronUp } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { match } from 'ts-pattern';
+
+import { Button } from '@documenso/ui/primitives/button';
 
 import { useEmbedSigningContext } from '~/components/embed/embed-signing-context';
 
@@ -19,7 +20,8 @@ export const DocumentSigningMobileWidget = () => {
 
   const { hidePoweredBy = true } = useEmbedSigningContext() || {};
 
-  const { recipientFieldsRemaining, recipient, requiredRecipientFields } = useRequiredEnvelopeSigningContext();
+  const { recipientFieldsRemaining, recipient, requiredRecipientFields } =
+    useRequiredEnvelopeSigningContext();
 
   /**
    * Pre open the widget for assistants to let them know it's there.
@@ -31,7 +33,7 @@ export const DocumentSigningMobileWidget = () => {
   }, []);
 
   return (
-    <div className="pointer-events-none fixed right-0 bottom-0 left-0 z-50 flex justify-center px-2 pb-2 sm:px-4 sm:pb-6">
+    <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center px-2 pb-2 sm:px-4 sm:pb-6">
       <div className="pointer-events-auto w-full max-w-[760px]">
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
           {/* Main Header Bar */}
@@ -54,7 +56,7 @@ export const DocumentSigningMobileWidget = () => {
                 )}
 
                 <div>
-                  <h2 className="font-semibold text-foreground text-lg">
+                  <h2 className="text-lg font-semibold text-foreground">
                     {match(recipient.role)
                       .with(RecipientRole.VIEWER, () => <Trans>View Document</Trans>)
                       .with(RecipientRole.SIGNER, () => <Trans>Sign Document</Trans>)
@@ -63,13 +65,21 @@ export const DocumentSigningMobileWidget = () => {
                       .otherwise(() => null)}
                   </h2>
 
-                  <p className="-mt-0.5 text-muted-foreground text-sm">
+                  <p className="-mt-0.5 text-sm text-muted-foreground">
                     {recipientFieldsRemaining.length === 0 ? (
                       match(recipient.role)
-                        .with(RecipientRole.VIEWER, () => <Trans>Please mark as viewed to complete</Trans>)
-                        .with(RecipientRole.SIGNER, () => <Trans>Please complete the document once reviewed</Trans>)
-                        .with(RecipientRole.APPROVER, () => <Trans>Please complete the document once reviewed</Trans>)
-                        .with(RecipientRole.ASSISTANT, () => <Trans>Please complete the document once reviewed</Trans>)
+                        .with(RecipientRole.VIEWER, () => (
+                          <Trans>Please mark as viewed to complete</Trans>
+                        ))
+                        .with(RecipientRole.SIGNER, () => (
+                          <Trans>Please complete the document once reviewed</Trans>
+                        ))
+                        .with(RecipientRole.APPROVER, () => (
+                          <Trans>Please complete the document once reviewed</Trans>
+                        ))
+                        .with(RecipientRole.ASSISTANT, () => (
+                          <Trans>Please complete the document once reviewed</Trans>
+                        ))
                         .otherwise(() => null)
                     ) : (
                       <Plural
@@ -89,28 +99,29 @@ export const DocumentSigningMobileWidget = () => {
           </div>
 
           {/* Progress Bar */}
-          {recipient.role !== RecipientRole.VIEWER && recipient.role !== RecipientRole.ASSISTANT && (
-            <div className="px-4 pb-3">
-              <div className="relative h-[4px] rounded-md bg-muted">
-                <motion.div
-                  layout="size"
-                  layoutId="document-signing-mobile-widget-progress-bar"
-                  className="absolute inset-y-0 left-0 bg-primary"
-                  style={{
-                    width: `${100 - (100 / requiredRecipientFields.length) * (recipientFieldsRemaining.length ?? 0)}%`,
-                  }}
-                />
+          {recipient.role !== RecipientRole.VIEWER &&
+            recipient.role !== RecipientRole.ASSISTANT && (
+              <div className="px-4 pb-3">
+                <div className="relative h-[4px] rounded-md bg-muted">
+                  <motion.div
+                    layout="size"
+                    layoutId="document-signing-mobile-widget-progress-bar"
+                    className="absolute inset-y-0 left-0 bg-primary"
+                    style={{
+                      width: `${100 - (100 / requiredRecipientFields.length) * (recipientFieldsRemaining.length ?? 0)}%`,
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Expandable Content */}
           {isExpanded && (
-            <div className="slide-in-from-bottom-2 animate-in border-border border-t p-4 duration-200">
+            <div className="border-t border-border p-4 duration-200 animate-in slide-in-from-bottom-2">
               <EnvelopeSignerForm />
 
               {!hidePoweredBy && (
-                <div className="mt-2 inline-block rounded bg-primary px-2 py-1 font-medium text-primary-foreground text-xs opacity-60 hover:opacity-100 lg:hidden">
+                <div className="mt-2 inline-block rounded bg-primary px-2 py-1 text-xs font-medium text-primary-foreground opacity-60 hover:opacity-100 lg:hidden">
                   <span>
                     <Trans>Powered by</Trans>
                   </span>

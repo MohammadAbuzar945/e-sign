@@ -1,5 +1,6 @@
-import { ZEnvelopeRecipientSchema } from '@documenso/lib/types/recipient';
 import { z } from 'zod';
+
+import { ZEnvelopeRecipientSchema } from '@documenso/lib/types/recipient';
 
 import type { TrpcRouteMeta } from '../../trpc';
 

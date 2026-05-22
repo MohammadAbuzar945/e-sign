@@ -1,11 +1,15 @@
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react/macro';
+
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { trpc } from '@documenso/trpc/react';
 import { SpinnerBox } from '@documenso/ui/primitives/spinner';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react/macro';
 
-import { EmailPreferencesForm, type TEmailPreferencesFormSchema } from '~/components/forms/email-preferences-form';
+import {
+  EmailPreferencesForm,
+  type TEmailPreferencesFormSchema,
+} from '~/components/forms/email-preferences-form';
 import { SettingsHeader } from '~/components/general/settings-header';
 import { appMetaTags } from '~/utils/meta';
 
@@ -19,11 +23,13 @@ export default function OrganisationSettingsGeneral() {
 
   const organisation = useCurrentOrganisation();
 
-  const { data: organisationWithSettings, isLoading: isLoadingOrganisation } = trpc.organisation.get.useQuery({
-    organisationReference: organisation.url,
-  });
+  const { data: organisationWithSettings, isLoading: isLoadingOrganisation } =
+    trpc.organisation.get.useQuery({
+      organisationReference: organisation.url,
+    });
 
-  const { mutateAsync: updateOrganisationSettings } = trpc.organisation.settings.update.useMutation();
+  const { mutateAsync: updateOrganisationSettings } =
+    trpc.organisation.settings.update.useMutation();
 
   const onEmailPreferencesSubmit = async (data: TEmailPreferencesFormSchema) => {
     try {
@@ -58,7 +64,10 @@ export default function OrganisationSettingsGeneral() {
 
   return (
     <div className="max-w-2xl">
-      <SettingsHeader title={t`Email Preferences`} subtitle={t`You can manage your email preferences here.`} />
+      <SettingsHeader
+        title={t`Email Preferences`}
+        subtitle={t`You can manage your email preferences here.`}
+      />
 
       <section>
         <EmailPreferencesForm

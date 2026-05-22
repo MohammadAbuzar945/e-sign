@@ -1,5 +1,18 @@
+import { useMemo, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans, useLingui } from '@lingui/react/macro';
+import type { Field, Recipient } from '@prisma/client';
+import { RecipientRole } from '@prisma/client';
+import { useForm } from 'react-hook-form';
+import { match } from 'ts-pattern';
+import { z } from 'zod';
+
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { type TRecipientAccessAuth, ZDocumentAccessAuthSchema } from '@documenso/lib/types/document-auth';
+import {
+  type TRecipientAccessAuth,
+  ZDocumentAccessAuthSchema,
+} from '@documenso/lib/types/document-auth';
 import { fieldsContainUnsignedRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
 import { zEmail } from '@documenso/lib/utils/zod';
 import { Button } from '@documenso/ui/primitives/button';
@@ -12,16 +25,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
-import type { Field, Recipient } from '@prisma/client';
-import { RecipientRole } from '@prisma/client';
-import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { match } from 'ts-pattern';
-import { z } from 'zod';
 
 import { useEmbedSigningContext } from '~/components/embed/embed-signing-context';
 import { AccessAuth2FAForm } from '~/components/general/document-signing/access-auth-2fa-form';
@@ -159,7 +171,9 @@ export const DocumentSigningCompleteDialog = ({
       }
 
       const nextSigner =
-        allowDictateNextSigner && data.name && data.email ? { name: data.name, email: data.email } : undefined;
+        allowDictateNextSigner && data.name && data.email
+          ? { name: data.name, email: data.email }
+          : undefined;
 
       await onSignatureComplete(nextSigner, data.accessAuthOptions, recipientOverridePayload);
     } catch (error) {
@@ -201,7 +215,9 @@ export const DocumentSigningCompleteDialog = ({
           {match({ isComplete, role: recipient.role })
             .with({ isComplete: false }, () => <Trans>Next Field</Trans>)
             .with({ isComplete: true, role: RecipientRole.APPROVER }, () => <Trans>Approve</Trans>)
-            .with({ isComplete: true, role: RecipientRole.VIEWER }, () => <Trans>Mark as viewed</Trans>)
+            .with({ isComplete: true, role: RecipientRole.VIEWER }, () => (
+              <Trans>Mark as viewed</Trans>
+            ))
             .with({ isComplete: true }, () => <Trans>Complete</Trans>)
             .exhaustive()}
         </Button>
@@ -242,78 +258,31 @@ export const DocumentSigningCompleteDialog = ({
         </DialogHeader>
 
         <div className="rounded-lg border border-border bg-muted/50 p-4 text-center">
-          <p className="font-medium text-muted-foreground text-sm">{documentTitle}</p>
+          <p className="text-sm font-medium text-muted-foreground">{documentTitle}</p>
         </div>
 
         {!showTwoFactorForm && (
-          <fieldset disabled={form.formState.isSubmitting} className="border-none p-0">
-            {recipientPayload && !recipientPayload.email && (
-              <Form {...recipientForm}>
-                <div className="mb-4 flex flex-col gap-4">
-                  <div className="flex flex-col gap-4 md:flex-row">
-                    <FormField
-                      control={recipientForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>
-                            <Trans>Your Name</Trans>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              className="mt-2"
-                              placeholder={t`Enter your name`}
-                              disabled={isNameLocked || disableNameInput}
-                            />
-                          </FormControl>
-
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={recipientForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>
-                            <Trans>Your Email</Trans>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="email"
-                              className="mt-2"
-                              placeholder={t`Enter your email`}
-                              disabled={!!field.value && isEmailLocked}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              </Form>
-            )}
-
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onFormSubmit)}>
-                {allowDictateNextSigner && defaultNextSigner && (
+          <>
+            <fieldset disabled={form.formState.isSubmitting} className="border-none p-0">
+              {recipientPayload && !recipientPayload.email && (
+                <Form {...recipientForm}>
                   <div className="mb-4 flex flex-col gap-4">
                     <div className="flex flex-col gap-4 md:flex-row">
                       <FormField
-                        control={form.control}
+                        control={recipientForm.control}
                         name="name"
                         render={({ field }) => (
                           <FormItem className="flex-1">
                             <FormLabel>
-                              <Trans>Next Recipient Name</Trans>
+                              <Trans>Your Name</Trans>
                             </FormLabel>
                             <FormControl>
-                              <Input {...field} className="mt-2" placeholder={t`Enter the next signer's name`} />
+                              <Input
+                                {...field}
+                                className="mt-2"
+                                placeholder={t`Enter your name`}
+                                disabled={isNameLocked || disableNameInput}
+                              />
                             </FormControl>
 
                             <FormMessage />
@@ -322,19 +291,20 @@ export const DocumentSigningCompleteDialog = ({
                       />
 
                       <FormField
-                        control={form.control}
+                        control={recipientForm.control}
                         name="email"
                         render={({ field }) => (
                           <FormItem className="flex-1">
                             <FormLabel>
-                              <Trans>Next Recipient Email</Trans>
+                              <Trans>Your Email</Trans>
                             </FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
                                 type="email"
                                 className="mt-2"
-                                placeholder={t`Enter the next signer's email`}
+                                placeholder={t`Enter your email`}
+                                disabled={!!field.value && isEmailLocked}
                               />
                             </FormControl>
                             <FormMessage />
@@ -343,33 +313,89 @@ export const DocumentSigningCompleteDialog = ({
                       />
                     </div>
                   </div>
-                )}
+                </Form>
+              )}
 
-                <DocumentSigningDisclosure />
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onFormSubmit)}>
+                  {allowDictateNextSigner && defaultNextSigner && (
+                    <div className="mb-4 flex flex-col gap-4">
+                      <div className="flex flex-col gap-4 md:flex-row">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormLabel>
+                                <Trans>Next Recipient Name</Trans>
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  className="mt-2"
+                                  placeholder={t`Enter the next signer's name`}
+                                />
+                              </FormControl>
 
-                <DialogFooter className="mt-4">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setShowDialog(false)}
-                    disabled={form.formState.isSubmitting}
-                  >
-                    <Trans>Cancel</Trans>
-                  </Button>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  <Button type="submit" disabled={!isComplete} loading={form.formState.isSubmitting}>
-                    {match(recipient.role)
-                      .with(RecipientRole.VIEWER, () => <Trans>Mark as Viewed</Trans>)
-                      .with(RecipientRole.SIGNER, () => <Trans>Sign</Trans>)
-                      .with(RecipientRole.APPROVER, () => <Trans>Approve</Trans>)
-                      .with(RecipientRole.CC, () => <Trans>Mark as Viewed</Trans>)
-                      .with(RecipientRole.ASSISTANT, () => <Trans>Complete</Trans>)
-                      .exhaustive()}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </fieldset>
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormLabel>
+                                <Trans>Next Recipient Email</Trans>
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="email"
+                                  className="mt-2"
+                                  placeholder={t`Enter the next signer's email`}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <DocumentSigningDisclosure />
+
+                  <DialogFooter className="mt-4">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setShowDialog(false)}
+                      disabled={form.formState.isSubmitting}
+                    >
+                      <Trans>Cancel</Trans>
+                    </Button>
+
+                    <Button
+                      type="submit"
+                      disabled={!isComplete}
+                      loading={form.formState.isSubmitting}
+                    >
+                      {match(recipient.role)
+                        .with(RecipientRole.VIEWER, () => <Trans>Mark as Viewed</Trans>)
+                        .with(RecipientRole.SIGNER, () => <Trans>Sign</Trans>)
+                        .with(RecipientRole.APPROVER, () => <Trans>Approve</Trans>)
+                        .with(RecipientRole.CC, () => <Trans>Mark as Viewed</Trans>)
+                        .with(RecipientRole.ASSISTANT, () => <Trans>Complete</Trans>)
+                        .exhaustive()}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </fieldset>
+          </>
         )}
 
         {showTwoFactorForm && (

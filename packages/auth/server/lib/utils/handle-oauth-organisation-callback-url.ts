@@ -1,10 +1,10 @@
+import type { Context } from 'hono';
+
 import { sendOrganisationAccountLinkConfirmationEmail } from '@documenso/ee/server-only/lib/send-organisation-account-link-confirmation-email';
-import { isSignupEnabledForProvider } from '@documenso/lib/constants/auth';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { onCreateUserHook } from '@documenso/lib/server-only/user/create-user';
 import { formatOrganisationLoginUrl } from '@documenso/lib/utils/organisation-authentication-portal';
 import { prisma } from '@documenso/prisma';
-import type { Context } from 'hono';
 
 import { AuthenticationErrorCode } from '../errors/error-codes';
 import { onAuthorize } from './authorizer';
@@ -16,7 +16,9 @@ type HandleOAuthOrganisationCallbackUrlOptions = {
   orgUrl: string;
 };
 
-export const handleOAuthOrganisationCallbackUrl = async (options: HandleOAuthOrganisationCallbackUrlOptions) => {
+export const handleOAuthOrganisationCallbackUrl = async (
+  options: HandleOAuthOrganisationCallbackUrlOptions,
+) => {
   const { c, orgUrl } = options;
 
   const { organisation, clientOptions } = await getOrganisationAuthenticationPortalOptions({
@@ -66,14 +68,6 @@ export const handleOAuthOrganisationCallbackUrl = async (options: HandleOAuthOrg
 
   // Handle new user.
   if (!userToLink) {
-    if (!isSignupEnabledForProvider('oidc')) {
-      const errorUrl = new URL(formatOrganisationLoginUrl(orgUrl));
-
-      errorUrl.searchParams.set('error', AuthenticationErrorCode.SignupDisabled);
-
-      return c.redirect(errorUrl.toString(), 302);
-    }
-
     userToLink = await prisma.user.create({
       data: {
         email: email,
@@ -83,7 +77,8 @@ export const handleOAuthOrganisationCallbackUrl = async (options: HandleOAuthOrg
     });
 
     await onCreateUserHook(userToLink, {
-      skipPersonalOrganisation: !organisation.organisationAuthenticationPortal.allowPersonalOrganisations,
+      skipPersonalOrganisation:
+        !organisation.organisationAuthenticationPortal.allowPersonalOrganisations,
     }).catch((err) => {
       // Todo: (RR7) Add logging.
       console.error(err);

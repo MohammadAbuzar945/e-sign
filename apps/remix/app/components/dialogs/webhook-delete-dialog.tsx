@@ -1,3 +1,13 @@
+import { useEffect, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import type { Webhook } from '@prisma/client';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
 import {
@@ -9,17 +19,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import type { Webhook } from '@prisma/client';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 import { useCurrentTeam } from '~/providers/team';
 
@@ -70,7 +79,9 @@ export const WebhookDeleteDialog = ({ webhook, children }: WebhookDeleteDialogPr
     } catch (error) {
       toast({
         title: _(msg`An unknown error occurred`),
-        description: _(msg`We encountered an unknown error while attempting to delete it. Please try again later.`),
+        description: _(
+          msg`We encountered an unknown error while attempting to delete it. Please try again later.`,
+        ),
         variant: 'destructive',
         duration: 5000,
       });
@@ -101,14 +112,18 @@ export const WebhookDeleteDialog = ({ webhook, children }: WebhookDeleteDialogPr
 
           <DialogDescription>
             <Trans>
-              Please note that this action is irreversible. Once confirmed, your webhook will be permanently deleted.
+              Please note that this action is irreversible. Once confirmed, your webhook will be
+              permanently deleted.
             </Trans>
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <fieldset className="flex h-full flex-col space-y-4" disabled={form.formState.isSubmitting}>
+            <fieldset
+              className="flex h-full flex-col space-y-4"
+              disabled={form.formState.isSubmitting}
+            >
               <FormField
                 control={form.control}
                 name="webhookUrl"
@@ -117,7 +132,9 @@ export const WebhookDeleteDialog = ({ webhook, children }: WebhookDeleteDialogPr
                     <FormLabel>
                       <Trans>
                         Confirm by typing:{' '}
-                        <span className="font-semibold font-sm text-destructive">{deleteMessage}</span>
+                        <span className="font-sm text-destructive font-semibold">
+                          {deleteMessage}
+                        </span>
                       </Trans>
                     </FormLabel>
                     <FormControl>

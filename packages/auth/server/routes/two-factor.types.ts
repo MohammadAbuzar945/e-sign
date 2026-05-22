@@ -17,4 +17,6 @@ export const ZViewTwoFactorRecoveryCodesRequestSchema = z.object({
   token: z.string().trim().min(1),
 });
 
-export type TViewTwoFactorRecoveryCodesRequestSchema = z.infer<typeof ZViewTwoFactorRecoveryCodesRequestSchema>;
+export type TViewTwoFactorRecoveryCodesRequestSchema = z.infer<
+  typeof ZViewTwoFactorRecoveryCodesRequestSchema
+>;

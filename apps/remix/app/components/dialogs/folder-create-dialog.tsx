@@ -1,3 +1,14 @@
+import { useEffect, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans, useLingui } from '@lingui/react/macro';
+import type { FolderType } from '@prisma/client';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { FolderPlusIcon } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { useParams } from 'react-router';
+import { z } from 'zod';
+
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
 import {
@@ -9,18 +20,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
-import type { FolderType } from '@prisma/client';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { FolderPlusIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useParams } from 'react-router';
-import { z } from 'zod';
 
 const ZCreateFolderFormSchema = z.object({
   name: z.string().min(1, { message: 'Folder name is required' }),
@@ -34,7 +43,12 @@ export type FolderCreateDialogProps = {
   parentFolderId?: string | null;
 } & Omit<DialogPrimitive.DialogProps, 'children'>;
 
-export const FolderCreateDialog = ({ type, trigger, parentFolderId, ...props }: FolderCreateDialogProps) => {
+export const FolderCreateDialog = ({
+  type,
+  trigger,
+  parentFolderId,
+  ...props
+}: FolderCreateDialogProps) => {
   const { t } = useLingui();
   const { toast } = useToast();
   const { folderId } = useParams();
@@ -84,7 +98,11 @@ export const FolderCreateDialog = ({ type, trigger, parentFolderId, ...props }: 
     <Dialog {...props} open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button variant="outline" className="flex items-center" data-testid="folder-create-button">
+          <Button
+            variant="outline"
+            className="flex items-center"
+            data-testid="folder-create-button"
+          >
             <FolderPlusIcon className="mr-2 h-4 w-4" />
             <Trans>Create Folder</Trans>
           </Button>
@@ -121,7 +139,11 @@ export const FolderCreateDialog = ({ type, trigger, parentFolderId, ...props }: 
               />
 
               <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setIsCreateFolderOpen(false)}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsCreateFolderOpen(false)}
+                >
                   <Trans>Cancel</Trans>
                 </Button>
 

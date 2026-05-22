@@ -1,5 +1,6 @@
-import { prisma } from '@documenso/prisma';
 import { type User, UserSecurityAuditLogType } from '@prisma/client';
+
+import { prisma } from '@documenso/prisma';
 
 import { AppError } from '../../errors/app-error';
 import type { RequestMetadata } from '../../universal/extract-request-metadata';

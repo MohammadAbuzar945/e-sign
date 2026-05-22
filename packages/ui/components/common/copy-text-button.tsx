@@ -1,8 +1,11 @@
+import { useState } from 'react';
+
+import { motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
+import { CheckSquareIcon, CopyIcon } from 'lucide-react';
+
 import { useCopyToClipboard } from '@documenso/lib/client-only/hooks/use-copy-to-clipboard';
 import { Button } from '@documenso/ui/primitives/button';
-import { AnimatePresence, motion } from 'framer-motion';
-import { CheckSquareIcon, CopyIcon } from 'lucide-react';
-import { useState } from 'react';
 
 import { cn } from '../../lib/utils';
 
@@ -41,7 +44,7 @@ export const CopyTextButton = ({
     <Button
       type="button"
       variant="none"
-      className="ml-2 h-7 rounded-md border-border bg-muted px-0.5 font-normal"
+      className="ml-2 h-7 rounded border bg-neutral-50 px-0.5 font-normal dark:border dark:border-neutral-500 dark:bg-neutral-600"
       onClick={async () => onCopy()}
     >
       <AnimatePresence mode="wait" initial={false}>
@@ -56,14 +59,18 @@ export const CopyTextButton = ({
 
           <div
             className={cn(
-              'flex h-6 w-6 items-center justify-center rounded transition-all hover:bg-muted-foreground/10 hover:active:bg-muted-foreground/20',
+              'flex h-6 w-6 items-center justify-center rounded transition-all hover:bg-neutral-200 hover:active:bg-neutral-300 dark:hover:bg-neutral-500 dark:hover:active:bg-neutral-400',
               {
                 'ml-1': Boolean(badgeContentCopied || badgeContentUncopied),
               },
             )}
           >
             <div className="absolute">
-              {copiedTimeout ? <CheckSquareIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
+              {copiedTimeout ? (
+                <CheckSquareIcon className="h-3.5 w-3.5" />
+              ) : (
+                <CopyIcon className="h-3.5 w-3.5" />
+              )}
             </div>
           </div>
         </motion.div>

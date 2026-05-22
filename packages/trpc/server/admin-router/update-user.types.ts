@@ -1,6 +1,7 @@
-import { zEmail } from '@documenso/lib/utils/zod';
 import { Role } from '@prisma/client';
 import { z } from 'zod';
+
+import { zEmail } from '@documenso/lib/utils/zod';
 
 export const ZUpdateUserRequestSchema = z.object({
   id: z.number().min(1),

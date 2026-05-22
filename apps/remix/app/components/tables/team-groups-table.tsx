@@ -1,3 +1,12 @@
+import { useMemo } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { OrganisationGroupType } from '@prisma/client';
+import { EditIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
+import { useSearchParams } from 'react-router';
+
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { EXTENDED_TEAM_MEMBER_ROLE_MAP } from '@documenso/lib/constants/teams-translations';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
@@ -14,13 +23,6 @@ import {
 } from '@documenso/ui/primitives/dropdown-menu';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { OrganisationGroupType } from '@prisma/client';
-import { EditIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
-import { useMemo } from 'react';
-import { useSearchParams } from 'react-router';
 
 import { useCurrentTeam } from '~/providers/team';
 
@@ -84,7 +86,7 @@ export const TeamGroupsTable = () => {
         cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger>
-              <MoreHorizontalIcon className="h-5 w-5 text-muted-foreground" />
+              <MoreHorizontalIcon className="text-muted-foreground h-5 w-5" />
             </DropdownMenuTrigger>
 
             <DropdownMenuContent className="w-52" align="start" forceMount>
@@ -97,7 +99,10 @@ export const TeamGroupsTable = () => {
                 teamGroupName={row.original.name ?? ''}
                 teamGroupRole={row.original.teamRole}
                 trigger={
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} title="Update team group role">
+                  <DropdownMenuItem
+                    onSelect={(e) => e.preventDefault()}
+                    title="Update team group role"
+                  >
                     <EditIcon className="mr-2 h-4 w-4" />
                     <Trans>Update role</Trans>
                   </DropdownMenuItem>
@@ -134,7 +139,7 @@ export const TeamGroupsTable = () => {
         enable: isLoadingError,
       }}
       emptyState={
-        <div className="flex h-60 flex-col items-center justify-center gap-y-4 text-muted-foreground/60">
+        <div className="text-muted-foreground/60 flex h-60 flex-col items-center justify-center gap-y-4">
           <p>
             <Trans>No team groups found</Trans>
           </p>
@@ -168,7 +173,11 @@ export const TeamGroupsTable = () => {
         ),
       }}
     >
-      {(table) => results.totalPages > 1 && <DataTablePagination additionalInformation="VisibleCount" table={table} />}
+      {(table) =>
+        results.totalPages > 1 && (
+          <DataTablePagination additionalInformation="VisibleCount" table={table} />
+        )
+      }
     </DataTable>
   );
 };

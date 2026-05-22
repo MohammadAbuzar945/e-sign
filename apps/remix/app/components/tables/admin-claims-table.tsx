@@ -1,3 +1,10 @@
+import { useMemo } from 'react';
+
+import { useLingui } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
+import { EditIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router';
+
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import type { TLicenseClaim } from '@documenso/lib/types/license';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
@@ -17,10 +24,6 @@ import {
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { EditIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
-import { useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router';
 
 import { ClaimDeleteDialog } from '../dialogs/claim-delete-dialog';
 import { ClaimUpdateDialog } from '../dialogs/claim-update-dialog';
@@ -65,13 +68,20 @@ export const AdminClaimsTable = ({ licenseFlags }: AdminClaimsTableProps) => {
         accessorKey: 'id',
         maxSize: 50,
         cell: ({ row }) => (
-          <CopyTextButton value={row.original.id} onCopySuccess={() => toast({ title: t`ID copied to clipboard` })} />
+          <CopyTextButton
+            value={row.original.id}
+            onCopySuccess={() => toast({ title: t`ID copied to clipboard` })}
+          />
         ),
       },
       {
         header: t`Name`,
         accessorKey: 'name',
-        cell: ({ row }) => <Link to={`/admin/organisations?query=claim:${row.original.id}`}>{row.original.name}</Link>,
+        cell: ({ row }) => (
+          <Link to={`/admin/organisations?query=claim:${row.original.id}`}>
+            {row.original.name}
+          </Link>
+        ),
       },
       {
         header: t`Allowed teams`,
@@ -87,14 +97,16 @@ export const AdminClaimsTable = ({ licenseFlags }: AdminClaimsTableProps) => {
       {
         header: t`Feature Flags`,
         cell: ({ row }) => {
-          const flags = Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).filter(({ key }) => row.original.flags[key]);
+          const flags = Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).filter(
+            ({ key }) => row.original.flags[key],
+          );
 
           if (flags.length === 0) {
-            return <p className="text-muted-foreground text-xs">{t`None`}</p>;
+            return <p className="text-xs text-muted-foreground">{t`None`}</p>;
           }
 
           return (
-            <ul className="list-disc space-y-1 text-muted-foreground text-xs">
+            <ul className="list-disc space-y-1 text-xs text-muted-foreground">
               {flags.map(({ key, label }) => (
                 <li key={key}>{label}</li>
               ))}

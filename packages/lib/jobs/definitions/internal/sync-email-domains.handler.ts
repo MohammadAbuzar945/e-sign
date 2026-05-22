@@ -1,7 +1,8 @@
+import { DateTime } from 'luxon';
+
 import { reregisterEmailDomain } from '@documenso/ee/server-only/lib/reregister-email-domain';
 import { verifyEmailDomain } from '@documenso/ee/server-only/lib/verify-email-domain';
 import { prisma } from '@documenso/prisma';
-import { DateTime } from 'luxon';
 
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSyncEmailDomainsJobDefinition } from './sync-email-domains';

@@ -1,13 +1,15 @@
-import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
-import { formatDocumentsPath, formatTemplatesPath } from '@documenso/lib/utils/teams';
-import { trpc } from '@documenso/trpc/react';
-import type { TFolderWithSubfolders } from '@documenso/trpc/server/folder-router/schema';
-import { Skeleton } from '@documenso/ui/primitives/skeleton';
+import { useState } from 'react';
+
 import { Trans } from '@lingui/react/macro';
 import { FolderType } from '@prisma/client';
 import { FolderIcon, HomeIcon } from 'lucide-react';
-import { useState } from 'react';
 import { Link } from 'react-router';
+
+import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { formatDocumentsPath, formatTemplatesPath } from '@documenso/lib/utils/teams';
+import { trpc } from '@documenso/trpc/react';
+import { type TFolderWithSubfolders } from '@documenso/trpc/server/folder-router/schema';
+import { Skeleton } from '@documenso/ui/primitives/skeleton';
 
 import { FolderCreateDialog } from '~/components/dialogs/folder-create-dialog';
 import { FolderDeleteDialog } from '~/components/dialogs/folder-delete-dialog';
@@ -41,13 +43,15 @@ export const FolderGrid = ({ type, parentId }: FolderGridProps) => {
   });
 
   const formatBreadCrumbPath = (folderId: string) => {
-    const rootPath = type === FolderType.DOCUMENT ? formatDocumentsPath(team.url) : formatTemplatesPath(team.url);
+    const rootPath =
+      type === FolderType.DOCUMENT ? formatDocumentsPath(team.url) : formatTemplatesPath(team.url);
 
     return `${rootPath}/f/${folderId}`;
   };
 
   const formatViewAllFoldersPath = () => {
-    const rootPath = type === FolderType.DOCUMENT ? formatDocumentsPath(team.url) : formatTemplatesPath(team.url);
+    const rootPath =
+      type === FolderType.DOCUMENT ? formatDocumentsPath(team.url) : formatTemplatesPath(team.url);
 
     if (parentId) {
       return `${rootPath}/folders?parentId=${parentId}`;
@@ -57,7 +61,9 @@ export const FolderGrid = ({ type, parentId }: FolderGridProps) => {
   };
 
   const formatRootPath = () => {
-    return type === FolderType.DOCUMENT ? formatDocumentsPath(team.url) : formatTemplatesPath(team.url);
+    return type === FolderType.DOCUMENT
+      ? formatDocumentsPath(team.url)
+      : formatTemplatesPath(team.url);
   };
 
   const pinnedFolders = foldersData?.folders.filter((folder) => folder.pinned) || [];
@@ -67,7 +73,7 @@ export const FolderGrid = ({ type, parentId }: FolderGridProps) => {
     <div>
       <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div
-          className="flex flex-1 items-center font-medium text-muted-foreground text-sm hover:text-muted-foreground/80"
+          className="flex flex-1 items-center text-sm font-medium text-muted-foreground hover:text-muted-foreground/80"
           data-testid="folder-grid-breadcrumbs"
         >
           <Link to={formatRootPath()} className="flex items-center">
@@ -98,7 +104,9 @@ export const FolderGrid = ({ type, parentId }: FolderGridProps) => {
           <EnvelopeUploadButton type={type} folderId={parentId || undefined} />
 
           {/* If you delete this, delete the component as well. */}
-          {organisation.organisationClaim.flags.allowLegacyEnvelopes && <DocumentUploadButtonLegacy type={type} />}
+          {organisation.organisationClaim.flags.allowLegacyEnvelopes && (
+            <DocumentUploadButtonLegacy type={type} />
+          )}
 
           <FolderCreateDialog type={type} />
         </div>
@@ -188,7 +196,7 @@ export const FolderGrid = ({ type, parentId }: FolderGridProps) => {
             {unpinnedFolders.length > 12 && (
               <div className="mt-2 flex items-center justify-center">
                 <Link
-                  className="font-medium text-muted-foreground text-sm hover:text-foreground"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
                   to={formatViewAllFoldersPath()}
                 >
                   <Trans>View all folders</Trans>

@@ -2,7 +2,10 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
 
 import { authenticatedProcedure } from '../trpc';
-import { ZGetOrganisationRequestSchema, ZGetOrganisationResponseSchema } from './get-organisation.types';
+import {
+  ZGetOrganisationRequestSchema,
+  ZGetOrganisationResponseSchema,
+} from './get-organisation.types';
 
 export const getOrganisationRoute = authenticatedProcedure
   //   .meta(getOrganisationMeta)
@@ -32,7 +35,10 @@ type GetOrganisationOptions = {
   organisationReference: string;
 };
 
-export const getOrganisation = async ({ userId, organisationReference }: GetOrganisationOptions) => {
+export const getOrganisation = async ({
+  userId,
+  organisationReference,
+}: GetOrganisationOptions) => {
   const organisation = await prisma.organisation.findFirst({
     where: {
       OR: [{ id: organisationReference }, { url: organisationReference }],

@@ -1,6 +1,5 @@
-import { mailer } from '@documenso/email/mailer';
-import DocumentReminderEmailTemplate from '@documenso/email/templates/document-reminder';
-import { prisma } from '@documenso/prisma';
+import { createElement } from 'react';
+
 import { msg } from '@lingui/core/macro';
 import {
   DocumentDistributionMethod,
@@ -11,7 +10,10 @@ import {
   SigningStatus,
   WebhookTriggerEvents,
 } from '@prisma/client';
-import { createElement } from 'react';
+
+import { mailer } from '@documenso/email/mailer';
+import DocumentReminderEmailTemplate from '@documenso/email/templates/document-reminder';
+import { prisma } from '@documenso/prisma';
 
 import { getI18nInstance } from '../../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../../constants/app';
@@ -21,14 +23,23 @@ import { updateRecipientNextReminder } from '../../../server-only/recipient/upda
 import { triggerWebhook } from '../../../server-only/webhooks/trigger/trigger-webhook';
 import { DOCUMENT_AUDIT_LOG_TYPE, DOCUMENT_EMAIL_TYPE } from '../../../types/document-audit-logs';
 import { extractDerivedDocumentEmailSettings } from '../../../types/document-email';
-import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../../types/webhook-payload';
+import {
+  ZWebhookDocumentSchema,
+  mapEnvelopeToWebhookDocumentPayload,
+} from '../../../types/webhook-payload';
 import { createDocumentAuditLogData } from '../../../utils/document-audit-logs';
 import { renderCustomEmailTemplate } from '../../../utils/render-custom-email-template';
 import { renderEmailWithI18N } from '../../../utils/render-email-with-i18n';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TProcessSigningReminderJobDefinition } from './process-signing-reminder';
 
-export const run = async ({ payload, io }: { payload: TProcessSigningReminderJobDefinition; io: JobRunIO }) => {
+export const run = async ({
+  payload,
+  io,
+}: {
+  payload: TProcessSigningReminderJobDefinition;
+  io: JobRunIO;
+}) => {
   const { recipientId } = payload;
   const now = new Date();
 
@@ -100,23 +111,30 @@ export const run = async ({ payload, io }: { payload: TProcessSigningReminderJob
     return;
   }
 
-  const { branding, emailLanguage, organisationType, senderEmail, replyToEmail } = await getEmailContext({
-    emailType: 'RECIPIENT',
-    source: {
-      type: 'team',
-      teamId: envelope.teamId,
-    },
-    meta: envelope.documentMeta,
-  });
+  const { branding, emailLanguage, organisationType, senderEmail, replyToEmail } =
+    await getEmailContext({
+      emailType: 'RECIPIENT',
+      source: {
+        type: 'team',
+        teamId: envelope.teamId,
+      },
+      meta: envelope.documentMeta,
+    });
 
   const i18n = await getI18nInstance(emailLanguage);
 
-  const recipientActionVerb = i18n._(RECIPIENT_ROLES_DESCRIPTION[recipient.role].actionVerb).toLowerCase();
+  const recipientActionVerb = i18n
+    ._(RECIPIENT_ROLES_DESCRIPTION[recipient.role].actionVerb)
+    .toLowerCase();
 
-  let emailSubject = i18n._(msg`Reminder: Please ${recipientActionVerb} the document "${envelope.title}"`);
+  let emailSubject = i18n._(
+    msg`Reminder: Please ${recipientActionVerb} the document "${envelope.title}"`,
+  );
 
   if (organisationType === OrganisationType.ORGANISATION) {
-    emailSubject = i18n._(msg`Reminder: ${envelope.team.name} invited you to ${recipientActionVerb} a document`);
+    emailSubject = i18n._(
+      msg`Reminder: ${envelope.team.name} invited you to ${recipientActionVerb} a document`,
+    );
   }
 
   const customEmailTemplate = {

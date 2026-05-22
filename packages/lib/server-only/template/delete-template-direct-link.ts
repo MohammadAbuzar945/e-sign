@@ -1,6 +1,7 @@
+import { EnvelopeType } from '@prisma/client';
+
 import { generateAvaliableRecipientPlaceholder } from '@documenso/lib/utils/templates';
 import { prisma } from '@documenso/prisma';
-import { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';

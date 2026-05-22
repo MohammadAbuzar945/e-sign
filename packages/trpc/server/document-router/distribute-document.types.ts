@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import { ZDocumentLiteSchema } from '@documenso/lib/types/document';
 import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';
 import {
@@ -10,7 +12,6 @@ import {
   ZDocumentMetaTimezoneSchema,
 } from '@documenso/lib/types/document-meta';
 import { zEmail } from '@documenso/lib/utils/zod';
-import { z } from 'zod';
 
 import type { TrpcRouteMeta } from '../trpc';
 

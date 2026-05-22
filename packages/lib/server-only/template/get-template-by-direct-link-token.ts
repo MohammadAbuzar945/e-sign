@@ -1,5 +1,6 @@
-import { prisma } from '@documenso/prisma';
 import { EnvelopeType } from '@prisma/client';
+
+import { prisma } from '@documenso/prisma';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { mapSecondaryIdToTemplateId } from '../../utils/envelope';
@@ -8,7 +9,9 @@ export interface GetTemplateByDirectLinkTokenOptions {
   token: string;
 }
 
-export const getTemplateByDirectLinkToken = async ({ token }: GetTemplateByDirectLinkTokenOptions) => {
+export const getTemplateByDirectLinkToken = async ({
+  token,
+}: GetTemplateByDirectLinkTokenOptions) => {
   const envelope = await prisma.envelope.findFirst({
     where: {
       type: EnvelopeType.TEMPLATE,

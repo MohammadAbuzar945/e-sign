@@ -1,17 +1,22 @@
-import { authClient } from '@documenso/auth/client';
-import { Button } from '@documenso/ui/primitives/button';
-import { useToast } from '@documenso/ui/primitives/use-toast';
+import { useState } from 'react';
+
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { useState } from 'react';
+
+import { authClient } from '@documenso/auth/client';
+import { Button } from '@documenso/ui/primitives/button';
+import { useToast } from '@documenso/ui/primitives/use-toast';
 
 export type DocumentSigningAuthPageViewProps = {
   email?: string;
   emailHasAccount?: boolean;
 };
 
-export const DocumentSigningAuthPageView = ({ email, emailHasAccount }: DocumentSigningAuthPageViewProps) => {
+export const DocumentSigningAuthPageView = ({
+  email,
+  emailHasAccount,
+}: DocumentSigningAuthPageViewProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
 
@@ -45,11 +50,11 @@ export const DocumentSigningAuthPageView = ({ email, emailHasAccount }: Document
   return (
     <div className="mx-auto flex h-[70vh] w-full max-w-md flex-col items-center justify-center">
       <div>
-        <h1 className="font-semibold text-3xl">
+        <h1 className="text-3xl font-semibold">
           <Trans>Authentication required</Trans>
         </h1>
 
-        <p className="mt-2 text-muted-foreground text-sm">
+        <p className="text-muted-foreground mt-2 text-sm">
           {email ? (
             <Trans>
               You need to be logged in as <strong>{email}</strong> to view this page.

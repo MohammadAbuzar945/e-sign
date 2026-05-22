@@ -1,9 +1,10 @@
+import { Link } from 'react-router';
+import { match } from 'ts-pattern';
+
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import type { TDocumentMany as TDocumentRow } from '@documenso/lib/types/document';
 import { findRecipientByEmail } from '@documenso/lib/utils/recipients';
 import { formatDocumentsPath } from '@documenso/lib/utils/teams';
-import { Link } from 'react-router';
-import { match } from 'ts-pattern';
 
 import { useCurrentTeam } from '~/providers/team';
 
@@ -52,6 +53,8 @@ export const DataTableTitle = ({ row, teamUrl }: DataTableTitleProps) => {
       </Link>
     ))
     .otherwise(() => (
-      <span className="block max-w-[10rem] truncate font-medium hover:underline md:max-w-[20rem]">{row.title}</span>
+      <span className="block max-w-[10rem] truncate font-medium hover:underline md:max-w-[20rem]">
+        {row.title}
+      </span>
     ));
 };

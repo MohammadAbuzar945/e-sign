@@ -1,8 +1,10 @@
+import { createElement } from 'react';
+
+import { msg } from '@lingui/core/macro';
+
 import { mailer } from '@documenso/email/mailer';
 import { ForgotPasswordTemplate } from '@documenso/email/templates/forgot-password';
 import { prisma } from '@documenso/prisma';
-import { msg } from '@lingui/core/macro';
-import { createElement } from 'react';
 
 import { getI18nInstance } from '../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';

@@ -55,5 +55,8 @@ export const handlerTriggerWebhooks = async (req: Request) => {
     }),
   );
 
-  return Response.json({ success: true, message: 'Webhooks queued for execution' }, { status: 200 });
+  return Response.json(
+    { success: true, message: 'Webhooks queued for execution' },
+    { status: 200 },
+  );
 };

@@ -1,6 +1,7 @@
-import fs from 'node:fs';
-import { env } from '@documenso/lib/utils/env';
 import { GoogleKmsSigner, parsePem } from '@libpdf/core';
+import fs from 'node:fs';
+
+import { env } from '@documenso/lib/utils/env';
 
 const loadCertificates = async (): Promise<Uint8Array[]> => {
   // Try chain file first (takes precedence)
@@ -8,7 +9,9 @@ const loadCertificates = async (): Promise<Uint8Array[]> => {
   const chainFilePath = env('NEXT_PRIVATE_SIGNING_GCLOUD_HSM_CERT_CHAIN_FILE_PATH');
 
   if (chainContents) {
-    return parsePem(Buffer.from(chainContents, 'base64').toString('utf-8')).map((block) => block.der);
+    return parsePem(Buffer.from(chainContents, 'base64').toString('utf-8')).map(
+      (block) => block.der,
+    );
   }
 
   if (chainFilePath) {
@@ -20,7 +23,9 @@ const loadCertificates = async (): Promise<Uint8Array[]> => {
   const certFilePath = env('NEXT_PRIVATE_SIGNING_GCLOUD_HSM_PUBLIC_CRT_FILE_PATH');
 
   if (certContents) {
-    return parsePem(Buffer.from(certContents, 'base64').toString('utf-8')).map((block) => block.der);
+    return parsePem(Buffer.from(certContents, 'base64').toString('utf-8')).map(
+      (block) => block.der,
+    );
   }
 
   if (certFilePath) {
@@ -51,7 +56,9 @@ export const createGoogleCloudSigner = async () => {
   }
 
   const googleAuthCredentials = env('GOOGLE_APPLICATION_CREDENTIALS');
-  const googleAuthCredentialContents = env('NEXT_PRIVATE_SIGNING_GCLOUD_APPLICATION_CREDENTIALS_CONTENTS');
+  const googleAuthCredentialContents = env(
+    'NEXT_PRIVATE_SIGNING_GCLOUD_APPLICATION_CREDENTIALS_CONTENTS',
+  );
 
   // To handle hosting in serverless environments like Vercel we can supply the base64 encoded
   // application credentials as an environment variable and write it to a file if it doesn't exist

@@ -1,6 +1,7 @@
-import { kyselyPrisma, sql } from '@documenso/prisma';
 import { DocumentStatus, EnvelopeType } from '@prisma/client';
 import { DateTime } from 'luxon';
+
+import { kyselyPrisma, sql } from '@documenso/prisma';
 
 export const getCompletedDocumentsMonthly = async () => {
   const qb = kyselyPrisma.$kysely
@@ -30,4 +31,6 @@ export const getCompletedDocumentsMonthly = async () => {
   }));
 };
 
-export type GetCompletedDocumentsMonthlyResult = Awaited<ReturnType<typeof getCompletedDocumentsMonthly>>;
+export type GetCompletedDocumentsMonthlyResult = Awaited<
+  ReturnType<typeof getCompletedDocumentsMonthly>
+>;

@@ -1,13 +1,15 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { Field } from '@prisma/client';
+import { FieldType } from '@prisma/client';
+import { useFieldArray, useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { getPdfPagesCount } from '@documenso/lib/constants/pdf-viewer';
 import type { TEditorEnvelope } from '@documenso/lib/types/envelope-editor';
 import { ZFieldMetaSchema } from '@documenso/lib/types/field-meta';
 import { nanoid } from '@documenso/lib/universal/id';
-import { zodResolver } from '@hookform/resolvers/zod';
-import type { Field } from '@prisma/client';
-import { FieldType } from '@prisma/client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 export const ZLocalFieldSchema = z.object({
   // This is the actual ID of the field if created.
@@ -65,7 +67,10 @@ type UseEditorFieldsResponse = {
   resetForm: (fields?: Field[]) => void;
 };
 
-export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsProps): UseEditorFieldsResponse => {
+export const useEditorFields = ({
+  envelope,
+  handleFieldsUpdate,
+}: EditorFieldsProps): UseEditorFieldsResponse => {
   const [selectedFieldFormId, setSelectedFieldFormId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(null);
 
@@ -118,7 +123,9 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
     }
 
     const foundField = localFields.find((field) => field.formId === formId);
-    const recipient = envelope.recipients.find((recipient) => recipient.id === foundField?.recipientId);
+    const recipient = envelope.recipients.find(
+      (recipient) => recipient.id === foundField?.recipientId,
+    );
 
     if (recipient) {
       setSelectedRecipient(recipient.id);
@@ -312,7 +319,9 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
   };
 };
 
-const restrictFieldPosValues = (field: Pick<TLocalField, 'positionX' | 'positionY' | 'width' | 'height'>) => {
+const restrictFieldPosValues = (
+  field: Pick<TLocalField, 'positionX' | 'positionY' | 'width' | 'height'>,
+) => {
   return {
     positionX: Math.max(0, Math.min(100, field.positionX)),
     positionY: Math.max(0, Math.min(100, field.positionY)),

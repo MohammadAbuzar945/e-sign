@@ -1,5 +1,6 @@
-import { cn } from '@documenso/ui/lib/utils';
 import type { ReactNode } from 'react';
+
+import { cn } from '@documenso/ui/lib/utils';
 
 export type DetailsCardProps = {
   label: ReactNode;
@@ -25,11 +26,15 @@ export type DetailsValueProps = {
   isSelectable?: boolean;
 };
 
-export const DetailsValue = ({ children, isMono = true, isSelectable = false }: DetailsValueProps) => {
+export const DetailsValue = ({
+  children,
+  isMono = true,
+  isSelectable = false,
+}: DetailsValueProps) => {
   return (
     <div
       className={cn(
-        'flex min-h-10 items-center break-all rounded-md bg-muted px-3 py-2 text-muted-foreground text-xs',
+        'flex min-h-10 items-center break-all rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground',
         isMono && 'font-mono',
         isSelectable && 'select-all',
       )}

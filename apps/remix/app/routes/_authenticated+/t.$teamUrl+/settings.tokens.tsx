@@ -1,11 +1,13 @@
-import { trpc } from '@documenso/trpc/react';
-import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
-import { Button } from '@documenso/ui/primitives/button';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { TeamMemberRole } from '@prisma/client';
 import { DateTime } from 'luxon';
+
+import { trpc } from '@documenso/trpc/react';
+import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
+import { AlertTitle } from '@documenso/ui/primitives/alert';
+import { Button } from '@documenso/ui/primitives/button';
 
 import TokenDeleteDialog from '~/components/dialogs/token-delete-dialog';
 import { ApiTokenForm } from '~/components/forms/token';
@@ -35,7 +37,6 @@ export default function ApiTokensPage() {
               className="text-primary underline"
               href={'https://docs.documenso.com/developers/public-api'}
               target="_blank"
-              rel="noopener"
             >
               Documentation
             </a>{' '}
@@ -45,7 +46,10 @@ export default function ApiTokensPage() {
       />
 
       {team && team?.currentTeamRole !== TeamMemberRole.ADMIN ? (
-        <Alert className="flex flex-col items-center justify-between gap-4 p-6 md:flex-row" variant="warning">
+        <Alert
+          className="flex flex-col items-center justify-between gap-4 p-6 md:flex-row"
+          variant="warning"
+        >
           <div>
             <AlertTitle>
               <Trans>Unauthorized</Trans>
@@ -59,15 +63,15 @@ export default function ApiTokensPage() {
         <>
           <ApiTokenForm className="max-w-xl" tokens={tokens} />
 
-          <hr className="mt-8 mb-4" />
+          <hr className="mb-4 mt-8" />
 
-          <h4 className="font-medium text-xl">
+          <h4 className="text-xl font-medium">
             <Trans>Your existing tokens</Trans>
           </h4>
 
           {tokens && tokens.length === 0 && (
             <div className="mb-4">
-              <p className="mt-2 text-muted-foreground text-sm italic">
+              <p className="mt-2 text-sm italic text-muted-foreground">
                 <Trans>Your tokens will be shown here once you create them.</Trans>
               </p>
             </div>
@@ -81,15 +85,19 @@ export default function ApiTokensPage() {
                     <div>
                       <h5 className="text-base">{token.name}</h5>
 
-                      <p className="mt-2 text-muted-foreground text-xs">
-                        <Trans>Created on {i18n.date(token.createdAt, DateTime.DATETIME_FULL)}</Trans>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        <Trans>
+                          Created on {i18n.date(token.createdAt, DateTime.DATETIME_FULL)}
+                        </Trans>
                       </p>
                       {token.expires ? (
-                        <p className="mt-1 text-muted-foreground text-xs">
-                          <Trans>Expires on {i18n.date(token.expires, DateTime.DATETIME_FULL)}</Trans>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          <Trans>
+                            Expires on {i18n.date(token.expires, DateTime.DATETIME_FULL)}
+                          </Trans>
                         </p>
                       ) : (
-                        <p className="mt-1 text-muted-foreground text-xs">
+                        <p className="mt-1 text-xs text-muted-foreground">
                           <Trans>Token doesn't have an expiration date</Trans>
                         </p>
                       )}

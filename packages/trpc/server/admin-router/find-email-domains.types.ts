@@ -1,8 +1,9 @@
+import { z } from 'zod';
+
 import { ZFindResultResponse, ZFindSearchParamsSchema } from '@documenso/lib/types/search-params';
 import EmailDomainStatusSchema from '@documenso/prisma/generated/zod/inputTypeSchemas/EmailDomainStatusSchema';
 import EmailDomainSchema from '@documenso/prisma/generated/zod/modelSchema/EmailDomainSchema';
 import OrganisationSchema from '@documenso/prisma/generated/zod/modelSchema/OrganisationSchema';
-import { z } from 'zod';
 
 export const ZFindEmailDomainsRequestSchema = ZFindSearchParamsSchema.extend({
   status: EmailDomainStatusSchema.optional(),

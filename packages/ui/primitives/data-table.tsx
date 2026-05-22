@@ -1,3 +1,5 @@
+import React, { useMemo } from 'react';
+
 import { Trans } from '@lingui/react/macro';
 import type {
   ColumnDef,
@@ -8,8 +10,6 @@ import type {
   VisibilityState,
 } from '@tanstack/react-table';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import type React from 'react';
-import { useMemo } from 'react';
 
 import { Skeleton } from './skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
@@ -128,7 +128,9 @@ export function DataTable<TData, TValue>({
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   );
                 })}
@@ -178,7 +180,10 @@ export function DataTable<TData, TValue>({
                       </p>
 
                       {hasFilters && onClearFilters !== undefined && (
-                        <button onClick={() => onClearFilters()} className="mt-1 text-foreground text-sm">
+                        <button
+                          onClick={() => onClearFilters()}
+                          className="mt-1 text-sm text-foreground"
+                        >
                           <Trans>Clear filters</Trans>
                         </button>
                       )}

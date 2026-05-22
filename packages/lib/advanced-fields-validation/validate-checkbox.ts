@@ -1,5 +1,6 @@
-import { checkboxValidationSigns } from '@documenso/ui/primitives/document-flow/field-items-advanced-settings/constants';
 import { match } from 'ts-pattern';
+
+import { checkboxValidationSigns } from '@documenso/ui/primitives/document-flow/field-items-advanced-settings/constants';
 
 import type { TCheckboxFieldMeta } from '../types/field-meta';
 
@@ -44,13 +45,17 @@ export const validateCheckboxField = (
 
       switch (validation.value) {
         case '=':
-          lengthCondition = isSigningPage ? values.length !== validationLength : values.length < validationLength;
+          lengthCondition = isSigningPage
+            ? values.length !== validationLength
+            : values.length < validationLength;
           break;
         case '>=':
           lengthCondition = values.length < validationLength;
           break;
         case '<=':
-          lengthCondition = isSigningPage ? values.length > validationLength : values.length < validationLength;
+          lengthCondition = isSigningPage
+            ? values.length > validationLength
+            : values.length < validationLength;
           break;
       }
 

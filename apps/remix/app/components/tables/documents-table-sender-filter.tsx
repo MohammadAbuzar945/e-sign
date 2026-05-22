@@ -1,9 +1,10 @@
-import { useIsMounted } from '@documenso/lib/client-only/hooks/use-is-mounted';
-import { trpc } from '@documenso/trpc/react';
-import { MultiSelectCombobox } from '@documenso/ui/primitives/multi-select-combobox';
 import { msg } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
+
+import { useIsMounted } from '@documenso/lib/client-only/hooks/use-is-mounted';
+import { trpc } from '@documenso/trpc/react';
+import { MultiSelectCombobox } from '@documenso/ui/primitives/multi-select-combobox';
 
 type DocumentsTableSenderFilterProps = {
   teamId: number;
@@ -16,7 +17,9 @@ export const DocumentsTableSenderFilter = ({ teamId }: DocumentsTableSenderFilte
 
   const isMounted = useIsMounted();
 
-  const senderIds = (searchParams?.get('senderIds') ?? '').split(',').filter((value) => value !== '');
+  const senderIds = (searchParams?.get('senderIds') ?? '')
+    .split(',')
+    .filter((value) => value !== '');
 
   const { data, isLoading } = trpc.team.member.getMany.useQuery({
     teamId,
@@ -46,7 +49,7 @@ export const DocumentsTableSenderFilter = ({ teamId }: DocumentsTableSenderFilte
   return (
     <MultiSelectCombobox
       emptySelectionPlaceholder={
-        <p className="font-normal text-muted-foreground">
+        <p className="text-muted-foreground font-normal">
           <Trans>
             <span className="text-muted-foreground/70">Sender:</span> All
           </Trans>

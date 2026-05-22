@@ -1,7 +1,11 @@
 import { getEnvelopeById } from '@documenso/lib/server-only/envelope/get-envelope-by-id';
 
 import { authenticatedProcedure } from '../trpc';
-import { getEnvelopeMeta, ZGetEnvelopeRequestSchema, ZGetEnvelopeResponseSchema } from './get-envelope.types';
+import {
+  ZGetEnvelopeRequestSchema,
+  ZGetEnvelopeResponseSchema,
+  getEnvelopeMeta,
+} from './get-envelope.types';
 
 export const getEnvelopeRoute = authenticatedProcedure
   .meta(getEnvelopeMeta)

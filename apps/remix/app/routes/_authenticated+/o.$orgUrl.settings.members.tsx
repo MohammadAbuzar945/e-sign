@@ -1,11 +1,13 @@
-import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
-import { Input } from '@documenso/ui/primitives/input';
-import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
+import { useEffect, useState } from 'react';
+
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
+
+import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
+import { Input } from '@documenso/ui/primitives/input';
+import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 
 import { OrganisationMemberInviteDialog } from '~/components/dialogs/organisation-member-invite-dialog';
 import { SettingsHeader } from '~/components/general/settings-header';
@@ -46,7 +48,10 @@ export default function TeamsSettingsMembersPage() {
 
   return (
     <div>
-      <SettingsHeader title={_(msg`Organisation Members`)} subtitle={_(msg`Manage the members or invite new members.`)}>
+      <SettingsHeader
+        title={_(msg`Organisation Members`)}
+        subtitle={_(msg`Manage the members or invite new members.`)}
+      >
         <OrganisationMemberInviteDialog />
       </SettingsHeader>
 

@@ -3,7 +3,8 @@ import type { MiddlewareHandler } from 'hono/types';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { getIpAddress } from '../../universal/get-ip-address';
-import type { createRateLimit, RateLimitCheckResult } from './rate-limit';
+import type { RateLimitCheckResult } from './rate-limit';
+import type { createRateLimit } from './rate-limit';
 
 /**
  * Set rate limit response headers on a Hono context.
@@ -40,7 +41,10 @@ export const createRateLimitMiddleware = (
     setRateLimitHeaders(c, result);
 
     if (result.isLimited) {
-      c.header('Retry-After', String(Math.max(1, Math.ceil((result.reset.getTime() - Date.now()) / 1000))));
+      c.header(
+        'Retry-After',
+        String(Math.max(1, Math.ceil((result.reset.getTime() - Date.now()) / 1000))),
+      );
 
       return c.json({ error: 'Too many requests, please try again later.' }, 429);
     }
@@ -58,7 +62,10 @@ export const rateLimitResponse = (c: Context, result: RateLimitCheckResult): Res
   setRateLimitHeaders(c, result);
 
   if (result.isLimited) {
-    c.header('Retry-After', String(Math.max(1, Math.ceil((result.reset.getTime() - Date.now()) / 1000))));
+    c.header(
+      'Retry-After',
+      String(Math.max(1, Math.ceil((result.reset.getTime() - Date.now()) / 1000))),
+    );
 
     return c.json({ error: 'Too many requests, please try again later.' }, 429);
   }
