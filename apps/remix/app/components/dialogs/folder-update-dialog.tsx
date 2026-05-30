@@ -120,7 +120,10 @@ export const FolderUpdateDialog = ({ folder, isOpen, onOpenChange }: FolderUpdat
           </DialogTitle>
           {folder && (
             <div className="flex items-center gap-1">
-              <span className="text-muted-foreground font-mono text-xs">{folder.id}</span>
+              <span className="text-muted-foreground text-xs">
+                <Trans>Folder ID</Trans>:{' '}
+                <span className="font-mono">{folder.id}</span>
+              </span>
               <Button
                 variant="none"
                 type="button"
