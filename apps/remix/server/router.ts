@@ -13,6 +13,7 @@ import { jobsClient } from '@documenso/lib/jobs/client';
 import { LicenseClient } from '@documenso/lib/server-only/license/license-client';
 import { TelemetryClient } from '@documenso/lib/server-only/telemetry/telemetry-client';
 import { getIpAddress } from '@documenso/lib/universal/get-ip-address';
+import { shouldSkipApiRateLimit } from '@documenso/lib/utils/api-rate-limit-exempt-ips';
 import { env } from '@documenso/lib/utils/env';
 import { logger } from '@documenso/lib/utils/logger';
 import { openApiDocument } from '@documenso/trpc/server/open-api';
@@ -37,6 +38,7 @@ const app = new Hono<HonoEnv>();
 /**
  * Rate limiting for v1 and v2 API routes only.
  * - 100 requests per minute per IP address
+ * - Skipped for IPs in NEXT_PRIVATE_API_RATE_LIMIT_EXEMPT_IPS (comma-separated)
  */
 const rateLimitMiddleware = rateLimiter({
   windowMs: 60 * 1000, // 1 minute
@@ -48,6 +50,7 @@ const rateLimitMiddleware = rateLimiter({
       return 'unknown';
     }
   },
+  skip: (c) => shouldSkipApiRateLimit(c.req.raw),
   message: {
     error: 'Too many requests, please try again later.',
   },

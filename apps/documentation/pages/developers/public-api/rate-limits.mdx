@@ -14,6 +14,16 @@ Documenso enforces rate limits on all API endpoints to ensure service stability.
 **Limit:** 100 requests per minute per IP address  
 **Response:** 429 Too Many Requests
 
+### Exempting trusted servers (self-hosted)
+
+If another server integrates with the API (e.g. your app backend) and needs to bypass the HTTP rate limit, set a comma-separated allowlist of **client IPs as Documenso sees them**:
+
+```env
+NEXT_PRIVATE_API_RATE_LIMIT_EXEMPT_IPS="203.0.113.10,127.0.0.1"
+```
+
+Restart the app after changing this value. Only use on self-hosted deployments behind a trusted reverse proxy so `X-Forwarded-For` cannot be spoofed by arbitrary clients.
+
 ### Rate Limit Response
 
 ```json

@@ -105,5 +105,8 @@ declare namespace NodeJS {
     GOOGLE_VERTEX_PROJECT_ID?: string;
     GOOGLE_VERTEX_LOCATION?: string;
     GOOGLE_VERTEX_API_KEY?: string;
+
+    /** Comma-separated IPs that skip HTTP rate limits on /api/v1 and /api/v2 */
+    NEXT_PRIVATE_API_RATE_LIMIT_EXEMPT_IPS?: string;
   }
 }
