@@ -1,18 +1,9 @@
-import {
-  OrganisationGroupType,
-  OrganisationMemberRole,
-  Prisma,
-  TeamMemberRole,
-} from '@prisma/client';
-import { match } from 'ts-pattern';
-
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
+import { OrganisationGroupType, OrganisationMemberRole, Prisma, TeamMemberRole } from '@prisma/client';
+import { match } from 'ts-pattern';
 
-import {
-  LOWEST_ORGANISATION_ROLE,
-  ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP,
-} from '../../constants/organisations';
+import { LOWEST_ORGANISATION_ROLE, ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '../../constants/organisations';
 import { TEAM_INTERNAL_GROUPS } from '../../constants/teams';
 import { TEAM_AUDIT_LOG_TYPE } from '../../types/team-audit-logs';
 import { generateDatabaseId } from '../../universal/id';
@@ -74,13 +65,7 @@ export type CreateTeamOptions = {
   metadata?: ApiRequestMetadata;
 };
 
-export const createTeam = async ({
-  userId,
-  teamName,
-  teamUrl,
-  organisationId,
-  inheritMembers,
-  isPrivate,
+export const createTeam = async ({ userId, teamName, teamUrl, organisationId, inheritMembers   isPrivate,
   organisationMemberId,
   metadata,
 }: CreateTeamOptions) => {

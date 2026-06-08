@@ -15,6 +15,14 @@ import { DataTable } from '@documenso/ui/primitives/data-table';
 import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import type { DateTimeFormatOptions } from 'luxon';
+import { DateTime } from 'luxon';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router';
+import { UAParser } from 'ua-parser-js';
 
 export type DocumentLogsTableProps = {
   documentId: number;
@@ -83,15 +91,15 @@ export const DocumentLogsTable = ({ documentId, userId }: DocumentLogsTableProps
               )}
             </div>
           ) : (
-            <p>N/A</p>
+            <p>
+              <Trans>N/A</Trans>
+            </p>
           ),
       },
       {
         header: _(msg`Action`),
         accessorKey: 'type',
-        cell: ({ row }) => (
-          <span>{formatDocumentAuditLogAction(i18n, row.original, userId).description}</span>
-        ),
+        cell: ({ row }) => <span>{formatDocumentAuditLogAction(i18n, row.original, userId).description}</span>,
       },
       {
         header: _(msg`IP Address`),

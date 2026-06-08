@@ -1,14 +1,9 @@
-import { TeamMemberRole } from '@prisma/client';
-
-import { getHighestOrganisationRoleInGroup } from '@documenso/lib/utils/organisations';
-import { getCurrentSubscriptionsByOrganisationIds } from '@documenso/lib/server-only/subscription/get-current-subscriptions-by-organisation-ids';
-import {
-  buildTeamWhereQuery,
-  extractDerivedTeamSettings,
-  getHighestTeamRoleInGroup,
-} from '@documenso/lib/utils/teams';
-import { prisma } from '@documenso/prisma';
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
+import { getCurrentSubscriptionsByOrganisationIds } from '@documenso/lib/server-only/subscription/get-current-subscriptions-by-organisation-ids';
+import { getHighestOrganisationRoleInGroup } from '@documenso/lib/utils/organisations';
+import { buildTeamWhereQuery, extractDerivedTeamSettings, getHighestTeamRoleInGroup } from '@documenso/lib/utils/teams';
+import { prisma } from '@documenso/prisma';
+import { TeamMemberRole } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
 import type { TGetOrganisationSessionResponse } from './get-organisation-session.types';
@@ -54,6 +49,7 @@ export const getOrganisationSession = async ({
         where: buildTeamWhereQuery({ teamId: undefined, userId }),
         include: {
           teamGlobalSettings: true,
+          teamEmail: { select: { email: true } },
           teamGroups: {
             where: {
               organisationGroup: {
@@ -109,20 +105,15 @@ export const getOrganisationSession = async ({
       subscription: subscriptionsByOrganisationId[organisation.id] ?? null,
       credits: creditsByOrganisationId[organisation.id] ?? 0,
       teams: organisation.teams.map((team) => {
-        const derivedSettings = extractDerivedTeamSettings(
-          organisationGlobalSettings,
-          team.teamGlobalSettings,
-        );
+        const derivedSettings = extractDerivedTeamSettings(organisationGlobalSettings, team.teamGlobalSettings);
 
         const isOrganisationOwner = organisation.ownerUserId === userId;
-            const isTeamMember = team.teamGroups.length > 0;
+        const isTeamMember = team.teamGroups.length > 0;
 
         return {
           ...team,
-          currentTeamRole: isOrganisationOwner
-            ? TeamMemberRole.ADMIN
-            : getHighestTeamRoleInGroup(team.teamGroups),
-              isTeamMember,
+          currentTeamRole: isOrganisationOwner ? TeamMemberRole.ADMIN : getHighestTeamRoleInGroup(team.teamGroups),
+          isTeamMember,
           preferences: {
             aiFeaturesEnabled: derivedSettings.aiFeaturesEnabled,
           },

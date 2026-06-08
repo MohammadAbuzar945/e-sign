@@ -40,6 +40,11 @@ export const getAdminOrganisation = async ({ organisationId }: GetOrganisationOp
       organisationClaim: true,
       organisationGlobalSettings: true,
       teams: true,
+      monthlyStats: {
+        orderBy: {
+          period: 'desc',
+        },
+      },
       members: {
         include: {
           organisationGroupMembers: {
@@ -77,8 +82,10 @@ export const getAdminOrganisation = async ({ organisationId }: GetOrganisationOp
   }
 
   return {
+    ...{
     ...organisation,
     subscription,
     credits,
+  },
   };
 };

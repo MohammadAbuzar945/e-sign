@@ -1,3 +1,6 @@
+import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
+import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
@@ -14,7 +17,7 @@ import { SettingsHeader } from '~/components/general/settings-header';
 import { appMetaTags } from '~/utils/meta';
 
 export function meta() {
-  return appMetaTags('Settings');
+  return appMetaTags(msg`Settings`);
 }
 
 export default function OrganisationSettingsGeneral() {
@@ -24,20 +27,14 @@ export default function OrganisationSettingsGeneral() {
 
   return (
     <div className="max-w-2xl">
-      <SettingsHeader
-        title={_(msg`General`)}
-        subtitle={_(msg`Here you can edit your organisation details.`)}
-      />
+      <SettingsHeader title={_(msg`General`)} subtitle={_(msg`Here you can edit your organisation details.`)} />
 
       <div className="space-y-8">
         <AvatarImageForm organisation={organisation} />
         <OrganisationUpdateForm />
       </div>
 
-      {canExecuteOrganisationAction(
-        'DELETE_ORGANISATION',
-        organisation.currentOrganisationRole,
-      ) &&
+      {canExecuteOrganisationAction('DELETE_ORGANISATION', organisation.currentOrganisationRole) &&
         organisation.type !== OrganisationType.PERSONAL && (
           <>
             <hr className="my-4" />

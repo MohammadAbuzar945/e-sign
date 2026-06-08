@@ -8,10 +8,7 @@ import { OrganisationGroupType } from '@documenso/prisma/generated/types';
 
 import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 import { authenticatedProcedure } from '../trpc';
-import {
-  ZUpdateTeamGroupRequestSchema,
-  ZUpdateTeamGroupResponseSchema,
-} from './update-team-group.types';
+import { ZUpdateTeamGroupRequestSchema, ZUpdateTeamGroupResponseSchema } from './update-team-group.types';
 
 export const updateTeamGroupRoute = authenticatedProcedure
   // .meta(updateTeamGroupMeta)

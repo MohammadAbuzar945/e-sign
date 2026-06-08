@@ -3,7 +3,7 @@ import { DocumentStatus, type EnvelopeItem } from '@prisma/client';
 import { getEnvelopeItemPdfUrl } from '../utils/envelope-download';
 import { downloadFile } from './download-file';
 
-type DocumentVersion = 'original' | 'signed';
+type DocumentVersion = 'original' | 'signed' | 'pending';
 
 type DownloadPDFProps = {
   envelopeItem: Pick<EnvelopeItem, 'id' | 'envelopeId'>;
@@ -14,6 +14,9 @@ type DownloadPDFProps = {
    * Specifies which version of the document to download.
    * 'signed': Downloads the signed version (default).
    * 'original': Downloads the original version.
+   * 'pending': Downloads the original document with currently-inserted fields burned in.
+   *            Only valid while the envelope is in PENDING status. Not supported via
+   *            recipient token.
    */
   version?: DocumentVersion;
   /**
@@ -21,6 +24,17 @@ type DownloadPDFProps = {
    * If REJECTED and version is 'signed', the filename will use '_rejected.pdf' instead of '_signed.pdf'.
    */
   envelopeStatus?: DocumentStatus;
+};
+
+const versionToFilenameSuffix = (version: DocumentVersion): string => {
+  switch (version) {
+    case 'signed':
+      return '_signed.pdf';
+    case 'pending':
+      return '_pending.pdf';
+    case 'original':
+      return '.pdf';
+  }
 };
 
 export const downloadPDF = async ({
@@ -48,7 +62,7 @@ export const downloadPDF = async ({
       : '.pdf';
 
   downloadFile({
-    filename: `${baseTitle}${suffix}`,
+    filename: `${baseTitle}${versionToFilenameSuffix(version)}`,
     data: blob,
   });
 };

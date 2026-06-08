@@ -1,20 +1,13 @@
-import { OrganisationType, SubscriptionStatus } from '@prisma/client';
-import { match } from 'ts-pattern';
-
 import {
   createOrganisation,
   createOrganisationClaimUpsertData,
 } from '@documenso/lib/server-only/organisation/create-organisation';
-import { type Stripe } from '@documenso/lib/server-only/stripe';
-import type {
-  InternalClaim,
-  StripeOrganisationCreateMetadata,
-} from '@documenso/lib/types/subscription';
-import {
-  INTERNAL_CLAIM_ID,
-  ZStripeOrganisationCreateMetadataSchema,
-} from '@documenso/lib/types/subscription';
+import type { Stripe } from '@documenso/lib/server-only/stripe';
+import type { StripeOrganisationCreateMetadata } from '@documenso/lib/types/subscription';
+import { INTERNAL_CLAIM_ID, ZStripeOrganisationCreateMetadataSchema } from '@documenso/lib/types/subscription';
 import { prisma } from '@documenso/prisma';
+import { OrganisationType, type SubscriptionClaim, SubscriptionStatus } from '@prisma/client';
+import { match } from 'ts-pattern';
 
 import { extractStripeClaim } from './on-subscription-updated';
 
@@ -33,8 +26,7 @@ type StripeWebhookResponse = {
  * potentially created.
  */
 export const onSubscriptionCreated = async ({ subscription }: OnSubscriptionCreatedOptions) => {
-  const customerId =
-    typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+  const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 
   // Todo: logging
   if (subscription.items.data.length !== 1) {
@@ -117,23 +109,17 @@ export const onSubscriptionCreated = async ({ subscription }: OnSubscriptionCrea
 
 type HandleOrganisationCreateOptions = {
   customerId: string;
-  claim: InternalClaim;
+  claim: Omit<SubscriptionClaim, 'createdAt' | 'updatedAt'>;
   unknownCreateData: string;
 };
 
 /**
  * Handles the creation of an organisation.
  */
-const handleOrganisationCreate = async ({
-  customerId,
-  claim,
-  unknownCreateData,
-}: HandleOrganisationCreateOptions) => {
+const handleOrganisationCreate = async ({ customerId, claim, unknownCreateData }: HandleOrganisationCreateOptions) => {
   let organisationCreateFlowData: StripeOrganisationCreateMetadata | null = null;
 
-  const parseResult = ZStripeOrganisationCreateMetadataSchema.safeParse(
-    JSON.parse(unknownCreateData),
-  );
+  const parseResult = ZStripeOrganisationCreateMetadataSchema.safeParse(JSON.parse(unknownCreateData));
 
   if (!parseResult.success) {
     console.error('Invalid organisation create flow data');
@@ -162,7 +148,7 @@ const handleOrganisationCreate = async ({
 
 type HandleOrganisationUpdateOptions = {
   customerId: string;
-  claim: InternalClaim;
+  claim: Omit<SubscriptionClaim, 'createdAt' | 'updatedAt'>;
 };
 
 /**
@@ -194,10 +180,7 @@ const handleOrganisationUpdate = async ({ customerId, claim }: HandleOrganisatio
   let newOrganisationType: OrganisationType = OrganisationType.ORGANISATION;
 
   // Keep the organisation as personal if the claim is for an individual.
-  if (
-    organisation.type === OrganisationType.PERSONAL &&
-    claim.id === INTERNAL_CLAIM_ID.INDIVIDUAL
-  ) {
+  if (organisation.type === OrganisationType.PERSONAL && claim.id === INTERNAL_CLAIM_ID.INDIVIDUAL) {
     newOrganisationType = OrganisationType.PERSONAL;
   }
 

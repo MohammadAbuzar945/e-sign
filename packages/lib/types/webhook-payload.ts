@@ -1,4 +1,4 @@
-import type { DocumentMeta, Envelope, Recipient, WebhookTriggerEvents } from '@prisma/client';
+import type { DocumentMeta, Envelope, Recipient } from '@prisma/client';
 import {
   DocumentDistributionMethod,
   DocumentSigningOrder,
@@ -10,6 +10,7 @@ import {
   RecipientRole,
   SendStatus,
   SigningStatus,
+  WebhookTriggerEvents,
 } from '@prisma/client';
 import { z } from 'zod';
 
@@ -27,9 +28,10 @@ export const ZWebhookRecipientSchema = z.object({
   email: z.string(),
   name: z.string(),
   token: z.string(),
-  documentDeletedAt: z.date().nullable(),
-  expired: z.date().nullable(),
-  signedAt: z.date().nullable(),
+  documentDeletedAt: z.coerce.date().nullable(),
+  expiresAt: z.coerce.date().nullable(),
+  expirationNotifiedAt: z.coerce.date().nullable(),
+  signedAt: z.coerce.date().nullable(),
   authOptions: z.any().nullable(),
   signingOrder: z.number().nullable(),
   rejectionReason: z.string().nullable(),
@@ -83,15 +85,20 @@ export const ZWebhookDocumentSchema = z.object({
   recipients: z.array(ZWebhookRecipientSchema),
 });
 
+/**
+ * Schema for the full webhook delivery envelope (what receivers see on the wire
+ * and what is persisted to `WebhookCall.requestBody`).
+ */
+export const ZWebhookPayloadSchema = z.object({
+  event: z.nativeEnum(WebhookTriggerEvents),
+  payload: ZWebhookDocumentSchema,
+  createdAt: z.string(),
+  webhookEndpoint: z.string(),
+});
+
 export type TWebhookRecipient = z.infer<typeof ZWebhookRecipientSchema>;
 export type TWebhookDocument = z.infer<typeof ZWebhookDocumentSchema>;
-
-export type WebhookPayload = {
-  event: WebhookTriggerEvents;
-  payload: TWebhookDocument;
-  createdAt: string;
-  webhookEndpoint: string;
-};
+export type WebhookPayload = z.infer<typeof ZWebhookPayloadSchema>;
 
 export const mapEnvelopeToWebhookDocumentPayload = (
   envelope: Envelope & {
@@ -114,7 +121,8 @@ export const mapEnvelopeToWebhookDocumentPayload = (
     name: recipient.name,
     token: recipient.token,
     documentDeletedAt: recipient.documentDeletedAt,
-    expired: recipient.expired,
+    expiresAt: recipient.expiresAt,
+    expirationNotifiedAt: recipient.expirationNotifiedAt,
     signedAt: recipient.signedAt,
     authOptions: recipient.authOptions,
     signingOrder: recipient.signingOrder,

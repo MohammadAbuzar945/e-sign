@@ -29,6 +29,13 @@ import {
 } from '@documenso/ui/primitives/dropdown-menu';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { OrganisationGroupType, OrganisationMemberRole } from '@prisma/client';
+import { EditIcon, MoreHorizontal, Trash2Icon } from 'lucide-react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router';
 
 import { useCurrentTeam } from '~/providers/team';
 
@@ -102,9 +109,7 @@ export const TeamMembersTable = () => {
             <AvatarWithText
               avatarClass="h-12 w-12"
               avatarFallback={avatarFallbackText}
-              primaryText={
-                <span className="text-foreground/80 font-semibold">{row.original.name}</span>
-              }
+              primaryText={<span className="font-semibold text-foreground/80">{row.original.name}</span>}
               secondaryText={row.original.email}
             />
           );
@@ -142,7 +147,7 @@ export const TeamMembersTable = () => {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger>
-                <MoreHorizontal className="text-muted-foreground h-5 w-5" />
+                <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
               </DropdownMenuTrigger>
 
               <DropdownMenuContent className="w-52" align="start" forceMount>
@@ -249,12 +254,10 @@ export const TeamMembersTable = () => {
       </DataTable>
 
       <AnimateGenericFadeInOut key={groupQuery.isPending ? 'pending' : 'fetched'}>
-        {!groupQuery.isPending && (
-          <TeamInheritMemberAlert
+        {!groupQuery.isPending && <TeamInheritMemberAlert
             memberAccessTeamGroup={memberAccessTeamGroup || null}
             isPrivate={team.isPrivate}
-          />
-        )}
+          />}
       </AnimateGenericFadeInOut>
     </div>
   );

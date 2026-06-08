@@ -3,15 +3,13 @@ import { OrganisationType, Role } from '@prisma/client';
 import type { SessionUser } from '@documenso/auth/server/lib/session/session';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createOrganisation } from '@documenso/lib/server-only/organisation/create-organisation';
-import { INTERNAL_CLAIM_ID, internalClaims } from '@documenso/lib/types/subscription';
+import { getSubscriptionClaim } from '@documenso/lib/server-only/subscription/get-subscription-claim';
+import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
 import { isAdmin } from '@documenso/lib/utils/is-admin';
 import { prisma } from '@documenso/prisma';
-
+import { OrganisationType } from '@prisma/client';
 import { authenticatedProcedure } from '../trpc';
-import {
-  ZCreateOrganisationRequestSchema,
-  ZCreateOrganisationResponseSchema,
-} from './create-organisation.types';
+import { ZCreateOrganisationRequestSchema, ZCreateOrganisationResponseSchema } from './create-organisation.types';
 
 export const createOrganisationRoute = authenticatedProcedure
   // .meta(createOrganisationMeta)
@@ -90,7 +88,7 @@ export const createOrganisationRoute = authenticatedProcedure
       userId: ctx.user.id,
       name: trimmedName,
       type: OrganisationType.ORGANISATION,
-      claim: internalClaims[INTERNAL_CLAIM_ID.FREE],
+      claim: freeSubscriptionClaim,
     });
 
     return {

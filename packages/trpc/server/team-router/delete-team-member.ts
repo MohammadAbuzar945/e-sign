@@ -8,12 +8,10 @@ import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/l
 import { prisma } from '@documenso/prisma';
 
 import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
+import { OrganisationGroupType } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
-import {
-  ZDeleteTeamMemberRequestSchema,
-  ZDeleteTeamMemberResponseSchema,
-} from './delete-team-member.types';
+import { ZDeleteTeamMemberRequestSchema, ZDeleteTeamMemberResponseSchema } from './delete-team-member.types';
 
 export const deleteTeamMemberRoute = authenticatedProcedure
   // .meta(deleteTeamMemberMeta)
@@ -50,6 +48,11 @@ export const deleteTeamMemberRoute = authenticatedProcedure
         ],
       },
       include: {
+        organisation: {
+          select: {
+            ownerUserId: true,
+          },
+        },
         teamGroups: {
           where: {
             organisationGroup: {
@@ -132,13 +135,39 @@ export const deleteTeamMemberRoute = authenticatedProcedure
       });
     }
 
-    await prisma.organisationGroupMember.delete({
-      where: {
-        organisationMemberId_groupId: {
-          organisationMemberId: memberId,
-          groupId: internalTeamGroupToRemoveMemberFrom.organisationGroupId,
+    const removedMember = teamGroupToRemoveMemberFrom.organisationGroup.organisationGroupMembers.find(
+      (ogm) => ogm.organisationMember.id === memberId,
+    );
+
+    if (!removedMember) {
+      throw new AppError(AppErrorCode.NOT_FOUND, {
+        message: 'Member not found in this team',
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Removing a user from a single team drops their INTERNAL_TEAM
+      // OrganisationGroupMember link, but Envelope rows they authored in this
+      // team still point at their userId. Reassign to the org owner so those
+      // envelopes remain reachable after the member loses team access.
+      await tx.envelope.updateMany({
+        where: {
+          userId: removedMember.organisationMember.userId,
+          teamId,
         },
-      },
+        data: {
+          userId: team.organisation.ownerUserId,
+        },
+      });
+
+      await tx.organisationGroupMember.delete({
+        where: {
+          organisationMemberId_groupId: {
+            organisationMemberId: memberId,
+            groupId: internalTeamGroupToRemoveMemberFrom.organisationGroupId,
+          },
+        },
+      });
     });
 
     if (organisationMemberToDelete) {

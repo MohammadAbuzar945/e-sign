@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
-
-import { useLingui } from '@lingui/react/macro';
-import { useLocation, useSearchParams } from 'react-router';
-
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { Input } from '@documenso/ui/primitives/input';
+import { useLingui } from '@lingui/react/macro';
+import { useEffect, useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router';
 
 import { useSession } from '@documenso/lib/client-only/providers/session';
 

@@ -22,7 +22,7 @@ declare namespace NodeJS {
     NEXT_PRIVATE_STRIPE_API_KEY: string;
     NEXT_PRIVATE_STRIPE_WEBHOOK_SECRET: string;
 
-    NEXT_PUBLIC_UPLOAD_TRANSPORT?: 'database' | 's3' | 'gcs';
+    NEXT_PUBLIC_UPLOAD_TRANSPORT?: 'database' | 's3' | 'gcs' | 'azure-blob';
     NEXT_PRIVATE_UPLOAD_ENDPOINT?: string;
     NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE?: string;
     NEXT_PRIVATE_UPLOAD_REGION?: string;
@@ -37,6 +37,10 @@ declare namespace NodeJS {
     NEXT_PRIVATE_GCS_PRIVATE_KEY?: string;
     NEXT_PRIVATE_GCS_BUCKET?: string;
     GOOGLE_APPLICATION_CREDENTIALS?: string;
+    NEXT_PRIVATE_UPLOAD_AZURE_ACCOUNT_NAME?: string;
+    NEXT_PRIVATE_UPLOAD_AZURE_ACCOUNT_KEY?: string;
+    NEXT_PRIVATE_UPLOAD_AZURE_CONTAINER?: string;
+    NEXT_PRIVATE_UPLOAD_AZURE_ENDPOINT?: string;
 
     NEXT_PRIVATE_SIGNING_TRANSPORT?: 'local' | 'http' | 'gcloud-hsm';
     NEXT_PRIVATE_SIGNING_PASSPHRASE?: string;
@@ -79,12 +83,24 @@ declare namespace NodeJS {
     NEXT_PRIVATE_SMTP_FROM_ADDRESS?: string;
 
     NEXT_PUBLIC_DISABLE_SIGNUP?: string;
+    NEXT_PUBLIC_DISABLE_EMAIL_PASSWORD_SIGNUP?: string;
+    NEXT_PUBLIC_DISABLE_GOOGLE_SIGNUP?: string;
+    NEXT_PUBLIC_DISABLE_MICROSOFT_SIGNUP?: string;
+    NEXT_PUBLIC_DISABLE_OIDC_SIGNUP?: string;
+    NEXT_PRIVATE_ALLOWED_SIGNUP_DOMAINS?: string;
 
     NEXT_PRIVATE_BROWSERLESS_URL?: string;
 
-    NEXT_PRIVATE_JOBS_PROVIDER?: 'inngest' | 'local';
+    NEXT_PRIVATE_JOBS_PROVIDER?: 'inngest' | 'local' | 'bullmq';
 
     NEXT_PUBLIC_USE_INTERNAL_URL_BROWSERLESS?: string;
+
+    /**
+     * Redis / BullMQ environment variables
+     */
+    NEXT_PRIVATE_REDIS_URL?: string;
+    NEXT_PRIVATE_REDIS_PREFIX?: string;
+    NEXT_PRIVATE_BULLMQ_CONCURRENCY?: string;
 
     /**
      * Inngest environment variables
@@ -98,6 +114,12 @@ declare namespace NodeJS {
     DATABASE_URL?: string;
     POSTGRES_PRISMA_URL?: string;
     POSTGRES_URL_NON_POOLING?: string;
+
+    /**
+     * Cloudflare Turnstile environment variables
+     */
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY?: string;
+    NEXT_PRIVATE_TURNSTILE_SECRET_KEY?: string;
 
     /**
      * Google Vertex AI environment variables

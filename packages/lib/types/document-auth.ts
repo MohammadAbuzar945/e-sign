@@ -84,12 +84,7 @@ export const ZDocumentActionAuthSchema = z.discriminatedUnion('type', [
   ZDocumentAuthPasswordSchema,
 ]);
 export const ZDocumentActionAuthTypesSchema = z
-  .enum([
-    DocumentAuth.ACCOUNT,
-    DocumentAuth.PASSKEY,
-    DocumentAuth.TWO_FACTOR_AUTH,
-    DocumentAuth.PASSWORD,
-  ])
+  .enum([DocumentAuth.ACCOUNT, DocumentAuth.PASSKEY, DocumentAuth.TWO_FACTOR_AUTH, DocumentAuth.PASSWORD])
   .describe(
     'The type of authentication required for the recipient to sign the document. This field is restricted to Enterprise plan users only.',
   );
@@ -206,12 +201,10 @@ export const ZDocumentAuthOptionsSchema = z.preprocess(
       };
     }
 
-    const globalAccessAuth =
-      'globalAccessAuth' in unknownValue
+    const globalAccessAuth = 'globalAccessAuth' in unknownValue
         ? stripAuthSentinelsFromArray(unknownValue.globalAccessAuth)
         : [];
-    const globalActionAuth =
-      'globalActionAuth' in unknownValue
+    const globalActionAuth = 'globalActionAuth' in unknownValue
         ? stripAuthSentinelsFromArray(unknownValue.globalActionAuth)
         : [];
     const kbaAccessExplicitlyDisabled =
@@ -244,10 +237,8 @@ export const ZRecipientAuthOptionsSchema = z.preprocess(
       };
     }
 
-    const accessAuth =
-      'accessAuth' in unknownValue ? stripAuthSentinelsFromArray(unknownValue.accessAuth) : [];
-    const actionAuth =
-      'actionAuth' in unknownValue ? stripAuthSentinelsFromArray(unknownValue.actionAuth) : [];
+    const accessAuth = 'accessAuth' in unknownValue ? stripAuthSentinelsFromArray(unknownValue.accessAuth) : [];
+    const actionAuth = 'actionAuth' in unknownValue ? stripAuthSentinelsFromArray(unknownValue.actionAuth) : [];
 
     return {
       accessAuth,

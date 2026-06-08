@@ -1,14 +1,20 @@
-import { OrganisationType, SubscriptionStatus } from '@prisma/client';
-import { match } from 'ts-pattern';
-
 import { createOrganisationClaimUpsertData } from '@documenso/lib/server-only/organisation/create-organisation';
 import { type Stripe, stripe } from '@documenso/lib/server-only/stripe';
 import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
 import { prisma } from '@documenso/prisma';
+import { OrganisationType, SubscriptionStatus } from '@prisma/client';
+import { match } from 'ts-pattern';
 
 export type OnSubscriptionUpdatedOptions = {
   subscription: Stripe.Subscription;
   previousAttributes: Partial<Stripe.Subscription> | null;
+  /**
+   * When true, the organisationClaim will not be synced.
+   *
+   * Used by the admin sync route to update only the Subscription
+   * row while leaving claim entitlements untouched.
+   */
+  bypassClaimUpdate?: boolean;
 };
 
 type StripeWebhookResponse = {
@@ -19,9 +25,9 @@ type StripeWebhookResponse = {
 export const onSubscriptionUpdated = async ({
   subscription,
   previousAttributes,
+  bypassClaimUpdate = false,
 }: OnSubscriptionUpdatedOptions) => {
-  const customerId =
-    typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+  const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 
   // Todo: logging
   if (subscription.items.data.length !== 1) {
@@ -58,9 +64,7 @@ export const onSubscriptionUpdated = async ({
   const previousItem = previousAttributes?.items?.data[0];
   const updatedItem = subscription.items.data[0];
 
-  const previousSubscriptionClaimId = previousItem
-    ? await extractStripeClaimId(previousItem.price)
-    : null;
+  const previousSubscriptionClaimId = previousItem ? await extractStripeClaimId(previousItem.price) : null;
   const updatedSubscriptionClaim = await extractStripeClaim(updatedItem.price);
 
   if (!updatedSubscriptionClaim) {
@@ -130,7 +134,8 @@ export const onSubscriptionUpdated = async ({
     });
 
     // Override current organisation claim if new one is found.
-    if (newClaimFound) {
+    // Skipped when bypassClaimUpdate is set.
+    if (!bypassClaimUpdate && newClaimFound) {
       await tx.organisationClaim.update({
         where: {
           id: organisation.organisationClaim.id,
