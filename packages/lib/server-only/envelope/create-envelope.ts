@@ -1,14 +1,3 @@
-import type { DocumentMeta, DocumentVisibility, TemplateType, Prisma } from '@prisma/client';
-import {
-  DocumentSource,
-  EnvelopeType,
-  FolderType,
-  RecipientRole,
-  SendStatus,
-  SigningStatus,
-  WebhookTriggerEvents,
-} from '@prisma/client';
-
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { PlaceholderInfo } from '@documenso/lib/server-only/pdf/auto-place-fields';
 import { convertPlaceholdersToFieldInputs } from '@documenso/lib/server-only/pdf/auto-place-fields';
@@ -170,7 +159,7 @@ export const createEnvelope = async ({
     title,
     externalId,
     formValues,
-    
+
     userTimezone,
     folderId,
     templateType,
@@ -202,10 +191,7 @@ export const createEnvelope = async ({
     });
   }
 
-  const settings = extractDerivedTeamSettings(
-    team.organisation.organisationGlobalSettings,
-    team.teamGlobalSettings,
-  );
+  const settings = extractDerivedTeamSettings(team.organisation.organisationGlobalSettings, team.teamGlobalSettings);
 
   // Enforce the organisation document-creation limit before doing any work.
   // Only documents count towards the limit (templates are exempt).
@@ -282,14 +268,9 @@ export const createEnvelope = async ({
     );
   }
 
-  const derivedKbaForAccess = normalizeStoredKbaSettings(
-    (settings as { kbaSettings?: unknown }).kbaSettings,
-  );
+  const derivedKbaForAccess = normalizeStoredKbaSettings((settings as { kbaSettings?: unknown }).kbaSettings);
   const initialGlobalAccessAuth: TDocumentAccessAuthTypes[] = [...(globalAccessAuth || [])];
-  if (
-    derivedKbaForAccess.isEnabled &&
-    !initialGlobalAccessAuth.includes(DocumentAccessAuth.KBA)
-  ) {
+  if (derivedKbaForAccess.isEnabled && !initialGlobalAccessAuth.includes(DocumentAccessAuth.KBA)) {
     initialGlobalAccessAuth.push(DocumentAccessAuth.KBA);
   }
 
@@ -304,10 +285,7 @@ export const createEnvelope = async ({
 
   // Check if user has permission to set the global action auth.
   const claimFlags = team.organisation?.organisationClaim?.flags as { cfr21?: boolean } | null;
-  if (
-    (authOptions.globalActionAuth.length > 0 || recipientsHaveActionAuth) &&
-    !claimFlags?.cfr21
-  ) {
+  if ((authOptions.globalActionAuth.length > 0 || recipientsHaveActionAuth) && !claimFlags?.cfr21) {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {
       message: 'You do not have permission to set the action auth',
     });
@@ -336,8 +314,6 @@ export const createEnvelope = async ({
   // userTimezone is last because it's always passed in regardless of the organisation/team settings
   // for uploads from the frontend
   const timezoneToUse = meta?.timezone || settings.documentTimezone || userTimezone;
-
-
 
   const getValidatedDelegatedOwner = async () => {
     if (!settings.delegateDocumentOwnership || !delegatedDocumentOwner || requestMetadata.source === 'app') {
@@ -369,8 +345,6 @@ export const createEnvelope = async ({
     return delegatedOwner;
   };
 
-  
-
   const [documentMeta, secondaryId, [documentMeta, secondaryId, delegatedOwner]] = await Promise.all([
     prisma.documentMeta.create({
       data: extractDerivedDocumentMeta(settings, {
@@ -382,17 +356,17 @@ export const createEnvelope = async ({
       ? incrementDocumentId().then((v) => v.formattedDocumentId)
       : incrementTemplateId().then((v) => v.formattedTemplateId),
     Promise.all([
-    prisma.documentMeta.create({
-      data: extractDerivedDocumentMeta(settings, {
-        ...meta,
-        timezone: timezoneToUse,
+      prisma.documentMeta.create({
+        data: extractDerivedDocumentMeta(settings, {
+          ...meta,
+          timezone: timezoneToUse,
+        }),
       }),
-    }),
-    type === EnvelopeType.DOCUMENT
-      ? incrementDocumentId().then((v) => v.formattedDocumentId)
-      : incrementTemplateId().then((v) => v.formattedTemplateId),
-    getValidatedDelegatedOwner(),
-  ]),
+      type === EnvelopeType.DOCUMENT
+        ? incrementDocumentId().then((v) => v.formattedDocumentId)
+        : incrementTemplateId().then((v) => v.formattedTemplateId),
+      getValidatedDelegatedOwner(),
+    ]),
   ]);
   const envelopeOwnerId = delegatedOwner?.id ?? userId;
 

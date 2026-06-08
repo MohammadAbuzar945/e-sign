@@ -1,9 +1,3 @@
-import { Trans } from '@lingui/react/macro';
-import { DocumentStatus, FieldType, SigningStatus } from '@prisma/client';
-import { DownloadIcon, XCircle } from 'lucide-react';
-import { Link } from 'react-router';
-import { match } from 'ts-pattern';
-
 import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
 import { loadRecipientBrandingByTeamId } from '@documenso/lib/server-only/branding/load-recipient-branding';
@@ -11,14 +5,15 @@ import { getDocumentAndSenderByToken } from '@documenso/lib/server-only/document
 import { getFieldsForToken } from '@documenso/lib/server-only/field/get-fields-for-token';
 import { getRecipientByToken } from '@documenso/lib/server-only/recipient/get-recipient-by-token';
 import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
-import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
+import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
 import { Trans } from '@lingui/react/macro';
-import { FieldType } from '@prisma/client';
-import { XCircle } from 'lucide-react';
+import { FieldType, SigningStatus } from '@prisma/client';
+import { DownloadIcon, XCircle } from 'lucide-react';
 import { Link } from 'react-router';
+import { match } from 'ts-pattern';
 
 import { EnvelopeDownloadDialog } from '~/components/dialogs/envelope-download-dialog';
 import { DocumentSigningAuthPageView } from '~/components/general/document-signing/document-signing-auth-page';
@@ -105,8 +100,7 @@ export default function RejectedSigningPage({ loaderData }: Route.ComponentProps
   const user = sessionData?.user;
   const cspNonce = useCspNonce();
 
-  const { isDocumentAccessValid, recipientReference, truncatedTitle, document, recipient, branding } =
-    loaderData;
+  const { isDocumentAccessValid, recipientReference, truncatedTitle, document, recipient, branding } = loaderData;
 
   if (!isDocumentAccessValid) {
     return (
@@ -149,21 +143,21 @@ export default function RejectedSigningPage({ loaderData }: Route.ComponentProps
             <Trans>No further action is required from you at this time.</Trans>
           </p>
 
-        <div className="mt-8 flex w-full max-w-xs flex-col items-stretch gap-4 md:w-auto md:max-w-none md:flex-row md:items-center">
-          {document && isDocumentCompleted(document) && (
-            <EnvelopeDownloadDialog
-              envelopeId={document.envelopeId}
-              envelopeStatus={document.status}
-              envelopeItems={document.envelopeItems}
-              token={recipient?.token}
-              trigger={
-                <Button type="button" variant="outline" className="flex-1 md:flex-initial">
-                  <DownloadIcon className="mr-2 h-5 w-5" />
-                  <Trans>Download</Trans>
-                </Button>
-              }
-            />
-          )}
+          <div className="mt-8 flex w-full max-w-xs flex-col items-stretch gap-4 md:w-auto md:max-w-none md:flex-row md:items-center">
+            {document && isDocumentCompleted(document) && (
+              <EnvelopeDownloadDialog
+                envelopeId={document.envelopeId}
+                envelopeStatus={document.status}
+                envelopeItems={document.envelopeItems}
+                token={recipient?.token}
+                trigger={
+                  <Button type="button" variant="outline" className="flex-1 md:flex-initial">
+                    <DownloadIcon className="mr-2 h-5 w-5" />
+                    <Trans>Download</Trans>
+                  </Button>
+                }
+              />
+            )}
 
             {user && (
               <Button className="flex-1 md:flex-initial" asChild>
@@ -172,7 +166,7 @@ export default function RejectedSigningPage({ loaderData }: Route.ComponentProps
                 </Link>
               </Button>
             )}
-        </div>
+          </div>
         </div>
       </div>
     </>

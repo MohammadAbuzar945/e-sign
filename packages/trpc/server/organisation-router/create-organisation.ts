@@ -1,13 +1,10 @@
-import { OrganisationType, Role } from '@prisma/client';
-
-import type { SessionUser } from '@documenso/auth/server/lib/session/session';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createOrganisation } from '@documenso/lib/server-only/organisation/create-organisation';
 import { getSubscriptionClaim } from '@documenso/lib/server-only/subscription/get-subscription-claim';
 import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
 import { isAdmin } from '@documenso/lib/utils/is-admin';
 import { prisma } from '@documenso/prisma';
-import { OrganisationType } from '@prisma/client';
+import { OrganisationType, type Role } from '@prisma/client';
 import { authenticatedProcedure } from '../trpc';
 import { ZCreateOrganisationRequestSchema, ZCreateOrganisationResponseSchema } from './create-organisation.types';
 
@@ -52,9 +49,7 @@ export const createOrganisationRoute = authenticatedProcedure
     // If maxOrganisationCount is 0, it means unlimited (only for admins)
     // For non-admins, treat 0 as 1 (default limit)
     const maxOrganisationCount = (user as { maxOrganisationCount?: number }).maxOrganisationCount ?? 1;
-    const effectiveLimit = !isUserAdmin && maxOrganisationCount === 0 
-      ? 1 
-      : maxOrganisationCount;
+    const effectiveLimit = !isUserAdmin && maxOrganisationCount === 0 ? 1 : maxOrganisationCount;
 
     // Skip limit check only if user is admin and maxOrganisationCount is 0 (unlimited)
     if (!(isUserAdmin && effectiveLimit === 0)) {
@@ -83,6 +78,8 @@ export const createOrganisationRoute = authenticatedProcedure
         message: 'An organisation with this name already exists.',
       });
     }
+
+    const freeSubscriptionClaim = await getSubscriptionClaim(INTERNAL_CLAIM_ID.FREE);
 
     await createOrganisation({
       userId: ctx.user.id,

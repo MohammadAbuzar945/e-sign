@@ -21,9 +21,7 @@ type TeamMemberInheritEnableDialogProps = {
   disabled?: boolean;
 };
 
-export const TeamMemberInheritEnableDialog = ({
-  disabled = false,
-}: TeamMemberInheritEnableDialogProps) => {
+export const TeamMemberInheritEnableDialog = ({ disabled = false }: TeamMemberInheritEnableDialogProps) => {
   const organisation = useCurrentOrganisation();
   const team = useCurrentTeam();
 

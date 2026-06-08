@@ -1,19 +1,3 @@
-import { useMemo, useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import {
-  Building2Icon,
-  ChevronsUpDown,
-  CreditCardIcon,
-  Plus,
-  Settings2Icon,
-  SettingsIcon,
-  UsersIcon,
-} from 'lucide-react';
-import { Link, useLocation } from 'react-router';
-
 import { authClient } from '@documenso/auth/client';
 import { useOptionalCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
@@ -27,8 +11,8 @@ import { canExecuteTeamAction } from '@documenso/lib/utils/teams';
 import { OrganisationMemberRole, OrganisationType } from '@documenso/prisma/generated/types';
 import { AnimateGenericFadeInOut } from '@documenso/ui/components/animate/animate-generic-fade-in-out';
 import { LanguageSwitcherDialog } from '@documenso/ui/components/common/language-switcher-dialog';
-import { cn } from '@documenso/ui/lib/utils';
 import { useHydrated } from '@documenso/ui/lib/use-hydrated';
+import { cn } from '@documenso/ui/lib/utils';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Button } from '@documenso/ui/primitives/button';
 import {
@@ -77,8 +61,7 @@ export const OrgMenuSwitcher = () => {
   const ownedOrganisationsCount = organisations.filter((org) => org.ownerUserId === user.id).length;
   const rawMax = user.maxOrganisationCount as number | string | undefined;
   const numMax = typeof rawMax === 'number' ? rawMax : Number(rawMax);
-  const maxOrganisationCount =
-    !Number.isNaN(numMax) && numMax >= 0 ? numMax : 1;
+  const maxOrganisationCount = !Number.isNaN(numMax) && numMax >= 0 ? numMax : 1;
 
   // Check if user can create more organisations
   // If maxOrganisationCount is 0, it means unlimited (only for admins)
@@ -96,20 +79,17 @@ export const OrgMenuSwitcher = () => {
     }
   };
 
-  const sortedOrganisations = useMemo(
-    () => {
-      const personalOwnerOrganisations = organisations.filter(
-        (org) => org.ownerUserId === user.id && org.type === OrganisationType.PERSONAL,
-      );
+  const sortedOrganisations = useMemo(() => {
+    const personalOwnerOrganisations = organisations.filter(
+      (org) => org.ownerUserId === user.id && org.type === OrganisationType.PERSONAL,
+    );
 
-      const otherOrganisations = organisations.filter(
-        (org) => !(org.ownerUserId === user.id && org.type === OrganisationType.PERSONAL),
-      );
+    const otherOrganisations = organisations.filter(
+      (org) => !(org.ownerUserId === user.id && org.type === OrganisationType.PERSONAL),
+    );
 
-      return [...personalOwnerOrganisations, ...otherOrganisations];
-    },
-    [organisations, user.id],
-  );
+    return [...personalOwnerOrganisations, ...otherOrganisations];
+  }, [organisations, user.id]);
 
   const isPathOrgUrl = (orgUrl: string) => {
     if (!pathname || !pathname.startsWith(`/o/`)) {
@@ -185,7 +165,7 @@ export const OrgMenuSwitcher = () => {
           avatarFallback={dropdownMenuAvatarText.avatarFallback}
           primaryText={dropdownMenuAvatarText.primaryText}
           secondaryText={dropdownMenuAvatarText.secondaryText}
-          rightSideComponent={<ChevronsUpDown className="text-muted-foreground ml-auto h-4 w-4" />}
+          rightSideComponent={<ChevronsUpDown className="ml-auto h-4 w-4 text-muted-foreground" />}
           textSectionClassName="hidden lg:flex"
         />
       </Button>
@@ -227,11 +207,7 @@ export const OrgMenuSwitcher = () => {
             </div>
             <div className="flex-1 space-y-1 overflow-y-auto p-1.5">
               {sortedOrganisations.map((org) => (
-                <div
-                  className="group relative"
-                  key={org.id}
-                  onMouseEnter={() => setHoveredOrgId(org.id)}
-                >
+                <div className="group relative" key={org.id} onMouseEnter={() => setHoveredOrgId(org.id)}>
                   <DropdownMenuItem
                     className={cn(
                       'w-full px-4 py-2 text-muted-foreground',
@@ -360,11 +336,8 @@ export const OrgMenuSwitcher = () => {
 
               {currentOrganisation &&
                 currentOrganisation.type !== OrganisationType.PERSONAL &&
-                canExecuteOrganisationAction(
-                  'MANAGE_ORGANISATION',
-                  currentOrganisation.currentOrganisationRole,
-                ) && (
-                  <DropdownMenuItem className="text-muted-foreground px-4 py-2" asChild>
+                canExecuteOrganisationAction('MANAGE_ORGANISATION', currentOrganisation.currentOrganisationRole) && (
+                  <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
                     <Link to={`/o/${currentOrganisation.url}/settings`}>
                       <Trans>Organisation settings</Trans>
                     </Link>
@@ -400,7 +373,7 @@ export const OrgMenuSwitcher = () => {
               </DropdownMenuItem>
 
               <DropdownMenuItem
-                className="text-destructive/90 hover:!text-destructive px-4 py-2"
+                className="hover:!text-destructive px-4 py-2 text-destructive/90"
                 onSelect={async () => authClient.signOut()}
               >
                 <Trans>Sign Out</Trans>
@@ -412,10 +385,7 @@ export const OrgMenuSwitcher = () => {
 
       <LanguageSwitcherDialog open={languageSwitcherOpen} setOpen={setLanguageSwitcherOpen} />
 
-      <OrganisationCreateDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-      />
+      <OrganisationCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
 
       <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
         <DialogContent position="center">

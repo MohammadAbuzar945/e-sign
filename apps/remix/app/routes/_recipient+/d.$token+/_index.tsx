@@ -14,9 +14,9 @@ import { redirect } from 'react-router';
 import { match } from 'ts-pattern';
 
 import { Header as AuthenticatedHeader } from '~/components/general/app-header';
+import { DirectTemplateKbaAccessGate } from '~/components/general/direct-template/direct-template-kba-access-gate';
 import { DirectTemplatePageView } from '~/components/general/direct-template/direct-template-page';
 import { DirectTemplateAuthPageView } from '~/components/general/direct-template/direct-template-signing-auth-page';
-import { DirectTemplateKbaAccessGate } from '~/components/general/direct-template/direct-template-kba-access-gate';
 import { DocumentSigningAuthPageView } from '~/components/general/document-signing/document-signing-auth-page';
 import { DocumentSigningAuthProvider } from '~/components/general/document-signing/document-signing-auth-provider';
 import { DocumentSigningPageViewV2 } from '~/components/general/document-signing/document-signing-page-view-v2';
@@ -201,7 +201,7 @@ const DirectSigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV
         user={user}
       >
         <DirectTemplateKbaAccessGate token={template.directLink.token}>
-            {sessionData?.user && <AuthenticatedHeader />}
+          {sessionData?.user && <AuthenticatedHeader />}
 
           <div className="mx-auto -mt-4 w-full max-w-screen-xl px-4 md:px-8">
             <h1
@@ -224,7 +224,7 @@ const DirectSigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV
               template={template}
             />
           </div>
-          </DirectTemplateKbaAccessGate>
+        </DirectTemplateKbaAccessGate>
       </DocumentSigningAuthProvider>
     </DocumentSigningProvider>
   );
@@ -257,11 +257,11 @@ const DirectSigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV
       <DocumentSigningAuthProvider documentAuthOptions={envelope.authOptions} recipient={recipient} user={user}>
         <DirectTemplateKbaAccessGate token={recipient.directToken || ''}>
           <EnvelopeRenderProvider
-          version="current"
-          envelope={envelope}
-          envelopeItems={envelope.envelopeItems}
-          token={recipient.token}
-        >
+            version="current"
+            envelope={envelope}
+            envelopeItems={envelope.envelopeItems}
+            token={recipient.token}
+          >
             <DocumentSigningPageViewV2 />
           </EnvelopeRenderProvider>
         </DirectTemplateKbaAccessGate>

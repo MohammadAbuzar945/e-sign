@@ -311,11 +311,11 @@ const EmbedDirectTemplatePageV2 = ({ data }: { data: Awaited<ReturnType<typeof h
       >
         <DirectTemplateKbaAccessGate token={token}>
           <EnvelopeRenderProvider
-          version="current"
-          envelope={envelope}
-          envelopeItems={envelope.envelopeItems}
-          token={recipient.token}
-        >
+            version="current"
+            envelope={envelope}
+            envelopeItems={envelope.envelopeItems}
+            token={recipient.token}
+          >
             <EmbedSignDocumentV2ClientPage
               hidePoweredBy={hidePoweredBy}
               allowWhitelabelling={allowEmbedSigningWhitelabel}

@@ -1,6 +1,4 @@
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-
-import { DEFAULT_MINIMUM_ENVELOPE_ITEM_COUNT, FREE_PLAN_LIMITS } from './constants';
 import type { TLimitsResponseSchema } from './schema';
 import { ZLimitsResponseSchema } from './schema';
 
@@ -29,13 +27,13 @@ export const getLimits = async ({ headers, teamId }: GetLimitsOptions) => {
   })
     .then(async (res) => {
       const data = await res.json();
-      
+
       // Check if the response contains an error
       if (!res.ok || 'error' in data) {
         console.error('Limits API error:', data.error || 'Unknown error', 'Status:', res.status);
         throw new Error(data.error || 'Failed to fetch limits');
       }
-      
+
       return data;
     })
     .then((res) => {

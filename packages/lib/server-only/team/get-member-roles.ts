@@ -1,6 +1,5 @@
-import { TeamMemberRole } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { TeamMemberRole } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { getHighestOrganisationRoleInGroup } from '../../utils/organisations';
@@ -67,8 +66,7 @@ export const getMemberRoles = async ({ teamId, reference }: GetMemberRolesOption
     });
   }
 
-  const isOrganisationOwner =
-    reference.type === 'User' && team.organisation.ownerUserId === reference.id;
+  const isOrganisationOwner = reference.type === 'User' && team.organisation.ownerUserId === reference.id;
 
   if (isOrganisationOwner) {
     return {

@@ -1,6 +1,5 @@
-import { TeamMemberRole } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { TeamMemberRole } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { normalizeStoredKbaSettings } from '../../utils/kba-settings';
@@ -79,9 +78,7 @@ export const getTeam = async ({ teamReference, userId }: { teamReference: number
   const teamSettings = team.teamGlobalSettings;
 
   const isOrganisationOwner = team.organisation.ownerUserId === userId;
-  const currentTeamRole = isOrganisationOwner
-    ? TeamMemberRole.ADMIN
-    : getHighestTeamRoleInGroup(team.teamGroups);
+  const currentTeamRole = isOrganisationOwner ? TeamMemberRole.ADMIN : getHighestTeamRoleInGroup(team.teamGroups);
 
   return {
     ...team,

@@ -1,13 +1,12 @@
+import { env } from '@documenso/lib/utils/env';
 import { formatTeamUrl } from '@documenso/lib/utils/teams';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-
 import { Body, Button, Container, Head, Hr, Html, Img, Link, Preview, Section, Text } from '../components';
 import { useBranding } from '../providers/branding';
 import { TemplateFooter } from '../template-components/template-footer';
 import TemplateImage from '../template-components/template-image';
-import { env } from '@documenso/lib/utils/env';
 
 export type ConfirmTeamEmailProps = {
   assetBaseUrl: string;

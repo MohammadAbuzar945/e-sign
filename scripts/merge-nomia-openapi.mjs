@@ -14,8 +14,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 
-const inputPath =
-  process.argv[2] ?? join(root, 'apps/remix/public/nomia-api-temp.json');
+const inputPath = process.argv[2] ?? join(root, 'apps/remix/public/nomia-api-temp.json');
 const outPath = join(root, 'apps/remix/public/nomia-api.json');
 
 const spec = JSON.parse(readFileSync(inputPath, 'utf8'));

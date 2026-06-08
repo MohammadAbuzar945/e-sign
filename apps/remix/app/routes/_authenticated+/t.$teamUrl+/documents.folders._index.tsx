@@ -77,14 +77,12 @@ export default function DocumentsFoldersPage() {
     return (
       <div className="mx-auto w-full max-w-screen-xl px-4 md:px-8">
         <div className="mt-8 text-center text-muted-foreground">
-          <h2 className="text-xl font-semibold">
+          <h2 className="font-semibold text-xl">
             <Trans>Folders are not available</Trans>
           </h2>
 
-          <p className="mt-2 max-w-[50ch] mx-auto text-sm">
-            <Trans>
-              You must be a member of this team to view, create, or manage its document folders.
-            </Trans>
+          <p className="mx-auto mt-2 max-w-[50ch] text-sm">
+            <Trans>You must be a member of this team to view, create, or manage its document folders.</Trans>
           </p>
         </div>
       </div>

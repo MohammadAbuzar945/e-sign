@@ -56,8 +56,7 @@ export const InboxTable = () => {
       {
         header: _(msg`Created`),
         accessorKey: 'createdAt',
-        cell: ({ row }) =>
-          DateTime.fromJSDate(row.original.createdAt).toFormat('yyyy-MM-dd hh:mm:ss a'),
+        cell: ({ row }) => DateTime.fromJSDate(row.original.createdAt).toFormat('yyyy-MM-dd hh:mm:ss a'),
       },
       {
         header: _(msg`Title`),

@@ -2,7 +2,6 @@ import type { TLicenseClaim } from '@documenso/lib/types/license';
 import { SUBSCRIPTION_CLAIM_FEATURE_FLAGS } from '@documenso/lib/types/subscription';
 import { trpc } from '@documenso/trpc/react';
 import { ZCreateSubscriptionClaimRequestSchema } from '@documenso/trpc/server/admin-router/create-subscription-claim.types';
-import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import {
   Form,
@@ -19,7 +18,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Trans, useLingui } from '@lingui/react/macro';
 import type { SubscriptionClaim } from '@prisma/client';
 import { useForm } from 'react-hook-form';
-import { Link } from 'react-router';
 import type { z } from 'zod';
 
 import { ClaimLimitFields } from '../general/claim-limit-fields';
@@ -229,7 +227,7 @@ export const SubscriptionClaimForm = ({
                 );
               })}
             </div>
-{/* 
+            {/* 
             {hasRestrictedEnterpriseFeatures && (
               <Alert variant="neutral" className="mt-4">
                 <AlertDescription>

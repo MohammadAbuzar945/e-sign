@@ -50,4 +50,3 @@ export const downloadTeamAuditLogsRoute = authenticatedProcedure
       teamName: team.name,
     };
   });
-

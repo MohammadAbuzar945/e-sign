@@ -14,7 +14,15 @@ import { AUTH_SESSION_LIFETIME } from '../../config';
  */
 export type SessionUser = Pick<
   User,
-  'id' | 'name' | 'email' | 'emailVerified' | 'avatarImageId' | 'twoFactorEnabled' | 'roles' | 'signature' | 'disabled'
+  | 'id'
+  | 'name'
+  | 'email'
+  | 'emailVerified'
+  | 'avatarImageId'
+  | 'twoFactorEnabled'
+  | 'roles'
+  | 'signature'
+  | 'disabled'
   | 'maxOrganisationCount'
 >;
 

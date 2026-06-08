@@ -1,16 +1,12 @@
-import { prisma } from '@documenso/prisma';
 import { getSubscriptionsByUserId } from '@documenso/lib/server-only/subscription/get-subscriptions-by-user-id';
+import { prisma } from '@documenso/prisma';
 
 export async function loader({ request }: { request: Request }) {
   try {
     // Get the session from the request
     const session = await prisma.session.findFirst({
       where: {
-        sessionToken: request
-          .headers
-          .get('cookie')
-          ?.split('next-auth.session-token=')[1]
-          ?.split(';')[0],
+        sessionToken: request.headers.get('cookie')?.split('next-auth.session-token=')[1]?.split(';')[0],
       },
       include: {
         user: true,

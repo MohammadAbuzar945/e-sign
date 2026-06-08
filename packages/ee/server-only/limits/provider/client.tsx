@@ -47,10 +47,10 @@ export const LimitsProvider = ({
   const refreshLimits = useCallback(async () => {
     try {
       if (disableLimitsFetch) {
-      return;
-    }
+        return;
+      }
 
-    const newLimits = await getLimits({ teamId });
+      const newLimits = await getLimits({ teamId });
 
       setLimits((oldLimits) => {
         if (isDeepEqual(oldLimits, newLimits)) {

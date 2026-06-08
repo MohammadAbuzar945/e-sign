@@ -1,6 +1,5 @@
-import { EnvelopeType } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../../errors/app-error';
 import { DocumentAuth } from '../../../types/document-auth';
@@ -11,9 +10,7 @@ type GetDirectTemplateKbaChallengeByTokenOptions = {
   token: string;
 };
 
-export const getDirectTemplateKbaChallengeByToken = async ({
-  token,
-}: GetDirectTemplateKbaChallengeByTokenOptions) => {
+export const getDirectTemplateKbaChallengeByToken = async ({ token }: GetDirectTemplateKbaChallengeByTokenOptions) => {
   const envelope = await prisma.envelope.findFirst({
     where: {
       type: EnvelopeType.TEMPLATE,

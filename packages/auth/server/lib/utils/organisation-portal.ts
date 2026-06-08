@@ -50,11 +50,7 @@ export const getOrganisationAuthenticationPortalOptions = async (
   const { organisationClaim, organisationAuthenticationPortal } = organisation;
   const claimFlags = ZClaimFlagsSchema.safeParse(organisationClaim?.flags);
 
-  if (
-    !claimFlags.success ||
-    !claimFlags.data.authenticationPortal ||
-    !organisationAuthenticationPortal?.enabled
-  ) {
+  if (!claimFlags.success || !claimFlags.data.authenticationPortal || !organisationAuthenticationPortal?.enabled) {
     throw new AppError(AppErrorCode.NOT_SETUP, {
       message: 'Authentication portal is not enabled for this organisation',
     });

@@ -303,12 +303,7 @@ export const DocumentSigningPageViewV2 = () => {
       </div>
 
       {recipient.role !== RecipientRole.ASSISTANT && (
-        <DocumentSigningAutoSign
-          recipient={recipient}
-          fields={recipientFields}
-          fullName={fullName}
-          email={email}
-        />
+        <DocumentSigningAutoSign recipient={recipient} fields={recipientFields} fullName={fullName} email={email} />
       )}
     </div>
   );

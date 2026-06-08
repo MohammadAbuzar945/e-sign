@@ -71,7 +71,7 @@ export const findTeamAuditLogs = async ({
     }),
   ]);
 
-  let nextCursor: string | undefined = undefined;
+  let nextCursor: string | undefined;
 
   const parsedData = data.map((auditLog: unknown) => parseTeamAuditLogData(auditLog as any));
 
@@ -89,4 +89,3 @@ export const findTeamAuditLogs = async ({
     nextCursor,
   } satisfies FindResultResponse<typeof parsedData> & { nextCursor?: string };
 };
-

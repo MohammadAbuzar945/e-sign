@@ -20,6 +20,8 @@ import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import type { TurnstileInstance } from '@marsidev/react-turnstile';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
+import { KeyRoundIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { FaIdCardClip } from 'react-icons/fa6';
@@ -79,6 +81,7 @@ export const SignInForm = ({
 
   const [isTwoFactorAuthenticationDialogOpen, setIsTwoFactorAuthenticationDialogOpen] = useState(false);
   const [isEmbeddedRedirect, setIsEmbeddedRedirect] = useState(false);
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
 
   const [twoFactorAuthenticationMethod, setTwoFactorAuthenticationMethod] = useState<'totp' | 'backup'>('totp');
 

@@ -1,9 +1,7 @@
-import { useCopyToClipboard } from '@documenso/lib/client-only/hooks/use-copy-to-clipboard';
 import { getRecipientType } from '@documenso/lib/client-only/recipient-type';
 import { RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-roles';
 import type { TRecipientLite } from '@documenso/lib/types/recipient';
 import { recipientAbbreviation } from '@documenso/lib/utils/recipient-formatter';
-import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { DocumentStatus } from '@prisma/client';
 
@@ -27,7 +25,7 @@ export function AvatarWithRecipient({ recipient, documentStatus }: AvatarWithRec
         fallbackText={recipientAbbreviation(recipient)}
       />
 
-      <div className="text-sm text-muted-foreground">
+      <div className="text-muted-foreground text-sm">
         <p>{recipient.email || recipient.name}</p>
         <p className="text-muted-foreground/70 text-xs">{_(RECIPIENT_ROLES_DESCRIPTION[recipient.role].roleName)}</p>
       </div>

@@ -7,9 +7,5 @@ export const ZUpdateAdminOrganisationCreditsRequestSchema = z.object({
 
 export const ZUpdateAdminOrganisationCreditsResponseSchema = z.void();
 
-export type TUpdateAdminOrganisationCreditsRequest = z.infer<
-  typeof ZUpdateAdminOrganisationCreditsRequestSchema
->;
-export type TUpdateAdminOrganisationCreditsResponse = z.infer<
-  typeof ZUpdateAdminOrganisationCreditsResponseSchema
->;
+export type TUpdateAdminOrganisationCreditsRequest = z.infer<typeof ZUpdateAdminOrganisationCreditsRequestSchema>;
+export type TUpdateAdminOrganisationCreditsResponse = z.infer<typeof ZUpdateAdminOrganisationCreditsResponseSchema>;

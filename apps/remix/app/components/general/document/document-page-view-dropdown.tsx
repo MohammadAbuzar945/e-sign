@@ -4,7 +4,6 @@ import { isDocumentCompleted } from '@documenso/lib/utils/document';
 import { getEnvelopeItemPermissions, mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
 import { formatDocumentsPath } from '@documenso/lib/utils/teams';
 import { trpc as trpcReact } from '@documenso/trpc/react';
-import { DocumentShareButton } from '@documenso/ui/components/document/document-share-button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,18 +13,7 @@ import {
 } from '@documenso/ui/primitives/dropdown-menu';
 import { Trans } from '@lingui/react/macro';
 import { DocumentStatus, EnvelopeType } from '@prisma/client';
-import {
-  Copy,
-  Download,
-  Edit,
-  FileOutputIcon,
-  Loader,
-  MoreHorizontal,
-  Pencil,
-  ScrollTextIcon,
-  Share,
-  Trash2,
-} from 'lucide-react';
+import { Copy, Download, Edit, FileOutputIcon, MoreHorizontal, Pencil, ScrollTextIcon, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -35,7 +23,6 @@ import { EnvelopeDownloadDialog } from '~/components/dialogs/envelope-download-d
 import { EnvelopeDuplicateDialog } from '~/components/dialogs/envelope-duplicate-dialog';
 import { EnvelopeRenameDialog } from '~/components/dialogs/envelope-rename-dialog';
 import { EnvelopeSaveAsTemplateDialog } from '~/components/dialogs/envelope-save-as-template-dialog';
-import { DocumentRecipientLinkCopyDialog } from '~/components/general/document/document-recipient-link-copy-dialog';
 import { useCurrentTeam } from '~/providers/team';
 
 export type DocumentPageViewDropdownProps = {

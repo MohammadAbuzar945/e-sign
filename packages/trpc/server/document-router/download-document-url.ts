@@ -1,17 +1,16 @@
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { getPresignGetUrl } from '@documenso/lib/universal/upload/server-actions';
+import { isDocumentCompleted } from '@documenso/lib/utils/document';
+import { unsafeBuildEnvelopeIdQuery } from '@documenso/lib/utils/envelope';
+import { prisma } from '@documenso/prisma';
 import type { DocumentData } from '@prisma/client';
 import { DocumentDataType, EnvelopeType } from '@prisma/client';
 
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { getPresignGetUrl } from '@documenso/lib/universal/upload/server-actions';
-import { unsafeBuildEnvelopeIdQuery } from '@documenso/lib/utils/envelope';
-import { isDocumentCompleted } from '@documenso/lib/utils/document';
-import { prisma } from '@documenso/prisma';
-
 import { procedure } from '../trpc';
 import {
+  downloadDocumentUrlMeta,
   ZDownloadDocumentUrlRequestSchema,
   ZDownloadDocumentUrlResponseSchema,
-  downloadDocumentUrlMeta,
 } from './download-document-url.types';
 
 export const downloadDocumentUrlRoute = procedure
@@ -58,8 +57,7 @@ export const downloadDocumentUrlRoute = procedure
 
     if (envelope.envelopeItems.length !== 1 || !documentData) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message:
-          'This endpoint only supports documents with a single item. Use envelopes API instead.',
+        message: 'This endpoint only supports documents with a single item. Use envelopes API instead.',
       });
     }
 
@@ -76,8 +74,7 @@ export const downloadDocumentUrlRoute = procedure
     }
 
     try {
-      const data =
-        version === 'original' ? documentData.initialData || documentData.data : documentData.data;
+      const data = version === 'original' ? documentData.initialData || documentData.data : documentData.data;
 
       const { url } = await getPresignGetUrl(data);
 
@@ -103,4 +100,3 @@ export const downloadDocumentUrlRoute = procedure
       });
     }
   });
-

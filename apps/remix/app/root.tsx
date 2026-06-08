@@ -119,13 +119,7 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
   const isRecipientRoute = matches.some((m) => m.id?.startsWith('routes/_recipient+'));
 
   return (
-    <html
-      translate="no"
-      lang={lang}
-      suppressHydrationWarning
-      data-theme={theme ?? undefined}
-      className={theme ?? ''}
-    >
+    <html translate="no" lang={lang} suppressHydrationWarning data-theme={theme ?? undefined} className={theme ?? ''}>
       <head>
         <meta charSet="utf-8" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
@@ -138,8 +132,6 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
         <Links nonce={nonce(cspNonce)} />
         <meta name="google" content="notranslate" />
         <PreventFlashOnWrongTheme ssrTheme={Boolean(data.theme)} nonce={nonce(cspNonce)} />
-
-
 
         {disableAnimations && (
           <style

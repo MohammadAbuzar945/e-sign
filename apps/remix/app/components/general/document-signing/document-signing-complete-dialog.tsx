@@ -377,7 +377,6 @@ export const DocumentSigningCompleteDialog = ({
             onSubmit={onTwoFactorFormSubmit}
           />
         )}
-
       </DialogContent>
     </Dialog>
   );

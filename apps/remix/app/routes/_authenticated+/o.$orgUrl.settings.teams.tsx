@@ -1,12 +1,11 @@
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
+import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
+import { OrganisationMemberRole } from '@documenso/prisma/generated/types';
 import { Input } from '@documenso/ui/primitives/input';
 import { useLingui } from '@lingui/react/macro';
 import { useEffect, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
-
-import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
-import { useSession } from '@documenso/lib/client-only/providers/session';
-import { OrganisationMemberRole, OrganisationType } from '@documenso/prisma/generated/types';
 
 import { TeamCreateDialog } from '~/components/dialogs/team-create-dialog';
 import { SettingsHeader } from '~/components/general/settings-header';
@@ -51,7 +50,7 @@ export default function OrganisationSettingsTeamsPage() {
         {canCreateTeam && <TeamCreateDialog />}
       </SettingsHeader>
 
-      <p className="mb-2 text-sm text-muted-foreground">
+      <p className="mb-2 text-muted-foreground text-sm">
         {t`Total credits remaining for this organisation: ${organisation.credits ?? 0}`}
       </p>
 

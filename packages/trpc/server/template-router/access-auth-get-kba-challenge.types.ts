@@ -1,6 +1,5 @@
-import { z } from 'zod';
-
 import { ZDocumentKbaAnswerTypeSchema, ZDocumentKbaOptionSchema } from '@documenso/lib/types/document-auth';
+import { z } from 'zod';
 
 export const ZTemplateAccessAuthGetKbaChallengeRequestSchema = z.object({
   token: z.string().min(1),

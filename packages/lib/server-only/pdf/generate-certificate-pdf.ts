@@ -40,16 +40,8 @@ export type GenerateCertificatePdfOptions = {
 };
 
 export const generateCertificatePdf = async (options: GenerateCertificatePdfOptions) => {
-  const {
-    envelope,
-    envelopeOwner,
-    recipients,
-    fields,
-    language,
-    includeQrCodeInCertificate,
-    pageWidth,
-    pageHeight,
-  } = options;
+  const { envelope, envelopeOwner, recipients, fields, language, includeQrCodeInCertificate, pageWidth, pageHeight } =
+    options;
 
   const documentLanguage = ZSupportedLanguageCodeSchema.parse(language);
 

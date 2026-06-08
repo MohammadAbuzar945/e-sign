@@ -5,11 +5,7 @@ export async function action({ request }: { request: Request }) {
   try {
     const session = await prisma.session.findFirst({
       where: {
-        sessionToken: request
-          .headers
-          .get('cookie')
-          ?.split('next-auth.session-token=')[1]
-          ?.split(';')[0],
+        sessionToken: request.headers.get('cookie')?.split('next-auth.session-token=')[1]?.split(';')[0],
       },
       include: {
         user: true,
@@ -17,10 +13,7 @@ export async function action({ request }: { request: Request }) {
     });
 
     if (!session?.user?.id) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Unauthorized' }),
-        { status: 401 },
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401 });
     }
 
     const organisation = await prisma.organisation.findFirst({
@@ -30,19 +23,13 @@ export async function action({ request }: { request: Request }) {
     });
 
     if (!organisation) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Organisation not found' }),
-        { status: 404 },
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Organisation not found' }), { status: 404 });
     }
 
     const { subscriptionCode } = await request.json();
 
     if (!subscriptionCode) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Missing subscription code' }),
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Missing subscription code' }), { status: 400 });
     }
 
     // Verify the subscription exists and is active
@@ -54,20 +41,14 @@ export async function action({ request }: { request: Request }) {
     });
 
     if (!subscription) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Active subscription not found' }),
-        { status: 404 }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Active subscription not found' }), { status: 404 });
     }
 
     // Call Paystack API to disable the subscription
     const result = await disableSubscription(subscriptionCode);
 
     if (!result.status) {
-      return new Response(
-        JSON.stringify({ success: false, error: result.message }),
-        { status: 500 }
-      );
+      return new Response(JSON.stringify({ success: false, error: result.message }), { status: 500 });
     }
 
     // Update subscription status in our database
@@ -85,13 +66,10 @@ export async function action({ request }: { request: Request }) {
         success: true,
         message: 'Subscription disabled successfully',
       }),
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error('Error disabling subscription:', error);
-    return new Response(
-      JSON.stringify({ success: false, error: 'Failed to disable subscription' }),
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ success: false, error: 'Failed to disable subscription' }), { status: 500 });
   }
-} 
+}

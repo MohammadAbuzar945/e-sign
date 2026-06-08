@@ -2,8 +2,6 @@ import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/e
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { DATE_FORMATS, DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
 import { DOCUMENT_DISTRIBUTION_METHODS, DOCUMENT_SIGNATURE_TYPES } from '@documenso/lib/constants/document';
-import { ZEnvelopeExpirationPeriod } from '@documenso/lib/constants/envelope-expiration';
-import { ZEnvelopeReminderSettings } from '@documenso/lib/constants/envelope-reminder';
 import { isValidLanguageCode, SUPPORTED_LANGUAGE_CODES, SUPPORTED_LANGUAGES } from '@documenso/lib/constants/i18n';
 import { DEFAULT_DOCUMENT_TIME_ZONE, TIME_ZONES } from '@documenso/lib/constants/time-zones';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
@@ -24,7 +22,6 @@ import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { isValidRedirectUrl } from '@documenso/lib/utils/is-valid-redirect-url';
 import { normalizeStoredKbaSettings } from '@documenso/lib/utils/kba-settings';
 import { canAccessTeamDocument, DocumentSignatureType, extractTeamSignatureSettings } from '@documenso/lib/utils/teams';
-import { zEmail } from '@documenso/lib/utils/zod';
 import { trpc } from '@documenso/trpc/react';
 import { DocumentEmailCheckboxes } from '@documenso/ui/components/document/document-email-checkboxes';
 import {
@@ -84,46 +81,40 @@ import { z } from 'zod';
 
 import { useCurrentTeam } from '~/providers/team';
 
-export const ZAddSettingsFormSchema = z.object({
-  externalId: z.string().optional(),
-  visibility: z.nativeEnum(DocumentVisibility).optional(),
-  globalAccessAuth: z
-    .array(z.union([ZDocumentAccessAuthTypesSchema, z.literal('-1')]))
-    .transform((val) => (val.length === 1 && val[0] === '-1' ? [] : val))
-    .optional()
-    .default([]),
-  globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional().default([]),
-  meta: z.object({
-    subject: z.string(),
-    message: z.string(),
-    timezone: ZDocumentMetaTimezoneSchema.default(DEFAULT_DOCUMENT_TIME_ZONE),
-    dateFormat: ZDocumentMetaDateFormatSchema.default(DEFAULT_DOCUMENT_DATE_FORMAT),
-    distributionMethod: z
-      .nativeEnum(DocumentDistributionMethod)
+export const ZAddSettingsFormSchema = z
+  .object({
+    externalId: z.string().optional(),
+    visibility: z.nativeEnum(DocumentVisibility).optional(),
+    globalAccessAuth: z
+      .array(z.union([ZDocumentAccessAuthTypesSchema, z.literal('-1')]))
+      .transform((val) => (val.length === 1 && val[0] === '-1' ? [] : val))
       .optional()
-      .default(DocumentDistributionMethod.EMAIL),
-    redirectUrl: z
-      .string()
-      .optional()
-      .refine((value) => value === undefined || value === '' || isValidRedirectUrl(value), {
-        message:
-          'Please enter a valid URL, make sure you include http:// or https:// part of the url.',
+      .default([]),
+    globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional().default([]),
+    meta: z.object({
+      subject: z.string(),
+      message: z.string(),
+      timezone: ZDocumentMetaTimezoneSchema.default(DEFAULT_DOCUMENT_TIME_ZONE),
+      dateFormat: ZDocumentMetaDateFormatSchema.default(DEFAULT_DOCUMENT_DATE_FORMAT),
+      distributionMethod: z.nativeEnum(DocumentDistributionMethod).optional().default(DocumentDistributionMethod.EMAIL),
+      redirectUrl: z
+        .string()
+        .optional()
+        .refine((value) => value === undefined || value === '' || isValidRedirectUrl(value), {
+          message: 'Please enter a valid URL, make sure you include http:// or https:// part of the url.',
+        }),
+      language: z
+        .union([z.string(), z.enum(SUPPORTED_LANGUAGE_CODES)])
+        .optional()
+        .default('en'),
+      emailId: z.string().nullable(),
+      emailReplyTo: z.preprocess((val) => (val === '' ? undefined : val), z.string().email().optional()),
+      emailSettings: ZDocumentEmailSettingsSchema,
+      signatureTypes: z.array(z.nativeEnum(DocumentSignatureType)).min(1, {
+        message: msg`At least one signature type must be enabled`.id,
       }),
-    language: z
-      .union([z.string(), z.enum(SUPPORTED_LANGUAGE_CODES)])
-      .optional()
-      .default('en'),
-    emailId: z.string().nullable(),
-    emailReplyTo: z.preprocess(
-      (val) => (val === '' ? undefined : val),
-      z.string().email().optional(),
-    ),
-    emailSettings: ZDocumentEmailSettingsSchema,
-    signatureTypes: z.array(z.nativeEnum(DocumentSignatureType)).min(1, {
-      message: msg`At least one signature type must be enabled`.id,
     }),
-  }),
-})
+  })
   .superRefine((value, ctx) => {
     const requiresKba = value.globalAccessAuth.includes(DocumentAccessAuth.KBA);
 
@@ -233,9 +224,7 @@ export const ZAddSettingsFormSchema = z.object({
       if (value.kbaMode === 'PER_RECIPIENT' && !value.kbaApplySameToAllRecipients) {
         value.kbaRecipientChallenges.forEach((challenge, index) => {
           const normalizedAnswer = challenge.answer?.trim().toLowerCase();
-          const hasMatchingOption = parsedOptions.some(
-            (option) => option.label.toLowerCase() === normalizedAnswer,
-          );
+          const hasMatchingOption = parsedOptions.some((option) => option.label.toLowerCase() === normalizedAnswer);
 
           if (parsedOptions.length > 0 && normalizedAnswer && !hasMatchingOption) {
             ctx.addIssue({
@@ -247,9 +236,7 @@ export const ZAddSettingsFormSchema = z.object({
         });
       } else {
         const normalizedAnswer = value.kbaAnswer?.trim().toLowerCase();
-        const hasMatchingOption = parsedOptions.some(
-          (option) => option.label.toLowerCase() === normalizedAnswer,
-        );
+        const hasMatchingOption = parsedOptions.some((option) => option.label.toLowerCase() === normalizedAnswer);
 
         if (parsedOptions.length > 0 && normalizedAnswer && !hasMatchingOption) {
           ctx.addIssue({

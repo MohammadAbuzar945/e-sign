@@ -27,8 +27,8 @@ import type { MessageDescriptor } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { DocumentStatus, FieldType, RecipientRole } from '@prisma/client';
-import { FileTextIcon, PencilIcon, SparklesIcon } from 'lucide-react';
+import { FieldType, RecipientRole } from '@prisma/client';
+import { FileTextIcon, PencilIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRevalidator, useSearchParams } from 'react-router';
 import { isDeepEqual } from 'remeda';
@@ -292,21 +292,19 @@ export const EnvelopeEditorFieldsPage = () => {
               <Trans>Detect with AI</Trans>
             </Button> */}
 
-                <AiFieldDetectionDialog
-                  open={isAiFieldDialogOpen}
-                  onOpenChange={setIsAiFieldDialogOpen}
-                  onComplete={onFieldDetectionComplete}
-                  envelopeId={envelope.id}
-                  teamId={envelope.teamId}
-                />
+            <AiFieldDetectionDialog
+              open={isAiFieldDialogOpen}
+              onOpenChange={setIsAiFieldDialogOpen}
+              onComplete={onFieldDetectionComplete}
+              envelopeId={envelope.id}
+              teamId={envelope.teamId}
+            />
 
-                <AiFeaturesEnableDialog
-                  open={isAiEnableDialogOpen}
-                  onOpenChange={setIsAiEnableDialogOpen}
-                  onEnabled={onAiFeaturesEnabled}
-                />
-              </>
-            )}
+            <AiFeaturesEnableDialog
+              open={isAiEnableDialogOpen}
+              onOpenChange={setIsAiEnableDialogOpen}
+              onEnabled={onAiFeaturesEnabled}
+            />
           </section>
 
           {/* Field details section. */}

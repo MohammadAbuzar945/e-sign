@@ -195,8 +195,7 @@ export const updateOrganisationSettingsRoute = authenticatedProcedure
             aiFeaturesEnabled,
 
             // KBA defaults.
-            kbaSettings:
-              kbaSettings === undefined ? undefined : (kbaSettings as Prisma.InputJsonValue),
+            kbaSettings: kbaSettings === undefined ? undefined : (kbaSettings as Prisma.InputJsonValue),
           },
         },
       },

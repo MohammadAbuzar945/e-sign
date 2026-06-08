@@ -3,11 +3,9 @@ import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 
 import { API_V2_URL, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-
+import type { LoaderFunctionArgs } from 'react-router';
 import { BrandingLogo } from '~/components/general/branding-logo';
 import { appMetaTags } from '~/utils/meta';
-
-import type { LoaderFunctionArgs } from 'react-router';
 
 /** Swagger UI reads root `servers`; static specs often bundle multiple URLs — show only this deployment's public API base. */
 function getPublicApiServerUrl(): string {
@@ -54,8 +52,7 @@ function filterDeprecatedEndpoints(spec: Record<string, unknown>): Record<string
             const operationObj = operation as Record<string, unknown>;
             const isDeprecated = operationObj.deprecated === true;
             const tags = operationObj.tags as unknown;
-            const hasEmbeddingTag =
-              Array.isArray(tags) && tags.includes('Embedding');
+            const hasEmbeddingTag = Array.isArray(tags) && tags.includes('Embedding');
 
             if (!isDeprecated && !hasEmbeddingTag) {
               filteredPathItem[method] = operation;
@@ -81,10 +78,7 @@ function filterDeprecatedEndpoints(spec: Record<string, unknown>): Record<string
   if (filteredSpec.tags && Array.isArray(filteredSpec.tags)) {
     filteredSpec.tags = (filteredSpec.tags as unknown[]).filter(
       (tag) =>
-        typeof tag === 'object' &&
-        tag !== null &&
-        'name' in tag &&
-        (tag as { name: string }).name !== 'Embedding',
+        typeof tag === 'object' && tag !== null && 'name' in tag && (tag as { name: string }).name !== 'Embedding',
     );
   }
 
@@ -94,18 +88,16 @@ function filterDeprecatedEndpoints(spec: Record<string, unknown>): Record<string
 export async function loader({ request }: LoaderFunctionArgs) {
   const baseUrl = new URL(request.url).origin;
   const apiSpecUrl = `${baseUrl}/nomia-api.json`;
-  
+
   try {
     const response = await fetch(apiSpecUrl);
-    
+
     if (!response.ok) {
       throw new Response('API specification not found', { status: 404 });
     }
-    
+
     const apiSpec = (await response.json()) as Record<string, unknown>;
-    const { patchOpenApiMultipartFileParts } = await import(
-      '@documenso/trpc/server/open-api-multipart-file-patch'
-    );
+    const { patchOpenApiMultipartFileParts } = await import('@documenso/trpc/server/open-api-multipart-file-patch');
     patchOpenApiMultipartFileParts(apiSpec);
     const filteredSpec = filterDeprecatedEndpoints(apiSpec);
     filteredSpec.servers = [{ url: getPublicApiServerUrl() }];
@@ -130,10 +122,8 @@ export default function ReferencePage() {
           <div className="flex items-center gap-4">
             <BrandingLogo className="h-8 w-auto" />
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">API Reference</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Interactive API documentation for the Nomia API
-              </p>
+              <h1 className="font-bold text-2xl tracking-tight">API Reference</h1>
+              <p className="mt-1 text-muted-foreground text-sm">Interactive API documentation for the Nomia API</p>
             </div>
           </div>
         </div>

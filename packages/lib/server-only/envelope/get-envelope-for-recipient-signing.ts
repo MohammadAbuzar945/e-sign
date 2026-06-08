@@ -13,10 +13,7 @@ import type { TDocumentAuthMethods } from '../../types/document-auth';
 import { DocumentAccessAuth } from '../../types/document-auth';
 import { ZEnvelopeFieldSchema, ZFieldSchema } from '../../types/field';
 import { ZRecipientLiteSchema } from '../../types/recipient';
-import {
-  extractDocumentAuthMethods,
-  stripKbaFromAuthJsonWhenPolicyInactive,
-} from '../../utils/document-auth';
+import { extractDocumentAuthMethods, stripKbaFromAuthJsonWhenPolicyInactive } from '../../utils/document-auth';
 import { isRecipientExpired } from '../../utils/recipients';
 import { isRecipientAuthorized } from '../document/is-recipient-authorized';
 import { getTeamSettings } from '../team/get-team-settings';
@@ -261,8 +258,7 @@ export const getEnvelopeForRecipientSigning = async ({
 
   // For link-open flow, defer KBA check to the frontend KBA gate if no answer payload is provided.
   // Account auth still remains enforced at this stage.
-  const shouldDeferKbaCheck =
-    !accessAuth && derivedRecipientAccessAuth.includes(DocumentAccessAuth.KBA);
+  const shouldDeferKbaCheck = !accessAuth && derivedRecipientAccessAuth.includes(DocumentAccessAuth.KBA);
 
   const documentAccessValid = shouldDeferKbaCheck
     ? derivedRecipientAccessAuth.every((authType) => {

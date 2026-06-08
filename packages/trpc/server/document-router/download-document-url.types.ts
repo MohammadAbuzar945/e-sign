@@ -1,10 +1,6 @@
-import { z } from 'zod';
-
-import {
-  ZDownloadDocumentRequestSchema,
-  ZDownloadDocumentResponseSchema,
-} from './download-document-beta.types';
+import type { z } from 'zod';
 import type { TrpcRouteMeta } from '../trpc';
+import { ZDownloadDocumentRequestSchema, ZDownloadDocumentResponseSchema } from './download-document-beta.types';
 
 export const downloadDocumentUrlMeta: TrpcRouteMeta = {
   openapi: {
@@ -22,4 +18,3 @@ export const ZDownloadDocumentUrlResponseSchema = ZDownloadDocumentResponseSchem
 
 export type TDownloadDocumentUrlRequest = z.infer<typeof ZDownloadDocumentUrlRequestSchema>;
 export type TDownloadDocumentUrlResponse = z.infer<typeof ZDownloadDocumentUrlResponseSchema>;
-

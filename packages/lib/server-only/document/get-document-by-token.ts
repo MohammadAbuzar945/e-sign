@@ -3,8 +3,8 @@ import { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { TDocumentAuthMethods } from '../../types/document-auth';
-import { mapSecondaryIdToDocumentId } from '../../utils/envelope';
 import { stripKbaFromAuthJsonWhenPolicyInactive } from '../../utils/document-auth';
+import { mapSecondaryIdToDocumentId } from '../../utils/envelope';
 import { isRecipientAuthorized } from './is-recipient-authorized';
 
 export interface GetDocumentAndSenderByTokenOptions {

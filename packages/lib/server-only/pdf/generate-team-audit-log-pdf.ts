@@ -1,11 +1,10 @@
+import { prisma } from '@documenso/prisma';
 import { PDF } from '@libpdf/core';
 import { i18n } from '@lingui/core';
 
-import { prisma } from '@documenso/prisma';
-
 import { ZSupportedLanguageCodeSchema } from '../../constants/i18n';
-import { parseTeamAuditLogData } from '../../utils/team-audit-logs';
 import { getTranslations } from '../../utils/i18n';
+import { parseTeamAuditLogData } from '../../utils/team-audit-logs';
 import { getOrganisationClaimByTeamId } from '../organisation/get-organisation-claims';
 import { renderTeamAuditLogs } from './render-team-audit-logs';
 
@@ -74,4 +73,3 @@ const getTeamAuditLogs = async (teamId: number) => {
 
   return auditLogs.map((auditLog: unknown) => parseTeamAuditLogData(auditLog));
 };
-

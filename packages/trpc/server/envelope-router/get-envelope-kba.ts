@@ -2,9 +2,9 @@ import { getEnvelopeKba } from '@documenso/lib/server-only/envelope/get-envelope
 
 import { authenticatedProcedure } from '../trpc';
 import {
+  getEnvelopeKbaMeta,
   ZGetEnvelopeKbaRequestSchema,
   ZGetEnvelopeKbaResponseSchema,
-  getEnvelopeKbaMeta,
 } from './get-envelope-kba.types';
 
 export const getEnvelopeKbaRoute = authenticatedProcedure
@@ -18,4 +18,3 @@ export const getEnvelopeKbaRoute = authenticatedProcedure
       envelopeId: input.envelopeId,
     });
   });
-

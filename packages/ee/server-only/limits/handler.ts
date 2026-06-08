@@ -37,16 +37,14 @@ export const limitsHandler = async (req: Request) => {
       console.error('Error stack:', err.stack);
 
       // Find the error code key by matching the error message
-      const errorCodeKey = Object.keys(ERROR_CODES).find(
-        (key) => ERROR_CODES[key] === err.message,
-      );
+      const errorCodeKey = Object.keys(ERROR_CODES).find((key) => ERROR_CODES[key] === err.message);
 
       const errorMessage = errorCodeKey ? ERROR_CODES[errorCodeKey] : err.message || ERROR_CODES.UNKNOWN;
       const status = match(errorCodeKey)
         .with('UNAUTHORIZED', () => 401)
         .otherwise(() => 500);
 
-        console.log('errorMessage', errorMessage);
+      console.log('errorMessage', errorMessage);
 
       return Response.json(
         {

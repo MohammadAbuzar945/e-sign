@@ -4,7 +4,7 @@ import { TEAM_MEMBER_ROLE_MAP } from '@documenso/lib/constants/teams-translation
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { canExecuteTeamAction, formatTeamUrl } from '@documenso/lib/utils/teams';
-import { OrganisationMemberRole, OrganisationType } from '@documenso/prisma/generated/types';
+import { OrganisationMemberRole } from '@documenso/prisma/generated/types';
 import type { TGetOrganisationSessionResponse } from '@documenso/trpc/server/organisation-router/get-organisation-session.types';
 import { Avatar, AvatarFallback, AvatarImage } from '@documenso/ui/primitives/avatar';
 import { Button } from '@documenso/ui/primitives/button';

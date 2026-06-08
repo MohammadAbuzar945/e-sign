@@ -211,9 +211,7 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
           ...restrictFieldPosValues(updatedField),
         };
 
-        const nextFields = currentFields.map((field, fieldIndex) =>
-          fieldIndex === index ? restrictedField : field,
-        );
+        const nextFields = currentFields.map((field, fieldIndex) => (fieldIndex === index ? restrictedField : field));
 
         update(index, restrictedField);
         triggerFieldsUpdate(nextFields);

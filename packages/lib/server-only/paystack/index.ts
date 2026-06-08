@@ -1,22 +1,18 @@
 import { Paystack } from 'paystack-sdk';
-import { any } from 'zod';
 
 import { env } from '../../utils/env';
-
-
 
 // if WEBAPP_URL is localhost, use the test key
 // else use the live key
 
 const webAppUrl = env('NEXT_PUBLIC_WEBAPP_URL');
-const isProduction   = webAppUrl?.includes('e-sign.nomiadocs.com');
+const isProduction = webAppUrl?.includes('e-sign.nomiadocs.com');
 const paystackKey = isProduction ? env('NEXT_PAYSTACK_LIVE_KEY') : env('NEXT_PAYSTACK_TEST_KEY');
 if (!paystackKey) {
   throw new Error('Paystack key is not set');
 }
 
 const paystack = new Paystack(paystackKey);
-
 
 export { paystack };
 

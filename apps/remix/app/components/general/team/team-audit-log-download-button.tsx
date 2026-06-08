@@ -1,9 +1,3 @@
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { DownloadIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-
 import { downloadFile } from '@documenso/lib/client-only/download-file';
 import {
   TEAM_AUDIT_LOG_EXPORT_DATE_RANGES,
@@ -25,6 +19,11 @@ import {
 import { Label } from '@documenso/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@documenso/ui/primitives/radio-group';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { DownloadIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 const DATE_RANGE_LABELS: Record<TTeamAuditLogExportDateRange, string> = {
   '1_WEEK': '1 week',
@@ -38,10 +37,7 @@ export type TeamAuditLogDownloadButtonProps = {
   teamId: number;
 };
 
-export const TeamAuditLogDownloadButton = ({
-  className,
-  teamId,
-}: TeamAuditLogDownloadButtonProps) => {
+export const TeamAuditLogDownloadButton = ({ className, teamId }: TeamAuditLogDownloadButtonProps) => {
   const { toast } = useToast();
   const { _ } = useLingui();
 
@@ -81,9 +77,7 @@ export const TeamAuditLogDownloadButton = ({
 
       toast({
         title: _(msg`Something went wrong`),
-        description: _(
-          msg`Sorry, we were unable to export the team audit logs. Please try again later.`,
-        ),
+        description: _(msg`Sorry, we were unable to export the team audit logs. Please try again later.`),
         variant: 'destructive',
       });
     }
@@ -99,9 +93,7 @@ export const TeamAuditLogDownloadButton = ({
     if (data.status === 'FAILED') {
       toast({
         title: _(msg`Export failed`),
-        description:
-          data.error ??
-          _(msg`Sorry, we were unable to export the team audit logs. Please try again later.`),
+        description: data.error ?? _(msg`Sorry, we were unable to export the team audit logs. Please try again later.`),
         variant: 'destructive',
       });
 
@@ -145,9 +137,7 @@ export const TeamAuditLogDownloadButton = ({
 
         toast({
           title: _(msg`Something went wrong`),
-          description: _(
-            msg`Sorry, we were unable to download the exported CSV. Please try again later.`,
-          ),
+          description: _(msg`Sorry, we were unable to download the exported CSV. Please try again later.`),
           variant: 'destructive',
         });
       } finally {
@@ -202,4 +192,3 @@ export const TeamAuditLogDownloadButton = ({
     </Dialog>
   );
 };
-

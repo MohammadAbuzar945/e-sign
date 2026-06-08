@@ -1,9 +1,14 @@
 import type { InternalClaimPlans } from '@documenso/ee/server-only/stripe/get-internal-claim-plans';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useSession } from '@documenso/lib/client-only/providers/session';
+import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { AppError } from '@documenso/lib/errors/app-error';
+import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
+import { parseMessageDescriptorMacro } from '@documenso/lib/utils/i18n';
 import { trpc } from '@documenso/trpc/react';
 import { ZCreateOrganisationRequestSchema } from '@documenso/trpc/server/organisation-router/create-organisation.types';
+import { cn } from '@documenso/ui/lib/utils';
+import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
 import {
   Dialog,
@@ -16,6 +21,7 @@ import {
 } from '@documenso/ui/primitives/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
+import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { MessageDescriptor } from '@lingui/core';

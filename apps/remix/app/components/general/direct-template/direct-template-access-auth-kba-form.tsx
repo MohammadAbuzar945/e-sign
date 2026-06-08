@@ -1,13 +1,3 @@
-import { useEffect, useMemo, useState } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { Clock3Icon, ShieldAlertIcon } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-
 import { trpc } from '@documenso/trpc/react';
 import { Alert } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
@@ -22,6 +12,14 @@ import {
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { RadioGroup, RadioGroupItem } from '@documenso/ui/primitives/radio-group';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { Clock3Icon, ShieldAlertIcon } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 const ZDirectTemplateAccessAuthKBAFormSchema = z.object({
   answer: z.string().optional(),
@@ -34,10 +32,7 @@ type DirectTemplateAccessAuthKBAFormProps = {
   onSubmit: () => void;
 };
 
-export const DirectTemplateAccessAuthKBAForm = ({
-  token,
-  onSubmit,
-}: DirectTemplateAccessAuthKBAFormProps) => {
+export const DirectTemplateAccessAuthKBAForm = ({ token, onSubmit }: DirectTemplateAccessAuthKBAFormProps) => {
   const { _ } = useLingui();
   const [selectedMcqOptionKey, setSelectedMcqOptionKey] = useState('');
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -53,8 +48,7 @@ export const DirectTemplateAccessAuthKBAForm = ({
   const { data, isLoading } = trpc.template.accessAuth.getKbaChallenge.useQuery({
     token,
   });
-  const { mutateAsync: verifyKba, isPending: isVerifyingKba } =
-    trpc.template.accessAuth.verifyKba.useMutation();
+  const { mutateAsync: verifyKba, isPending: isVerifyingKba } = trpc.template.accessAuth.verifyKba.useMutation();
 
   const isMcq = data?.answerType === 'MCQ';
   const isNumeric = data?.answerType === 'NUMERIC';
@@ -142,7 +136,7 @@ export const DirectTemplateAccessAuthKBAForm = ({
 
   if (isLoading) {
     return (
-      <div className="py-4 text-sm text-muted-foreground">
+      <div className="py-4 text-muted-foreground text-sm">
         <Trans>Loading security challenge...</Trans>
       </div>
     );
@@ -160,24 +154,21 @@ export const DirectTemplateAccessAuthKBAForm = ({
     <Form {...form}>
       <form className="space-y-4 py-2" onSubmit={form.handleSubmit(onFormSubmit)}>
         <div className="space-y-1">
-          <h3 className="text-lg font-semibold">
+          <h3 className="font-semibold text-lg">
             <Trans>Security challenge</Trans>
           </h3>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             <Trans>Please answer the question below to continue.</Trans>
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             <Trans>
-              You can try up to {data.maxAttempts} times before a {data.lockoutMinutes}-minute
-              lockout.
+              You can try up to {data.maxAttempts} times before a {data.lockoutMinutes}-minute lockout.
             </Trans>
           </p>
         </div>
 
-        <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm font-medium">
-          {data.question}
-        </div>
+        <div className="rounded-lg border border-border bg-muted/50 p-3 font-medium text-sm">{data.question}</div>
 
         {submissionError && (
           <Alert variant="destructive" padding="tight" className="text-sm">
@@ -191,16 +182,16 @@ export const DirectTemplateAccessAuthKBAForm = ({
               <div className="flex items-start gap-2">
                 <ShieldAlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">
+                  <p className="font-medium text-sm">
                     <Trans>Too many failed attempts</Trans>
                   </p>
-                  <p className="text-xs text-amber-800">
+                  <p className="text-amber-800 text-xs">
                     <Trans>Please wait until the lockout period ends before trying again.</Trans>
                   </p>
                 </div>
               </div>
 
-              <div className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2 py-1 text-xs font-semibold text-amber-900">
+              <div className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2 py-1 font-semibold text-amber-900 text-xs">
                 <Clock3Icon className="h-3.5 w-3.5" />
                 <span>{formatDuration(lockoutRemainingSeconds)}</span>
               </div>
@@ -214,11 +205,7 @@ export const DirectTemplateAccessAuthKBAForm = ({
               <Trans>Select one option</Trans>
             </FormLabel>
 
-            <RadioGroup
-              value={selectedMcqOptionKey}
-              onValueChange={setSelectedMcqOptionKey}
-              disabled={isLocked}
-            >
+            <RadioGroup value={selectedMcqOptionKey} onValueChange={setSelectedMcqOptionKey} disabled={isLocked}>
               {data.mcqOptions.map((option) => (
                 <label
                   key={option.key}
@@ -246,14 +233,8 @@ export const DirectTemplateAccessAuthKBAForm = ({
                     value={field.value ?? ''}
                     onBlur={field.onBlur}
                     inputMode={isNumeric ? 'numeric' : 'text'}
-                    placeholder={
-                      isNumeric ? _(msg`Digits only (e.g. 1234)`) : _(msg`Enter your answer`)
-                    }
-                    onChange={
-                      isNumeric
-                        ? (e) => field.onChange(e.target.value.replace(/\D/g, ''))
-                        : field.onChange
-                    }
+                    placeholder={isNumeric ? _(msg`Digits only (e.g. 1234)`) : _(msg`Enter your answer`)}
+                    onChange={isNumeric ? (e) => field.onChange(e.target.value.replace(/\D/g, '')) : field.onChange}
                     disabled={isLocked}
                   />
                 </FormControl>

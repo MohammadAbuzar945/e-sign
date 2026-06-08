@@ -405,9 +405,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
   if (updatedEnvelope.fromNomia) {
     console.log('Calling external webhook for document completion');
 
-    const payload = ZWebhookDocumentSchema.parse(
-      mapEnvelopeToWebhookDocumentPayload(updatedEnvelope),
-    );
+    const payload = ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(updatedEnvelope));
 
     const webhookEndpoint =
       NEXT_PUBLIC_WEBAPP_URL() === 'https://sign.nomiadocs.com'
@@ -415,9 +413,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
         : 'https://api.nomiadocs.com/esignature/documentSendv1';
 
     const payloadData = {
-      event: isRejected
-        ? WebhookTriggerEvents.DOCUMENT_REJECTED
-        : WebhookTriggerEvents.DOCUMENT_COMPLETED,
+      event: isRejected ? WebhookTriggerEvents.DOCUMENT_REJECTED : WebhookTriggerEvents.DOCUMENT_COMPLETED,
       payload,
       createdAt: new Date().toISOString(),
       webhookEndpoint,
@@ -431,10 +427,6 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
       body: JSON.stringify(payloadData),
     });
   }
-
-
-
-
 };
 
 type DecorateAndSignPdfOptions = {
@@ -505,11 +497,10 @@ const decorateAndSignPdf = async ({
     // arcoFields are created by pdf-lib itself.
     legacy_pdfLibDoc.getForm().flatten();
 
-
-  // / Should never run into issues with this flatten since all
+    // / Should never run into issues with this flatten since all
     // arcoFields are created by pdf-lib itself./
     legacy_pdfLibDoc.getForm().flatten();
-    
+
     await pdfDoc.reload(await legacy_pdfLibDoc.save());
   }
 
@@ -574,9 +565,7 @@ const decorateAndSignPdf = async ({
   pdfDoc = await PDF.load(await pdfDoc.save({ useXRefStream: true }));
 
   // Do not cryptographically sign rejected documents; only sign completed ones
-  const pdfBytes = isRejected
-    ? await pdfDoc.save({ useXRefStream: true })
-    : await signPdf({ pdf: pdfDoc });
+  const pdfBytes = isRejected ? await pdfDoc.save({ useXRefStream: true }) : await signPdf({ pdf: pdfDoc });
 
   const { name } = path.parse(envelopeItem.title);
 

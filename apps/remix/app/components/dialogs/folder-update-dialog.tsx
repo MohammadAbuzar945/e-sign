@@ -1,13 +1,3 @@
-import { useEffect } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { ClipboardCopyIcon } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-
 import { useCopyToClipboard } from '@documenso/lib/client-only/hooks/use-copy-to-clipboard';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { DocumentVisibility } from '@documenso/lib/types/document-visibility';
@@ -30,6 +20,7 @@ import { useToast } from '@documenso/ui/primitives/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Trans, useLingui } from '@lingui/react/macro';
 import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { ClipboardCopyIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -114,13 +105,12 @@ export const FolderUpdateDialog = ({ folder, isOpen, onOpenChange }: FolderUpdat
           {folder && (
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground text-xs">
-                <Trans>Folder ID</Trans>:{' '}
-                <span className="font-mono">{folder.id}</span>
+                <Trans>Folder ID</Trans>: <span className="font-mono">{folder.id}</span>
               </span>
               <Button
                 variant="none"
                 type="button"
-                className="text-muted-foreground hover:text-foreground h-6 w-6"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
                 onClick={() =>
                   void copy(folder.id).then(() => {
                     toast({ title: t`Copied to clipboard` });

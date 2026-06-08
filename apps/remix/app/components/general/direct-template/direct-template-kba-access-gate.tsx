@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
 
 import { Trans } from '@lingui/react/macro';
-
-import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
+import { useState } from 'react';
 
 import { useRequiredDocumentSigningAuthContext } from '../document-signing/document-signing-auth-provider';
 import { DirectTemplateAccessAuthKBAForm } from './direct-template-access-auth-kba-form';
@@ -12,10 +11,7 @@ type DirectTemplateKbaAccessGateProps = {
   children: React.ReactNode;
 };
 
-export const DirectTemplateKbaAccessGate = ({
-  token,
-  children,
-}: DirectTemplateKbaAccessGateProps) => {
+export const DirectTemplateKbaAccessGate = ({ token, children }: DirectTemplateKbaAccessGateProps) => {
   const { derivedRecipientAccessAuth } = useRequiredDocumentSigningAuthContext();
   const requiresKba = derivedRecipientAccessAuth.includes(DocumentAccessAuth.KBA);
   const [isKbaVerified, setIsKbaVerified] = useState(false);
@@ -28,10 +24,10 @@ export const DirectTemplateKbaAccessGate = ({
     <div className="mx-auto flex min-h-[70vh] w-full max-w-lg items-center justify-center px-4">
       <div className="w-full rounded-lg border bg-background p-6 shadow-sm">
         <div className="mb-4 space-y-1">
-          <h2 className="text-lg font-semibold">
+          <h2 className="font-semibold text-lg">
             <Trans>Security verification required</Trans>
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             <Trans>Please answer this security question to continue.</Trans>
           </p>
         </div>

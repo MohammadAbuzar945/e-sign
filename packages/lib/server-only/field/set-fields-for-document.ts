@@ -147,11 +147,7 @@ export const setFieldsForDocument = async ({
     if (field.type === FieldType.NUMBER && field.fieldMeta) {
       const numberFieldParsedMeta = ZNumberFieldMeta.parse(field.fieldMeta);
 
-      const errors = validateNumberField(
-        String(numberFieldParsedMeta.value || ''),
-        numberFieldParsedMeta,
-        false,
-      );
+      const errors = validateNumberField(String(numberFieldParsedMeta.value || ''), numberFieldParsedMeta, false);
 
       if (errors.length > 0) {
         throw new Error(errors.join(', '));
@@ -170,18 +166,14 @@ export const setFieldsForDocument = async ({
           throw new Error(errors.join(', '));
         }
       } else {
-        throw new Error(
-          'To proceed further, please set at least one value for the Checkbox field',
-        );
+        throw new Error('To proceed further, please set at least one value for the Checkbox field');
       }
     }
 
     if (field.type === FieldType.RADIO) {
       if (field.fieldMeta) {
         const radioFieldParsedMeta = ZRadioFieldMeta.parse(field.fieldMeta);
-        const checkedRadioFieldValue = radioFieldParsedMeta.values?.find(
-          (option) => option.checked,
-        )?.value;
+        const checkedRadioFieldValue = radioFieldParsedMeta.values?.find((option) => option.checked)?.value;
 
         const errors = validateRadioField(checkedRadioFieldValue, radioFieldParsedMeta);
 
@@ -202,9 +194,7 @@ export const setFieldsForDocument = async ({
           throw new Error(errors.join('. '));
         }
       } else {
-        throw new Error(
-          'To proceed further, please set at least one value for the Dropdown field',
-        );
+        throw new Error('To proceed further, please set at least one value for the Dropdown field');
       }
     }
 
@@ -273,9 +263,7 @@ export const setFieldsForDocument = async ({
           fieldType: upsertedField.type,
         };
 
-        const changes = field._persisted
-          ? diffFieldChanges(field._persisted, upsertedField)
-          : [];
+        const changes = field._persisted ? diffFieldChanges(field._persisted, upsertedField) : [];
 
         return {
           upsertedField,

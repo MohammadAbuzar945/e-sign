@@ -1,21 +1,3 @@
-import { useEffect, useMemo, useState } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import {
-  DocumentDistributionMethod,
-  DocumentStatus,
-  EnvelopeType,
-  RecipientRole,
-} from '@prisma/client';
-import { AnimatePresence, motion } from 'framer-motion';
-import { InfoIcon } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router';
-import { match } from 'ts-pattern';
-import * as z from 'zod';
-
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
@@ -48,7 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitive
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Trans, useLingui } from '@lingui/react/macro';
-import { DocumentDistributionMethod, DocumentStatus, EnvelopeType } from '@prisma/client';
+import { DocumentDistributionMethod, DocumentStatus, EnvelopeType, RecipientRole } from '@prisma/client';
 import { AnimatePresence, motion } from 'framer-motion';
 import { InfoIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -56,6 +38,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import { match } from 'ts-pattern';
 import * as z from 'zod';
+
 import { getDistributeErrorMessage } from '~/utils/toast-error-messages';
 
 export type EnvelopeDistributeDialogProps = {
@@ -176,15 +159,10 @@ export const EnvelopeDistributeDialog = ({
     if (kbaConfig.settings.mode === 'PER_ENVELOPE') {
       const challenge = kbaConfig.envelopeChallenge;
 
-      return (
-        !challenge?.question?.trim() ||
-        challenge.isAnswerConfigured !== true
-      );
+      return !challenge?.question?.trim() || challenge.isAnswerConfigured !== true;
     }
 
-    const recipientsNeedingChallenges = envelope.recipients.filter(
-      (recipient) => recipient.role !== RecipientRole.CC,
-    );
+    const recipientsNeedingChallenges = envelope.recipients.filter((recipient) => recipient.role !== RecipientRole.CC);
 
     for (const recipient of recipientsNeedingChallenges) {
       const challenge = kbaConfig.recipientChallenges.find((c) => c.recipientId === recipient.id);
@@ -215,12 +193,7 @@ export const EnvelopeDistributeDialog = ({
     }
 
     return null;
-  }, [
-    envelope.recipients,
-    isKbaSendBlocked,
-    recipientsMissingRequiredEmail,
-    recipientsMissingSignatureFields,
-  ]);
+  }, [envelope.recipients, isKbaSendBlocked, recipientsMissingRequiredEmail, recipientsMissingSignatureFields]);
 
   const onFormSubmit = async ({ meta }: TEnvelopeDistributeFormSchema) => {
     try {
@@ -286,8 +259,7 @@ export const EnvelopeDistributeDialog = ({
           emailReplyTo: envelope.documentMeta?.emailReplyTo || undefined,
           subject: envelope.documentMeta?.subject ?? '',
           message: envelope.documentMeta?.message ?? '',
-          distributionMethod:
-            envelope.documentMeta?.distributionMethod || DocumentDistributionMethod.EMAIL,
+          distributionMethod: envelope.documentMeta?.distributionMethod || DocumentDistributionMethod.EMAIL,
         },
       });
     }
@@ -508,9 +480,9 @@ export const EnvelopeDistributeDialog = ({
                 .with('KBA_INCOMPLETE', () => (
                   <AlertDescription>
                     <Trans>
-                      Security question (KBA) is turned on for this document, but the question,
-                      answer, or multiple-choice options are not saved yet. Open Document Settings,
-                      go to Security, finish KBA setup, then try sending again.
+                      Security question (KBA) is turned on for this document, but the question, answer, or
+                      multiple-choice options are not saved yet. Open Document Settings, go to Security, finish KBA
+                      setup, then try sending again.
                     </Trans>
                   </AlertDescription>
                 ))

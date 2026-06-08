@@ -18,9 +18,11 @@ import {
 } from '@prisma/client';
 
 import { validateCheckboxLength } from '../../advanced-fields-validation/validate-checkbox';
+import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
 import { DIRECT_TEMPLATE_RECIPIENT_EMAIL } from '../../constants/direct-templates';
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { jobs } from '../../jobs/client';
+import { DocumentAuth } from '../../types/document-auth';
 import { extractDerivedDocumentEmailSettings } from '../../types/document-email';
 import {
   FIELD_META_DEFAULT_VALUES,
@@ -35,7 +37,6 @@ import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../
 import { getFileServerSide } from '../../universal/upload/get-file.server';
 import { putNormalizedPdfFileServerSide } from '../../universal/upload/put-file.server';
 import { isDocumentCompleted } from '../../utils/document';
-import { DocumentAuth } from '../../types/document-auth';
 import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import { type EnvelopeIdOptions, mapSecondaryIdToDocumentId } from '../../utils/envelope';
 import { toCheckboxCustomText, toRadioCustomText } from '../../utils/fields';
@@ -45,7 +46,6 @@ import { isPersistedKbaChallengeCompleteForSend } from '../kba/kba';
 import { insertFormValuesInPdf } from '../pdf/insert-form-values-in-pdf';
 import { assertUserNotDisabledById } from '../user/assert-user-not-disabled';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
-import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
 
 export type SendDocumentOptions = {
   id: EnvelopeIdOptions;
@@ -173,9 +173,7 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
     const activeChallenges = envelope.kbaChallenges;
 
     if (envelope.kbaPolicy.mode === 'PER_ENVELOPE') {
-      const envelopeChallenge = activeChallenges.find(
-        (challenge) => challenge.scopeType === KbaScopeType.ENVELOPE,
-      );
+      const envelopeChallenge = activeChallenges.find((challenge) => challenge.scopeType === KbaScopeType.ENVELOPE);
 
       if (!isPersistedKbaChallengeCompleteForSend(envelopeChallenge)) {
         throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -184,14 +182,11 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
         });
       }
     } else {
-      const recipientsNeedingKba = envelope.recipients.filter(
-        (recipient) => recipient.role !== RecipientRole.CC,
-      );
+      const recipientsNeedingKba = envelope.recipients.filter((recipient) => recipient.role !== RecipientRole.CC);
 
       for (const recipient of recipientsNeedingKba) {
         const recipientChallenge = activeChallenges.find(
-          (challenge) =>
-            challenge.scopeType === KbaScopeType.RECIPIENT && challenge.recipientId === recipient.id,
+          (challenge) => challenge.scopeType === KbaScopeType.RECIPIENT && challenge.recipientId === recipient.id,
         );
 
         if (!isPersistedKbaChallengeCompleteForSend(recipientChallenge)) {
@@ -399,9 +394,7 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
   if (envelope.fromNomia) {
     console.log('Calling external webhook in sent');
 
-    const payload = ZWebhookDocumentSchema.parse(
-      mapEnvelopeToWebhookDocumentPayload(updatedEnvelope),
-    );
+    const payload = ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(updatedEnvelope));
 
     const webhookEndpoint =
       NEXT_PUBLIC_WEBAPP_URL() === 'https://sign.nomiadocs.com'
@@ -423,8 +416,6 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
       body: JSON.stringify(payloadData),
     });
   }
-
-
 
   return updatedEnvelope;
 };

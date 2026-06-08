@@ -1,12 +1,11 @@
+import { env } from '@documenso/lib/utils/env';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-
 import { Body, Container, Head, Hr, Html, Img, Preview, Section, Text } from '../components';
 import { useBranding } from '../providers/branding';
 import { TemplateFooter } from '../template-components/template-footer';
 import TemplateImage from '../template-components/template-image';
-import { env } from '@documenso/lib/utils/env';
 
 export type OrganisationLeaveEmailProps = {
   assetBaseUrl: string;
@@ -28,7 +27,7 @@ export const OrganisationLeaveEmailTemplate = ({
   const { _ } = useLingui();
   const branding = useBranding();
 
-    const previewText = msg`A member has left your organisation on Nomia`;
+  const previewText = msg`A member has left your organisation on Nomia`;
 
   return (
     <Html>

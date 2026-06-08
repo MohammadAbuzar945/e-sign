@@ -2,8 +2,7 @@ import { z } from 'zod';
 
 import type { JobDefinition } from '../../client/_internal/job';
 
-export const SEND_TEAM_AUDIT_LOGS_EXPORT_EMAIL_JOB_DEFINITION_ID =
-  'send.team-audit-logs-export.email';
+export const SEND_TEAM_AUDIT_LOGS_EXPORT_EMAIL_JOB_DEFINITION_ID = 'send.team-audit-logs-export.email';
 
 export const ZSendTeamAuditLogsExportEmailJobDefinitionSchema = z.object({
   teamId: z.number().min(1),
@@ -35,4 +34,3 @@ export const SEND_TEAM_AUDIT_LOGS_EXPORT_EMAIL_JOB_DEFINITION = {
   typeof SEND_TEAM_AUDIT_LOGS_EXPORT_EMAIL_JOB_DEFINITION_ID,
   TSendTeamAuditLogsExportEmailJobDefinition
 >;
-

@@ -1,18 +1,15 @@
-import { OrganisationGroupType, OrganisationMemberRole, Prisma, TeamMemberRole } from '@prisma/client';
-import { z } from 'zod';
-
 import { TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
-import { Prisma } from '@prisma/client';
+import { OrganisationGroupType, Prisma, TeamMemberRole } from '@prisma/client';
 import { z } from 'zod';
 
 import { TEAM_AUDIT_LOG_TYPE } from '../../types/team-audit-logs';
 import type { ApiRequestMetadata } from '../../universal/extract-request-metadata';
 import { generateDatabaseId } from '../../universal/id';
 import { createTeamAuditLogData } from '../../utils/team-audit-logs';
-import { getMemberRoles } from './get-member-roles';
 import { buildTeamWhereQuery } from '../../utils/teams';
+import { getMemberRoles } from './get-member-roles';
 
 export type UpdateTeamOptions = {
   userId: number;
@@ -25,12 +22,7 @@ export type UpdateTeamOptions = {
   metadata?: ApiRequestMetadata;
 };
 
-export const updateTeam = async ({
-  userId,
-  teamId,
-  data,
-  metadata,
-}: UpdateTeamOptions): Promise<void> => {
+export const updateTeam = async ({ userId, teamId, data, metadata }: UpdateTeamOptions): Promise<void> => {
   try {
     const teamWhere = buildTeamWhereQuery({
       teamId,
@@ -93,8 +85,7 @@ export const updateTeam = async ({
             group.teamRole === TeamMemberRole.ADMIN,
         );
 
-        const adminCount =
-          adminTeamGroup?.organisationGroup.organisationGroupMembers.length ?? 0;
+        const adminCount = adminTeamGroup?.organisationGroup.organisationGroupMembers.length ?? 0;
         const currentUserIsAdmin = isOrganisationOwner || currentUserTeamRole === TeamMemberRole.ADMIN;
         const hasAdminMembers = adminCount > 0 || currentUserIsAdmin;
 
@@ -107,25 +98,17 @@ export const updateTeam = async ({
         // Migrate users from INTERNAL_ORGANISATION groups to INTERNAL_TEAM groups,
         // then remove all org-based access so only explicit team members retain access.
         const internalOrgTeamGroups = existingTeam.teamGroups.filter(
-          (tg) =>
-            tg.organisationGroup.type === OrganisationGroupType.INTERNAL_ORGANISATION,
+          (tg) => tg.organisationGroup.type === OrganisationGroupType.INTERNAL_ORGANISATION,
         );
 
         if (internalOrgTeamGroups.length > 0) {
           const internalTeamGroups = existingTeam.teamGroups.filter(
-            (tg) =>
-              tg.organisationGroup.type === OrganisationGroupType.INTERNAL_TEAM,
+            (tg) => tg.organisationGroup.type === OrganisationGroupType.INTERNAL_TEAM,
           );
 
-          const adminInternalGroup = internalTeamGroups.find(
-            (g) => g.teamRole === TeamMemberRole.ADMIN,
-          );
-          const managerInternalGroup = internalTeamGroups.find(
-            (g) => g.teamRole === TeamMemberRole.MANAGER,
-          );
-          const memberInternalGroup = internalTeamGroups.find(
-            (g) => g.teamRole === TeamMemberRole.MEMBER,
-          );
+          const adminInternalGroup = internalTeamGroups.find((g) => g.teamRole === TeamMemberRole.ADMIN);
+          const managerInternalGroup = internalTeamGroups.find((g) => g.teamRole === TeamMemberRole.MANAGER);
+          const memberInternalGroup = internalTeamGroups.find((g) => g.teamRole === TeamMemberRole.MEMBER);
 
           if (adminInternalGroup && managerInternalGroup && memberInternalGroup) {
             const membersToMigrate: { organisationMemberId: string; teamRole: TeamMemberRole }[] = [];
@@ -141,8 +124,12 @@ export const updateTeam = async ({
             }
 
             const targetGroupId = (role: TeamMemberRole) => {
-              if (role === TeamMemberRole.ADMIN) return adminInternalGroup.organisationGroupId;
-              if (role === TeamMemberRole.MANAGER) return managerInternalGroup.organisationGroupId;
+              if (role === TeamMemberRole.ADMIN) {
+                return adminInternalGroup.organisationGroupId;
+              }
+              if (role === TeamMemberRole.MANAGER) {
+                return managerInternalGroup.organisationGroupId;
+              }
               return memberInternalGroup.organisationGroupId;
             };
 
@@ -170,8 +157,7 @@ export const updateTeam = async ({
     }
 
     const organisationSuffix = existingTeam.organisationId.slice(-5);
-    const organisationScopedTeamUrl =
-      data.url !== undefined ? `${organisationSuffix}-${data.url}` : undefined;
+    const organisationScopedTeamUrl = data.url !== undefined ? `${organisationSuffix}-${data.url}` : undefined;
 
     if (organisationScopedTeamUrl) {
       const foundTeamWithUrl = await prisma.team.findFirst({

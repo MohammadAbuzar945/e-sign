@@ -1,16 +1,4 @@
-import { useEffect, useMemo } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { ExternalLinkIcon, InfoIcon, Loader } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router';
-import { z } from 'zod';
-
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-import { SUBSCRIPTION_STATUS_MAP } from '@documenso/lib/constants/billing';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { LicenseClient } from '@documenso/lib/server-only/license/license-client';
 import type { TLicenseClaim } from '@documenso/lib/types/license';
@@ -36,23 +24,21 @@ import {
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { msg } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { OrganisationMemberRole } from '@prisma/client';
-import { ExternalLinkIcon, InfoIcon, Loader } from 'lucide-react';
-import { useMemo } from 'react';
+import { Loader } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router';
 import { match } from 'ts-pattern';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 import { AdminOrganisationDeleteDialog } from '~/components/dialogs/admin-organisation-delete-dialog';
 import { AdminOrganisationMemberDeleteDialog } from '~/components/dialogs/admin-organisation-member-delete-dialog';
 import { AdminOrganisationMemberUpdateDialog } from '~/components/dialogs/admin-organisation-member-update-dialog';
-import { AdminOrganisationSyncSubscriptionDialog } from '~/components/dialogs/admin-organisation-sync-subscription-dialog';
 import { DetailsCard, DetailsValue } from '~/components/general/admin-details';
 import { AdminGlobalSettingsSection } from '~/components/general/admin-global-settings-section';
 import { ClaimLimitFields } from '~/components/general/claim-limit-fields';
@@ -341,12 +327,6 @@ export default function OrganisationGroupSettingsPage({ params, loaderData }: Ro
         </Accordion>
       </div>
 
-      <SettingsHeader
-        title={t`Manage subscription`}
-        subtitle={t`Manage the ${organisation.name} organisation subscription`}
-        className="mt-16"
-      /> */}
-
       {/* <Alert
         className="my-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
         variant="neutral"
@@ -538,10 +518,10 @@ const AdminOrganisationCreditsForm = ({
 
   return (
     <div className="mt-16">
-      <label className="text-sm font-medium leading-none">
+      <label className="font-medium text-sm leading-none">
         <Trans>User Credits</Trans>
       </label>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="mt-1 text-muted-foreground text-sm">
         <Trans>Current balance: {credits} credits</Trans>
       </p>
       <Form {...form}>

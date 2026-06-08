@@ -1,6 +1,5 @@
-import { z } from 'zod';
-
 import { ZDocumentKbaAnswerTypeSchema, ZDocumentKbaOptionSchema } from '@documenso/lib/types/document-auth';
+import { z } from 'zod';
 
 export const ZAccessAuthGetKbaChallengeRequestSchema = z.object({
   token: z.string().min(1),
@@ -17,10 +16,5 @@ export const ZAccessAuthGetKbaChallengeResponseSchema = z.object({
   lockoutRemainingSeconds: z.number().int().min(0),
 });
 
-export type TAccessAuthGetKbaChallengeRequest = z.infer<
-  typeof ZAccessAuthGetKbaChallengeRequestSchema
->;
-export type TAccessAuthGetKbaChallengeResponse = z.infer<
-  typeof ZAccessAuthGetKbaChallengeResponseSchema
->;
-
+export type TAccessAuthGetKbaChallengeRequest = z.infer<typeof ZAccessAuthGetKbaChallengeRequestSchema>;
+export type TAccessAuthGetKbaChallengeResponse = z.infer<typeof ZAccessAuthGetKbaChallengeResponseSchema>;

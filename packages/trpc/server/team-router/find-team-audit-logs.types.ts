@@ -1,13 +1,7 @@
-import { z } from 'zod';
+import { ZFindResultResponse, ZFindSearchParamsSchema } from '@documenso/lib/types/search-params';
 
-import {
-  ZTeamAuditLogSchema,
-  ZTeamAuditLogTypeSchema,
-} from '@documenso/lib/types/team-audit-logs';
-import {
-  ZFindResultResponse,
-  ZFindSearchParamsSchema,
-} from '@documenso/lib/types/search-params';
+import { ZTeamAuditLogSchema, ZTeamAuditLogTypeSchema } from '@documenso/lib/types/team-audit-logs';
+import { z } from 'zod';
 
 export const ZFindTeamAuditLogsRequestSchema = ZFindSearchParamsSchema.extend({
   teamId: z.number().min(1),
@@ -24,4 +18,3 @@ export const ZFindTeamAuditLogsResponseSchema = ZFindResultResponse.extend({
 
 export type TFindTeamAuditLogsRequest = z.infer<typeof ZFindTeamAuditLogsRequestSchema>;
 export type TFindTeamAuditLogsResponse = z.infer<typeof ZFindTeamAuditLogsResponseSchema>;
-

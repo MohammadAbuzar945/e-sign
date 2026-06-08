@@ -39,14 +39,10 @@ export const EnvelopeSignerHeader = () => {
                 className="h-6 w-auto"
               />
             ) : (
-
-
-              <>  
+              <>
                 <BrandingLogo className="hidden h-6 w-auto md:block" />
                 <BrandingLogo className="h-6 w-auto md:hidden" />
-              
               </>
-
             )}
           </Link>
         )}

@@ -1,16 +1,15 @@
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { getTeamWithEmail } from '@documenso/lib/server-only/team/get-team-email-by-email';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
 import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
 import { canExecuteTeamAction } from '@documenso/lib/utils/teams';
-import { OrganisationType } from '@documenso/prisma/generated/types';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Trans } from '@lingui/react/macro';
 import { CheckCircle2, Clock } from 'lucide-react';
 import { match, P } from 'ts-pattern';
-
 import { TeamDeleteDialog } from '~/components/dialogs/team-delete-dialog';
 import { TeamEmailAddDialog } from '~/components/dialogs/team-email-add-dialog';
 import { AvatarImageForm } from '~/components/forms/avatar-image';
@@ -18,7 +17,6 @@ import { TeamUpdateForm } from '~/components/forms/team-update-form';
 import { SettingsHeader } from '~/components/general/settings-header';
 import { TeamEmailDropdown } from '~/components/general/teams/team-email-dropdown';
 import { useCurrentTeam } from '~/providers/team';
-import { useSession } from '@documenso/lib/client-only/providers/session';
 
 import type { Route } from './+types/settings._index';
 

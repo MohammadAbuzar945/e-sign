@@ -185,7 +185,7 @@ export const EnvelopeDropZoneWrapper = ({ children, type, className }: EnvelopeD
             {isUploadDisabled && IS_BILLING_ENABLED() && (
               <Link
                 to={organisation ? `/o/${organisation.url}/price-plan` : `/price-plans`}
-                className="mt-4 text-sm text-amber-500 hover:underline dark:text-amber-400"
+                className="mt-4 text-amber-500 text-sm hover:underline dark:text-amber-400"
               >
                 <Trans>Upgrade your plan to upload more documents</Trans>
               </Link>

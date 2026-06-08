@@ -26,27 +26,26 @@ export const SELFHOSTED_PLAN_LIMITS: TLimitsSchema = {
 
 /**
  * Used as an initial value for the frontend before values are loaded from the server.
- * 
- * 
- * 
+ *
+ *
+ *
  */
-
 
 export const PLAN_DOCUMENT_QUOTAS: Record<string, number> = {
   //Test Plans
   PLN_scnf05tt3vrui2i: 12000, // EsignAnnual12000
-  PLN_moko1x694rvm5l8: 6000, // EsignAnnual6000   
+  PLN_moko1x694rvm5l8: 6000, // EsignAnnual6000
   PLN_kn6j6ur12pedilo: 2400, // EsignAnnual2400
   PLN_tzngz1lbhvxnufb: 1200, // EsignAnnual1200
   PLN_8kh731h1ojcx37d: 600, // EsignAnnual600
-  PLN_coac3n7m4jo59ct: 240, // EsignAnnual240 
-  
+  PLN_coac3n7m4jo59ct: 240, // EsignAnnual240
+
   PLN_q4qbiwreibc8qr5: 1000, // EsignMonthly1000
-  PLN_27yc6cxtga9huy7: 500, // EsignMonthly500 
+  PLN_27yc6cxtga9huy7: 500, // EsignMonthly500
   PLN_0oqk4fljy5uais0: 200, // EsignMonthly200
-  PLN_yvo5ujkxt1diiak: 100, // EsignMonthly100 
+  PLN_yvo5ujkxt1diiak: 100, // EsignMonthly100
   PLN_zel9llutx085dp9: 50, // EsignMonthly50
-  PLN_1croxh14pyq4cj7: 20, // EsignMonthly20 
+  PLN_1croxh14pyq4cj7: 20, // EsignMonthly20
 
   PLN_f54sm9jv38v7r5m: 1000, // EsignPayAsYouGo1000 (Test)
   PLN_5nmok91ploz44u6: 500, // EsignPayAsYouGo500 (Test)
@@ -54,11 +53,6 @@ export const PLAN_DOCUMENT_QUOTAS: Record<string, number> = {
   PLN_ktbomtrjkiz73i1: 100, // EsignPayAsYouGo100 (Test)
   PLN_59961ig3ply5r3s: 50, // EsignPayAsYouGo50 (Test)
   PLN_bit1oy0ayiqpkdu: 20, // EsignPayAsYouGo20 (Test)
-
-  
-
-
-
 
   //Live Plans
 
@@ -83,37 +77,23 @@ export const PLAN_DOCUMENT_QUOTAS: Record<string, number> = {
   PLN_jw0og1p6hc4oz9d: 50, //EsignPayAsYouGo50
   PLN_qcz1c2zdiyk3lw3: 20, //EsignPayAsYouGo20
 
-
-
-//Live
-  u1d7onwlr : 1000, //EsignPayAsYouGo1000
+  //Live
+  u1d7onwlr: 1000, //EsignPayAsYouGo1000
   jk53idasm2: 500, //EsignPayAsYouGo500
   pkxnaia58b: 200, //EsignPayAsYouGo200
   nom51ao6dn: 100, //EsignPayAsYouGo100
   x0njhbshus: 50, //EsignPayAsYouGo50
   t1tt334q2r: 20, //EsignPayAsYouGo20
 
-
-
-
-
-
-
   //tEST
-  
 
-
-  q2shmym9rjg : 1000, //EsignPayAsYouGo1000
+  q2shmym9rjg: 1000, //EsignPayAsYouGo1000
   bpbblrunck: 500, //EsignPayAsYouGo500
   c4jdb6jsv7: 200, //EsignPayAsYouGo200
   dfpu1arzjn: 100, //EsignPayAsYouGo100
   guc0g9s57q: 50, //EsignPayAsYouGo50
-  testqoiw2m: 20 //EsignPayAsYouGo20
-
-
+  testqoiw2m: 20, //EsignPayAsYouGo20
 };
-
-
 
 export const DEFAULT_MINIMUM_ENVELOPE_ITEM_COUNT = 5;
 

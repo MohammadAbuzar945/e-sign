@@ -1,7 +1,6 @@
-import { redirect } from 'react-router';
-
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { prisma } from '@documenso/prisma';
+import { redirect } from 'react-router';
 
 import { appMetaTags } from '~/utils/meta';
 

@@ -40,14 +40,14 @@ export const DocumentGlobalAuthAccessSelect = ({
   const displayValue = value?.length ? value : ['-1'];
 
   // Convert string array to Option array for MultiSelect
-  const selectedOptions = (
-    displayValue.map((val) => authOptions.find((option) => option.value === val)).filter(Boolean) as Option[]
-  );
+  const selectedOptions = displayValue
+    .map((val) => authOptions.find((option) => option.value === val))
+    .filter(Boolean) as Option[];
 
   // Convert default value to Option array (empty = No restrictions)
-  const defaultOptions = (
-    (defaultValue?.length ? defaultValue : ['-1']).map((val) => authOptions.find((option) => option.value === val)).filter(Boolean) as Option[]
-  );
+  const defaultOptions = (defaultValue?.length ? defaultValue : ['-1'])
+    .map((val) => authOptions.find((option) => option.value === val))
+    .filter(Boolean) as Option[];
 
   const handleChange = (options: Option[]) => {
     let values = options.map((option) => option.value);
@@ -105,14 +105,12 @@ export const DocumentGlobalAuthAccessTooltip = () => (
         </li>
         <li>
           <Trans>
-            <strong>No restrictions</strong> - The document can be accessed directly by the URL sent
-            to the recipient
+            <strong>No restrictions</strong> - The document can be accessed directly by the URL sent to the recipient
           </Trans>
         </li>
         <li>
           <Trans>
-            <strong>Require KBA</strong> — Question before access; configure in the fields below
-            when selected.
+            <strong>Require KBA</strong> — Question before access; configure in the fields below when selected.
           </Trans>
         </li>
       </ul>

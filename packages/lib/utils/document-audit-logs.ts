@@ -564,19 +564,16 @@ export const formatDocumentAuditLogAction = (i18n: I18n, auditLog: TDocumentAudi
       }),
       identified: msg`${prefix} updated KBA settings`,
     }))
-    .with(
-      { type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_CHALLENGE_VIEWED },
-      ({ data }) => {
-        const userName = prefix || i18n._(msg`Recipient`);
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_CHALLENGE_VIEWED }, ({ data }) => {
+      const userName = prefix || i18n._(msg`Recipient`);
 
-        const result = msg`${userName} opened the KBA challenge`;
+      const result = msg`${userName} opened the KBA challenge`;
 
-        return {
-          anonymous: result,
-          identified: result,
-        };
-      },
-    )
+      return {
+        anonymous: result,
+        identified: result,
+      };
+    })
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_VALIDATED }, ({ data }) => {
       const userName = prefix || i18n._(msg`Recipient`);
 

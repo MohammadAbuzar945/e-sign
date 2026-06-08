@@ -14,4 +14,3 @@ export const accessAuthGetKbaChallengeRoute = procedure
       token: input.token,
     });
   });
-

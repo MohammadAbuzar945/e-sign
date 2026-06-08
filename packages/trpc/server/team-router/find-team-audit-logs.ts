@@ -1,24 +1,13 @@
 import { findTeamAuditLogs } from '@documenso/lib/server-only/team/find-team-audit-logs';
 
 import { authenticatedProcedure } from '../trpc';
-import {
-  ZFindTeamAuditLogsRequestSchema,
-  ZFindTeamAuditLogsResponseSchema,
-} from './find-team-audit-logs.types';
+import { ZFindTeamAuditLogsRequestSchema, ZFindTeamAuditLogsResponseSchema } from './find-team-audit-logs.types';
 
 export const findTeamAuditLogsRoute = authenticatedProcedure
   .input(ZFindTeamAuditLogsRequestSchema)
   .output(ZFindTeamAuditLogsResponseSchema)
   .query(async ({ input, ctx }) => {
-    const {
-      page,
-      perPage,
-      teamId,
-      cursor,
-      types,
-      orderByColumn,
-      orderByDirection,
-    } = input;
+    const { page, perPage, teamId, cursor, types, orderByColumn, orderByDirection } = input;
 
     ctx.logger.info({
       input: {
@@ -36,4 +25,3 @@ export const findTeamAuditLogsRoute = authenticatedProcedure
       orderBy: orderByColumn ? { column: orderByColumn, direction: orderByDirection } : undefined,
     });
   });
-

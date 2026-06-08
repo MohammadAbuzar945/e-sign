@@ -1,17 +1,13 @@
 import { prisma } from '@documenso/prisma';
 
 /** Email of the service account used for deleted-user data. Excluded from admin user lists. */
-export const DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL =
-  'abuzarmohammad945+service-account@gmail.com' as const;
+export const DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL = 'abuzarmohammad945+service-account@gmail.com' as const;
 
 /** Additional internal emails excluded from admin user lists. */
 export const DELETED_ACCOUNT_EMAIL = 'abuzarmohammad945+deleted-account@gmail.com' as const;
 
 /** All emails hidden from the admin panel users list. */
-export const ADMIN_HIDDEN_USER_EMAILS = [
-  DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL,
-  DELETED_ACCOUNT_EMAIL,
-] as const;
+export const ADMIN_HIDDEN_USER_EMAILS = [DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL, DELETED_ACCOUNT_EMAIL] as const;
 
 const LEGACY_DELETED_ACCOUNT_EMAIL = 'deleted-account@documenso.com';
 

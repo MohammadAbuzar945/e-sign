@@ -1,12 +1,11 @@
+import { env } from '@documenso/lib/utils/env';
 import { formatTeamUrl } from '@documenso/lib/utils/teams';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
-
 import { Body, Container, Head, Hr, Html, Img, Preview, Section, Text } from '../components';
 import { useBranding } from '../providers/branding';
 import { TemplateFooter } from '../template-components/template-footer';
 import TemplateImage from '../template-components/template-image';
-import { env } from '@documenso/lib/utils/env';
 
 export type TeamDeleteEmailProps = {
   assetBaseUrl: string;

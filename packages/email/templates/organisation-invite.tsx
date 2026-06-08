@@ -1,8 +1,7 @@
+import { env } from '@documenso/lib/utils/env';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-
-import { env } from '@documenso/lib/utils/env';
 import { Body, Button, Container, Head, Hr, Html, Img, Preview, Section, Text } from '../components';
 import { useBranding } from '../providers/branding';
 import { TemplateFooter } from '../template-components/template-footer';

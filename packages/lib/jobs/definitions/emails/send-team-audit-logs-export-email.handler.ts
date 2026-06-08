@@ -1,9 +1,7 @@
-import { createElement } from 'react';
-
-import { msg } from '@lingui/core/macro';
-
 import { mailer } from '@documenso/email/mailer';
 import { TeamAuditLogsExportEmailTemplate } from '@documenso/email/templates/team-audit-logs-export';
+import { msg } from '@lingui/core/macro';
+import { createElement } from 'react';
 
 import { getI18nInstance } from '../../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../../constants/app';
@@ -12,13 +10,7 @@ import { renderEmailWithI18N } from '../../../utils/render-email-with-i18n';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSendTeamAuditLogsExportEmailJobDefinition } from './send-team-audit-logs-export-email';
 
-export const run = async ({
-  payload,
-  io,
-}: {
-  payload: TSendTeamAuditLogsExportEmailJobDefinition;
-  io: JobRunIO;
-}) => {
+export const run = async ({ payload, io }: { payload: TSendTeamAuditLogsExportEmailJobDefinition; io: JobRunIO }) => {
   const { teamId, teamName, requestedByUserEmail, requestedByUserName, downloadUrl } = payload;
 
   const { branding, emailLanguage, senderEmail } = await getEmailContext({
@@ -63,4 +55,3 @@ export const run = async ({
     });
   });
 };
-

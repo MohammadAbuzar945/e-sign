@@ -195,9 +195,7 @@ export const DocumentUploadButtonLegacy = ({ className, type }: DocumentUploadBu
           {showCreditsInfo && remaining.documents > 0 && (
             <TooltipContent>
               <p className="text-sm">
-                <Trans>
-                  {remaining.documents} envelopes remaining
-                </Trans>
+                <Trans>{remaining.documents} envelopes remaining</Trans>
               </p>
             </TooltipContent>
           )}
@@ -206,13 +204,8 @@ export const DocumentUploadButtonLegacy = ({ className, type }: DocumentUploadBu
 
       {/* Always show remaining credits under the button */}
       {showCreditsInfo && (
-        <p className={cn(
-          "text-xs text-center",
-          hasNoCredits ? "text-muted-foreground " : "text-muted-foreground"
-        )}>
-          <Trans>
-            {remaining.documents} envelopes remaining
-          </Trans>
+        <p className={cn('text-center text-xs', hasNoCredits ? 'text-muted-foreground' : 'text-muted-foreground')}>
+          <Trans>{remaining.documents} envelopes remaining</Trans>
         </p>
       )}
     </div>

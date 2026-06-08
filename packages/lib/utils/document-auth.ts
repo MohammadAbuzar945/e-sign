@@ -25,9 +25,7 @@ export const extractDocumentAuthMethods = ({ documentAuth, recipientAuth }: Extr
     parsedDocumentAuth.kbaAccessExplicitlyDisabled === true
       ? {
           ...parsedDocumentAuth,
-          globalAccessAuth: parsedDocumentAuth.globalAccessAuth.filter(
-            (method) => method !== DocumentAuth.KBA,
-          ),
+          globalAccessAuth: parsedDocumentAuth.globalAccessAuth.filter((method) => method !== DocumentAuth.KBA),
         }
       : parsedDocumentAuth;
 

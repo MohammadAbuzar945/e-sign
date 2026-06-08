@@ -193,8 +193,7 @@ export class LocalJobProvider extends BaseJobProvider {
   public async triggerJob(options: SimpleTriggerJobOptions) {
     const eligibleJobs = Object.values(this._jobDefinitions).filter((job) => job.trigger.name === options.name);
 
-    const requestedJobId =
-      typeof options.id === 'string' && eligibleJobs.length === 1 ? options.id : undefined;
+    const requestedJobId = typeof options.id === 'string' && eligibleJobs.length === 1 ? options.id : undefined;
 
     await Promise.all(
       eligibleJobs.map(async (job) => {
@@ -342,17 +341,19 @@ export class LocalJobProvider extends BaseJobProvider {
             });
 
         if (taskHasExceededRetries || jobHasExceededRetries) {
-          backgroundJob = (await updateJobInCatch({
-            status: BackgroundJobStatus.FAILED,
-            completedAt: new Date(),
-          })) ?? backgroundJob;
+          backgroundJob =
+            (await updateJobInCatch({
+              status: BackgroundJobStatus.FAILED,
+              completedAt: new Date(),
+            })) ?? backgroundJob;
 
           return c.text('Task exceeded retries', 500);
         }
 
-        backgroundJob = (await updateJobInCatch({
-          status: BackgroundJobStatus.PENDING,
-        })) ?? backgroundJob;
+        backgroundJob =
+          (await updateJobInCatch({
+            status: BackgroundJobStatus.PENDING,
+          })) ?? backgroundJob;
 
         if (backgroundJob) {
           await this.submitJobToEndpoint({

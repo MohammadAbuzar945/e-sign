@@ -9,10 +9,7 @@ import { isDeepEqual } from 'remeda';
 
 import { TEAM_DOCUMENT_VISIBILITY_MAP } from '../../constants/teams';
 import { AppError, AppErrorCode } from '../../errors/app-error';
-import type {
-  TDocumentAccessAuthTypes,
-  TDocumentActionAuthTypes,
-} from '../../types/document-auth';
+import type { TDocumentAccessAuthTypes, TDocumentActionAuthTypes } from '../../types/document-auth';
 import { ZDocumentAuthOptionsSchema } from '../../types/document-auth';
 import { ZClaimFlagsSchema } from '../../types/subscription';
 import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../types/webhook-payload';
@@ -114,10 +111,8 @@ export const updateEnvelope = async ({
   const documentGlobalActionAuth = documentAuthOption?.globalActionAuth ?? null;
 
   // If the new global auth values aren't passed in, fallback to the current document values.
-  const newGlobalAccessAuth =
-    data?.globalAccessAuth === undefined ? documentGlobalAccessAuth : data.globalAccessAuth;
-  const newGlobalActionAuth =
-    data?.globalActionAuth === undefined ? documentGlobalActionAuth : data.globalActionAuth;
+  const newGlobalAccessAuth = data?.globalAccessAuth === undefined ? documentGlobalAccessAuth : data.globalAccessAuth;
+  const newGlobalActionAuth = data?.globalActionAuth === undefined ? documentGlobalActionAuth : data.globalActionAuth;
 
   const newKbaAccessExplicitlyDisabled =
     data?.kbaAccessExplicitlyDisabled !== undefined
@@ -125,11 +120,8 @@ export const updateEnvelope = async ({
       : Boolean(existingAuthOptions.kbaAccessExplicitlyDisabled);
 
   // Check if user has permission to set the global action auth.
-  const organisationClaimFlags = ZClaimFlagsSchema.safeParse(
-    envelope.team.organisation.organisationClaim.flags,
-  );
-  const hasCfr21 =
-    organisationClaimFlags.success && Boolean(organisationClaimFlags.data.cfr21);
+  const organisationClaimFlags = ZClaimFlagsSchema.safeParse(envelope.team.organisation.organisationClaim.flags);
+  const hasCfr21 = organisationClaimFlags.success && Boolean(organisationClaimFlags.data.cfr21);
 
   if (newGlobalActionAuth.length > 0 && !hasCfr21) {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {

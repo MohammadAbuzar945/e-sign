@@ -1,10 +1,9 @@
 import { z } from 'zod';
-
+import { SUPPORTED_LANGUAGE_CODES } from '../../../constants/i18n';
 import {
   TEAM_AUDIT_LOG_EXPORT_DATE_RANGES,
   type TTeamAuditLogExportDateRange,
 } from '../../../constants/team-audit-logs';
-import { SUPPORTED_LANGUAGE_CODES } from '../../../constants/i18n';
 import { ZRequestMetadataSchema } from '../../../universal/extract-request-metadata';
 import type { JobDefinition } from '../../client/_internal/job';
 
@@ -25,9 +24,7 @@ export const ZExportTeamAuditLogsCsvJobDefinitionSchema = z.object({
   requestMetadata: ZRequestMetadataSchema.optional(),
 });
 
-export type TExportTeamAuditLogsCsvJobDefinition = z.infer<
-  typeof ZExportTeamAuditLogsCsvJobDefinitionSchema
->;
+export type TExportTeamAuditLogsCsvJobDefinition = z.infer<typeof ZExportTeamAuditLogsCsvJobDefinitionSchema>;
 
 export const EXPORT_TEAM_AUDIT_LOGS_CSV_JOB_DEFINITION = {
   id: EXPORT_TEAM_AUDIT_LOGS_CSV_JOB_DEFINITION_ID,
@@ -47,4 +44,3 @@ export const EXPORT_TEAM_AUDIT_LOGS_CSV_JOB_DEFINITION = {
   typeof EXPORT_TEAM_AUDIT_LOGS_CSV_JOB_DEFINITION_ID,
   TExportTeamAuditLogsCsvJobDefinition
 >;
-

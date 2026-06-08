@@ -14,4 +14,3 @@ export const ZAccessAuthVerifyKbaResponseSchema = z.object({
 
 export type TAccessAuthVerifyKbaRequest = z.infer<typeof ZAccessAuthVerifyKbaRequestSchema>;
 export type TAccessAuthVerifyKbaResponse = z.infer<typeof ZAccessAuthVerifyKbaResponseSchema>;
-

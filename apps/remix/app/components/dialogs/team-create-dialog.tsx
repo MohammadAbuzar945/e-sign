@@ -1,10 +1,7 @@
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
-import {
-  NEXT_PUBLIC_WEBAPP_URL,
-  SUPPORT_EMAIL,
-} from '@documenso/lib/constants/app';
+import { NEXT_PUBLIC_WEBAPP_URL, SUPPORT_EMAIL } from '@documenso/lib/constants/app';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { ZCreateTeamRequestBaseSchema } from '@documenso/trpc/server/team-router/create-team.types';
@@ -22,13 +19,7 @@ import {
 } from '@documenso/ui/primitives/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@documenso/ui/primitives/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { SpinnerBox } from '@documenso/ui/primitives/spinner';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -316,10 +307,7 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
                             }}
                           />
 
-                          <label
-                            className="text-muted-foreground ml-2 text-sm"
-                            htmlFor="inherit-members"
-                          >
+                          <label className="ml-2 text-muted-foreground text-sm" htmlFor="inherit-members">
                             <Trans>Allow all organisation members to access this team</Trans>
                           </label>
                         </div>
@@ -348,10 +336,7 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
                             }}
                           />
 
-                          <label
-                            className="text-muted-foreground ml-2 text-sm"
-                            htmlFor="is-private"
-                          >
+                          <label className="ml-2 text-muted-foreground text-sm" htmlFor="is-private">
                             <Trans>Private Team - only members can see documents</Trans>
                           </label>
                         </div>
@@ -370,14 +355,9 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
                           <Trans>Team admin</Trans>
                         </FormLabel>
                         <FormControl>
-                          <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
-                          >
+                          <Select value={field.value} onValueChange={field.onChange}>
                             <SelectTrigger className="bg-background">
-                              <SelectValue
-                                placeholder={_(msg`Select an organisation member`)}
-                              />
+                              <SelectValue placeholder={_(msg`Select an organisation member`)} />
                             </SelectTrigger>
                             <SelectContent>
                               {organisationMembers?.data?.map((member) => (
@@ -388,10 +368,10 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
                             </SelectContent>
                           </Select>
                         </FormControl>
-                        <span className="text-foreground/50 text-xs font-normal">
+                        <span className="font-normal text-foreground/50 text-xs">
                           <Trans>
-                            Only this member will be added to the private team as an admin. No
-                            organisation groups will be added automatically.
+                            Only this member will be added to the private team as an admin. No organisation groups will
+                            be added automatically.
                           </Trans>
                         </span>
                         <FormMessage />

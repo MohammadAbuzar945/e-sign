@@ -1,14 +1,3 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import type { TeamGlobalSettings } from '@prisma/client';
-import { DocumentVisibility, OrganisationType, type RecipientRole } from '@prisma/client';
-import type { ChangeEvent } from 'react';
-import { InfoIcon } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { DATE_FORMATS } from '@documenso/lib/constants/date-formats';
@@ -22,10 +11,7 @@ import { isValidLanguageCode, SUPPORTED_LANGUAGE_CODES, SUPPORTED_LANGUAGES } fr
 import { TIME_ZONES } from '@documenso/lib/constants/time-zones';
 import type { TDefaultRecipients } from '@documenso/lib/types/default-recipients';
 import { ZDefaultRecipientsSchema } from '@documenso/lib/types/default-recipients';
-import {
-  ZDocumentKbaModeSchema,
-  type TDocumentKbaSettings,
-} from '@documenso/lib/types/document-auth';
+import { type TDocumentKbaSettings, ZDocumentKbaModeSchema } from '@documenso/lib/types/document-auth';
 import { type TDocumentMetaDateFormat, ZDocumentMetaTimezoneSchema } from '@documenso/lib/types/document-meta';
 import { normalizeStoredKbaSettings } from '@documenso/lib/utils/kba-settings';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
@@ -38,7 +24,6 @@ import { RecipientRoleSelect } from '@documenso/ui/components/recipient/recipien
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Button } from '@documenso/ui/primitives/button';
-import { Switch } from '@documenso/ui/primitives/switch';
 import { Combobox } from '@documenso/ui/primitives/combobox';
 import {
   Form,
@@ -49,15 +34,18 @@ import {
   FormLabel,
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
+import { Input } from '@documenso/ui/primitives/input';
 import { MultiSelectCombobox } from '@documenso/ui/primitives/multi-select-combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
-import { Input } from '@documenso/ui/primitives/input';
+import { Switch } from '@documenso/ui/primitives/switch';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { msg, t } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import type { TeamGlobalSettings } from '@prisma/client';
 import { DocumentVisibility, OrganisationType, type RecipientRole } from '@prisma/client';
+import { InfoIcon } from 'lucide-react';
+import type { ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -166,8 +154,7 @@ export const DocumentPreferencesForm = ({
     kbaLockoutMinutes: z.number().int().min(1).max(1440),
   });
 
-  const resolvedEffectiveKba =
-    effectiveKbaSettings ?? normalizeStoredKbaSettings(settings.kbaSettings);
+  const resolvedEffectiveKba = effectiveKbaSettings ?? normalizeStoredKbaSettings(settings.kbaSettings);
   const displayKba = normalizeStoredKbaSettings(
     canInherit && settings.kbaSettings === null ? resolvedEffectiveKba : settings.kbaSettings,
   );
@@ -201,8 +188,7 @@ export const DocumentPreferencesForm = ({
   const kbaInheritOrganisationKbaDefaults = form.watch('kbaInheritOrganisationKbaDefaults');
   const kbaIsEnabled = form.watch('kbaIsEnabled');
   const showTeamKbaOverrideFields = canInherit && !kbaInheritOrganisationKbaDefaults;
-  const showKbaTuningFields =
-    kbaIsEnabled && (!canInherit || showTeamKbaOverrideFields);
+  const showKbaTuningFields = kbaIsEnabled && (!canInherit || showTeamKbaOverrideFields);
 
   return (
     <Form {...form}>
@@ -569,8 +555,8 @@ export const DocumentPreferencesForm = ({
 
                 <FormDescription>
                   <Trans>
-                    When enabled, the signing certificate PDF will include a QR code linking to the
-                    document. Default is on. Can be overridden per document in Security settings.
+                    When enabled, the signing certificate PDF will include a QR code linking to the document. Default is
+                    on. Can be overridden per document in Security settings.
                   </Trans>
                 </FormDescription>
               </FormItem>
@@ -863,10 +849,10 @@ export const DocumentPreferencesForm = ({
           )}
 
           <div className="border-t pt-6">
-            <h3 className="mb-4 text-lg font-medium">
+            <h3 className="mb-4 font-medium text-lg">
               <Trans>Knowledge-based authentication (KBA)</Trans>
             </h3>
-            <p className="mb-4 text-sm text-muted-foreground">
+            <p className="mb-4 text-muted-foreground text-sm">
               {canInherit ? (
                 <Trans>Optional question before access. Documents can override.</Trans>
               ) : (
@@ -924,11 +910,10 @@ export const DocumentPreferencesForm = ({
                     <AlertTitle>
                       <Trans>Organisation KBA defaults</Trans>
                     </AlertTitle>
-                    <AlertDescription className="mt-1 text-sm text-muted-foreground">
+                    <AlertDescription className="mt-1 text-muted-foreground text-sm">
                       <Trans>
-                        This team follows your organisation&apos;s document preferences. Values
-                        below are read-only here; choose &quot;Override organisation settings&quot;
-                        to set KBA only for this team.
+                        This team follows your organisation&apos;s document preferences. Values below are read-only
+                        here; choose &quot;Override organisation settings&quot; to set KBA only for this team.
                       </Trans>
                     </AlertDescription>
                   </div>
@@ -938,11 +923,10 @@ export const DocumentPreferencesForm = ({
                       <div className="space-y-3">
                         <p className="font-medium text-foreground">
                           <Trans>
-                            KBA is on for new documents — signers may be asked a question before
-                            they can open the file.
+                            KBA is on for new documents — signers may be asked a question before they can open the file.
                           </Trans>
                         </p>
-                        <dl className="space-y-2.5 border-t border-border/60 pt-3">
+                        <dl className="space-y-2.5 border-border/60 border-t pt-3">
                           <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
                             <dt className="font-medium text-foreground">
                               <Trans>Challenge scope</Trans>
@@ -959,7 +943,7 @@ export const DocumentPreferencesForm = ({
                             <dt className="font-medium text-foreground">
                               <Trans>Wrong answers before lockout</Trans>
                             </dt>
-                            <dd className="tabular-nums text-muted-foreground sm:text-right">
+                            <dd className="text-muted-foreground tabular-nums sm:text-right">
                               {resolvedEffectiveKba.maxAttempts}
                             </dd>
                           </div>
@@ -967,7 +951,7 @@ export const DocumentPreferencesForm = ({
                             <dt className="font-medium text-foreground">
                               <Trans>Lockout length</Trans>
                             </dt>
-                            <dd className="tabular-nums text-muted-foreground sm:text-right">
+                            <dd className="text-muted-foreground tabular-nums sm:text-right">
                               <Trans>{resolvedEffectiveKba.lockoutMinutes} minutes</Trans>
                             </dd>
                           </div>
@@ -980,9 +964,8 @@ export const DocumentPreferencesForm = ({
                         </p>
                         <p className="text-muted-foreground">
                           <Trans>
-                            New documents do not get KBA by default from the organisation. If this
-                            team should use KBA anyway, switch to &quot;Override organisation
-                            settings&quot; and turn it on for the team.
+                            New documents do not get KBA by default from the organisation. If this team should use KBA
+                            anyway, switch to &quot;Override organisation settings&quot; and turn it on for the team.
                           </Trans>
                         </p>
                       </div>
@@ -1008,11 +991,7 @@ export const DocumentPreferencesForm = ({
                         </FormDescription>
                       </div>
                       <FormControl>
-                        <Switch
-                          className="shrink-0"
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
+                        <Switch className="shrink-0" checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
                     </FormItem>
                   )}

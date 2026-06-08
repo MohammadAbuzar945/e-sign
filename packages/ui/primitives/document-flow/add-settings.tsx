@@ -285,9 +285,7 @@ export const AddSettingsFormPartial = ({
                     <Select
                       value={field.value == null ? '-1' : String(field.value)}
                       onValueChange={(value) => {
-                        field.onChange(
-                          value === '-1' ? null : value === 'true',
-                        );
+                        field.onChange(value === '-1' ? null : value === 'true');
                         void handleAutoSave();
                       }}
                     >

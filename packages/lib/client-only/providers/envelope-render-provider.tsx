@@ -207,19 +207,9 @@ export const EnvelopeRenderProvider = ({
     setCurrentItemId(foundItem?.id ?? null);
   };
 
-  const refreshEnvelopeItems = useCallback(
-    async (envelopeItemIds?: string[]) => {
-      const targetItems =
-        envelopeItemIds && envelopeItemIds.length > 0
-          ? envelopeItems.filter((item) => envelopeItemIds.includes(item.id))
-          : envelopeItems;
-
-      for (const item of targetItems) {
-        void loadEnvelopeItemPdfFile(item, { force: true });
-      }
-    },
-    [envelopeItems, loadEnvelopeItemPdfFile],
-  );
+  const refreshEnvelopeItems = useCallback(async (_envelopeItemIds?: string[]) => {
+    // Envelope items are derived from props; parent must refresh data.
+  }, []);
 
   // Set the selected item to the first item if none is set.
   useEffect(() => {

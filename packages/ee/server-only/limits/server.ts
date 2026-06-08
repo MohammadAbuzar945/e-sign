@@ -1,15 +1,13 @@
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
-import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
-import { ZClaimFlagsSchema } from '@documenso/lib/types/subscription';
 import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
+import { INTERNAL_CLAIM_ID, ZClaimFlagsSchema } from '@documenso/lib/types/subscription';
 import { prisma } from '@documenso/prisma';
-import { DocumentSource, EnvelopeType, SubscriptionStatus } from '@prisma/client';
-import { DateTime } from 'luxon';
+import { EnvelopeType, SubscriptionStatus } from '@prisma/client';
 
 import { FREE_PLAN_LIMITS, INACTIVE_PLAN_LIMITS, PAID_PLAN_LIMITS, SELFHOSTED_PLAN_LIMITS } from './constants';
 import { ERROR_CODES } from './errors';
 import type { TLimitsResponseSchema } from './schema';
-import { ensureOrganisationCredits, getOrganisationCredits } from './user-credits';
+import { getOrganisationCredits } from './user-credits';
 
 export type GetServerLimitsOptions = {
   userId: number;
@@ -58,7 +56,7 @@ export const getServerLimits = async ({ userId, teamId }: GetServerLimitsOptions
   const userOrganisationIds = userOrganisationMembers.map((m) => m.organisationId);
   if (!userOrganisationIds.includes(team.organisationId)) {
     console.error(
-      'User is not a member of the team\'s organisation. Team organisationId:',
+      "User is not a member of the team's organisation. Team organisationId:",
       team.organisationId,
       'User organisationIds:',
       userOrganisationIds,
@@ -81,7 +79,14 @@ export const getServerLimits = async ({ userId, teamId }: GetServerLimitsOptions
   });
 
   if (!organisation) {
-    console.error('No organisation found for userId:', userId, 'teamId:', teamId, 'organisationId:', team.organisationId);
+    console.error(
+      'No organisation found for userId:',
+      userId,
+      'teamId:',
+      teamId,
+      'organisationId:',
+      team.organisationId,
+    );
     throw new Error(ERROR_CODES.USER_FETCH_FAILED);
   }
 
@@ -95,7 +100,7 @@ export const getServerLimits = async ({ userId, teamId }: GetServerLimitsOptions
   const subscription = await getCurrentSubscriptionByOrganisationId({
     organisationId: organisation.id,
   });
-  
+
   // Query organisation credits from UserCredits table (credits column)
   // Each organisation has its own credits pool
   let userCredits: number;
@@ -113,10 +118,10 @@ export const getServerLimits = async ({ userId, teamId }: GetServerLimitsOptions
     }
     throw new Error(ERROR_CODES.USER_FETCH_FAILED);
   }
-  
+
   // Get maximumEnvelopeItemCount from organisationClaim
   const maximumEnvelopeItemCount = organisation.organisationClaim.envelopeItemCount;
-  
+
   // Validate that envelopeItemCount was successfully queried from database
   // Allow 0 as a valid value
   if (typeof maximumEnvelopeItemCount !== 'number' || isNaN(maximumEnvelopeItemCount) || maximumEnvelopeItemCount < 0) {
@@ -131,7 +136,7 @@ export const getServerLimits = async ({ userId, teamId }: GetServerLimitsOptions
     recipients: FREE_PLAN_LIMITS.recipients,
     directTemplates: FREE_PLAN_LIMITS.directTemplates,
   };
-  
+
   const remaining = {
     documents: Math.max(userCredits, 0), // Current remaining credits from UserCredits table
     recipients: FREE_PLAN_LIMITS.recipients,

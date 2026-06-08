@@ -3,7 +3,6 @@ import type { Envelope, Recipient } from '@prisma/client';
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import { match } from 'ts-pattern';
-import { verifyKbaAttempt } from '../kba/kba';
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { TDocumentAuth, TDocumentAuthMethods } from '../../types/document-auth';
 import { DocumentAuth } from '../../types/document-auth';
@@ -13,6 +12,7 @@ import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import { validateTwoFactorTokenFromEmail } from '../2fa/email/validate-2fa-token-from-email';
 import { verifyTwoFactorAuthenticationToken } from '../2fa/verify-2fa-token';
 import { verifyPassword } from '../2fa/verify-password';
+import { verifyKbaAttempt } from '../kba/kba';
 
 type IsRecipientAuthorizedOptions = {
   // !: Probably find a better name than 'ACCESS_2FA' if requirements change.

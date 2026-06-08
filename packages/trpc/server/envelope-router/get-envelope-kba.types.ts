@@ -57,4 +57,3 @@ export const ZGetEnvelopeKbaResponseSchema = z.object({
 
 export type TGetEnvelopeKbaRequest = z.infer<typeof ZGetEnvelopeKbaRequestSchema>;
 export type TGetEnvelopeKbaResponse = z.infer<typeof ZGetEnvelopeKbaResponseSchema>;
-

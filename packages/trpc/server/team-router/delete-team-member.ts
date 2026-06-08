@@ -1,14 +1,11 @@
-import { OrganisationGroupType, TeamMemberRole } from '@prisma/client';
-
 import { TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
 import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
+import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
-
-import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
-import { OrganisationGroupType } from '@prisma/client';
+import { OrganisationGroupType, TeamMemberRole } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
 import { ZDeleteTeamMemberRequestSchema, ZDeleteTeamMemberResponseSchema } from './delete-team-member.types';
@@ -119,10 +116,7 @@ export const deleteTeamMemberRoute = authenticatedProcedure
       )?.organisationMember;
 
     // Prevent admins from removing themselves from the team.
-    if (
-      organisationMemberToDelete?.userId === user.id &&
-      currentMemberToDeleteTeamRole === TeamMemberRole.ADMIN
-    ) {
+    if (organisationMemberToDelete?.userId === user.id && currentMemberToDeleteTeamRole === TeamMemberRole.ADMIN) {
       throw new AppError(AppErrorCode.UNAUTHORIZED, {
         message: 'Admins cannot remove themselves from the team.',
       });
@@ -135,7 +129,7 @@ export const deleteTeamMemberRoute = authenticatedProcedure
       });
     }
 
-    const removedMember = teamGroupToRemoveMemberFrom.organisationGroup.organisationGroupMembers.find(
+    const removedMember = internalTeamGroupToRemoveMemberFrom.organisationGroup.organisationGroupMembers.find(
       (ogm) => ogm.organisationMember.id === memberId,
     );
 

@@ -1,6 +1,5 @@
-import { EnvelopeType } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../../errors/app-error';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '../../../types/document-audit-logs';
@@ -96,9 +95,7 @@ export const verifyKbaByToken = async ({ token, answer }: VerifyKbaByTokenOption
     });
   }
 
-  const persistedChallenge = envelope.kbaChallenges.find(
-    (envelopeChallenge) => envelopeChallenge.id === challenge.id,
-  );
+  const persistedChallenge = envelope.kbaChallenges.find((envelopeChallenge) => envelopeChallenge.id === challenge.id);
 
   if (!persistedChallenge) {
     throw new AppError(AppErrorCode.NOT_FOUND, {
@@ -257,8 +254,9 @@ export const verifyKbaByToken = async ({ token, answer }: VerifyKbaByTokenOption
   return {
     success: isValid,
     isLocked: isLockedAfterAttempt,
-    attemptsRemaining: isValid ? envelope.kbaPolicy.maxAttempts : Math.max(envelope.kbaPolicy.maxAttempts - failedAttemptsAfterAttempt, 0),
+    attemptsRemaining: isValid
+      ? envelope.kbaPolicy.maxAttempts
+      : Math.max(envelope.kbaPolicy.maxAttempts - failedAttemptsAfterAttempt, 0),
     lockoutRemainingSeconds,
   };
 };
-

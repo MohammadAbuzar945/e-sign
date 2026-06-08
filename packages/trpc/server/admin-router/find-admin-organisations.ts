@@ -1,6 +1,6 @@
-import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { getCurrentSubscriptionsByOrganisationIds } from '@documenso/lib/server-only/subscription/get-current-subscriptions-by-organisation-ids';
 import { ADMIN_HIDDEN_USER_EMAILS } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
+import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { prisma } from '@documenso/prisma';
 import { Prisma } from '@prisma/client';
 
@@ -125,9 +125,7 @@ export const findAdminOrganisations = async ({
     owner: { email: { notIn: [...ADMIN_HIDDEN_USER_EMAILS] } },
   };
   whereClause =
-    Object.keys(whereClause).length === 0
-      ? excludeHiddenOwnerFilter
-      : { AND: [excludeHiddenOwnerFilter, whereClause] };
+    Object.keys(whereClause).length === 0 ? excludeHiddenOwnerFilter : { AND: [excludeHiddenOwnerFilter, whereClause] };
 
   const orderBy: Prisma.OrganisationOrderByWithRelationInput[] = query
     ? [{ subscription: { status: 'asc' } }, { name: 'asc' }]

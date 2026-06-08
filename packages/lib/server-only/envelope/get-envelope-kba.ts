@@ -108,9 +108,7 @@ export const getEnvelopeKba = async ({
     });
   }
 
-  const envelopeChallenge = envelope.kbaChallenges.find(
-    (challenge) => challenge.scopeType === 'ENVELOPE',
-  );
+  const envelopeChallenge = envelope.kbaChallenges.find((challenge) => challenge.scopeType === 'ENVELOPE');
 
   const recipientChallenges = envelope.kbaChallenges.filter(
     (challenge) => challenge.scopeType === 'RECIPIENT' && challenge.recipientId !== null,
@@ -144,4 +142,3 @@ export const getEnvelopeKba = async ({
     })),
   };
 };
-

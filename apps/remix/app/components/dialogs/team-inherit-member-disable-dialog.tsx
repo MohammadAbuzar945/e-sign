@@ -21,10 +21,7 @@ type TeamMemberInheritDisableDialogProps = {
   disabled?: boolean;
 };
 
-export const TeamMemberInheritDisableDialog = ({
-  group,
-  disabled = false,
-}: TeamMemberInheritDisableDialogProps) => {
+export const TeamMemberInheritDisableDialog = ({ group, disabled = false }: TeamMemberInheritDisableDialogProps) => {
   const { toast } = useToast();
   const { t } = useLingui();
 
@@ -76,18 +73,18 @@ export const TeamMemberInheritDisableDialog = ({
             </Button>
           </DialogClose>
 
-            <Button
-              type="submit"
-              variant="destructive"
-              disabled={disabled}
-              loading={deleteGroupMutation.isPending}
-              onClick={() =>
-                deleteGroupMutation.mutate({
-                  teamId: team.id,
-                  teamGroupId: group.id,
-                })
-              }
-            >
+          <Button
+            type="submit"
+            variant="destructive"
+            disabled={disabled}
+            loading={deleteGroupMutation.isPending}
+            onClick={() =>
+              deleteGroupMutation.mutate({
+                teamId: team.id,
+                teamGroupId: group.id,
+              })
+            }
+          >
             <Trans>Disable</Trans>
           </Button>
         </DialogFooter>

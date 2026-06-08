@@ -201,15 +201,12 @@ export const ZDocumentAuthOptionsSchema = z.preprocess(
       };
     }
 
-    const globalAccessAuth = 'globalAccessAuth' in unknownValue
-        ? stripAuthSentinelsFromArray(unknownValue.globalAccessAuth)
-        : [];
-    const globalActionAuth = 'globalActionAuth' in unknownValue
-        ? stripAuthSentinelsFromArray(unknownValue.globalActionAuth)
-        : [];
+    const globalAccessAuth =
+      'globalAccessAuth' in unknownValue ? stripAuthSentinelsFromArray(unknownValue.globalAccessAuth) : [];
+    const globalActionAuth =
+      'globalActionAuth' in unknownValue ? stripAuthSentinelsFromArray(unknownValue.globalActionAuth) : [];
     const kbaAccessExplicitlyDisabled =
-      'kbaAccessExplicitlyDisabled' in unknownValue &&
-      unknownValue.kbaAccessExplicitlyDisabled === true;
+      'kbaAccessExplicitlyDisabled' in unknownValue && unknownValue.kbaAccessExplicitlyDisabled === true;
 
     return {
       globalAccessAuth,

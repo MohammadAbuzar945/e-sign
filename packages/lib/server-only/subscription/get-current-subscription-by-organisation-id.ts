@@ -1,6 +1,5 @@
-import { SubscriptionStatus } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { SubscriptionStatus } from '@prisma/client';
 
 export type GetCurrentSubscriptionByOrganisationIdOptions = {
   organisationId: string;
@@ -34,4 +33,3 @@ export const getCurrentSubscriptionByOrganisationId = async ({
     },
   });
 };
-

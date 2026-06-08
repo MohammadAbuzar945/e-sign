@@ -8,8 +8,8 @@ import {
   TEAM_MEMBER_ROLE_HIERARCHY,
   TEAM_MEMBER_ROLE_PERMISSIONS_MAP,
 } from '../constants/teams';
-import { normalizeStoredKbaSettings } from './kba-settings';
 import type { TEAM_MEMBER_ROLE_MAP } from '../constants/teams-translations';
+import { normalizeStoredKbaSettings } from './kba-settings';
 
 /**
  * Workaround for E2E tests to not import `msg`.
@@ -128,41 +128,40 @@ export const buildTeamWhereQuery = ({
   userId,
   roles,
 }: BuildTeamWhereQueryOptions): Prisma.TeamWhereUniqueInput => {
-  const baseTeamGroupCondition: Prisma.TeamWhereInput =
-    !roles
-      ? {
-          teamGroups: {
-            some: {
-              organisationGroup: {
-                organisationGroupMembers: {
-                  some: {
-                    organisationMember: {
-                      userId,
-                    },
+  const baseTeamGroupCondition: Prisma.TeamWhereInput = !roles
+    ? {
+        teamGroups: {
+          some: {
+            organisationGroup: {
+              organisationGroupMembers: {
+                some: {
+                  organisationMember: {
+                    userId,
                   },
                 },
               },
             },
           },
-        }
-      : {
-          teamGroups: {
-            some: {
-              organisationGroup: {
-                organisationGroupMembers: {
-                  some: {
-                    organisationMember: {
-                      userId,
-                    },
+        },
+      }
+    : {
+        teamGroups: {
+          some: {
+            organisationGroup: {
+              organisationGroupMembers: {
+                some: {
+                  organisationMember: {
+                    userId,
                   },
                 },
               },
-              teamRole: {
-                in: roles,
-              },
+            },
+            teamRole: {
+              in: roles,
             },
           },
-        };
+        },
+      };
 
   return {
     id: teamId,

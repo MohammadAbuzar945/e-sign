@@ -148,12 +148,6 @@ const handleV1Loader = async ({ params, request }: Route.LoaderArgs) => {
     throw redirect(documentMeta?.redirectUrl || `/sign/${token}/complete`);
   }
 
-  // const [recipientSignatures, settings] = await Promise.all([
-    getRecipientSignatures({ recipientId: recipient.id }),
-    getTeamSettings({ teamId: document.teamId }),
-  ]);
-
-  // const [recipientSignature] = recipientSignatures;
   const [recipientSignatures, settings] = await Promise.all([
     getRecipientSignatures({ recipientId: recipient.id }),
     getTeamSettings({ teamId: document.teamId }),
@@ -352,10 +346,7 @@ const SigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV1Loade
   if (document.deletedAt || document.status === DocumentStatus.REJECTED) {
     return (
       <div className="-mx-4 flex max-w-[100vw] flex-col items-center overflow-x-hidden px-4 pt-16 md:-mx-8 md:px-8 lg:pt-16 xl:pt-24">
-        <SigningCard3D
-          name={recipient.name}
-          signature={recipientSignature}
-        />
+        <SigningCard3D name={recipient.name} signature={recipientSignature} />
 
         <div className="relative mt-2 flex w-full flex-col items-center">
           <div className="mt-8 flex items-center text-center text-red-600">
@@ -405,14 +396,9 @@ const SigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV1Loade
       uploadSignatureEnabled={document.documentMeta?.uploadSignatureEnabled}
       drawSignatureEnabled={document.documentMeta?.drawSignatureEnabled}
     >
-      <DocumentSigningAuthProvider
-        documentAuthOptions={document.authOptions}
-        recipient={recipient}
-        user={user}
-      >
+      <DocumentSigningAuthProvider documentAuthOptions={document.authOptions} recipient={recipient} user={user}>
         <DocumentSigningKbaAccessGate token={recipient.token}>
-          <>
-            {sessionData?.user && <AuthenticatedHeader />}
+          {sessionData?.user && <AuthenticatedHeader />}
 
           <div className="mt-8 mb-8 px-4 md:mt-12 md:mb-12 md:px-8">
             <DocumentSigningPageViewV1
@@ -425,7 +411,7 @@ const SigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV1Loade
               includeSenderDetails={includeSenderDetails}
             />
           </div>
-          </DocumentSigningKbaAccessGate>
+        </DocumentSigningKbaAccessGate>
       </DocumentSigningAuthProvider>
     </DocumentSigningProvider>
   );
@@ -444,10 +430,7 @@ const SigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV2Loade
   if (envelope.deletedAt || envelope.status === DocumentStatus.REJECTED) {
     return (
       <div className="-mx-4 flex max-w-[100vw] flex-col items-center overflow-x-hidden px-4 pt-16 md:-mx-8 md:px-8 lg:pt-16 xl:pt-24">
-        <SigningCard3D
-          name={recipient.name}
-          signature={recipientSignature || undefined}
-        />
+        <SigningCard3D name={recipient.name} signature={recipientSignature || undefined} />
 
         <div className="relative mt-2 flex w-full flex-col items-center">
           <div className="mt-8 flex items-center text-center text-red-600">
@@ -498,11 +481,11 @@ const SigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV2Loade
       <DocumentSigningAuthProvider documentAuthOptions={envelope.authOptions} recipient={recipient} user={user}>
         <DocumentSigningKbaAccessGate token={recipient.token}>
           <EnvelopeRenderProvider
-          version="current"
-          envelope={envelope}
-          envelopeItems={envelope.envelopeItems}
-          token={recipient.token}
-        >
+            version="current"
+            envelope={envelope}
+            envelopeItems={envelope.envelopeItems}
+            token={recipient.token}
+          >
             <DocumentSigningPageViewV2 />
           </EnvelopeRenderProvider>
         </DocumentSigningKbaAccessGate>

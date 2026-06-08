@@ -1,9 +1,5 @@
+import { ZDocumentKbaChallengeInputSchema, ZDocumentKbaSettingsSchema } from '@documenso/lib/types/document-auth';
 import { z } from 'zod';
-
-import {
-  ZDocumentKbaChallengeInputSchema,
-  ZDocumentKbaSettingsSchema,
-} from '@documenso/lib/types/document-auth';
 
 import type { TrpcRouteMeta } from '../trpc';
 
@@ -38,4 +34,3 @@ export const ZUpdateEnvelopeKbaResponseSchema = z.object({
 
 export type TUpdateEnvelopeKbaRequest = z.infer<typeof ZUpdateEnvelopeKbaRequestSchema>;
 export type TUpdateEnvelopeKbaResponse = z.infer<typeof ZUpdateEnvelopeKbaResponseSchema>;
-

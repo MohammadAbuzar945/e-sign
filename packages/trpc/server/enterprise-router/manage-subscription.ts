@@ -64,7 +64,6 @@ export const manageSubscriptionRoute = authenticatedProcedure
     }
 
     if (customerId && !organisation.customerId) {
-
       await prisma.organisation
         .update({
           where: {

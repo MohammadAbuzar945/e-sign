@@ -1,5 +1,4 @@
 import { prisma } from '@documenso/prisma';
-import type { UserCredits } from '@prisma/client';
 export const INITIAL_USER_CREDITS = 10;
 
 /**
@@ -8,7 +7,9 @@ export const INITIAL_USER_CREDITS = 10;
  */
 export const ensureOrganisationCredits = async (organisationId: string, userId: number) => {
   if (!prisma) {
-    console.error('Prisma client is undefined in ensureOrganisationCredits. Check if @documenso/prisma is properly imported.');
+    console.error(
+      'Prisma client is undefined in ensureOrganisationCredits. Check if @documenso/prisma is properly imported.',
+    );
     throw new Error('Database connection failed');
   }
 
@@ -116,7 +117,9 @@ export const updateOrganisationCredits = async (organisationId: string, credits:
  */
 export const getOrganisationCredits = async (organisationId: string) => {
   if (!prisma) {
-    console.error('Prisma client is undefined in getOrganisationCredits. Check if @documenso/prisma is properly imported.');
+    console.error(
+      'Prisma client is undefined in getOrganisationCredits. Check if @documenso/prisma is properly imported.',
+    );
     throw new Error('Database connection failed');
   }
 

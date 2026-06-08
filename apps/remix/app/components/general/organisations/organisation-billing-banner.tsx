@@ -1,5 +1,5 @@
-import { useSession } from '@documenso/lib/client-only/providers/session';
 import { useOptionalCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { SUPPORT_EMAIL } from '@documenso/lib/constants/app';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
@@ -113,12 +113,12 @@ export const OrganisationBillingBanner = () => {
 
               {canExecuteOrganisationAction('MANAGE_BILLING', organisation.currentOrganisationRole) &&
                 isOrganisationOwner && (
-                <DialogFooter>
-                  <Button loading={isPending} onClick={async () => handleCreatePortal(organisation.id)}>
-                    <Trans>Resolve payment</Trans>
-                  </Button>
-                </DialogFooter>
-              )}
+                  <DialogFooter>
+                    <Button loading={isPending} onClick={async () => handleCreatePortal(organisation.id)}>
+                      <Trans>Resolve payment</Trans>
+                    </Button>
+                  </DialogFooter>
+                )}
             </DialogContent>
           ))
           .with(SubscriptionStatus.INACTIVE, () => (
@@ -129,10 +129,7 @@ export const OrganisationBillingBanner = () => {
                 </DialogTitle>
 
                 <DialogDescription>
-                  <Trans>
-                    Your plan is no longer valid. Please subscribe to a new plan to continue using
-                    Nomia.
-                  </Trans>
+                  <Trans>Your plan is no longer valid. Please subscribe to a new plan to continue using Nomia.</Trans>
                 </DialogDescription>
               </DialogHeader>
 
@@ -147,16 +144,16 @@ export const OrganisationBillingBanner = () => {
 
               {canExecuteOrganisationAction('MANAGE_BILLING', organisation.currentOrganisationRole) &&
                 isOrganisationOwner && (
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button asChild>
-                      <Link to={`/o/${organisation.url}/price-plan`}>
-                        <Trans>Manage Billing</Trans>
-                      </Link>
-                    </Button>
-                  </DialogClose>
-                </DialogFooter>
-              )}
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button asChild>
+                        <Link to={`/o/${organisation.url}/price-plan`}>
+                          <Trans>Manage Billing</Trans>
+                        </Link>
+                      </Button>
+                    </DialogClose>
+                  </DialogFooter>
+                )}
             </DialogContent>
           ))
           .otherwise(() => null)}

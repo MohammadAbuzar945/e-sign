@@ -111,8 +111,8 @@ export const setFieldsForTemplate = async ({ userId, teamId, id, fields }: SetFi
     // eslint-disable-next-line @typescript-eslint/promise-function-async
     linkedFields.map(async (field) => {
       const parsedFieldMeta = field.fieldMeta
-      ? ZFieldMetaSchema.parse(field.fieldMeta)
-      : FIELD_META_DEFAULT_VALUES[field.type];
+        ? ZFieldMetaSchema.parse(field.fieldMeta)
+        : FIELD_META_DEFAULT_VALUES[field.type];
 
       if (field.type === FieldType.TEXT && field.fieldMeta) {
         const textFieldParsedMeta = ZTextFieldMeta.parse(field.fieldMeta);

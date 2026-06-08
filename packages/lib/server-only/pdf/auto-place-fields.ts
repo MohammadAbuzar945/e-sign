@@ -2,8 +2,6 @@ import { type TFieldAndMeta, ZEnvelopeFieldAndMetaSchema } from '@documenso/lib/
 import { PDF, rgb } from '@libpdf/core';
 import type { FieldType, Recipient } from '@prisma/client';
 
-import { type TFieldAndMeta, ZEnvelopeFieldAndMetaSchema } from '@documenso/lib/types/field-meta';
-
 import { parseFieldMetaFromPlaceholder, parseFieldTypeFromPlaceholder } from './helpers';
 
 const PLACEHOLDER_REGEX = /\{\{([^}]+)\}\}/g;

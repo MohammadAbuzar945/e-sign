@@ -1,5 +1,5 @@
-import { env } from '@documenso/lib/utils/env';
 import { getDocumentByAccessToken } from '@documenso/lib/server-only/document/get-document-by-access-token';
+import { env } from '@documenso/lib/utils/env';
 import { redirect, useLoaderData } from 'react-router';
 
 import { DocumentCertificateQRView } from '~/components/general/document/document-certificate-qr-view';

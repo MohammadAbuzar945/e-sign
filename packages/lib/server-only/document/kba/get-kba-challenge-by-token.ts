@@ -1,6 +1,5 @@
-import { EnvelopeType } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../../errors/app-error';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '../../../types/document-audit-logs';
@@ -192,4 +191,3 @@ export const getKbaChallengeByToken = async ({ token }: GetKbaChallengeByTokenOp
     lockoutRemainingSeconds,
   };
 };
-

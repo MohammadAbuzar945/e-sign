@@ -55,11 +55,7 @@ export const downloadPDF = async ({
 
   const baseTitle = (fileName ?? 'document').replace(/\.pdf$/, '');
   const suffix =
-    version === 'signed'
-      ? envelopeStatus === DocumentStatus.REJECTED
-        ? '_rejected.pdf'
-        : '_signed.pdf'
-      : '.pdf';
+    version === 'signed' ? (envelopeStatus === DocumentStatus.REJECTED ? '_rejected.pdf' : '_signed.pdf') : '.pdf';
 
   downloadFile({
     filename: `${baseTitle}${versionToFilenameSuffix(version)}`,

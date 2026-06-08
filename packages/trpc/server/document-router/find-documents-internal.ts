@@ -1,14 +1,12 @@
 import { findDocuments } from '@documenso/lib/server-only/document/find-documents';
 import { getStats } from '@documenso/lib/server-only/document/get-stats';
 import { mapEnvelopesToDocumentMany } from '@documenso/lib/utils/document';
-import { ExtendedDocumentStatus } from '@documenso/prisma/types/extended-document-status';
 
 import { authenticatedProcedure } from '../trpc';
 import {
   ZFindDocumentsInternalRequestSchema,
   ZFindDocumentsInternalResponseSchema,
 } from './find-documents-internal.types';
-import type { TFindDocumentsInternalResponse } from './find-documents-internal.types';
 
 export const findDocumentsInternalRoute = authenticatedProcedure
   .input(ZFindDocumentsInternalRequestSchema)

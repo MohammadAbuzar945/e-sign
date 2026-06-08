@@ -1,6 +1,5 @@
-import { EnvelopeType } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../../errors/app-error';
 import { DocumentAuth } from '../../../types/document-auth';
@@ -12,10 +11,7 @@ type VerifyDirectTemplateKbaByTokenOptions = {
   answer: string;
 };
 
-export const verifyDirectTemplateKbaByToken = async ({
-  token,
-  answer,
-}: VerifyDirectTemplateKbaByTokenOptions) => {
+export const verifyDirectTemplateKbaByToken = async ({ token, answer }: VerifyDirectTemplateKbaByTokenOptions) => {
   const envelope = await prisma.envelope.findFirst({
     where: {
       type: EnvelopeType.TEMPLATE,
@@ -98,9 +94,7 @@ export const verifyDirectTemplateKbaByToken = async ({
     });
   }
 
-  const persistedChallenge = envelope.kbaChallenges.find(
-    (envelopeChallenge) => envelopeChallenge.id === challenge.id,
-  );
+  const persistedChallenge = envelope.kbaChallenges.find((envelopeChallenge) => envelopeChallenge.id === challenge.id);
 
   if (!persistedChallenge) {
     throw new AppError(AppErrorCode.NOT_FOUND, {

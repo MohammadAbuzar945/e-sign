@@ -1,20 +1,14 @@
-import { BackgroundJobStatus, DocumentDataType } from '@prisma/client';
-import { i18n } from '@lingui/core';
-
-import { ZSupportedLanguageCodeSchema } from '../../../constants/i18n';
-import { getTranslations } from '../../../utils/i18n';
-import { parseTeamAuditLogData, formatTeamAuditLogAction } from '../../../utils/team-audit-logs';
 import { prisma } from '@documenso/prisma';
-
+import { i18n } from '@lingui/core';
+import { BackgroundJobStatus, DocumentDataType } from '@prisma/client';
+import { ZSupportedLanguageCodeSchema } from '../../../constants/i18n';
 import { putFileServerSide } from '../../../universal/upload/put-file.server';
 import { getPresignGetUrl } from '../../../universal/upload/server-actions';
 import { env } from '../../../utils/env';
-import { jobs } from '../../client';
+import { getTranslations } from '../../../utils/i18n';
+import { formatTeamAuditLogAction, parseTeamAuditLogData } from '../../../utils/team-audit-logs';
 import type { JobRunIO } from '../../client/_internal/job';
-import type {
-  TExportTeamAuditLogsCsvJobDefinition,
-  TTeamAuditLogExportDateRange,
-} from './export-team-audit-logs-csv';
+import type { TExportTeamAuditLogsCsvJobDefinition, TTeamAuditLogExportDateRange } from './export-team-audit-logs-csv';
 
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -49,8 +43,7 @@ const toCsvCell = (value: unknown) => {
     return '';
   }
 
-  const str =
-    value instanceof Date ? value.toISOString() : typeof value === 'string' ? value : String(value);
+  const str = value instanceof Date ? value.toISOString() : typeof value === 'string' ? value : String(value);
 
   const escaped = str.replaceAll('"', '""');
   const needsQuotes = /[",\n\r]/.test(escaped);
@@ -67,21 +60,8 @@ const safeFileName = (name: string) => {
   return name.replaceAll(/[<>:"/\\|?*\u0000-\u001F]/g, '-').trim();
 };
 
-export const run = async ({
-  payload,
-  io,
-}: {
-  payload: TExportTeamAuditLogsCsvJobDefinition;
-  io: JobRunIO;
-}) => {
-  const {
-    jobId,
-    teamId,
-    dateRange,
-    requestedByUserId,
-    requestedByUserEmail,
-    requestedByUserName,
-  } = payload;
+export const run = async ({ payload, io }: { payload: TExportTeamAuditLogsCsvJobDefinition; io: JobRunIO }) => {
+  const { jobId, teamId, dateRange, requestedByUserId, requestedByUserEmail, requestedByUserName } = payload;
 
   const fromDate = getFromDateForDateRange(dateRange);
 
@@ -121,19 +101,10 @@ export const run = async ({
     });
 
     const csvParts: string[] = [];
-    csvParts.push(
-      toCsvRow([
-        'createdAt',
-        'type',
-        'actorName',
-        'actorEmail',
-        'ipAddress',
-        'description',
-      ]),
-    );
+    csvParts.push(toCsvRow(['createdAt', 'type', 'actorName', 'actorEmail', 'ipAddress', 'description']));
 
     let recordCount = 0;
-    let cursor: string | undefined = undefined;
+    let cursor: string | undefined;
 
     while (true) {
       const batch = (await (prisma as any).teamAuditLog.findMany({
@@ -184,16 +155,7 @@ export const run = async ({
         const formatted = formatTeamAuditLogAction(i18n, parsed);
 
         recordCount += 1;
-        csvParts.push(
-          toCsvRow([
-            row.createdAt,
-            row.type,
-            row.name,
-            row.email,
-            row.ipAddress,
-            formatted.description,
-          ]),
-        );
+        csvParts.push(toCsvRow([row.createdAt, row.type, row.name, row.email, row.ipAddress, formatted.description]));
       }
 
       cursor = batch[batch.length - 1]?.id;
@@ -223,10 +185,7 @@ export const run = async ({
 
     let downloadUrl: string | null = null;
 
-    if (
-      result.storage.type === DocumentDataType.S3_PATH &&
-      (uploadTransport === 's3' || uploadTransport === 'gcs')
-    ) {
+    if (result.storage.type === DocumentDataType.S3_PATH && (uploadTransport === 's3' || uploadTransport === 'gcs')) {
       const { url } = await getPresignGetUrl(result.storage.data);
       downloadUrl = url;
     }
@@ -282,4 +241,3 @@ export const run = async ({
     throw error;
   }
 };
-

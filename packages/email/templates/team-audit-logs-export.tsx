@@ -1,11 +1,10 @@
+import { env } from '@documenso/lib/utils/env';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
-
 import { Body, Container, Head, Hr, Html, Img, Link, Preview, Section, Text } from '../components';
 import { useBranding } from '../providers/branding';
 import { TemplateFooter } from '../template-components/template-footer';
 import TemplateImage from '../template-components/template-image';
-import { env } from '@documenso/lib/utils/env';
 
 export type TeamAuditLogsExportEmailProps = {
   assetBaseUrl?: string;
@@ -36,36 +35,32 @@ export const TeamAuditLogsExportEmailTemplate = ({
 
       <Body className="mx-auto my-auto font-sans">
         <Section className="bg-white text-slate-500">
-          <Container className="mx-auto mb-2 mt-8 max-w-xl rounded-lg border border-solid border-slate-200 p-4 backdrop-blur-sm">
+          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid p-4 backdrop-blur-sm">
             {branding.brandingEnabled && branding.brandingLogo ? (
               <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
             ) : (
-              <TemplateImage
-                assetBaseUrl={assetBaseUrl}
-                className="mb-4 h-16 p-2"
-                staticAsset="logo.png"
-              />
+              <TemplateImage assetBaseUrl={assetBaseUrl} className="mb-4 h-16 p-2" staticAsset="logo.png" />
             )}
 
             <Section className="p-2 text-slate-500">
-              <Text className="text-center text-lg font-medium text-black">{_(title)}</Text>
+              <Text className="text-center font-medium text-black text-lg">{_(title)}</Text>
 
               <Text className="my-3 text-center text-base">{_(description)}</Text>
 
               <div className="my-4 text-center">
                 <Link
                   href={downloadUrl}
-                  className="inline-block rounded-md bg-black px-5 py-2 text-sm font-medium text-white no-underline"
+                  className="inline-block rounded-md bg-black px-5 py-2 font-medium text-sm text-white no-underline"
                 >
                   {_(msg`Download CSV`)}
                 </Link>
               </div>
 
-              <Text className="mt-4 text-xs text-slate-400">
+              <Text className="mt-4 text-slate-400 text-xs">
                 {_(msg`If the button above does not work, copy and paste this link into your browser:`)}
               </Text>
 
-              <Text className="break-all text-xs text-slate-500">
+              <Text className="break-all text-slate-500 text-xs">
                 {baseUrl ? downloadUrl.replace(baseUrl, '') : downloadUrl}
               </Text>
             </Section>
@@ -83,4 +78,3 @@ export const TeamAuditLogsExportEmailTemplate = ({
 };
 
 export default TeamAuditLogsExportEmailTemplate;
-

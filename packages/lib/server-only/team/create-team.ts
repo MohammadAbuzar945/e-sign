@@ -6,10 +6,10 @@ import { match } from 'ts-pattern';
 import { LOWEST_ORGANISATION_ROLE, ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '../../constants/organisations';
 import { TEAM_INTERNAL_GROUPS } from '../../constants/teams';
 import { TEAM_AUDIT_LOG_TYPE } from '../../types/team-audit-logs';
-import { generateDatabaseId } from '../../universal/id';
 import type { ApiRequestMetadata } from '../../universal/extract-request-metadata';
-import { createTeamAuditLogData } from '../../utils/team-audit-logs';
+import { generateDatabaseId } from '../../universal/id';
 import { buildOrganisationWhereQuery } from '../../utils/organisations';
+import { createTeamAuditLogData } from '../../utils/team-audit-logs';
 import { generateDefaultTeamSettings } from '../../utils/teams';
 
 export type CreateTeamOptions = {
@@ -65,7 +65,13 @@ export type CreateTeamOptions = {
   metadata?: ApiRequestMetadata;
 };
 
-export const createTeam = async ({ userId, teamName, teamUrl, organisationId, inheritMembers   isPrivate,
+export const createTeam = async ({
+  userId,
+  teamName,
+  teamUrl,
+  organisationId,
+  inheritMembers,
+  isPrivate,
   organisationMemberId,
   metadata,
 }: CreateTeamOptions) => {
@@ -129,38 +135,37 @@ export const createTeam = async ({ userId, teamName, teamUrl, organisationId, in
   // Organisation Admins/Mangers get assigned as team admins, members get assigned as team members.
   // For private teams we do not attach any organisation groups so that only explicitly added members
   // have access to the team.
-  const internalOrganisationGroups =
-    isPrivate
-      ? []
-      : organisation.groups
-          .filter((group) => {
-            if (group.type !== OrganisationGroupType.INTERNAL_ORGANISATION) {
-              return false;
-            }
+  const internalOrganisationGroups = isPrivate
+    ? []
+    : organisation.groups
+        .filter((group) => {
+          if (group.type !== OrganisationGroupType.INTERNAL_ORGANISATION) {
+            return false;
+          }
 
-            // If we're inheriting members, allow all internal organisation groups.
-            if (inheritMembers) {
-              return true;
-            }
+          // If we're inheriting members, allow all internal organisation groups.
+          if (inheritMembers) {
+            return true;
+          }
 
-            // Otherwise, only inherit organisation admins/managers.
-            return (
-              group.organisationRole === OrganisationMemberRole.ADMIN ||
-              group.organisationRole === OrganisationMemberRole.MANAGER
-            );
-          })
-          .map((group) =>
-            match(group.organisationRole)
-              .with(OrganisationMemberRole.ADMIN, OrganisationMemberRole.MANAGER, () => ({
-                organisationGroupId: group.id,
-                teamRole: TeamMemberRole.ADMIN,
-              }))
-              .with(OrganisationMemberRole.MEMBER, () => ({
-                organisationGroupId: group.id,
-                teamRole: TeamMemberRole.MEMBER,
-              }))
-              .exhaustive(),
+          // Otherwise, only inherit organisation admins/managers.
+          return (
+            group.organisationRole === OrganisationMemberRole.ADMIN ||
+            group.organisationRole === OrganisationMemberRole.MANAGER
           );
+        })
+        .map((group) =>
+          match(group.organisationRole)
+            .with(OrganisationMemberRole.ADMIN, OrganisationMemberRole.MANAGER, () => ({
+              organisationGroupId: group.id,
+              teamRole: TeamMemberRole.ADMIN,
+            }))
+            .with(OrganisationMemberRole.MEMBER, () => ({
+              organisationGroupId: group.id,
+              teamRole: TeamMemberRole.MEMBER,
+            }))
+            .exhaustive(),
+        );
 
   await prisma
     .$transaction(

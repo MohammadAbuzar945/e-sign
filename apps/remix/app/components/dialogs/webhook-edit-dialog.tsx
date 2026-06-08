@@ -178,8 +178,8 @@ export const WebhookEditDialog = ({ trigger, webhook, ...props }: WebhookEditDia
 
                     <FormDescription>
                       <Trans>
-                        A secret that will be sent to your URL so you can verify that the request
-                        has been sent by Nomia.
+                        A secret that will be sent to your URL so you can verify that the request has been sent by
+                        Nomia.
                       </Trans>
                     </FormDescription>
                     <FormMessage />

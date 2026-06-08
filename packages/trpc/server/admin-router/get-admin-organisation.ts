@@ -1,8 +1,7 @@
+import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
 import { prisma } from '@documenso/prisma';
-
-import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 
 import { adminProcedure } from '../trpc';
 import {
@@ -83,9 +82,9 @@ export const getAdminOrganisation = async ({ organisationId }: GetOrganisationOp
 
   return {
     ...{
-    ...organisation,
-    subscription,
-    credits,
-  },
+      ...organisation,
+      subscription,
+      credits,
+    },
   };
 };

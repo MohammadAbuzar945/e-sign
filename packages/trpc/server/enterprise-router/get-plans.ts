@@ -1,6 +1,5 @@
 import { getInternalClaimPlans } from '@documenso/ee/server-only/stripe/get-internal-claim-plans';
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
-import { prisma } from '@documenso/prisma';
 
 import { authenticatedProcedure } from '../trpc';
 
@@ -9,7 +8,7 @@ export const getPlansRoute = authenticatedProcedure.query(async ({ ctx }) => {
 
   const plans = await getInternalClaimPlans();
 
-  let canCreateFreeOrganisation = false;
+  const canCreateFreeOrganisation = false;
 
   if (IS_BILLING_ENABLED()) {
     // const numberOfFreeOrganisations = await prisma.organisation.count({
@@ -20,7 +19,6 @@ export const getPlansRoute = authenticatedProcedure.query(async ({ ctx }) => {
     //     },
     //   },
     // });
-
     // canCreateFreeOrganisation = numberOfFreeOrganisations === 0;
   }
 

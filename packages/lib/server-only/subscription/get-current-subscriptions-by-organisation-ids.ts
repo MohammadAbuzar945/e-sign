@@ -1,6 +1,5 @@
-import { SubscriptionStatus } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { SubscriptionStatus } from '@prisma/client';
 
 export type GetCurrentSubscriptionsByOrganisationIdsOptions = {
   organisationIds: string[];
@@ -29,10 +28,7 @@ export const getCurrentSubscriptionsByOrganisationIds = async ({
     ],
   });
 
-  const activeStatuses = new Set<SubscriptionStatus>([
-    SubscriptionStatus.ACTIVE,
-    SubscriptionStatus.PAST_DUE,
-  ]);
+  const activeStatuses = new Set<SubscriptionStatus>([SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE]);
 
   const bestByOrganisationId = new Map<
     string,
@@ -68,4 +64,3 @@ export const getCurrentSubscriptionsByOrganisationIds = async ({
 
   return result;
 };
-

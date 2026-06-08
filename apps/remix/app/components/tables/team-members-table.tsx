@@ -1,12 +1,3 @@
-import { useMemo } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { OrganisationGroupType, OrganisationMemberRole, TeamMemberRole } from '@prisma/client';
-import { EditIcon, MoreHorizontal, Trash2Icon } from 'lucide-react';
-import { useSearchParams } from 'react-router';
-
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
@@ -32,7 +23,7 @@ import { TableCell } from '@documenso/ui/primitives/table';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { OrganisationGroupType, OrganisationMemberRole } from '@prisma/client';
+import { OrganisationGroupType, OrganisationMemberRole, TeamMemberRole } from '@prisma/client';
 import { EditIcon, MoreHorizontal, Trash2Icon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
@@ -141,8 +132,7 @@ export const TeamMembersTable = () => {
               group.members.some((member) => member.id === row.original.id),
           );
 
-          const isSelfAdmin =
-            row.original.userId === user.id && row.original.teamRole === TeamMemberRole.ADMIN;
+          const isSelfAdmin = row.original.userId === user.id && row.original.teamRole === TeamMemberRole.ADMIN;
 
           return (
             <DropdownMenu>
@@ -164,8 +154,7 @@ export const TeamMembersTable = () => {
                   trigger={
                     <DropdownMenuItem
                       disabled={
-                        isSelfAdmin ||
-                        !isTeamRoleWithinUserHierarchy(team.currentTeamRole, row.original.teamRole)
+                        isSelfAdmin || !isTeamRoleWithinUserHierarchy(team.currentTeamRole, row.original.teamRole)
                       }
                       onSelect={(e) => e.preventDefault()}
                       title="Update team member role"
@@ -254,10 +243,9 @@ export const TeamMembersTable = () => {
       </DataTable>
 
       <AnimateGenericFadeInOut key={groupQuery.isPending ? 'pending' : 'fetched'}>
-        {!groupQuery.isPending && <TeamInheritMemberAlert
-            memberAccessTeamGroup={memberAccessTeamGroup || null}
-            isPrivate={team.isPrivate}
-          />}
+        {!groupQuery.isPending && (
+          <TeamInheritMemberAlert memberAccessTeamGroup={memberAccessTeamGroup || null} isPrivate={team.isPrivate} />
+        )}
       </AnimateGenericFadeInOut>
     </div>
   );

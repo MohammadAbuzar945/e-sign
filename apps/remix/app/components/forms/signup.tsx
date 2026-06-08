@@ -408,20 +408,12 @@ export const SignUpForm = ({
         </Form>
         <p className="mt-6 text-muted-foreground text-xs">
           <Trans>
-          By proceeding, you agree to our{' '}
-            <Link
-              to="/articles/terms"
-              target="_blank"
-              className="text-documenso-700 duration-200 hover:opacity-70"
-            >
+            By proceeding, you agree to our{' '}
+            <Link to="/articles/terms" target="_blank" className="text-documenso-700 duration-200 hover:opacity-70">
               Terms of Service
             </Link>{' '}
             and{' '}
-            <Link
-              to="/articles/privacy"
-              target="_blank"
-              className="text-documenso-700 duration-200 hover:opacity-70"
-            >
+            <Link to="/articles/privacy" target="_blank" className="text-documenso-700 duration-200 hover:opacity-70">
               Privacy Policy
             </Link>
             .

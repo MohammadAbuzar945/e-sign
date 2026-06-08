@@ -1,10 +1,7 @@
 import { verifyKbaByToken } from '@documenso/lib/server-only/document/kba/verify-kba-by-token';
 
 import { procedure } from '../trpc';
-import {
-  ZAccessAuthVerifyKbaRequestSchema,
-  ZAccessAuthVerifyKbaResponseSchema,
-} from './access-auth-verify-kba.types';
+import { ZAccessAuthVerifyKbaRequestSchema, ZAccessAuthVerifyKbaResponseSchema } from './access-auth-verify-kba.types';
 
 export const accessAuthVerifyKbaRoute = procedure
   .input(ZAccessAuthVerifyKbaRequestSchema)
@@ -15,4 +12,3 @@ export const accessAuthVerifyKbaRoute = procedure
       answer: input.answer,
     });
   });
-

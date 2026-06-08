@@ -1,8 +1,7 @@
+import { env } from '@documenso/lib/utils/env';
 import { Trans } from '@lingui/react/macro';
-
 import { Link, Section, Text } from '../components';
 import { useBranding } from '../providers/branding';
-import { env } from '@documenso/lib/utils/env';
 
 export type TemplateFooterProps = {
   isDocument?: boolean;

@@ -430,12 +430,9 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
 
   const setSelectedFields = (nodes: Konva.Node[]) => {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    
+
     const fieldGroups = nodes.filter(
-      
-      (node) =>
-        node.hasName('field-group') && Boolean(node.getStage()) && Boolean(node.getParent()),
-     && Boolean(node.getStage()) && Boolean(node.getParent()),
+      (node) => node.hasName('field-group') && Boolean(node.getStage()) && Boolean(node.getParent()),
     ) as Konva.Group[];
 
     interactiveTransformer.current?.nodes(fieldGroups);
@@ -640,7 +637,6 @@ const FieldActionButtons = ({
     if (fields.length === 0) {
       return null;
     }
-
 
     if (fields.length === 0 || !fields[0]?.recipientId) {
       return null;

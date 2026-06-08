@@ -1,9 +1,8 @@
-import { Trans } from '@lingui/react/macro';
-import { File } from 'lucide-react';
-
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
+import { Trans } from '@lingui/react/macro';
+import { File } from 'lucide-react';
 
 import { BrandingLogo } from '~/components/general/branding-logo';
 
@@ -16,12 +15,7 @@ export const UserProfileTimur = ({ className, rows = 2 }: UserProfileTimurProps)
   const baseUrl = new URL(NEXT_PUBLIC_WEBAPP_URL() ?? 'http://localhost:3000');
 
   return (
-    <div
-      className={cn(
-        'dark:bg-background flex flex-col items-center rounded-xl bg-neutral-100 p-4',
-        className,
-      )}
-    >
+    <div className={cn('flex flex-col items-center rounded-xl bg-neutral-100 p-4 dark:bg-background', className)}>
       {/* <div className="border-border bg-background text-muted-foreground inline-block max-w-full truncate rounded-md border px-2.5 py-1.5 text-sm">
         {baseUrl.host}/u/timur
       </div> */}

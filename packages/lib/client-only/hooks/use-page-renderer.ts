@@ -55,15 +55,15 @@ export const usePageRenderer = (renderFunction: RenderFunction, pageData: PageRe
       },
     });
 
-      // Create the main layer for interactive elements.
-      pageLayer.current = new Konva.Layer();
+    // Create the main layer for interactive elements.
+    pageLayer.current = new Konva.Layer();
 
-      stage.current.add(pageLayer.current);
+    stage.current.add(pageLayer.current);
 
-      renderFunction({
-        stage: stage.current,
-        pageLayer: pageLayer.current,
-      });
+    renderFunction({
+      stage: stage.current,
+      pageLayer: pageLayer.current,
+    });
 
     void document.fonts.ready.then(() => {
       pageLayer.current?.batchDraw();

@@ -1,12 +1,12 @@
-import { expect, test } from '@playwright/test';
+import { verifyKbaByToken } from '@documenso/lib/server-only/document/kba/verify-kba-by-token';
 
 import { updateEnvelopeKba } from '@documenso/lib/server-only/envelope/update-envelope-kba';
-import { verifyKbaByToken } from '@documenso/lib/server-only/document/kba/verify-kba-by-token';
 import { hashKbaChallengeAnswer } from '@documenso/lib/server-only/kba/kba';
 import { createDocumentAuthOptions } from '@documenso/lib/utils/document-auth';
 import { prisma } from '@documenso/prisma';
 import { seedPendingDocument } from '@documenso/prisma/seed/documents';
 import { seedUser } from '@documenso/prisma/seed/users';
+import { expect, test } from '@playwright/test';
 
 test('[DOCUMENT_AUTH_KBA]: should validate answers and track attempts', async () => {
   const { user, team } = await seedUser();
@@ -159,4 +159,3 @@ test('[DOCUMENT_AUTH_KBA]: should persist envelope settings and recipient challe
   expect(savedChallenges.some((challenge) => challenge.answerType === 'NUMERIC')).toBe(true);
   expect(savedChallenges.some((challenge) => challenge.answerType === 'MCQ')).toBe(true);
 });
-

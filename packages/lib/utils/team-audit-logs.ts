@@ -6,15 +6,11 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 import type { I18n } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
-import { TeamMemberRole } from '@prisma/client';
 import { match } from 'ts-pattern';
 
 import type { TTeamAuditLog } from '../types/team-audit-logs';
 import { TEAM_AUDIT_LOG_TYPE, ZTeamAuditLogSchema } from '../types/team-audit-logs';
-import type {
-  ApiRequestMetadata,
-  RequestMetadata,
-} from '../universal/extract-request-metadata';
+import type { ApiRequestMetadata, RequestMetadata } from '../universal/extract-request-metadata';
 
 type CreateTeamAuditLogDataOptions<T = TTeamAuditLog['type']> = {
   teamId: number;
@@ -111,13 +107,8 @@ const getOrganisationGroupLabel = (
   return organisationGroupId ?? '';
 };
 
-export const formatTeamAuditLogAction = (
-  i18n: I18n,
-  auditLog: TTeamAuditLog,
-  userId?: number,
-) => {
-  const prefix =
-    userId === auditLog.userId ? i18n._(msg`You`) : auditLog.name || auditLog.email || '';
+export const formatTeamAuditLogAction = (i18n: I18n, auditLog: TTeamAuditLog, userId?: number) => {
+  const prefix = userId === auditLog.userId ? i18n._(msg`You`) : auditLog.name || auditLog.email || '';
 
   const description = match(auditLog)
     .with({ type: TEAM_AUDIT_LOG_TYPE.TEAM_CREATED }, ({ data }) => ({
@@ -176,45 +167,34 @@ export const formatTeamAuditLogAction = (
       }),
       identified: msg`${prefix} changed group ${getOrganisationGroupLabel(i18n, data.organisationGroupName, data.organisationGroupId)} role from ${data.previousRole.toLowerCase()} to ${data.newRole.toLowerCase()}`,
     }))
-    .with(
-      { type: TEAM_AUDIT_LOG_TYPE.ORGANISATION_MEMBER_INVITED },
-      ({ data }) => ({
-        anonymous: msg({
-          message: `Organisation member invited`,
-          context: `Team audit log format`,
-        }),
-        identified: msg`${prefix} invited ${data.email} to the organisation`,
+    .with({ type: TEAM_AUDIT_LOG_TYPE.ORGANISATION_MEMBER_INVITED }, ({ data }) => ({
+      anonymous: msg({
+        message: `Organisation member invited`,
+        context: `Team audit log format`,
       }),
-    )
-    .with(
-      { type: TEAM_AUDIT_LOG_TYPE.ORGANISATION_MEMBER_INVITE_ACCEPTED },
-      ({ data }) => ({
-        anonymous: msg({
-          message: `Organisation invite accepted`,
-          context: `Team audit log format`,
-        }),
-        identified: msg`${data.email} accepted the organisation invitation`,
+      identified: msg`${prefix} invited ${data.email} to the organisation`,
+    }))
+    .with({ type: TEAM_AUDIT_LOG_TYPE.ORGANISATION_MEMBER_INVITE_ACCEPTED }, ({ data }) => ({
+      anonymous: msg({
+        message: `Organisation invite accepted`,
+        context: `Team audit log format`,
       }),
-    )
-    .with(
-      { type: TEAM_AUDIT_LOG_TYPE.ORGANISATION_MEMBER_INVITE_DECLINED },
-      ({ data }) => ({
-        anonymous: msg({
-          message: `Organisation invite declined`,
-          context: `Team audit log format`,
-        }),
-        identified: msg`${data.email} declined the organisation invitation`,
+      identified: msg`${data.email} accepted the organisation invitation`,
+    }))
+    .with({ type: TEAM_AUDIT_LOG_TYPE.ORGANISATION_MEMBER_INVITE_DECLINED }, ({ data }) => ({
+      anonymous: msg({
+        message: `Organisation invite declined`,
+        context: `Team audit log format`,
       }),
-    )
+      identified: msg`${data.email} declined the organisation invitation`,
+    }))
     .with({ type: TEAM_AUDIT_LOG_TYPE.TEAM_VISIBILITY_UPDATED }, ({ data }) => ({
       anonymous: msg({
         message: `Team visibility updated`,
         context: `Team audit log format`,
       }),
       identified:
-        data.newIsPrivate === true
-          ? msg`${prefix} made the team private`
-          : msg`${prefix} made the team public`,
+        data.newIsPrivate === true ? msg`${prefix} made the team private` : msg`${prefix} made the team public`,
     }))
     .exhaustive();
 
@@ -223,4 +203,3 @@ export const formatTeamAuditLogAction = (
     description: i18n._(prefix ? description.identified : description.anonymous),
   };
 };
-

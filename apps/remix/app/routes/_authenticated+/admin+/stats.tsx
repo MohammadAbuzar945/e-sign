@@ -24,8 +24,6 @@ import {
   UserSquare2,
   Users,
 } from 'lucide-react';
-
-import { AdminLicenseCard } from '~/components/general/admin-license-card';
 import { MonthlyActiveUsersChart } from '~/components/general/admin-monthly-active-user-charts';
 import { AdminStatsSignerConversionChart } from '~/components/general/admin-stats-signer-conversion-chart';
 import { AdminStatsUsersWithDocumentsChart } from '~/components/general/admin-stats-users-with-documents';

@@ -1,18 +1,8 @@
-import type {
-  EnvelopeKbaPolicy,
-  KbaAnswerType,
-  KbaChallenge,
-  KbaScopeType,
-  Recipient,
-} from '@prisma/client';
 import { compare } from '@node-rs/bcrypt';
+import type { EnvelopeKbaPolicy, KbaAnswerType, KbaChallenge, KbaScopeType, Recipient } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
-import type {
-  TDocumentKbaAnswerType,
-  TDocumentKbaChallengeInput,
-  TDocumentKbaOption,
-} from '../../types/document-auth';
+import type { TDocumentKbaAnswerType, TDocumentKbaChallengeInput, TDocumentKbaOption } from '../../types/document-auth';
 
 type KbaChallengeSummary = Pick<
   KbaChallenge,
@@ -81,10 +71,7 @@ export const parseKbaMcqOptions = (mcqOptions: unknown): TDocumentKbaOption[] =>
   });
 };
 
-type PersistedKbaChallengeForSendCheck = Pick<
-  KbaChallenge,
-  'question' | 'answerHash' | 'answerType' | 'mcqOptions'
->;
+type PersistedKbaChallengeForSendCheck = Pick<KbaChallenge, 'question' | 'answerHash' | 'answerType' | 'mcqOptions'>;
 
 /**
  * True when an active KBA row has a non-empty question, a stored answer hash, and (for MCQ) at
@@ -176,4 +163,3 @@ export const verifyKbaAttempt = async ({
     isValid,
   };
 };
-

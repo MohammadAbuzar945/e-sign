@@ -31,7 +31,7 @@ import { plural } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { DocumentSigningOrder, EnvelopeType, RecipientRole, SendStatus } from '@prisma/client';
 import { motion } from 'framer-motion';
-import { GripVerticalIcon, HelpCircleIcon, PlusIcon, SparklesIcon, TrashIcon } from 'lucide-react';
+import { GripVerticalIcon, HelpCircleIcon, PlusIcon, TrashIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFieldArray, useWatch } from 'react-hook-form';
 import { useRevalidator, useSearchParams } from 'react-router';

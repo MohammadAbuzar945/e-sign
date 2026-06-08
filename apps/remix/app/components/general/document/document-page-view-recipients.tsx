@@ -1,19 +1,16 @@
 import { RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-roles';
 import type { TEnvelope } from '@documenso/lib/types/envelope';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
-import { formatSigningLink, isRecipientExpired } from '@documenso/lib/utils/recipients';
-import { CopyTextButton } from '@documenso/ui/components/common/copy-text-button';
+import { isRecipientExpired } from '@documenso/lib/utils/recipients';
 import { SignatureIcon } from '@documenso/ui/icons/signature';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { PopoverHover } from '@documenso/ui/primitives/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { DocumentStatus, RecipientRole, SigningStatus } from '@prisma/client';
-import { TooltipArrow } from '@radix-ui/react-tooltip';
 import {
   AlertTriangle,
   CheckIcon,

@@ -1,7 +1,7 @@
-import { z } from 'zod';
-
 import { initializeTransaction } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
+import { z } from 'zod';
+
 // import { SubscriptionStatus } from '@documenso/prisma/generated/zod/inputTypeSchemas/SubscriptionStatusSchema';
 
 const initializeTransactionSchema = z.object({
@@ -27,7 +27,6 @@ export async function action({ request }: { request: Request }) {
         { status: 500 },
       );
     }
-
 
     console.log('Transaction data:', transaction.data);
     //create subscription record in database
@@ -78,9 +77,8 @@ export async function action({ request }: { request: Request }) {
       'message' in error.response.data
     ) {
       errorMessage = String(error.response.data.message);
-      statusCode = 'status' in error.response && typeof error.response.status === 'number' 
-        ? error.response.status 
-        : 500;
+      statusCode =
+        'status' in error.response && typeof error.response.status === 'number' ? error.response.status : 500;
     }
 
     return new Response(
@@ -91,4 +89,3 @@ export async function action({ request }: { request: Request }) {
     );
   }
 }
-

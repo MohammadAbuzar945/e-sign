@@ -4,8 +4,6 @@ import type { Field, RecipientRole, Signature } from '@prisma/client';
 import { SigningStatus } from '@prisma/client';
 import Konva from 'konva';
 import 'konva/skia-backend';
-import fs from 'node:fs';
-import path from 'node:path';
 import { DateTime } from 'luxon';
 import type { Canvas } from 'skia-canvas';
 import { Image as SkiaImage } from 'skia-canvas';
@@ -631,7 +629,7 @@ const renderBranding = async ({
   const bodyText = new Konva.Text({
     x: 0,
     y: bodyY,
-    text: 'This document is digitally signed by Nomia Africa (Pty) Ltd using Adobe AATL trusted certificate issued by SSL.com. This signature includes Long-Term Validation (LTV) metadata, ensuring the document\'s authenticity and integrity can be verified for long-term archival purposes.',
+    text: "This document is digitally signed by Nomia Africa (Pty) Ltd using Adobe AATL trusted certificate issued by SSL.com. This signature includes Long-Term Validation (LTV) metadata, ensuring the document's authenticity and integrity can be verified for long-term archival purposes.",
     fontFamily: 'Inter',
     fontSize: 7,
     fill: '#444',

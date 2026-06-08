@@ -3,18 +3,17 @@ import { msg } from '@lingui/core/macro';
 import type { Team } from '@prisma/client';
 import Konva from 'konva';
 import 'konva/skia-backend';
-import type { DateTimeFormatOptions } from 'luxon';
-import { DateTime } from 'luxon';
 import fs from 'node:fs';
 import path from 'node:path';
+import type { DateTimeFormatOptions } from 'luxon';
+import { DateTime } from 'luxon';
 import type { Canvas } from 'skia-canvas';
-import { FontLibrary } from 'skia-canvas';
-import { Image as SkiaImage } from 'skia-canvas';
+import { FontLibrary, Image as SkiaImage } from 'skia-canvas';
 import { UAParser } from 'ua-parser-js';
 
 import { APP_I18N_OPTIONS } from '../../constants/i18n';
-import { TEAM_AUDIT_LOG_TYPE } from '../../types/team-audit-logs';
 import type { TTeamAuditLog } from '../../types/team-audit-logs';
+import { TEAM_AUDIT_LOG_TYPE } from '../../types/team-audit-logs';
 import { formatTeamAuditLogAction } from '../../utils/team-audit-logs';
 
 export type TeamAuditLogTeam = Team & {
@@ -211,9 +210,7 @@ const renderRow = (options: RenderRowOptions) => {
   const auditLogTimestampText = new Konva.Text({
     x: columnWidth + columnSpacing,
     width: columnWidth,
-    text: DateTime.fromJSDate(auditLog.createdAt)
-      .setLocale(APP_I18N_OPTIONS.defaultLocale)
-      .toLocaleString(dateFormat),
+    text: DateTime.fromJSDate(auditLog.createdAt).setLocale(APP_I18N_OPTIONS.defaultLocale).toLocaleString(dateFormat),
     fontFamily: 'Inter',
     align: 'right',
     fontSize: textSm,
@@ -547,4 +544,3 @@ const formatUserAgent = (userAgent: string | null | undefined, userAgentInfo: UA
 
   return userAgent;
 };
-

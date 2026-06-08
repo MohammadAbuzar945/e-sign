@@ -1,10 +1,9 @@
 import { useSessionStorage } from '@documenso/lib/client-only/hooks/use-session-storage';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { FolderType } from '@documenso/lib/types/folder-type';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
 import { formatDocumentsPath, formatTemplatesPath } from '@documenso/lib/utils/teams';
-import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
-import { useSession } from '@documenso/lib/client-only/providers/session';
 import { trpc } from '@documenso/trpc/react';
 import { Avatar, AvatarFallback, AvatarImage } from '@documenso/ui/primitives/avatar';
 import type { RowSelectionState } from '@documenso/ui/primitives/data-table';
@@ -16,7 +15,7 @@ import { Bird } from 'lucide-react';
 import { parseAsStringLiteral, useQueryState } from 'nuqs';
 import { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
-import { useSessionStorage } from '@documenso/lib/client-only/hooks/use-session-storage';
+
 import { EnvelopesBulkDeleteDialog } from '~/components/dialogs/envelopes-bulk-delete-dialog';
 import { EnvelopesBulkMoveDialog } from '~/components/dialogs/envelopes-bulk-move-dialog';
 import { EnvelopeDropZoneWrapper } from '~/components/general/envelope/envelope-drop-zone-wrapper';
@@ -84,14 +83,12 @@ export default function TemplatesPage() {
             <Bird className="h-12 w-12" strokeWidth={1.5} />
 
             <div className="text-center">
-              <h3 className="text-lg font-semibold">
+              <h3 className="font-semibold text-lg">
                 <Trans>Templates are not available</Trans>
               </h3>
 
               <p className="mt-2 max-w-[50ch]">
-                <Trans>
-                  You must be a member of this team to view or manage its templates and folders.
-                </Trans>
+                <Trans>You must be a member of this team to view or manage its templates and folders.</Trans>
               </p>
             </div>
           </div>

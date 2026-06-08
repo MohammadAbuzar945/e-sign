@@ -283,8 +283,6 @@ export const EnvelopeEditorProvider = ({
           })
         : {};
 
-      const recipientIds = new Set(recipients.map((recipient) => recipient.id));
-
       setEnvelope((prev) => ({
         ...prev,
         ...data,

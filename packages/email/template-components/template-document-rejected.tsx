@@ -37,7 +37,7 @@ export function TemplateDocumentRejected({
         <Trans>You can view the document and its status by clicking the button below.</Trans>
       </Text>
 
-      <Section className="mb-6 mt-8 text-center">
+      <Section className="mt-8 mb-6 text-center">
         <Button
           href={documentUrl}
           className="inline-flex items-center justify-center rounded-lg bg-documenso-500 px-6 py-3 text-center font-medium text-black text-sm no-underline"

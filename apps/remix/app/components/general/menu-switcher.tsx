@@ -1,11 +1,3 @@
-import { useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { ChevronsUpDown, CreditCardIcon } from 'lucide-react';
-import { Link } from 'react-router';
-
 import { authClient } from '@documenso/auth/client';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';

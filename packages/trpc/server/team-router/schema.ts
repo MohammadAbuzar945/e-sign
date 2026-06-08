@@ -1,5 +1,4 @@
 import { URL_PATTERN, ZNameSchema } from '@documenso/lib/constants/auth';
-import { PROTECTED_TEAM_URLS } from '@documenso/lib/constants/teams';
 import { zEmail } from '@documenso/lib/utils/zod';
 import { TeamMemberRole } from '@prisma/client';
 import { z } from 'zod';
@@ -28,10 +27,7 @@ export const ZTeamUrlSchema = z
   .toLowerCase()
   .regex(/^[a-z0-9].*[^_-]$/, 'Team URL cannot start or end with dashes or underscores.')
   .regex(/^(?!.*[-_]{2})/, 'Team URL cannot contain consecutive dashes or underscores.')
-  .regex(
-    /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/,
-    'Team URL can only contain letters, numbers, dashes and underscores.',
-  );
+  .regex(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/, 'Team URL can only contain letters, numbers, dashes and underscores.');
 
 export const ZTeamNameSchema = z
   .string()

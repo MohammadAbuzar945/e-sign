@@ -3,12 +3,11 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
 import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
 import { generateDatabaseId } from '@documenso/lib/universal/id';
+import type { CreateTeamAuditLogDataResponse } from '@documenso/lib/utils/team-audit-logs';
+import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
 import { OrganisationGroupType, OrganisationMemberRole, TeamMemberRole } from '@documenso/prisma/generated/types';
-
-import type { CreateTeamAuditLogDataResponse } from '@documenso/lib/utils/team-audit-logs';
-import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 
 import { authenticatedProcedure } from '../trpc';
 import { ZCreateTeamGroupsRequestSchema, ZCreateTeamGroupsResponseSchema } from './create-team-groups.types';
@@ -114,9 +113,7 @@ export const createTeamGroupsRoute = authenticatedProcedure
       })),
     });
 
-    const organisationGroupsById = new Map(
-      team.organisation.groups.map((group) => [group.id, group]),
-    );
+    const organisationGroupsById = new Map(team.organisation.groups.map((group) => [group.id, group]));
 
     const auditLogs: CreateTeamAuditLogDataResponse[] = [];
 

@@ -9,10 +9,5 @@ export const ZDownloadTeamAuditLogsResponseSchema = z.object({
   teamName: z.string(),
 });
 
-export type TDownloadTeamAuditLogsRequest = z.infer<
-  typeof ZDownloadTeamAuditLogsRequestSchema
->;
-export type TDownloadTeamAuditLogsResponse = z.infer<
-  typeof ZDownloadTeamAuditLogsResponseSchema
->;
-
+export type TDownloadTeamAuditLogsRequest = z.infer<typeof ZDownloadTeamAuditLogsRequestSchema>;
+export type TDownloadTeamAuditLogsResponse = z.infer<typeof ZDownloadTeamAuditLogsResponseSchema>;

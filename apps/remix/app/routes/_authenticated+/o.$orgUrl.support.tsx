@@ -59,7 +59,7 @@ export default function SupportPage() {
                 <Trans>Documentation</Trans>
               </Link>
             </h2>
-            <p className="text-muted-foreground mt-1">
+            <p className="mt-1 text-muted-foreground">
               <Trans>Read our documentation to get started with Nomia.</Trans>
             </p>
           </div>

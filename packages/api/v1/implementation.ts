@@ -914,8 +914,8 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
         },
         data: {
           authOptions: {
-              ...body.authOptions,
-            },
+            ...body.authOptions,
+          },
         },
       });
     }

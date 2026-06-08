@@ -4,11 +4,10 @@ import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles
 import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { generateDatabaseId } from '@documenso/lib/universal/id';
-import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
-import { prisma } from '@documenso/prisma';
-
 import type { CreateTeamAuditLogDataResponse } from '@documenso/lib/utils/team-audit-logs';
 import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
+import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
+import { prisma } from '@documenso/prisma';
 import { OrganisationGroupType, TeamMemberRole } from '@prisma/client';
 import { match } from 'ts-pattern';
 
@@ -47,8 +46,7 @@ type CreateTeamMembersOptions = {
   metadata?: ApiRequestMetadata;
 };
 
-export const createTeamMembers = async ({ userId, teamId, membersToCreate   metadata,
-}: CreateTeamMembersOptions) => {
+export const createTeamMembers = async ({ userId, teamId, membersToCreate, metadata }: CreateTeamMembersOptions) => {
   const team = await prisma.team.findFirst({
     where: buildTeamWhereQuery({
       teamId,
@@ -202,9 +200,7 @@ export const createTeamMembers = async ({ userId, teamId, membersToCreate   meta
   const auditLogs: CreateTeamAuditLogDataResponse[] = [];
 
   for (const member of membersToCreate) {
-    const organisationMember = team.organisation.members.find(
-      ({ id }) => id === member.organisationMemberId,
-    );
+    const organisationMember = team.organisation.members.find(({ id }) => id === member.organisationMemberId);
 
     if (!organisationMember || !organisationMember.user) {
       continue;

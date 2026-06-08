@@ -10,10 +10,7 @@ type TeamInheritMemberAlertProps = {
   isPrivate: boolean;
 };
 
-export const TeamInheritMemberAlert = ({
-  memberAccessTeamGroup,
-  isPrivate,
-}: TeamInheritMemberAlertProps) => {
+export const TeamInheritMemberAlert = ({ memberAccessTeamGroup, isPrivate }: TeamInheritMemberAlertProps) => {
   if (isPrivate) {
     return null;
   }

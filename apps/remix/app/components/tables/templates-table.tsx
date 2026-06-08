@@ -1,12 +1,3 @@
-import { useMemo, useTransition } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { AlertTriangle, Globe2Icon, InfoIcon, Link2Icon, Loader, LockIcon } from 'lucide-react';
-import { DateTime } from 'luxon';
-import { Link } from 'react-router';
-
 import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
@@ -24,6 +15,7 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { AlertTriangle, Building2Icon, Globe2Icon, InfoIcon, Link2Icon, Loader, LockIcon } from 'lucide-react';
+import { DateTime } from 'luxon';
 import { useMemo, useTransition } from 'react';
 import { Link } from 'react-router';
 
@@ -105,8 +97,7 @@ export const TemplatesTable = ({
       {
         header: _(msg`Created`),
         accessorKey: 'createdAt',
-        cell: ({ row }) =>
-          DateTime.fromJSDate(row.original.createdAt).toFormat('yyyy-MM-dd hh:mm:ss a'),
+        cell: ({ row }) => DateTime.fromJSDate(row.original.createdAt).toFormat('yyyy-MM-dd hh:mm:ss a'),
       },
       {
         header: _(msg`Title`),

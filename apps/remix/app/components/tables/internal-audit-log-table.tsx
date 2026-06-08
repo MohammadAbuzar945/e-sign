@@ -1,4 +1,3 @@
-import { APP_I18N_OPTIONS } from '@documenso/lib/constants/i18n';
 import { DOCUMENT_AUDIT_LOG_TYPE, type TDocumentAuditLog } from '@documenso/lib/types/document-audit-logs';
 import { formatDocumentAuditLogAction } from '@documenso/lib/utils/document-audit-logs';
 import { cn } from '@documenso/ui/lib/utils';
@@ -8,13 +7,6 @@ import { useLingui } from '@lingui/react';
 import { DateTime } from 'luxon';
 import { match, P } from 'ts-pattern';
 import { UAParser } from 'ua-parser-js';
-import {
-  DOCUMENT_AUDIT_LOG_TYPE,
-  type TDocumentAuditLog,
-} from '@documenso/lib/types/document-audit-logs';
-import { formatDocumentAuditLogAction } from '@documenso/lib/utils/document-audit-logs';
-import { cn } from '@documenso/ui/lib/utils';
-import { Card, CardContent } from '@documenso/ui/primitives/card';
 
 export type AuditLogDataTableProps = {
   logs: TDocumentAuditLog[];

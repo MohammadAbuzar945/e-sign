@@ -1,8 +1,8 @@
 import { useSessionStorage } from '@documenso/lib/client-only/hooks/use-session-storage';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { STATS_COUNT_CAP } from '@documenso/lib/constants/document';
 import { SKIP_QUERY_BATCH_META } from '@documenso/lib/constants/trpc';
-import { useSession } from '@documenso/lib/client-only/providers/session';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
 import { parseToIntegerArray } from '@documenso/lib/utils/params';
 import { formatDocumentsPath } from '@documenso/lib/utils/teams';
@@ -144,14 +144,12 @@ export default function DocumentsPage() {
             <Bird className="h-12 w-12" strokeWidth={1.5} />
 
             <div className="text-center">
-              <h3 className="text-lg font-semibold">
+              <h3 className="font-semibold text-lg">
                 <Trans>Documents are not available</Trans>
               </h3>
 
               <p className="mt-2 max-w-[50ch]">
-                <Trans>
-                  You must be a member of this team to view or manage its documents and folders.
-                </Trans>
+                <Trans>You must be a member of this team to view or manage its documents and folders.</Trans>
               </p>
             </div>
           </div>

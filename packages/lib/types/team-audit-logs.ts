@@ -156,10 +156,6 @@ export const ZTeamAuditLogSchema = ZTeamAuditLogBaseSchema.and(
 export type TTeamAuditLog = z.infer<typeof ZTeamAuditLogSchema>;
 export type TTeamAuditLogType = z.infer<typeof ZTeamAuditLogTypeSchema>;
 
-export type TeamAuditLogByType<T = TTeamAuditLog['type']> = Extract<
-  TTeamAuditLog,
-  { type: T }
->;
+export type TeamAuditLogByType<T = TTeamAuditLog['type']> = Extract<TTeamAuditLog, { type: T }>;
 
 export type TTeamAuditLogBaseSchema = z.infer<typeof ZTeamAuditLogBaseSchema>;
-

@@ -1,10 +1,7 @@
+import { cn } from '@documenso/ui/lib/utils';
 import type { ImgHTMLAttributes } from 'react';
 
-import { cn } from '@documenso/ui/lib/utils';
-
-
 export type LogoProps = ImgHTMLAttributes<HTMLImageElement>;
-
 
 export const BrandingLogo = ({ className, ...props }: LogoProps) => (
   <>

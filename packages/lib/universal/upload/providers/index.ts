@@ -27,8 +27,6 @@ export const getStorageProvider = (): StorageProvider => {
       cached = new GCSProvider();
       return cached;
     default:
-      throw new Error(
-        `Invalid object storage transport: "${transport}". Expected "s3", "azure-blob", or "gcs".`,
-      );
+      throw new Error(`Invalid object storage transport: "${transport}". Expected "s3", "azure-blob", or "gcs".`);
   }
 };

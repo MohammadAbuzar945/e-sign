@@ -1,9 +1,3 @@
-import { useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { isAdmin } from '@documenso/lib/utils/is-admin';
 import { Button } from '@documenso/ui/primitives/button';
@@ -15,6 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { useState } from 'react';
 
 import { OrganisationCreateDialog } from '~/components/dialogs/organisation-create-dialog';
 import { OrganisationInvitations } from '~/components/general/organisations/organisation-invitations';
@@ -33,8 +31,7 @@ export default function TeamsSettingsPage() {
   const ownedOrganisationsCount = organisations.filter((org) => org.ownerUserId === user.id).length;
   const rawMax = user.maxOrganisationCount as number | string | undefined;
   const numMax = typeof rawMax === 'number' ? rawMax : Number(rawMax);
-  const maxOrganisationCount =
-    !Number.isNaN(numMax) && numMax >= 0 ? numMax : 1;
+  const maxOrganisationCount = !Number.isNaN(numMax) && numMax >= 0 ? numMax : 1;
 
   // Check if user can create more organisations
   // If maxOrganisationCount is 0, it means unlimited (only for admins)
@@ -61,10 +58,7 @@ export default function TeamsSettingsPage() {
         </Button>
       </SettingsHeader>
 
-      <OrganisationCreateDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-      />
+      <OrganisationCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
 
       <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
         <DialogContent position="center">

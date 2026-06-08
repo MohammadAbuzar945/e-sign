@@ -1,9 +1,6 @@
 import type { Prisma } from '@prisma/client';
 
-import {
-  type TDocumentKbaSettings,
-  ZDocumentKbaSettingsSchema,
-} from '../types/document-auth';
+import { type TDocumentKbaSettings, ZDocumentKbaSettingsSchema } from '../types/document-auth';
 
 /**
  * Normalise stored JSON (organisation/team settings or Prisma `Json`) into a full KBA settings object.

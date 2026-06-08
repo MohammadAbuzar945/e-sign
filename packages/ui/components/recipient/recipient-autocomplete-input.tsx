@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { Popover, PopoverContent } from '@documenso/ui/primitives/popover';
 
 import { Trans } from '@lingui/react/macro';
 import { PopoverAnchor } from '@radix-ui/react-popover';
 import type React from 'react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { Command, CommandGroup, CommandItem } from '../../primitives/command';
 import { Input } from '../../primitives/input';
@@ -79,11 +79,7 @@ export const RecipientAutoCompleteInput = React.forwardRef<HTMLInputElement, Com
             {/* Not using <CommandEmpty /> here due to some weird behaviour */}
             {options.length === 0 && (
               <div className="px-2 py-1.5 text-sm">
-                {loading ? (
-                  <Trans>Loading suggestions...</Trans>
-                ) : (
-                  <Trans>No suggestions found</Trans>
-                )}
+                {loading ? <Trans>Loading suggestions...</Trans> : <Trans>No suggestions found</Trans>}
               </div>
             )}
 

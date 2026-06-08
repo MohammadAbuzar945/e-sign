@@ -24,10 +24,5 @@ export const ZGetTeamAuditLogsCsvExportStatusResponseSchema = z.object({
     .nullable(),
 });
 
-export type TGetTeamAuditLogsCsvExportStatusRequest = z.infer<
-  typeof ZGetTeamAuditLogsCsvExportStatusRequestSchema
->;
-export type TGetTeamAuditLogsCsvExportStatusResponse = z.infer<
-  typeof ZGetTeamAuditLogsCsvExportStatusResponseSchema
->;
-
+export type TGetTeamAuditLogsCsvExportStatusRequest = z.infer<typeof ZGetTeamAuditLogsCsvExportStatusRequestSchema>;
+export type TGetTeamAuditLogsCsvExportStatusResponse = z.infer<typeof ZGetTeamAuditLogsCsvExportStatusResponseSchema>;

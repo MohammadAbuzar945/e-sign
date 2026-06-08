@@ -36,8 +36,6 @@ const getSigner = async () => {
 };
 
 export const signPdf = async ({ pdf }: SignOptions) => {
-
-
   const nodeEnv = String(NEXT_PUBLIC_WEBAPP_URL()).includes('https://sign.nomiadocs.com');
 
   // In test environments we skip cryptographic signing to avoid requiring

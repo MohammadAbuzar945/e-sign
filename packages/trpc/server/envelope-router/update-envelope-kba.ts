@@ -2,9 +2,9 @@ import { updateEnvelopeKba } from '@documenso/lib/server-only/envelope/update-en
 
 import { authenticatedProcedure } from '../trpc';
 import {
+  updateEnvelopeKbaMeta,
   ZUpdateEnvelopeKbaRequestSchema,
   ZUpdateEnvelopeKbaResponseSchema,
-  updateEnvelopeKbaMeta,
 } from './update-envelope-kba.types';
 
 export const updateEnvelopeKbaRoute = authenticatedProcedure
@@ -32,4 +32,3 @@ export const updateEnvelopeKbaRoute = authenticatedProcedure
       },
     });
   });
-

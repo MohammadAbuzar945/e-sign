@@ -1,33 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
-
+import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import { useSession } from '@documenso/lib/client-only/providers/session';
+import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { getSubscriptionsByUserId } from '@documenso/lib/server-only/subscription/get-subscriptions-by-user-id';
+import { prisma } from '@documenso/prisma';
+import { Button } from '@documenso/ui/primitives/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@documenso/ui/primitives/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@documenso/ui/primitives/table';
+import { useToast } from '@documenso/ui/primitives/use-toast';
 import { Trans } from '@lingui/react/macro';
 import { ChevronLeftIcon } from 'lucide-react';
-import { Link, type LoaderFunctionArgs, useLocation, useRevalidator } from 'react-router';
-
-import { getSession } from '@documenso/auth/server/lib/utils/get-session';
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { prisma } from '@documenso/prisma';
-import { useSession } from '@documenso/lib/client-only/providers/session';
-import { getSubscriptionsByUserId } from '@documenso/lib/server-only/subscription/get-subscriptions-by-user-id';
-import { Button } from '@documenso/ui/primitives/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@documenso/ui/primitives/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@documenso/ui/primitives/table';
-import { useToast } from '@documenso/ui/primitives/use-toast';
-
-import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useRevalidator } from 'react-router';
 import { appMetaTags } from '~/utils/meta';
 import { superLoaderJson, useSuperLoaderData } from '~/utils/super-json-loader';
 
@@ -342,8 +326,8 @@ function PlanCard({
   return (
     <div className="flex w-full flex-col justify-between rounded-xl border p-4 hover:bg-purple-50 md:w-1/3">
       <div className="h-44">
-        <h2 className="mb-4 text-xl font-semibold">{title}</h2>
-        <h1 className="pb-3 text-sm text-gray-500">
+        <h2 className="mb-4 font-semibold text-xl">{title}</h2>
+        <h1 className="pb-3 text-gray-500 text-sm">
           <Trans>Select the number of envelopes you require</Trans>
         </h1>
         <div className="mb-4 flex flex-wrap gap-2">
@@ -353,7 +337,7 @@ function PlanCard({
               onClick={() => setSelectedPlan(plan)}
               className={`rounded-2xl border px-3 py-1 text-sm shadow-md ${
                 selectedPlan.name === plan.name
-                  ? 'bg-primary border-teal-400 text-white'
+                  ? 'border-teal-400 bg-primary text-white'
                   : activePlanId === plan.planCode
                     ? 'animate-bounce border-teal-300 bg-gradient-to-bl from-green-500 to-blue-500 text-white'
                     : 'border-teal-200 hover:bg-blue-100'
@@ -365,20 +349,19 @@ function PlanCard({
         </div>
       </div>
       <div>
-        <div className="text-muted-foreground mb-4 rounded-xl bg-purple-50 p-2 text-center text-xl font-bold">
-          <strong className="text-primary text-2xl">
+        <div className="mb-4 rounded-xl bg-purple-50 p-2 text-center font-bold text-muted-foreground text-xl">
+          <strong className="text-2xl text-primary">
             {selectedPlan.credits}
             <br />{' '}
           </strong>
           <Trans>Envelopes</Trans>
         </div>
 
-        <div className="text-muted-foreground mb-4 rounded-xl bg-purple-50 p-2 text-center text-xl font-bold">
-          <Trans>Price </Trans> <br />{' '}
-          <strong className="text-primary text-2xl">{selectedPlan.amount}</strong>
+        <div className="mb-4 rounded-xl bg-purple-50 p-2 text-center font-bold text-muted-foreground text-xl">
+          <Trans>Price </Trans> <br /> <strong className="text-2xl text-primary">{selectedPlan.amount}</strong>
         </div>
       </div>
-      <div className="text-primary bottom-0 w-full text-sm underline duration-200 hover:opacity-70">
+      <div className="bottom-0 w-full text-primary text-sm underline duration-200 hover:opacity-70">
         <Button
           className="w-full"
           onClick={() => {
@@ -440,8 +423,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
             setIsPolling(false);
             toast({
               title: 'Taking longer than expected',
-              description:
-                'Your payment is being processed. Please refresh the page in a few minutes.',
+              description: 'Your payment is being processed. Please refresh the page in a few minutes.',
               variant: 'destructive',
             });
 
@@ -497,19 +479,18 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
 
   const getActiveSubscriptionDetails = (planId: string) => {
     for (const [_, plans] of Object?.entries(plansData)) {
-      const matchedPlan = plans?.find((plan: { planCode: string; }) => plan.planCode === planId);
-      if (matchedPlan) return matchedPlan;
+      const matchedPlan = plans?.find((plan: { planCode: string }) => plan.planCode === planId);
+      if (matchedPlan) {
+        return matchedPlan;
+      }
     }
     return null;
   };
 
   const activePlanDetails = getActiveSubscriptionDetails(activeSubscriptionPlanId);
 
-  const [isCancelPreviousSubscriptionDialogOpen, setIsCancelPreviousSubscriptionDialogOpen] =
-    useState(false);
-  const [pendingNewSubscriptionPlanId, setPendingNewSubscriptionPlanId] = useState<string | null>(
-    null,
-  );
+  const [isCancelPreviousSubscriptionDialogOpen, setIsCancelPreviousSubscriptionDialogOpen] = useState(false);
+  const [pendingNewSubscriptionPlanId, setPendingNewSubscriptionPlanId] = useState<string | null>(null);
 
   const buildPlusAddressEmail = (email: string, _planId: string) => {
     const atIndex = email.indexOf('@');
@@ -549,13 +530,10 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
       return;
     }
 
-    const hasActivePaidSubscription =
-      Boolean(currentSubscriptionData) && activePlanDetails?.label !== 'Pay as you go';
+    const hasActivePaidSubscription = Boolean(currentSubscriptionData) && activePlanDetails?.label !== 'Pay as you go';
 
     const isTryingToSwitchPlans =
-      hasActivePaidSubscription &&
-      Boolean(activeSubscriptionPlanId) &&
-      activeSubscriptionPlanId !== planId;
+      hasActivePaidSubscription && Boolean(activeSubscriptionPlanId) && activeSubscriptionPlanId !== planId;
 
     if (isTryingToSwitchPlans) {
       setPendingNewSubscriptionPlanId(planId);
@@ -599,11 +577,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
     window.location.href = data?.authorization_url;
   }
 
-  async function handleApiPaystackOneTimeTransaction(
-    email: string,
-    amount: any,
-    metadata?: number,
-  ) {
+  async function handleApiPaystackOneTimeTransaction(email: string, amount: any, metadata?: number) {
     const sanitizedAmount = amount.replace(/[^\d]/g, '');
     const response = await fetch(`${NEXT_PUBLIC_WEBAPP_URL()}/api/paystack/create-transaction`, {
       method: 'POST',
@@ -637,18 +611,15 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
   }
 
   async function handleApiCancelPaystackSubscription(subscriptionCode: string) {
-    const response = await fetch(
-      `${NEXT_PUBLIC_WEBAPP_URL()}/api/paystack/update-subscription-link`,
-      {
+    const response = await fetch(`${NEXT_PUBLIC_WEBAPP_URL()}/api/paystack/update-subscription-link`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-        body: JSON.stringify({
-          subscriptionCode,
-        }),
-      },
-    );
+      body: JSON.stringify({
+        subscriptionCode,
+      }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -675,18 +646,15 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
   }
 
   async function handleManageCards(subscriptionCode: string) {
-    const response = await fetch(
-      `${NEXT_PUBLIC_WEBAPP_URL()}/api/paystack/update-subscription-link`,
-      {
+    const response = await fetch(`${NEXT_PUBLIC_WEBAPP_URL()}/api/paystack/update-subscription-link`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-        body: JSON.stringify({
-          subscriptionCode,
-        }),
-      },
-    );
+      body: JSON.stringify({
+        subscriptionCode,
+      }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -709,7 +677,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
   if (!organisation) {
     return (
       <div className="mx-auto w-full max-w-screen-xl px-4 md:px-8">
-        <h1 className="py-6 text-xl font-semibold text-gray-500">
+        <h1 className="py-6 font-semibold text-gray-500 text-xl">
           <Trans>Subscriptions are only available to organisation owners.</Trans>
         </h1>
       </div>
@@ -721,28 +689,25 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
       <div className="w-full">
         <Link
           to={`/o/${orgUrl}/settings/general`}
-          className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center text-sm font-medium transition-colors"
+          className="mb-6 inline-flex items-center font-medium text-muted-foreground text-sm transition-colors hover:text-foreground"
         >
           <ChevronLeftIcon className="mr-2 h-4 w-4" />
           <Trans>Back</Trans>
         </Link>
 
-        <Dialog
-          open={isCancelPreviousSubscriptionDialogOpen}
-          onOpenChange={setIsCancelPreviousSubscriptionDialogOpen}
-        >
+        <Dialog open={isCancelPreviousSubscriptionDialogOpen} onOpenChange={setIsCancelPreviousSubscriptionDialogOpen}>
           <DialogContent className="w-full max-w-lg p-6">
             <DialogHeader>
-              <DialogTitle className="text-primary text-xl font-bold">
+              <DialogTitle className="font-bold text-primary text-xl">
                 <Trans>Cancel current subscription first</Trans>
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-3 text-sm text-gray-600">
+            <div className="space-y-3 text-gray-600 text-sm">
               <p>
                 <Trans>
-                  You already have an active subscription. To start a new monthly/annual subscription,
-                  please cancel your current one first.
+                  You already have an active subscription. To start a new monthly/annual subscription, please cancel
+                  your current one first.
                 </Trans>
               </p>
 
@@ -788,12 +753,10 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
         {isPolling && (
           <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
             <div className="flex items-center space-x-3">
-              <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-blue-600"></div>
+              <div className="h-5 w-5 animate-spin rounded-full border-blue-600 border-b-2"></div>
               <div>
                 <p className="font-medium text-blue-800">Processing your subscription...</p>
-                <p className="text-sm text-blue-600">
-                  This may take a few moments. Please don't refresh the page.
-                </p>
+                <p className="text-blue-600 text-sm">This may take a few moments. Please don't refresh the page.</p>
               </div>
             </div>
           </div>
@@ -801,49 +764,39 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
 
         <Dialog>
           <DialogTrigger asChild className="flex w-full items-end justify-end">
-            <button className="text-md cursor-pointer pb-6 text-blue-500 underline">
+            <button className="cursor-pointer pb-6 text-blue-500 text-md underline">
               <Trans>View History</Trans>
             </button>
           </DialogTrigger>
           <DialogContent className="w-full max-w-5xl p-6">
             <DialogHeader>
-              <DialogTitle className="text-primary text-2xl font-bold">
-                Subscription History
-              </DialogTitle>
+              <DialogTitle className="font-bold text-2xl text-primary">Subscription History</DialogTitle>
             </DialogHeader>
             <div className="mt-6 overflow-x-auto">
-              <Table className="border-primary/30 w-full rounded-lg border shadow-md">
+              <Table className="w-full rounded-lg border border-primary/30 shadow-md">
                 <TableHeader className="bg-primary/10">
                   <TableRow>
-                    <TableHead className="text-primary font-semibold">Name</TableHead>
-                    <TableHead className="text-primary font-semibold">Price</TableHead>
-                    <TableHead className="text-primary font-semibold">Credits</TableHead>
-                    <TableHead className="text-primary font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold text-primary">Name</TableHead>
+                    <TableHead className="font-semibold text-primary">Price</TableHead>
+                    <TableHead className="font-semibold text-primary">Credits</TableHead>
+                    <TableHead className="font-semibold text-primary">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {subscriptions?.map((sub: any, i: number) => {
                     const planDetails = getActiveSubscriptionDetails(sub.priceId ?? sub.planId);
                     return (
-                      <TableRow key={sub.planId ?? i} className="hover:bg-muted/50 transition">
+                      <TableRow key={sub.planId ?? i} className="transition hover:bg-muted/50">
                         <TableCell>
-                          {planDetails?.label ?? (
-                            <span className="italic text-gray-400">Unknown</span>
-                          )}
+                          {planDetails?.label ?? <span className="text-gray-400 italic">Unknown</span>}
                         </TableCell>
                         <TableCell>
-                          {planDetails?.amount ?? (
-                            <span className="italic text-gray-400">Unknown</span>
-                          )}
+                          {planDetails?.amount ?? <span className="text-gray-400 italic">Unknown</span>}
                         </TableCell>
                         <TableCell>
-                          {planDetails?.credits ?? (
-                            <span className="italic text-gray-400">Unknown</span>
-                          )}
+                          {planDetails?.credits ?? <span className="text-gray-400 italic">Unknown</span>}
                         </TableCell>
-                        <TableCell>
-                          {sub.status === 'PAST_DUE' ? 'INCOMPLETE' : sub.status}
-                        </TableCell>
+                        <TableCell>{sub.status === 'PAST_DUE' ? 'INCOMPLETE' : sub.status}</TableCell>
                       </TableRow>
                     );
                   })}
@@ -856,26 +809,26 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
         {currentSubscriptionData && (
           <div>
             <div className="flex w-full items-center justify-between">
-              <h1 className="pb-6 text-xl font-semibold text-gray-500">
+              <h1 className="pb-6 font-semibold text-gray-500 text-xl">
                 <Trans>Active Subscription</Trans>
               </h1>
             </div>
 
-            <div className="flex h-[25vh] w-full flex-col justify-between rounded-xl border border-dashed border-purple-500 bg-gradient-to-br from-blue-100 to-purple-100 p-4">
+            <div className="flex h-[25vh] w-full flex-col justify-between rounded-xl border border-purple-500 border-dashed bg-gradient-to-br from-blue-100 to-purple-100 p-4">
               <div>
-                <h1 className="text-primary text-xl font-extrabold">
+                <h1 className="font-extrabold text-primary text-xl">
                   <Trans>{activePlanDetails?.label}</Trans>
                 </h1>
-                <h2 className="text-xl text-gray-500">
+                <h2 className="text-gray-500 text-xl">
                   <Trans>{activePlanDetails?.name}</Trans>
                 </h2>
-                <h3 className="text-lg text-gray-400">
+                <h3 className="text-gray-400 text-lg">
                   <Trans>{activePlanDetails?.amount}</Trans>
                 </h3>
               </div>
               <div>
                 {activePlanDetails?.label === 'Pay as you go' ? (
-                  <h1 className="text-sm text-gray-400">
+                  <h1 className="text-gray-400 text-sm">
                     <Trans>*This is life time envelopes you can use on this platform</Trans>
                   </h1>
                 ) : (
@@ -904,7 +857,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
           </div>
         )}
 
-        <h1 className="py-6 text-xl font-semibold text-gray-500">
+        <h1 className="py-6 font-semibold text-gray-500 text-xl">
           <Trans>Please select subscription</Trans>
         </h1>
 

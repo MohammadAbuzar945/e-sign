@@ -3,6 +3,7 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { ZUpdateTeamRequestSchema } from '@documenso/trpc/server/team-router/update-team.types';
 import { Button } from '@documenso/ui/primitives/button';
+import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
@@ -14,7 +15,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import type { z } from 'zod';
-import { Checkbox } from '@documenso/ui/primitives/checkbox';
 
 export type UpdateTeamDialogProps = {
   teamId: number;
@@ -189,16 +189,9 @@ export const TeamUpdateForm = ({
               <FormItem className="mt-4 flex items-center space-x-2">
                 <FormControl>
                   <div className="flex items-center">
-                    <Checkbox
-                      id="is-private"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Checkbox id="is-private" checked={field.value} onCheckedChange={field.onChange} />
 
-                    <label
-                      className="text-muted-foreground ml-2 text-sm"
-                      htmlFor="is-private"
-                    >
+                    <label className="ml-2 text-muted-foreground text-sm" htmlFor="is-private">
                       <Trans>Private Team - only members can see documents</Trans>
                     </label>
                   </div>

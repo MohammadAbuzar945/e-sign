@@ -1,14 +1,10 @@
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
+import { OrganisationType } from '@documenso/prisma/generated/types';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-
-import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
-import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
-import { OrganisationType } from '@documenso/prisma/generated/types';
-import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 
 import { OrganisationDeleteDialog } from '~/components/dialogs/organisation-delete-dialog';
 import { AvatarImageForm } from '~/components/forms/avatar-image';
@@ -39,19 +35,14 @@ export default function OrganisationSettingsGeneral() {
           <>
             <hr className="my-4" />
 
-            <Alert
-              className="flex flex-col justify-between p-6 sm:flex-row sm:items-center"
-              variant="neutral"
-            >
+            <Alert className="flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
               <div className="mb-4 sm:mb-0">
                 <AlertTitle>
                   <Trans>Delete organisation</Trans>
                 </AlertTitle>
 
                 <AlertDescription className="mr-2">
-                  <Trans>
-                    This organisation, and any associated data will be permanently deleted.
-                  </Trans>
+                  <Trans>This organisation, and any associated data will be permanently deleted.</Trans>
                 </AlertDescription>
               </div>
 

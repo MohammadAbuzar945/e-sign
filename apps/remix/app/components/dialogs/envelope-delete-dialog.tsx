@@ -56,10 +56,7 @@ export const EnvelopeDeleteDialog = ({
     onSuccess: async () => {
       void refreshLimits();
 
-      await Promise.all([
-        trpcUtils.document.inbox.getCount.invalidate(),
-        trpcUtils.document.inbox.find.invalidate(),
-      ]);
+      await Promise.all([trpcUtils.document.inbox.getCount.invalidate(), trpcUtils.document.inbox.find.invalidate()]);
 
       toast({
         title: canManageDocument

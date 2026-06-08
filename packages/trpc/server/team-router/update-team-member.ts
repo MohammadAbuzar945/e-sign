@@ -3,12 +3,11 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
 import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
 import { generateDatabaseId } from '@documenso/lib/universal/id';
+import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
 import { OrganisationGroupType, TeamMemberRole } from '@documenso/prisma/generated/types';
 import { match } from 'ts-pattern';
-
-import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 
 import { authenticatedProcedure } from '../trpc';
 import { ZUpdateTeamMemberRequestSchema, ZUpdateTeamMemberResponseSchema } from './update-team-member.types';
@@ -139,13 +138,8 @@ export const updateTeamMemberRoute = authenticatedProcedure
     const isUpdatingSelfAsAdmin =
       currentMemberToUpdateTeamRole === TeamMemberRole.ADMIN &&
       team.organisation.members.some((organisationMember) => organisationMember.id === memberId) &&
-      team.organisation.members.some(
-        (organisationMember) => organisationMember.userId === userId,
-      ) &&
-      memberId ===
-        team.organisation.members.find(
-          (organisationMember) => organisationMember.userId === userId,
-        )?.id;
+      team.organisation.members.some((organisationMember) => organisationMember.userId === userId) &&
+      memberId === team.organisation.members.find((organisationMember) => organisationMember.userId === userId)?.id;
 
     if (isUpdatingSelfAsAdmin) {
       throw new AppError(AppErrorCode.UNAUTHORIZED, {

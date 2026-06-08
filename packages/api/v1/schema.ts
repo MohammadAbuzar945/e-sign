@@ -35,10 +35,7 @@ export const ZNoBodyMutationSchema = null;
 export const ZGetDocumentsQuerySchema = z.object({
   page: z.coerce.number().min(1).optional().default(1),
   perPage: z.coerce.number().min(1).optional().default(10),
-  folderId: z
-  .string()
-  .describe('Filter documents by folder ID. When omitted, returns root documents.')
-  .optional(),
+  folderId: z.string().describe('Filter documents by folder ID. When omitted, returns root documents.').optional(),
 });
 
 export type TGetDocumentsQuerySchema = z.infer<typeof ZGetDocumentsQuerySchema>;

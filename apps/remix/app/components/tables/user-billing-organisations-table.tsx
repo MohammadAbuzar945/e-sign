@@ -18,9 +18,9 @@ export const UserBillingOrganisationsTable = () => {
   const { user, organisations } = useSession();
 
   const billingOrganisations = useMemo(() => {
-    return organisations.filter((org) =>
-      canExecuteOrganisationAction('MANAGE_BILLING', org.currentOrganisationRole) &&
-      org.ownerUserId === user.id,
+    return organisations.filter(
+      (org) =>
+        canExecuteOrganisationAction('MANAGE_BILLING', org.currentOrganisationRole) && org.ownerUserId === user.id,
     );
   }, [organisations, user.id]);
 

@@ -1,6 +1,5 @@
-import { KbaMode, KbaScopeType } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { type KbaMode, KbaScopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '../../types/document-audit-logs';
@@ -182,7 +181,8 @@ export const updateEnvelopeKba = async ({
           isEnabled: settings.isEnabled,
           maxAttempts: settings.maxAttempts,
           lockoutMinutes: settings.lockoutMinutes,
-          envelopeChallengeAnswerType: settings.mode === 'PER_ENVELOPE' ? envelopeChallenge?.answerType ?? null : null,
+          envelopeChallengeAnswerType:
+            settings.mode === 'PER_ENVELOPE' ? (envelopeChallenge?.answerType ?? null) : null,
           recipientChallengeAnswerTypes:
             settings.mode === 'PER_RECIPIENT'
               ? recipientChallenges.map((challenge) => ({
@@ -199,4 +199,3 @@ export const updateEnvelopeKba = async ({
     success: true as const,
   };
 };
-

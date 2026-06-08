@@ -201,8 +201,7 @@ export const updateTeamSettingsRoute = authenticatedProcedure
             // where generated XOR input has not yet picked up `kbaSettings`.
             ...(kbaSettings !== undefined
               ? {
-                  kbaSettings:
-                    kbaSettings === null ? Prisma.DbNull : (kbaSettings as Prisma.InputJsonValue),
+                  kbaSettings: kbaSettings === null ? Prisma.DbNull : (kbaSettings as Prisma.InputJsonValue),
                 }
               : {}),
           } as unknown as Prisma.TeamGlobalSettingsUncheckedUpdateWithoutTeamInput,

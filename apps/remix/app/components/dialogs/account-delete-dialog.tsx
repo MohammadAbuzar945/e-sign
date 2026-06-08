@@ -103,10 +103,8 @@ export const AccountDeleteDialog = ({ className }: AccountDeleteDialogProps) => 
 
                 <DialogDescription>
                   <Trans>
-                    Nomia will delete{' '}
-                    <span className="font-semibold">all of your documents</span>, along with all of
-                    your completed documents, signatures, and all other resources belonging to your
-                    Account.
+                    Nomia will delete <span className="font-semibold">all of your documents</span>, along with all of
+                    your completed documents, signatures, and all other resources belonging to your Account.
                   </Trans>
                 </DialogDescription>
               </DialogHeader>

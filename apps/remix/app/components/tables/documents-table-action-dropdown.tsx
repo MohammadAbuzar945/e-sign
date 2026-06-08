@@ -5,7 +5,6 @@ import { getEnvelopeItemPermissions } from '@documenso/lib/utils/envelope';
 import { findRecipientByEmail } from '@documenso/lib/utils/recipients';
 import { formatDocumentsPath } from '@documenso/lib/utils/teams';
 import { trpc as trpcReact } from '@documenso/trpc/react';
-import { DocumentShareButton } from '@documenso/ui/components/document/document-share-button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,10 +24,8 @@ import {
   EyeIcon,
   FileOutputIcon,
   FolderInput,
-  Loader,
   MoreHorizontal,
   Pencil,
-  Share,
   Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -38,7 +35,6 @@ import { DocumentResendDialog } from '~/components/dialogs/document-resend-dialo
 import { EnvelopeDeleteDialog } from '~/components/dialogs/envelope-delete-dialog';
 import { EnvelopeDuplicateDialog } from '~/components/dialogs/envelope-duplicate-dialog';
 import { EnvelopeSaveAsTemplateDialog } from '~/components/dialogs/envelope-save-as-template-dialog';
-import { DocumentRecipientLinkCopyDialog } from '~/components/general/document/document-recipient-link-copy-dialog';
 import { useCurrentTeam } from '~/providers/team';
 
 import { EnvelopeDownloadDialog } from '../dialogs/envelope-download-dialog';

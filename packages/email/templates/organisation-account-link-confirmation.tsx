@@ -47,11 +47,7 @@ export const OrganisationAccountLinkConfirmationTemplate = ({
 
             <Section className="p-2 text-slate-500">
               <Text className="text-center font-medium text-black text-lg">
-                {type === 'create' ? (
-                  <Trans>Account creation request</Trans>
-                ) : (
-                  <Trans>Link your Nomia account</Trans>
-                )}
+                {type === 'create' ? <Trans>Account creation request</Trans> : <Trans>Link your Nomia account</Trans>}
               </Text>
 
               <Text className="text-center text-base">
@@ -62,8 +58,8 @@ export const OrganisationAccountLinkConfirmationTemplate = ({
                   </Trans>
                 ) : (
                   <Trans>
-                    <span className="font-bold">{organisationName}</span> has requested to link your
-                    current Nomia account to their organisation.
+                    <span className="font-bold">{organisationName}</span> has requested to link your current Nomia
+                    account to their organisation.
                   </Trans>
                 )}
               </Text>

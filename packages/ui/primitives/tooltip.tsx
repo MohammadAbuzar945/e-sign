@@ -16,12 +16,7 @@ const TooltipTrigger = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Trigger>
 >(({ type, asChild, ...props }, ref) => (
-  <TooltipPrimitive.Trigger
-    ref={ref}
-    asChild={asChild}
-    type={asChild ? undefined : (type ?? 'button')}
-    {...props}
-  />
+  <TooltipPrimitive.Trigger ref={ref} asChild={asChild} type={asChild ? undefined : (type ?? 'button')} {...props} />
 ));
 
 TooltipTrigger.displayName = TooltipPrimitive.Trigger.displayName;

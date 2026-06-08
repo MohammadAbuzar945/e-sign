@@ -47,8 +47,8 @@ import {
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { mapSecondaryIdToTemplateId } from '../../utils/envelope';
 import { buildTeamWhereQuery } from '../../utils/teams';
-import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { processExternalId } from '../envelope/create-envelope';
+import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { incrementDocumentId } from '../envelope/increment-id';
 import { insertFormValuesInPdf } from '../pdf/insert-form-values-in-pdf';
 import { assertOrganisationRatesAndLimits } from '../rate-limit/assert-organisation-rates-and-limits';
@@ -565,7 +565,6 @@ export const createDocumentFromTemplate = async ({
         useLegacyFieldInsertion: template.useLegacyFieldInsertion ?? false,
         documentMetaId: documentMeta.id,
         formValues: formValues ?? undefined,
-        formValues: formValues ?? undefined,
         recipients: {
           createMany: {
             data: allFinalRecipients.map((recipient) => {
@@ -773,7 +772,7 @@ export const createDocumentFromTemplate = async ({
   await Promise.allSettled([
     triggerWebhook({
       event: WebhookTriggerEvents.DOCUMENT_CREATED,
-      data: ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(createdEnvelope)),
+      data: ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(envelope)),
       userId,
       teamId,
     }),
