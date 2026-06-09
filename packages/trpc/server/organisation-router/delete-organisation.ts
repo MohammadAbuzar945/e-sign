@@ -54,11 +54,5 @@ export const deleteOrganisationRoute = authenticatedProcedure
       });
     }
 
-    if (organisation.type === 'PERSONAL') {
-      throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message: 'Personal organisations cannot be deleted',
-      });
-    }
-
     await deleteOrganisation({ organisation });
   });
