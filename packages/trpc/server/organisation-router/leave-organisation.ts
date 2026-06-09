@@ -57,15 +57,13 @@ export const leaveOrganisationRoute = authenticatedProcedure
       organisationId: organisation.id,
     });
 
-    const subscription = validateIfSubscriptionIsRequired(currentSubscription);
-
     const inviteCount = organisation.invites.length;
     const newMemberCount = organisation.members.length + inviteCount - 1;
 
     // Leaving is a reducing operation, so we don't gate it on the subscription
     // being present. Sync Stripe only when one exists.
-    if (organisation.subscription) {
-      await syncMemberCountWithStripeSeatPlan(organisation.subscription, organisationClaim, newMemberCount);
+    if (currentSubscription) {
+      await syncMemberCountWithStripeSeatPlan(currentSubscription, organisationClaim, newMemberCount);
     }
 
     const teamIds = organisation.teams.map((team) => team.id);

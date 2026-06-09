@@ -45,7 +45,6 @@ import { Trans } from '@lingui/react/macro';
 import type { TeamGlobalSettings } from '@prisma/client';
 import { DocumentVisibility, OrganisationType, type RecipientRole } from '@prisma/client';
 import { InfoIcon } from 'lucide-react';
-import type { ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -1041,7 +1040,7 @@ export const DocumentPreferencesForm = ({
                               min={1}
                               max={20}
                               value={Number.isFinite(field.value) ? String(field.value) : ''}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                              onChange={(e) => {
                                 const next = Number.parseInt(e.target.value, 10);
                                 field.onChange(Number.isFinite(next) ? next : 1);
                               }}
@@ -1066,7 +1065,7 @@ export const DocumentPreferencesForm = ({
                               min={1}
                               max={1440}
                               value={Number.isFinite(field.value) ? String(field.value) : ''}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                              onChange={(e) => {
                                 const next = Number.parseInt(e.target.value, 10);
                                 field.onChange(Number.isFinite(next) ? next : 1);
                               }}

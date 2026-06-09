@@ -144,7 +144,13 @@ export enum INTERNAL_CLAIM_ID {
   ENTERPRISE = 'enterprise',
 }
 
-export type InternalClaim = Pick<SubscriptionClaim, 'id' | 'name'>;
+export type InternalClaim = Pick<SubscriptionClaim, 'id' | 'name'> & {
+  teamCount?: number;
+  memberCount?: number;
+  envelopeItemCount?: number;
+  locked?: boolean;
+  flags?: TClaimFlags;
+};
 
 export type InternalClaims = {
   [key in INTERNAL_CLAIM_ID]: InternalClaim;

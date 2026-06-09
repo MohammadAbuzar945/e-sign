@@ -264,6 +264,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
           recipients: envelope.recipients,
           fields,
           language: envelope.documentMeta.language,
+          includeQrCodeInCertificate: envelope.includeQrCodeInCertificate ?? true,
           envelopeOwner: {
             email: envelope.user.email,
             name: envelope.user.name || '',

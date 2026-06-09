@@ -1,10 +1,23 @@
-export const appMetaTags = (title?: MessageDescriptor) => {
+import type { MessageDescriptor } from '@lingui/core';
+import { i18n } from '@lingui/core';
+
+const resolveTitle = (title: MessageDescriptor | string) => {
+  if (typeof title === 'string') {
+    return title;
+  }
+
+  return i18n._(title);
+};
+
+export const appMetaTags = (title?: MessageDescriptor | string) => {
   const description =
     'An intuitive, affordable app with pay-as-you-go pricing bundles and unlimited seats. Premium e-sign without the premium price tag. Fully AATL compliant.';
 
+  const resolvedTitle = title ? resolveTitle(title) : undefined;
+
   return [
     {
-      title: title ? `${title} - Nomia Signatures` : 'Nomia Signatures',
+      title: resolvedTitle ? `${resolvedTitle} - Nomia Signatures` : 'Nomia Signatures',
     },
     {
       name: 'description',

@@ -6,7 +6,7 @@ import { reactRouter } from '@react-router/dev/vite';
 import autoprefixer from 'autoprefixer';
 import serverAdapter from 'hono-react-router-adapter/vite';
 import tailwindcss from 'tailwindcss';
-import { defineConfig, normalizePath } from 'vite';
+import { defineConfig, normalizePath, type Plugin } from 'vite';
 import macrosPlugin from 'vite-plugin-babel-macros';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import tsconfigPaths from 'vite-tsconfig-paths';
@@ -15,6 +15,45 @@ const require = createRequire(import.meta.url);
 
 const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
 const cMapsDir = normalizePath(path.join(pdfjsDistPath, 'cmaps'));
+
+const prismaClientPath = require.resolve('@prisma/client');
+const prismaExportNames = Object.keys(require(prismaClientPath)).filter(
+  (key) => key !== 'default' && /^[a-zA-Z_$][\w$]*$/.test(key),
+);
+const PRISMA_SSR_SHIM_ID = '\0virtual:prisma-client-ssr-shim';
+
+/**
+ * Vite's SSR module runner cannot import named exports from the CJS @prisma/client
+ * package. This shim re-exports the runtime values as ESM named exports in dev.
+ */
+const prismaSsrPlugin = (): Plugin => ({
+  name: 'prisma-ssr-shim',
+  enforce: 'pre',
+  resolveId(id, _importer, options) {
+    if (id === '@prisma/client' && options?.ssr) {
+      return PRISMA_SSR_SHIM_ID;
+    }
+  },
+  load(id) {
+    if (id !== PRISMA_SSR_SHIM_ID) {
+      return;
+    }
+
+    const namedExports = prismaExportNames
+      .map((key) => `export const ${key} = prisma[${JSON.stringify(key)}];`)
+      .join('\n');
+
+    return `
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const prisma = require(${JSON.stringify(prismaClientPath)});
+
+export default prisma;
+${namedExports}
+    `;
+  },
+});
 
 /**
  * Note: We load the env variables externally so we can have runtime enviroment variables
@@ -33,6 +72,7 @@ export default defineConfig({
     strictPort: true,
   },
   plugins: [
+    prismaSsrPlugin(),
     viteStaticCopy({
       targets: [
         {

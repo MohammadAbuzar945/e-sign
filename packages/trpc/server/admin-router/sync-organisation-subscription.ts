@@ -1,6 +1,7 @@
 import { onSubscriptionUpdated } from '@documenso/ee/server-only/stripe/webhook/on-subscription-updated';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { Stripe, stripe } from '@documenso/lib/server-only/stripe';
+import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
 import { prisma } from '@documenso/prisma';
 
 import { adminProcedure } from '../trpc';
@@ -24,9 +25,6 @@ export const syncOrganisationSubscriptionRoute = adminProcedure
 
     const organisation = await prisma.organisation.findUnique({
       where: { id: organisationId },
-      include: {
-        subscription: true,
-      },
     });
 
     if (!organisation) {
@@ -35,7 +33,11 @@ export const syncOrganisationSubscriptionRoute = adminProcedure
       });
     }
 
-    if (!organisation.subscription) {
+    const currentSubscription = await getCurrentSubscriptionByOrganisationId({
+      organisationId: organisation.id,
+    });
+
+    if (!currentSubscription) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Organisation has no subscription to sync',
       });
@@ -44,7 +46,7 @@ export const syncOrganisationSubscriptionRoute = adminProcedure
     let stripeSubscription: Stripe.Subscription;
 
     try {
-      stripeSubscription = await stripe.subscriptions.retrieve(organisation.subscription.planId, {
+      stripeSubscription = await stripe.subscriptions.retrieve(currentSubscription.planId, {
         expand: ['items.data.price.product'],
       });
     } catch (error) {

@@ -12,6 +12,7 @@ import { EnvelopeType } from '@prisma/client';
 import { motion } from 'framer-motion';
 import {
   ArrowLeftIcon,
+  CopyPlusIcon,
   DownloadCloudIcon,
   EyeIcon,
   FileOutputIcon,
@@ -28,6 +29,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { match } from 'ts-pattern';
 
 import { EnvelopeDeleteDialog } from '~/components/dialogs/envelope-delete-dialog';
+import { EnvelopeDuplicateDialog } from '~/components/dialogs/envelope-duplicate-dialog';
 import { EnvelopeDistributeDialog } from '~/components/dialogs/envelope-distribute-dialog';
 import { EnvelopeDownloadDialog } from '~/components/dialogs/envelope-download-dialog';
 import { EnvelopeRedistributeDialog } from '~/components/dialogs/envelope-redistribute-dialog';

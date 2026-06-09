@@ -36,7 +36,6 @@ export function meta() {
 export default function TemplatesPage() {
   const team = useCurrentTeam();
   const organisation = useCurrentOrganisation();
-  const organisation = useCurrentOrganisation();
   const { user } = useSession();
 
   const { folderId } = useParams();
@@ -61,11 +60,32 @@ export default function TemplatesPage() {
   const documentRootPath = formatDocumentsPath(team.url);
   const templateRootPath = formatTemplatesPath(team.url);
 
-  const { data, isLoading, isLoadingError } = trpc.template.findTemplates.useQuery({
-    page: page,
-    perPage: perPage,
-    folderId,
-  });
+  const teamTemplatesQuery = trpc.template.findTemplates.useQuery(
+    {
+      page: page,
+      perPage: perPage,
+      folderId,
+    },
+    {
+      enabled: !isOrgView,
+    },
+  );
+
+  const organisationTemplatesQuery = trpc.template.findOrganisationTemplates.useQuery(
+    {
+      page: page,
+      perPage: perPage,
+    },
+    {
+      enabled: isOrgView,
+    },
+  );
+
+  const handleViewChange = (newView: string) => {
+    void setView(newView as TemplateView);
+  };
+
+  const activeQuery = isOrgView ? organisationTemplatesQuery : teamTemplatesQuery;
 
   // // Clear selection when navigation or filters change
   // useEffect(() => {

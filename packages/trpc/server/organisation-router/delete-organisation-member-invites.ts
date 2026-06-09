@@ -89,17 +89,15 @@ export const deleteOrganisationMemberInvitesRoute = authenticatedProcedure
       organisationId: organisation.id,
     });
 
-    const subscription = validateIfSubscriptionIsRequired(currentSubscription);
-
     const numberOfCurrentMembers = organisation.members.length;
     const numberOfCurrentInvites = organisation.invites.length;
     const totalMemberCountWithInvites = numberOfCurrentMembers + numberOfCurrentInvites - 1;
 
     // Removing pending invites is a reducing operation, so we don't gate it on
     // the subscription being present. Sync Stripe only when one exists.
-    if (organisation.subscription) {
+    if (currentSubscription) {
       await syncMemberCountWithStripeSeatPlan(
-        organisation.subscription,
+        currentSubscription,
         organisationClaim,
         totalMemberCountWithInvites,
       );

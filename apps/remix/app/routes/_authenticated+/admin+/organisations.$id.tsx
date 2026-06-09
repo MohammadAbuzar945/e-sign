@@ -666,7 +666,9 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
   const transports = transportsData?.data ?? [];
   const NONE_VALUE = '__none__';
 
-  const hasRestrictedEnterpriseFeatures = Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).some(
+  const visibleFeatureFlags = Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS);
+
+  const hasRestrictedEnterpriseFeatures = visibleFeatureFlags.some(
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     (flag) => flag.isEnterprise && !licenseFlags?.[flag.key as keyof TLicenseClaim],
   );

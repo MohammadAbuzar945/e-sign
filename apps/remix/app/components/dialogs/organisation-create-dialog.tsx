@@ -125,14 +125,16 @@ export const OrganisationCreateDialog = ({ trigger, ...props }: OrganisationCrea
   const handleClose = () => setOpenValue(false);
 
   return (
-    <Dialog {...props} open={open} onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}>
-      <DialogTrigger onClick={(e) => e.stopPropagation()} asChild={true}>
-        {trigger ?? (
-          <Button className="flex-shrink-0" variant="secondary">
-            <Trans>Create organisation</Trans>
-          </Button>
-        )}
-      </DialogTrigger>
+    <Dialog {...props} open={openValue} onOpenChange={(value) => !form.formState.isSubmitting && setOpenValue(value)}>
+      {!isControlled && (
+        <DialogTrigger onClick={(e) => e.stopPropagation()} asChild={true}>
+          {trigger ?? (
+            <Button className="flex-shrink-0" variant="secondary">
+              <Trans>Create organisation</Trans>
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
 
       <DialogContent position="center">
         <DialogHeader>

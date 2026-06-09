@@ -1,5 +1,6 @@
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createOrganisationClaimUpsertData } from '@documenso/lib/server-only/organisation/create-organisation';
+import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
 import { getSubscriptionClaim } from '@documenso/lib/server-only/subscription/get-subscription-claim';
 import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
 import { prisma } from '@documenso/prisma';
@@ -33,7 +34,6 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
     const sourceOrg = await prisma.organisation.findUnique({
       where: { id: sourceOrganisationId },
       include: {
-        subscription: true,
         organisationClaim: true,
       },
     });
@@ -44,10 +44,14 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
       });
     }
 
+    const sourceSubscription = await getCurrentSubscriptionByOrganisationId({
+      organisationId: sourceOrganisationId,
+    });
+
     if (
-      !sourceOrg.subscription ||
-      (sourceOrg.subscription.status !== SubscriptionStatus.ACTIVE &&
-        sourceOrg.subscription.status !== SubscriptionStatus.PAST_DUE)
+      !sourceSubscription ||
+      (sourceSubscription.status !== SubscriptionStatus.ACTIVE &&
+        sourceSubscription.status !== SubscriptionStatus.PAST_DUE)
     ) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Source organisation does not have an active subscription',
@@ -57,7 +61,6 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
     const targetOrg = await prisma.organisation.findUnique({
       where: { id: targetOrganisationId },
       include: {
-        subscription: true,
         organisationClaim: true,
       },
     });
@@ -68,6 +71,10 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
       });
     }
 
+    const targetSubscription = await getCurrentSubscriptionByOrganisationId({
+      organisationId: targetOrganisationId,
+    });
+
     if (sourceOrg.ownerUserId !== targetOrg.ownerUserId) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Both organisations must be owned by the same user',
@@ -75,24 +82,24 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
     }
 
     if (
-      targetOrg.subscription &&
-      (targetOrg.subscription.status === SubscriptionStatus.ACTIVE ||
-        targetOrg.subscription.status === SubscriptionStatus.PAST_DUE)
+      targetSubscription &&
+      (targetSubscription.status === SubscriptionStatus.ACTIVE ||
+        targetSubscription.status === SubscriptionStatus.PAST_DUE)
     ) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Target organisation already has an active subscription',
       });
     }
 
-    const customerId = sourceOrg.customerId ?? sourceOrg.subscription.customerId;
+    const customerId = sourceOrg.customerId ?? sourceSubscription.customerId;
 
     const freeSubscriptionClaim = await getSubscriptionClaim(INTERNAL_CLAIM_ID.FREE);
 
     await prisma.$transaction(async (tx) => {
       // Delete stale INACTIVE subscription on target if present.
-      if (targetOrg.subscription) {
+      if (targetSubscription) {
         await tx.subscription.delete({
-          where: { id: targetOrg.subscription.id },
+          where: { id: targetSubscription.id },
         });
       }
 
@@ -110,7 +117,7 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
 
       // Move the subscription record to the target org.
       await tx.subscription.update({
-        where: { id: sourceOrg.subscription!.id },
+        where: { id: sourceSubscription.id },
         data: { organisationId: targetOrganisationId },
       });
 

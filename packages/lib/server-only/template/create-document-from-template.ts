@@ -536,7 +536,7 @@ export const createDocumentFromTemplate = async ({
   const finalExternalId = externalId || template.externalId;
   const { processedExternalId, fromNomia } = processExternalId(finalExternalId || undefined);
 
-  return await prisma.$transaction(async (tx) => {
+  const { envelope, createdEnvelope } = await prisma.$transaction(async (tx) => {
     const envelope = await tx.envelope.create({
       data: {
         id: prefixedId('envelope'),
@@ -772,7 +772,7 @@ export const createDocumentFromTemplate = async ({
   await Promise.allSettled([
     triggerWebhook({
       event: WebhookTriggerEvents.DOCUMENT_CREATED,
-      data: ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(envelope)),
+      data: ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(createdEnvelope)),
       userId,
       teamId,
     }),

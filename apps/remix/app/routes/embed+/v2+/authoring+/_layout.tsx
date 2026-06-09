@@ -38,7 +38,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
     throw new Response('Invalid token', { status: 404 });
   }
 
-  const organisationClaim = await getOrganisationClaimByTeamId({
+  const claim = await getOrganisationClaimByTeamId({
     teamId: result.teamId,
   });
 
@@ -51,7 +51,17 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
     token,
     userId: result.userId,
     teamId: result.teamId,
-    organisationClaim,
+    organisationClaim: {
+      id: claim.id,
+      createdAt: claim.createdAt,
+      updatedAt: claim.updatedAt,
+      originalSubscriptionClaimId: claim.originalSubscriptionClaimId,
+      teamCount: claim.teamCount,
+      memberCount: claim.memberCount,
+      recipientCount: claim.recipientCount,
+      envelopeItemCount: claim.envelopeItemCount,
+      flags: claim.flags,
+    },
     preferences: {
       aiFeaturesEnabled: teamSettings.aiFeaturesEnabled,
     },
@@ -112,6 +122,8 @@ export default function AuthoringLayout() {
     createdAt: new Date(),
     avatarImageId: null,
     organisationId: '',
+    isPrivate: false,
+    isTeamMember: true,
     teamEmail: null,
     currentTeamRole: TeamMemberRole.MEMBER,
     preferences: {
@@ -119,9 +131,6 @@ export default function AuthoringLayout() {
     },
   };
 
-  /**
-   * Dummy data for providers.
-   */
   const organisation: OrganisationSession = {
     id: '',
     createdAt: new Date(),
@@ -136,6 +145,7 @@ export default function AuthoringLayout() {
     teams: [team],
     subscription: null,
     currentOrganisationRole: OrganisationMemberRole.MEMBER,
+    credits: 0,
   };
 
   return (

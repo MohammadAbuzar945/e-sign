@@ -7,6 +7,10 @@ import {
   OIDC_PROVIDER_LABEL,
 } from '@documenso/lib/constants/auth';
 import { isValidReturnTo, normalizeReturnTo } from '@documenso/lib/utils/is-valid-return-to';
+import { msg } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { useEffect, useState } from 'react';
+import { Link, redirect, useSearchParams } from 'react-router';
 import { SignInForm } from '~/components/forms/signin';
 import { SIGNUP_ERROR_MESSAGES } from '~/components/forms/signup';
 import { BrandingLogo } from '~/components/general/branding-logo';
@@ -53,8 +57,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function SignIn({ loaderData }: Route.ComponentProps) {
   const { isGoogleSSOEnabled, isMicrosoftSSOEnabled, isOIDCSSOEnabled, isSignupEnabled, oidcProviderLabel, returnTo } =
     loaderData;
-
-  const { _ } = useLingui();
 
   const [searchParams] = useSearchParams();
   const [isEmbeddedRedirect, setIsEmbeddedRedirect] = useState(false);

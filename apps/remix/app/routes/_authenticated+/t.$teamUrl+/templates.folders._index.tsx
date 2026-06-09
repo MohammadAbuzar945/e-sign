@@ -61,30 +61,11 @@ export default function TemplatesFoldersPage() {
     const templatesPath = formatTemplatesPath(team.url);
 
     if (folderId) {
-      void navigate(`${templatesPath}/f/${folderId}`);
-    } else {
-      void navigate(templatesPath);
+      return `${templatesPath}/f/${folderId}`;
     }
+
+    return templatesPath;
   };
-
-  const isOrganisationOwner = organisation.ownerUserId === user.id;
-  const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
-
-  if (isOwnerNonMember) {
-    return (
-      <div className="mx-auto w-full max-w-screen-xl px-4 md:px-8">
-        <div className="mt-8 text-center text-muted-foreground">
-          <h2 className="font-semibold text-xl">
-            <Trans>Folders are not available</Trans>
-          </h2>
-
-          <p className="mx-auto mt-2 max-w-[50ch] text-sm">
-            <Trans>You must be a member of this team to view, create, or manage its template folders.</Trans>
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   const isOrganisationOwner = organisation.ownerUserId === user.id;
   const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;

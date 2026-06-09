@@ -1,4 +1,7 @@
-import { syncMemberCountWithStripeSeatPlan } from '@documenso/ee/server-only/stripe/update-subscription-item-quantity';
+import {
+  assertMemberCountWithinCap,
+  syncMemberCountWithStripeSeatPlan,
+} from '@documenso/ee/server-only/stripe/update-subscription-item-quantity';
 import { OrganisationInviteEmailTemplate } from '@documenso/email/templates/organisation-invite';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';

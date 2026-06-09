@@ -11,10 +11,13 @@ import {
   ZDocumentAccessAuthTypesSchema,
   ZDocumentActionAuthTypesSchema,
   ZDocumentAuthOptionsSchema,
+  ZDocumentKbaAnswerTypeSchema,
+  ZDocumentKbaModeSchema,
 } from '@documenso/lib/types/document-auth';
 import { DocumentEmailEvents, ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';
 import {
   type TDocumentMetaDateFormat,
+  ZDocumentMetaCreateSchema,
   ZDocumentMetaDateFormatSchema,
   ZDocumentMetaTimezoneSchema,
 } from '@documenso/lib/types/document-meta';
@@ -54,9 +57,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { MultiSelectCombobox } from '@documenso/ui/primitives/multi-select-combobox';
+import { PasswordInput } from '@documenso/ui/primitives/password-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { Textarea } from '@documenso/ui/primitives/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
@@ -81,39 +93,80 @@ import { z } from 'zod';
 
 import { useCurrentTeam } from '~/providers/team';
 
+const parseMcqOptions = (input: string) => {
+  return input
+    .split(',')
+    .map((option) => option.trim())
+    .filter(Boolean)
+    .map((label, index) => ({
+      key: String(index + 1),
+      label,
+    }));
+};
+
+const ZEnvelopeEditorSettingsMetaSchema = z
+  .object({
+    subject: z.string(),
+    message: z.string(),
+    timezone: ZDocumentMetaTimezoneSchema.default(DEFAULT_DOCUMENT_TIME_ZONE),
+    dateFormat: ZDocumentMetaDateFormatSchema.default(DEFAULT_DOCUMENT_DATE_FORMAT),
+    distributionMethod: z.nativeEnum(DocumentDistributionMethod).optional().default(DocumentDistributionMethod.EMAIL),
+    redirectUrl: z
+      .string()
+      .optional()
+      .refine((value) => value === undefined || value === '' || isValidRedirectUrl(value), {
+        message: 'Please enter a valid URL, make sure you include http:// or https:// part of the url.',
+      }),
+    language: z
+      .union([z.string(), z.enum(SUPPORTED_LANGUAGE_CODES)])
+      .optional()
+      .default('en'),
+    emailId: z.string().nullable(),
+    emailReplyTo: z.preprocess((val) => (val === '' ? undefined : val), z.string().email().optional()),
+    emailSettings: ZDocumentEmailSettingsSchema,
+    signatureTypes: z.array(z.nativeEnum(DocumentSignatureType)).min(1, {
+      message: msg`At least one signature type must be enabled`.id,
+    }),
+  })
+  .merge(
+    ZDocumentMetaCreateSchema.pick({
+      envelopeExpirationPeriod: true,
+      reminderSettings: true,
+    }),
+  );
+
 export const ZAddSettingsFormSchema = z
   .object({
+    templateType: z.nativeEnum(TemplateType).optional(),
     externalId: z.string().optional(),
     visibility: z.nativeEnum(DocumentVisibility).optional(),
+    includeQrCodeInCertificate: z.boolean().nullish(),
+    kbaMode: ZDocumentKbaModeSchema.default('PER_ENVELOPE'),
+    kbaMaxAttempts: z.number().int().min(1).max(20).default(5),
+    kbaLockoutMinutes: z.number().int().min(1).max(1440).default(15),
+    kbaAnswerType: ZDocumentKbaAnswerTypeSchema.default('STRING'),
+    kbaApplySameToAllRecipients: z.boolean().default(true),
+    kbaQuestion: z.string().default(''),
+    kbaAnswer: z.string().default(''),
+    kbaMcqOptions: z.string().default(''),
+    kbaRecipientChallenges: z
+      .array(
+        z.object({
+          recipientId: z.number(),
+          recipientName: z.string(),
+          recipientEmail: z.string(),
+          question: z.string(),
+          answer: z.string(),
+        }),
+      )
+      .default([]),
     globalAccessAuth: z
       .array(z.union([ZDocumentAccessAuthTypesSchema, z.literal('-1')]))
       .transform((val) => (val.length === 1 && val[0] === '-1' ? [] : val))
       .optional()
       .default([]),
     globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional().default([]),
-    meta: z.object({
-      subject: z.string(),
-      message: z.string(),
-      timezone: ZDocumentMetaTimezoneSchema.default(DEFAULT_DOCUMENT_TIME_ZONE),
-      dateFormat: ZDocumentMetaDateFormatSchema.default(DEFAULT_DOCUMENT_DATE_FORMAT),
-      distributionMethod: z.nativeEnum(DocumentDistributionMethod).optional().default(DocumentDistributionMethod.EMAIL),
-      redirectUrl: z
-        .string()
-        .optional()
-        .refine((value) => value === undefined || value === '' || isValidRedirectUrl(value), {
-          message: 'Please enter a valid URL, make sure you include http:// or https:// part of the url.',
-        }),
-      language: z
-        .union([z.string(), z.enum(SUPPORTED_LANGUAGE_CODES)])
-        .optional()
-        .default('en'),
-      emailId: z.string().nullable(),
-      emailReplyTo: z.preprocess((val) => (val === '' ? undefined : val), z.string().email().optional()),
-      emailSettings: ZDocumentEmailSettingsSchema,
-      signatureTypes: z.array(z.nativeEnum(DocumentSignatureType)).min(1, {
-        message: msg`At least one signature type must be enabled`.id,
-      }),
-    }),
+    meta: ZEnvelopeEditorSettingsMetaSchema,
   })
   .superRefine((value, ctx) => {
     const requiresKba = value.globalAccessAuth.includes(DocumentAccessAuth.KBA);
@@ -393,7 +446,7 @@ export const EnvelopeEditorSettingsDialog = ({ trigger, ...props }: EnvelopeEdit
         timezone: envelope.documentMeta.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE,
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         dateFormat: (envelope.documentMeta.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT) as TDocumentMetaDateFormat,
-        distributionMethod: envelope.documentMeta.distributionMethod || DocumentDistributionMethod.EMAIL,
+        distributionMethod: resolvedDistributionMethod,
         redirectUrl: envelope.documentMeta.redirectUrl ?? '',
         language: envelope.documentMeta.language ?? 'en',
         emailId: envelope.documentMeta.emailId ?? null,

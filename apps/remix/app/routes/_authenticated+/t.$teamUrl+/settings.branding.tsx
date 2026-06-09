@@ -1,9 +1,9 @@
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
-import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { putFile } from '@documenso/lib/universal/upload/put-file';
 import type { SanitizeBrandingCssWarning } from '@documenso/lib/utils/sanitize-branding-css';
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
+import { Button } from '@documenso/ui/primitives/button';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { plural } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
@@ -36,8 +36,7 @@ export default function TeamsSettingsPage() {
 
   const { mutateAsync: updateTeamSettings } = trpc.team.settings.update.useMutation();
 
-  const canCustomBranding =
-    organisation.organisationClaim.flags.embedSigningWhiteLabel === true || !IS_BILLING_ENABLED();
+  const hasAdvancedBranding = organisation.organisationClaim.flags.embedSigningWhiteLabel === true;
 
   const onBrandingPreferencesFormSubmit = async (data: TBrandingPreferencesFormSchema) => {
     try {
@@ -116,7 +115,7 @@ export default function TeamsSettingsPage() {
         <section>
           <BrandingPreferencesForm
             canInherit={true}
-            hasAdvancedBranding={canCustomBranding}
+            hasAdvancedBranding={hasAdvancedBranding}
             context="Team"
             settings={teamWithSettings.teamSettings}
             onFormSubmit={onBrandingPreferencesFormSubmit}
@@ -154,9 +153,15 @@ export default function TeamsSettingsPage() {
             </AlertTitle>
 
             <AlertDescription className="mr-2">
-              <Trans>Branding is not enabled for your current plan.</Trans>
+              <Trans>Please contact us at help@nomiadocs.com for this feature!</Trans>
             </AlertDescription>
           </div>
+
+          <Button asChild variant="outline">
+            <a href="mailto:help@nomiadocs.com">
+              <Trans>Contact us</Trans>
+            </a>
+          </Button>
         </Alert>
       )}
     </div>

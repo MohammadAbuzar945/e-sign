@@ -364,6 +364,7 @@ const EnvelopeCreatePage = ({ embedAuthoringOptions }: EnvelopeCreatePageProps) 
         email: '',
       },
       externalId: embedAuthoringOptions?.externalId ?? null,
+      includeQrCodeInCertificate: null,
       attachments: [],
     };
   }, []);

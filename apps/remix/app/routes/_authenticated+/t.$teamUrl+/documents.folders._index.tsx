@@ -61,14 +61,11 @@ export default function DocumentsFoldersPage() {
     const documentsPath = formatDocumentsPath(team.url);
 
     if (folderId) {
-      void navigate(`${documentsPath}/f/${folderId}`);
-    } else {
-      void navigate(documentsPath);
+      return `${documentsPath}/f/${folderId}`;
     }
-  };
 
-  const isFolderMatchingSearch = (folder: TFolderWithSubfolders) =>
-    folder.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return documentsPath;
+  };
 
   const isOrganisationOwner = organisation.ownerUserId === user.id;
   const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;

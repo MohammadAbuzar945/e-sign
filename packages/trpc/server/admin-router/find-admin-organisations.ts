@@ -128,7 +128,7 @@ export const findAdminOrganisations = async ({
     Object.keys(whereClause).length === 0 ? excludeHiddenOwnerFilter : { AND: [excludeHiddenOwnerFilter, whereClause] };
 
   const orderBy: Prisma.OrganisationOrderByWithRelationInput[] = query
-    ? [{ subscription: { status: 'asc' } }, { name: 'asc' }]
+    ? [{ name: 'asc' }]
     : [{ createdAt: 'desc' }];
 
   const [data, count] = await Promise.all([

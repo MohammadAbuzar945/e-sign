@@ -16,21 +16,18 @@ import {
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { ChevronsUpDown, Plus } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 
 export const MenuSwitcher = () => {
   const { _ } = useLingui();
 
-  const { user, organisations } = useSession();
+  const { user } = useSession();
 
   const [languageSwitcherOpen, setLanguageSwitcherOpen] = useState(false);
 
   const isUserAdmin = isAdmin(user);
-
-  const isOrganisationOwner = organisations.some((org) => org.ownerUserId === user.id);
-  const firstOwnedOrganisation = organisations.find((org) => org.ownerUserId === user.id);
 
   const formatAvatarFallback = (name?: string) => {
     if (name !== undefined) {
@@ -60,14 +57,6 @@ export const MenuSwitcher = () => {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className={cn('z-[60] ml-6 w-full min-w-[12rem] md:ml-0')} align="end" forceMount>
-        <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
-          <Link to="/settings/organisations?action=add-organisation" className="flex items-center justify-between">
-            <Trans>Create Organisation</Trans>
-            <Plus className="ml-2 h-4 w-4" />
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-
         {isUserAdmin && (
           <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
             <Link to="/admin">

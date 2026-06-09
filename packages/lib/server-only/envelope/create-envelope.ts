@@ -345,7 +345,7 @@ export const createEnvelope = async ({
     return delegatedOwner;
   };
 
-  const [documentMeta, secondaryId, [documentMeta, secondaryId, delegatedOwner]] = await Promise.all([
+  const [documentMeta, secondaryId, delegatedOwner] = await Promise.all([
     prisma.documentMeta.create({
       data: extractDerivedDocumentMeta(settings, {
         ...meta,
@@ -355,18 +355,7 @@ export const createEnvelope = async ({
     type === EnvelopeType.DOCUMENT
       ? incrementDocumentId().then((v) => v.formattedDocumentId)
       : incrementTemplateId().then((v) => v.formattedTemplateId),
-    Promise.all([
-      prisma.documentMeta.create({
-        data: extractDerivedDocumentMeta(settings, {
-          ...meta,
-          timezone: timezoneToUse,
-        }),
-      }),
-      type === EnvelopeType.DOCUMENT
-        ? incrementDocumentId().then((v) => v.formattedDocumentId)
-        : incrementTemplateId().then((v) => v.formattedTemplateId),
-      getValidatedDelegatedOwner(),
-    ]),
+    getValidatedDelegatedOwner(),
   ]);
   const envelopeOwnerId = delegatedOwner?.id ?? userId;
 

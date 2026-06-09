@@ -521,94 +521,42 @@ export const formatDocumentAuditLogAction = (i18n: I18n, auditLog: TDocumentAudi
       you: msg`You failed to validate a 2FA token for the document`,
       user: msg`${user} failed to validate a 2FA token for the document`,
     }))
-    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_SENT }, ({ data }) => {
-      if (data.isResending) {
-        return {
-          anonymous: msg({
-            message: `Email resent`,
-            context: `Audit log format`,
-          }),
-          you: msg`You resent an email to ${data.recipientEmail}`,
-          user: msg`${user} resent an email to ${data.recipientEmail}`,
-        };
-      }
-      return {
-        anonymous: result,
-        identified: result,
-      };
-    })
-    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_2FA_VALIDATED }, ({ data }) => {
-      const userName = prefix || i18n._(msg`Recipient`);
-
-      const result = msg`${userName} validated a 2FA token for the document`;
-
-      return {
-        anonymous: result,
-        identified: result,
-      };
-    })
-    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_2FA_FAILED }, ({ data }) => {
-      const userName = prefix || i18n._(msg`Recipient`);
-
-      const result = msg`${userName} failed to validate a 2FA token for the document`;
-
-      return {
-        anonymous: result,
-        identified: result,
-      };
-    })
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_KBA_CONFIG_UPDATED }, () => ({
       anonymous: msg({
         message: `KBA settings updated`,
         context: `Audit log format`,
       }),
-      identified: msg`${prefix} updated KBA settings`,
+      you: msg`You updated KBA settings`,
+      user: msg`${user} updated KBA settings`,
     }))
-    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_CHALLENGE_VIEWED }, ({ data }) => {
-      const userName = prefix || i18n._(msg`Recipient`);
-
-      const result = msg`${userName} opened the KBA challenge`;
-
-      return {
-        anonymous: result,
-        identified: result,
-      };
-    })
-    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_VALIDATED }, ({ data }) => {
-      const userName = prefix || i18n._(msg`Recipient`);
-
-      const result = msg`${userName} successfully passed KBA verification`;
-
-      return {
-        anonymous: result,
-        identified: result,
-      };
-    })
-    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_FAILED }, ({ data }) => {
-      const userName = prefix || i18n._(msg`Recipient`);
-
-      const result = msg`${userName} failed KBA verification`;
-
-      return {
-        anonymous: result,
-        identified: result,
-      };
-    })
-    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_LOCKED }, ({ data }) => {
-      const userName = prefix || i18n._(msg`Recipient`);
-
-      const result = msg`${userName} was temporarily locked from KBA verification`;
-
-      return {
-        anonymous: result,
-        identified: result,
-      };
-    })
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_CHALLENGE_VIEWED }, () => ({
+      anonymous: msg`Recipient opened the KBA challenge`,
+      you: msg`You opened the KBA challenge`,
+      user: msg`${user} opened the KBA challenge`,
+    }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_VALIDATED }, () => ({
+      anonymous: msg`Recipient successfully passed KBA verification`,
+      you: msg`You successfully passed KBA verification`,
+      user: msg`${user} successfully passed KBA verification`,
+    }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_FAILED }, () => ({
+      anonymous: msg`Recipient failed KBA verification`,
+      you: msg`You failed KBA verification`,
+      user: msg`${user} failed KBA verification`,
+    }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_KBA_LOCKED }, () => ({
+      anonymous: msg`Recipient was temporarily locked from KBA verification`,
+      you: msg`You were temporarily locked from KBA verification`,
+      user: msg`${user} was temporarily locked from KBA verification`,
+    }))
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_SENT }, ({ data }) => ({
       anonymous: data.isResending ? msg`Email resent` : msg`Email sent`,
-      identified: data.isResending
-        ? msg`${prefix} resent an email to ${data.recipientEmail}`
-        : msg`${prefix} sent an email to ${data.recipientEmail}`,
+      you: data.isResending
+        ? msg`You resent an email to ${data.recipientEmail}`
+        : msg`You sent an email to ${data.recipientEmail}`,
+      user: data.isResending
+        ? msg`${user} resent an email to ${data.recipientEmail}`
+        : msg`${user} sent an email to ${data.recipientEmail}`,
     }))
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_COMPLETED }, () => ({
       anonymous: msg({ message: `Document completed`, context: `Audit log format` }),

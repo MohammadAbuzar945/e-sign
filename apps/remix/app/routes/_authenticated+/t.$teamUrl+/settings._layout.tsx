@@ -1,5 +1,4 @@
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
-import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { getTeamByUrl } from '@documenso/lib/server-only/team/get-team';
 import { canExecuteTeamAction } from '@documenso/lib/utils/teams';
 import { cn } from '@documenso/ui/lib/utils';
@@ -40,7 +39,6 @@ export default function TeamsSettingsLayout() {
   const { t } = useLingui();
 
   const team = useCurrentTeam();
-  const organisation = useCurrentOrganisation();
 
   const teamSettingRoutes = [
     {
@@ -94,13 +92,7 @@ export default function TeamsSettingsLayout() {
       label: t`Webhooks`,
       icon: WebhookIcon,
     },
-  ].filter((route) => {
-    if (!organisation.organisationClaim.flags.allowCustomBranding && route.path.includes('/branding')) {
-      return false;
-    }
-
-    return true;
-  });
+  ];
 
   if (!canExecuteTeamAction('MANAGE_TEAM', team.currentTeamRole)) {
     return (

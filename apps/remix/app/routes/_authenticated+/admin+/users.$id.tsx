@@ -7,6 +7,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@documenso/ui/primitives/input';
 import { SpinnerBox } from '@documenso/ui/primitives/spinner';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { useForm } from 'react-hook-form';
+import { Link, useRevalidator } from 'react-router';
+import { z } from 'zod';
 
 import { AdminUserDeleteDialog } from '~/components/dialogs/admin-user-delete-dialog';
 import { AdminUserDisableDialog } from '~/components/dialogs/admin-user-disable-dialog';
@@ -63,7 +69,7 @@ export default function UserPage({ params }: { params: { id: number } }) {
 }
 
 const AdminUserPage = ({ user }: { user: TGetUserResponse }) => {
-  const { _ } = useLingui();
+  const { t } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
 
@@ -94,14 +100,14 @@ const AdminUserPage = ({ user }: { user: TGetUserResponse }) => {
       await revalidate();
 
       toast({
-        title: _(msg`Profile updated`),
-        description: _(msg`Your profile has been updated.`),
+        title: t(msg`Profile updated`),
+        description: t(msg`Your profile has been updated.`),
         duration: 5000,
       });
     } catch (e) {
       toast({
-        title: _(msg`Error`),
-        description: _(msg`An error occurred while updating your profile.`),
+        title: t(msg`Error`),
+        description: t(msg`An error occurred while updating your profile.`),
         variant: 'destructive',
       });
     }

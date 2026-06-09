@@ -1,6 +1,7 @@
 import { syncMemberCountWithStripeSeatPlan } from '@documenso/ee/server-only/stripe/update-subscription-item-quantity';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { jobs } from '@documenso/lib/jobs/client';
+import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
 import { prisma } from '@documenso/prisma';
 import { OrganisationMemberInviteStatus } from '@prisma/client';
 
@@ -28,7 +29,6 @@ export const deleteAdminOrganisationMemberRoute = adminProcedure
         id: organisationId,
       },
       include: {
-        subscription: true,
         organisationClaim: true,
         teams: {
           select: {
@@ -74,11 +74,15 @@ export const deleteAdminOrganisationMemberRoute = adminProcedure
 
     const newMemberCount = organisation.members.length + organisation.invites.length - 1;
 
+    const currentSubscription = await getCurrentSubscriptionByOrganisationId({
+      organisationId: organisation.id,
+    });
+
     // Removing a member is a reducing operation, so we don't gate it on the
     // subscription being present. Sync Stripe only when one exists.
-    if (organisation.subscription) {
+    if (currentSubscription) {
       await syncMemberCountWithStripeSeatPlan(
-        organisation.subscription,
+        currentSubscription,
         organisation.organisationClaim,
         newMemberCount,
       );

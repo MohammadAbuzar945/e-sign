@@ -8,7 +8,7 @@ import { Trans } from '@lingui/react/macro';
 import { SubscriptionStatus } from '@prisma/client';
 import { Loader } from 'lucide-react';
 import type Stripe from 'stripe';
-import { match } from 'ts-pattern';
+import { match, P } from 'ts-pattern';
 
 import { BillingPlans } from '~/components/general/billing-plans';
 import { OrganisationBillingPortalButton } from '~/components/general/organisations/organisation-billing-portal-button';
@@ -27,6 +27,16 @@ export default function TeamsSettingBillingPage() {
 
   const isOrganisationOwner = organisation.ownerUserId === user.id;
 
+  const { data: subscriptionQuery, isLoading: isLoadingSubscription } =
+    trpc.enterprise.billing.subscription.get.useQuery(
+      {
+        organisationId: organisation.id,
+      },
+      {
+        enabled: isOrganisationOwner,
+      },
+    );
+
   if (!isOrganisationOwner) {
     return (
       <div className="flex items-center justify-center rounded-lg py-32">
@@ -36,11 +46,6 @@ export default function TeamsSettingBillingPage() {
       </div>
     );
   }
-
-  const { data: subscriptionQuery, isLoading: isLoadingSubscription } =
-    trpc.enterprise.billing.subscription.get.useQuery({
-      organisationId: organisation.id,
-    });
 
   if (isLoadingSubscription || !subscriptionQuery) {
     return (
