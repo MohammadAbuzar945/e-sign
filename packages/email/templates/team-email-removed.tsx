@@ -1,10 +1,11 @@
-import { env } from '@documenso/lib/utils/env';
 import { formatTeamUrl } from '@documenso/lib/utils/teams';
+import { env } from '@documenso/lib/utils/env';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { Body, Container, Head, Hr, Html, Img, Preview, Section, Text } from '../components';
-import { useBranding } from '../providers/branding';
+
+import { Body, Container, Head, Hr, Html, Preview, Section, Text } from '../components';
+import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
 import { TemplateFooter } from '../template-components/template-footer';
 import TemplateImage from '../template-components/template-image';
 
@@ -19,12 +20,11 @@ export type TeamEmailRemovedTemplateProps = {
 export const TeamEmailRemovedTemplate = ({
   assetBaseUrl = 'http://localhost:4002',
   baseUrl = env('NEXT_PUBLIC_WEBAPP_URL') ?? 'http://localhost:3000',
-  teamEmail = 'example@nomiadocs.com',
+  teamEmail = 'example@documenso.com',
   teamName = 'Team Name',
   teamUrl = 'demo',
 }: TeamEmailRemovedTemplateProps) => {
   const { _ } = useLingui();
-  const branding = useBranding();
 
   const previewText = msg`Team email removed for ${teamName} on Nomia`;
 
@@ -36,11 +36,7 @@ export const TeamEmailRemovedTemplate = ({
       <Body className="mx-auto my-auto font-sans">
         <Section className="bg-white text-slate-500">
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid px-2 pt-2 backdrop-blur-sm">
-            {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
-            ) : (
-              <TemplateImage assetBaseUrl={assetBaseUrl} className="mb-4 h-16 p-2" staticAsset="logo.png" />
-            )}
+            <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6 p-2" />
 
             <Section>
               <TemplateImage className="mx-auto" assetBaseUrl={assetBaseUrl} staticAsset="mail-open-alert.png" />

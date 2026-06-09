@@ -1,10 +1,11 @@
-import { env } from '@documenso/lib/utils/env';
 import { formatTeamUrl } from '@documenso/lib/utils/teams';
+import { env } from '@documenso/lib/utils/env';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { Body, Button, Container, Head, Hr, Html, Img, Link, Preview, Section, Text } from '../components';
-import { useBranding } from '../providers/branding';
+
+import { Body, Button, Container, Head, Hr, Html, Link, Preview, Section, Text } from '../components';
+import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
 import { TemplateFooter } from '../template-components/template-footer';
 import TemplateImage from '../template-components/template-image';
 
@@ -24,7 +25,6 @@ export const ConfirmTeamEmailTemplate = ({
   token = '',
 }: ConfirmTeamEmailProps) => {
   const { _ } = useLingui();
-  const branding = useBranding();
 
   const previewText = msg`Accept team email request for ${teamName} on Nomia`;
 
@@ -36,11 +36,7 @@ export const ConfirmTeamEmailTemplate = ({
       <Body className="mx-auto my-auto font-sans">
         <Section className="bg-white">
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid px-2 pt-2 backdrop-blur-sm">
-            {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
-            ) : (
-              <TemplateImage assetBaseUrl={assetBaseUrl} className="mb-4 h-16 p-2" staticAsset="logo.png" />
-            )}
+            <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6 p-2" />
 
             <Section>
               <TemplateImage className="mx-auto" assetBaseUrl={assetBaseUrl} staticAsset="mail-open.png" />
@@ -54,7 +50,7 @@ export const ConfirmTeamEmailTemplate = ({
               <Text className="text-center text-base">
                 <Trans>
                   <span className="font-bold">{teamName}</span> has requested to use your email address for their team
-                  on Nomia.
+                  on Documenso.
                 </Trans>
               </Text>
 
@@ -83,7 +79,7 @@ export const ConfirmTeamEmailTemplate = ({
 
                 <Text className="mt-2 text-sm">
                   <Trans>
-                    You can revoke access at any time in your team settings on Nomia{' '}
+                    You can revoke access at any time in your team settings on Documenso{' '}
                     <Link href={`${baseUrl}/settings/teams`}>here</Link>.
                   </Trans>
                 </Text>

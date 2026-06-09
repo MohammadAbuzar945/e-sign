@@ -1,3 +1,4 @@
+import signingCelebration from '@documenso/assets/images/signing-celebration.png';
 import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
 import { EnvelopeRenderProvider } from '@documenso/lib/client-only/providers/envelope-render-provider';
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
@@ -17,8 +18,8 @@ import { getRecipientsForAssistant } from '@documenso/lib/server-only/recipient/
 import { getTeamSettings } from '@documenso/lib/server-only/team/get-team-settings';
 import { getUserByEmail } from '@documenso/lib/server-only/user/get-user-by-email';
 import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
-import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { env } from '@documenso/lib/utils/env';
+import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { isRecipientExpired } from '@documenso/lib/utils/recipients';
 import { prisma } from '@documenso/prisma';
 import { SigningCard3D } from '@documenso/ui/components/signing-card';
@@ -31,8 +32,8 @@ import { match } from 'ts-pattern';
 
 import { Header as AuthenticatedHeader } from '~/components/general/app-header';
 import { DocumentSigningAuthPageView } from '~/components/general/document-signing/document-signing-auth-page';
-import { DocumentSigningAuthProvider } from '~/components/general/document-signing/document-signing-auth-provider';
 import { DocumentSigningKbaAccessGate } from '~/components/general/document-signing/document-signing-kba-access-gate';
+import { DocumentSigningAuthProvider } from '~/components/general/document-signing/document-signing-auth-provider';
 import { DocumentSigningPageViewV1 } from '~/components/general/document-signing/document-signing-page-view-v1';
 import { DocumentSigningPageViewV2 } from '~/components/general/document-signing/document-signing-page-view-v2';
 import { DocumentSigningProvider } from '~/components/general/document-signing/document-signing-provider';
@@ -110,7 +111,6 @@ const handleV1Loader = async ({ params, request }: Route.LoaderArgs) => {
     match(accesssAuth)
       .with(DocumentAccessAuth.ACCOUNT, () => user && user.email === recipient.email)
       .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => true) // Allow without account requirement
-      .with(DocumentAccessAuth.KBA, () => true) // KBA is validated at completion
       .exhaustive(),
   );
 
@@ -154,6 +154,7 @@ const handleV1Loader = async ({ params, request }: Route.LoaderArgs) => {
   ]);
 
   const [recipientSignature] = recipientSignatures;
+
   return {
     isDocumentAccessValid: true,
     document,
@@ -165,6 +166,10 @@ const handleV1Loader = async ({ params, request }: Route.LoaderArgs) => {
     recipientSignature,
     isRecipientsTurn,
     includeSenderDetails: settings.includeSenderDetails,
+    branding: {
+      brandingEnabled: settings.brandingEnabled,
+      brandingLogo: settings.brandingLogo,
+    },
   } as const;
 };
 
@@ -219,7 +224,6 @@ const handleV2Loader = async ({ params, request }: Route.LoaderArgs) => {
     match(accesssAuth)
       .with(DocumentAccessAuth.ACCOUNT, () => user && user.email === recipient.email)
       .with(DocumentAccessAuth.TWO_FACTOR_AUTH, () => true) // Allow without account requirement
-      .with(DocumentAccessAuth.KBA, () => true) // KBA is validated at completion
       .exhaustive(),
   );
 
@@ -340,13 +344,18 @@ const SigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV1Loade
     isRecipientsTurn,
     allRecipients,
     includeSenderDetails,
+    branding,
     recipientWithFields,
   } = data;
 
   if (document.deletedAt || document.status === DocumentStatus.REJECTED) {
     return (
       <div className="-mx-4 flex max-w-[100vw] flex-col items-center overflow-x-hidden px-4 pt-16 md:-mx-8 md:px-8 lg:pt-16 xl:pt-24">
-        <SigningCard3D name={recipient.name} signature={recipientSignature} />
+        <SigningCard3D
+          name={recipient.name}
+          signature={recipientSignature}
+          signingCelebrationImage={signingCelebration}
+        />
 
         <div className="relative mt-2 flex w-full flex-col items-center">
           <div className="mt-8 flex items-center text-center text-red-600">
@@ -375,8 +384,8 @@ const SigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV1Loade
             <p className="mt-36 text-muted-foreground/60 text-sm">
               <Trans>
                 Want to send slick signing links like this one?{' '}
-                <Link to={env('NEXT_PUBLIC_WEBAPP_URL') ?? '/'} className="text-documenso-700 hover:text-documenso-600">
-                  Check out Nomia
+                <Link to="https://documenso.com" className="text-documenso-700 hover:text-documenso-600">
+                  Check out Documenso
                 </Link>
                 .
               </Trans>
@@ -398,20 +407,21 @@ const SigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV1Loade
     >
       <DocumentSigningAuthProvider documentAuthOptions={document.authOptions} recipient={recipient} user={user}>
         <DocumentSigningKbaAccessGate token={recipient.token}>
-          {sessionData?.user && <AuthenticatedHeader />}
+        {sessionData?.user && <AuthenticatedHeader />}
 
-          <div className="mt-8 mb-8 px-4 md:mt-12 md:mb-12 md:px-8">
-            <DocumentSigningPageViewV1
-              recipient={recipientWithFields}
-              document={document}
-              fields={fields}
-              completedFields={completedFields}
-              isRecipientsTurn={isRecipientsTurn}
-              allRecipients={allRecipients}
-              includeSenderDetails={includeSenderDetails}
-            />
-          </div>
-        </DocumentSigningKbaAccessGate>
+        <div className="mt-8 mb-8 px-4 md:mt-12 md:mb-12 md:px-8">
+          <DocumentSigningPageViewV1
+            recipient={recipientWithFields}
+            document={document}
+            fields={fields}
+            completedFields={completedFields}
+            isRecipientsTurn={isRecipientsTurn}
+            allRecipients={allRecipients}
+            includeSenderDetails={includeSenderDetails}
+            branding={branding}
+          />
+        </div>
+      </DocumentSigningKbaAccessGate>
       </DocumentSigningAuthProvider>
     </DocumentSigningProvider>
   );
@@ -430,7 +440,11 @@ const SigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV2Loade
   if (envelope.deletedAt || envelope.status === DocumentStatus.REJECTED) {
     return (
       <div className="-mx-4 flex max-w-[100vw] flex-col items-center overflow-x-hidden px-4 pt-16 md:-mx-8 md:px-8 lg:pt-16 xl:pt-24">
-        <SigningCard3D name={recipient.name} signature={recipientSignature || undefined} />
+        <SigningCard3D
+          name={recipient.name}
+          signature={recipientSignature || undefined}
+          signingCelebrationImage={signingCelebration}
+        />
 
         <div className="relative mt-2 flex w-full flex-col items-center">
           <div className="mt-8 flex items-center text-center text-red-600">
@@ -459,8 +473,8 @@ const SigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV2Loade
             <p className="mt-36 text-muted-foreground/60 text-sm">
               <Trans>
                 Want to send slick signing links like this one?{' '}
-                <Link to={env('NEXT_PUBLIC_WEBAPP_URL') ?? '/'} className="text-documenso-700 hover:text-documenso-600">
-                  Check out Nomia
+                <Link to="https://documenso.com" className="text-documenso-700 hover:text-documenso-600">
+                  Check out Documenso
                 </Link>
                 .
               </Trans>
@@ -480,15 +494,15 @@ const SigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV2Loade
     >
       <DocumentSigningAuthProvider documentAuthOptions={envelope.authOptions} recipient={recipient} user={user}>
         <DocumentSigningKbaAccessGate token={recipient.token}>
-          <EnvelopeRenderProvider
-            version="current"
-            envelope={envelope}
-            envelopeItems={envelope.envelopeItems}
-            token={recipient.token}
-          >
-            <DocumentSigningPageViewV2 />
-          </EnvelopeRenderProvider>
-        </DocumentSigningKbaAccessGate>
+        <EnvelopeRenderProvider
+          version="current"
+          envelope={envelope}
+          envelopeItems={envelope.envelopeItems}
+          token={recipient.token}
+        >
+          <DocumentSigningPageViewV2 />
+        </EnvelopeRenderProvider>
+      </DocumentSigningKbaAccessGate>
       </DocumentSigningAuthProvider>
     </EnvelopeSigningProvider>
   );

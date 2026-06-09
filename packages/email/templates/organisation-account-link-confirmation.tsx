@@ -2,8 +2,8 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 
-import { Body, Button, Container, Head, Hr, Html, Img, Preview, Section, Text } from '../components';
-import { useBranding } from '../providers/branding';
+import { Body, Button, Container, Head, Hr, Html, Preview, Section, Text } from '../components';
+import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
 import { TemplateFooter } from '../template-components/template-footer';
 import TemplateImage from '../template-components/template-image';
 
@@ -21,7 +21,6 @@ export const OrganisationAccountLinkConfirmationTemplate = ({
   assetBaseUrl = 'http://localhost:4002',
 }: OrganisationAccountLinkConfirmationTemplateProps) => {
   const { _ } = useLingui();
-  const branding = useBranding();
 
   const previewText =
     type === 'create'
@@ -35,11 +34,7 @@ export const OrganisationAccountLinkConfirmationTemplate = ({
       <Body className="mx-auto my-auto font-sans">
         <Section className="bg-white">
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-slate-200 border-solid px-2 pt-2 backdrop-blur-sm">
-            {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
-            ) : (
-              <TemplateImage assetBaseUrl={assetBaseUrl} className="mb-4 h-16 p-2" staticAsset="logo.png" />
-            )}
+            <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6 p-2" />
 
             <Section>
               <TemplateImage className="mx-auto h-12 w-12" assetBaseUrl={assetBaseUrl} staticAsset="building-2.png" />
@@ -47,7 +42,11 @@ export const OrganisationAccountLinkConfirmationTemplate = ({
 
             <Section className="p-2 text-slate-500">
               <Text className="text-center font-medium text-black text-lg">
-                {type === 'create' ? <Trans>Account creation request</Trans> : <Trans>Link your Nomia account</Trans>}
+                {type === 'create' ? (
+                  <Trans>Account creation request</Trans>
+                ) : (
+                  <Trans>Link your Documenso account</Trans>
+                )}
               </Text>
 
               <Text className="text-center text-base">
@@ -58,7 +57,7 @@ export const OrganisationAccountLinkConfirmationTemplate = ({
                   </Trans>
                 ) : (
                   <Trans>
-                    <span className="font-bold">{organisationName}</span> has requested to link your current Nomia
+                    <span className="font-bold">{organisationName}</span> has requested to link your current Documenso
                     account to their organisation.
                   </Trans>
                 )}
@@ -87,7 +86,7 @@ export const OrganisationAccountLinkConfirmationTemplate = ({
 
                 <Text className="mt-2 text-sm">
                   <Trans>
-                    You can unlink your account at any time in your security settings on Nomia{' '}
+                    You can unlink your account at any time in your security settings on Documenso{' '}
                     <Link href={`${assetBaseUrl}/settings/security/linked-accounts`}>here.</Link>
                   </Trans>
                 </Text>

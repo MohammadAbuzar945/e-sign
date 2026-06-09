@@ -1,11 +1,6 @@
-import {
-  ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP,
-  ORGANISATION_USER_ACCOUNT_TYPE,
-} from '@documenso/lib/constants/organisations';
+import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { jobs } from '@documenso/lib/jobs/client';
-import { orphanEnvelopes } from '@documenso/lib/server-only/envelope/orphan-envelopes';
-import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
+import { deleteOrganisation } from '@documenso/lib/server-only/organisation/delete-organisation';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
 
@@ -45,6 +40,11 @@ export const deleteOrganisationRoute = authenticatedProcedure
             id: true,
           },
         },
+        subscription: {
+          select: {
+            planId: true,
+          },
+        },
       },
     });
 
@@ -60,39 +60,5 @@ export const deleteOrganisationRoute = authenticatedProcedure
       });
     }
 
-    const currentSubscription = await getCurrentSubscriptionByOrganisationId({
-      organisationId: organisation.id,
-    });
-
-    // Orphan all envelopes to get rid of foreign key constraints.
-    await Promise.all(organisation.teams.map(async (team) => orphanEnvelopes({ teamId: team.id })));
-
-    await prisma.$transaction(async (tx) => {
-      await tx.account.deleteMany({
-        where: {
-          type: ORGANISATION_USER_ACCOUNT_TYPE,
-          provider: organisation.id,
-        },
-      });
-
-      await tx.organisation.delete({
-        where: {
-          id: organisation.id,
-        },
-      });
-    });
-
-    // If the organisation has a Stripe subscription, schedule it to be
-    // cancelled at the end of the current billing period. The job runs
-    // asynchronously so a Stripe outage doesn't block deletion, and is
-    // retried by the job runner if Stripe is temporarily unavailable.
-    if (currentSubscription) {
-      await jobs.triggerJob({
-        name: 'internal.cancel-organisation-subscription',
-        payload: {
-          stripeSubscriptionId: currentSubscription.planId,
-          organisationId: organisation.id,
-        },
-      });
-    }
+    await deleteOrganisation({ organisation });
   });
