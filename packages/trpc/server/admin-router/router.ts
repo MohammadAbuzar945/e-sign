@@ -15,6 +15,11 @@ import { findSubscriptionClaimsRoute } from './find-subscription-claims';
 import { getAdminOrganisationRoute } from './get-admin-organisation';
 import { getUserRoute } from './get-user';
 import { promoteMemberToOwnerRoute } from './promote-member-to-owner';
+import {
+  findResellerApplicationsRoute,
+  rejectResellerApplicationRoute,
+  sendResellerTermsRoute,
+} from './reseller-applications';
 import { resealDocumentRoute } from './reseal-document';
 import { resetTwoFactorRoute } from './reset-two-factor-authentication';
 import { resyncLicenseRoute } from './resync-license';
@@ -43,6 +48,11 @@ export const adminRouter = router({
     create: createSubscriptionClaimRoute,
     update: updateSubscriptionClaimRoute,
     delete: deleteSubscriptionClaimRoute,
+  },
+  resellerApplications: {
+    find: findResellerApplicationsRoute,
+    sendTerms: sendResellerTermsRoute,
+    reject: rejectResellerApplicationRoute,
   },
   stripe: {
     createCustomer: createStripeCustomerRoute,

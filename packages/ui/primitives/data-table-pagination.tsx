@@ -3,6 +3,7 @@ import type { Table } from '@tanstack/react-table';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { match } from 'ts-pattern';
 
+import { useHydrated } from '../lib/use-hydrated';
 import { Button } from './button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 
@@ -21,6 +22,9 @@ export function DataTablePagination<TData>({
   table,
   additionalInformation = 'VisibleCount',
 }: DataTablePaginationProps<TData>) {
+  const isHydrated = useHydrated();
+  const pageSize = table.getState().pagination.pageSize;
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-4 px-2">
       <div className="flex-1 text-sm text-muted-foreground">
@@ -63,23 +67,29 @@ export function DataTablePagination<TData>({
         <p className="whitespace-nowrap text-sm font-medium">
           <Trans>Rows per page</Trans>
         </p>
-        <Select
-          value={`${table.getState().pagination.pageSize}`}
-          onValueChange={(value) => {
-            table.setPageSize(Number(value));
-          }}
-        >
-          <SelectTrigger className="h-8 w-[70px]">
-            <SelectValue placeholder={table.getState().pagination.pageSize} />
-          </SelectTrigger>
-          <SelectContent side="top">
-            {[10, 20, 30, 40, 50].map((pageSize) => (
-              <SelectItem key={pageSize} value={`${pageSize}`}>
-                {pageSize}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {isHydrated ? (
+          <Select
+            value={`${pageSize}`}
+            onValueChange={(value) => {
+              table.setPageSize(Number(value));
+            }}
+          >
+            <SelectTrigger className="h-8 w-[70px]">
+              <SelectValue placeholder={pageSize} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[10, 20, 30, 40, 50].map((size) => (
+                <SelectItem key={size} value={`${size}`}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="border-input flex h-8 w-[70px] items-center justify-between rounded-md border bg-transparent px-3 py-2 text-sm">
+            {pageSize}
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-4 lg:gap-x-8">
         <div className="flex items-center text-sm font-medium md:justify-center">

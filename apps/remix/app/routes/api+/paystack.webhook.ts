@@ -248,14 +248,37 @@ export async function action({ request }: { request: Request }) {
     }
     else if (event.event === 'charge.success') {
 
-      // console.log('Processing charge.success:', event.data);
-      const { customer, metadata, plan, reference } = event.data as {
+      const { customer, metadata, plan, reference, amount } = event.data as {
         customer?: { email?: string };
-        metadata?: { value?: number; organisationId?: string };
+        metadata?: {
+          value?: number;
+          organisationId?: string;
+          type?: string;
+          resellerProfileId?: string;
+          purchaserOrganisationId?: string;
+          purchaserUserId?: number;
+          packageId?: string;
+          expectedAmount?: number;
+        };
         plan?: { plan_code?: string };
         reference?: string;
+        amount?: number;
       };
 
+      if (metadata?.type === 'reseller-credit-purchase') {
+        const { processResellerPaystackWebhook } = await import(
+          '@documenso/lib/server-only/reseller/process-reseller-paystack-webhook'
+        );
+
+        await processResellerPaystackWebhook({
+          paystackReference: reference ?? '',
+          metadata,
+          amountInCents: Number(amount ?? metadata.expectedAmount ?? 0),
+          purchaserEmail: customer?.email ? normaliseEmailFromPaystack(customer.email) : '',
+        });
+
+        return new Response(JSON.stringify({ success: true }), { status: 200 });
+      }
 
       const customerEmailRaw = customer?.email;
       if (!customerEmailRaw) {

@@ -1,5 +1,6 @@
 import { router } from '../trpc';
 import { acceptOrganisationMemberInviteRoute } from './accept-organisation-member-invite';
+import { applyResellerRoute } from './apply-reseller';
 import { createOrganisationRoute } from './create-organisation';
 import { createOrganisationGroupRoute } from './create-organisation-group';
 import { createOrganisationMemberInvitesRoute } from './create-organisation-member-invites';
@@ -16,8 +17,22 @@ import { getOrganisationRoute } from './get-organisation';
 import { getOrganisationMemberInvitesRoute } from './get-organisation-member-invites';
 import { getOrganisationSessionRoute } from './get-organisation-session';
 import { getOrganisationsRoute } from './get-organisations';
+import { getResellerEligibilityRoute } from './get-reseller-eligibility';
 import { leaveOrganisationRoute } from './leave-organisation';
 import { resendOrganisationMemberInviteRoute } from './resend-organisation-member-invite';
+import {
+  exportResellerTransactionsRoute,
+} from './export-reseller-transactions';
+import {
+  findResellerTransactionsRoute,
+  getResellerProfileRoute,
+  updateResellerPackagesRoute,
+  updateResellerProfileRoute,
+} from './reseller-profile';
+import {
+  getAffiliateResellerRoute,
+  initializeResellerPurchaseRoute,
+} from './reseller-purchase';
 import { updateOrganisationRoute } from './update-organisation';
 import { updateOrganisationGroupRoute } from './update-organisation-group';
 import { updateOrganisationMemberRoute } from './update-organisation-members';
@@ -53,6 +68,17 @@ export const organisationRouter = router({
   },
   settings: {
     update: updateOrganisationSettingsRoute,
+  },
+  reseller: {
+    getEligibility: getResellerEligibilityRoute,
+    apply: applyResellerRoute,
+    getProfile: getResellerProfileRoute,
+    updateProfile: updateResellerProfileRoute,
+    updatePackages: updateResellerPackagesRoute,
+    findTransactions: findResellerTransactionsRoute,
+    exportTransactions: exportResellerTransactionsRoute,
+    getAffiliate: getAffiliateResellerRoute,
+    initializePurchase: initializeResellerPurchaseRoute,
   },
   internal: {
     getOrganisationSession: getOrganisationSessionRoute,

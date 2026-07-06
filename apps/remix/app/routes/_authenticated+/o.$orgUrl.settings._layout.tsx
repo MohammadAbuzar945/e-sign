@@ -7,6 +7,7 @@ import {
   MailboxIcon,
   Settings2Icon,
   ShieldCheckIcon,
+  StoreIcon,
   Users2Icon,
 } from 'lucide-react';
 import { FaUsers } from 'react-icons/fa6';
@@ -15,7 +16,9 @@ import { Link, NavLink, Outlet } from 'react-router';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
+import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
+import { trpc } from '@documenso/trpc/react';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 
@@ -34,6 +37,18 @@ export default function SettingsLayout() {
   const { user } = useSession();
 
   const isOrganisationOwner = organisation.ownerUserId === user.id;
+  const isResellerFeatureAllowed = user.email
+    ? isResellerFeatureAllowedEmail(user.email)
+    : false;
+
+  const { data: resellerProfile } = trpc.organisation.reseller.getProfile.useQuery(
+    {
+      organisationId: organisation.id,
+    },
+    {
+      enabled: isResellerFeatureAllowed,
+    },
+  );
 
   const organisationSettingRoutes = [
     {
@@ -87,6 +102,15 @@ export default function SettingsLayout() {
       label: t`SSO`,
       icon: ShieldCheckIcon,
     },
+    ...(isResellerFeatureAllowed && resellerProfile
+      ? [
+          {
+            path: `/o/${organisation.url}/settings/reseller`,
+            label: t`Reseller`,
+            icon: StoreIcon,
+          },
+        ]
+      : []),
     {
       path: `/o/${organisation.url}/price-plan`,
       label: t`Billing`,

@@ -1,0 +1,104 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  isResellerFeatureAllowedEmail,
+  RESELLER_MIN_CREDITS_USED,
+  RESELLER_MIN_SUBSCRIPTION_MONTHS,
+} from '@documenso/lib/constants/esign-credit-packages';
+import { buildResellerTransactionsCsv } from '@documenso/lib/utils/build-reseller-transactions-csv';
+import {
+  calculateResellerNetAmountInCents,
+  calculateResellerVatAmountInCents,
+  resolveResellerVatAmountInCents,
+} from '@documenso/lib/utils/reseller-vat';
+
+describe('reseller constants', () => {
+  it('defines qualification thresholds', () => {
+    expect(RESELLER_MIN_CREDITS_USED).toBe(50);
+    expect(RESELLER_MIN_SUBSCRIPTION_MONTHS).toBe(2);
+  });
+
+  it('matches reseller feature allowed emails case-insensitively', () => {
+    expect(isResellerFeatureAllowedEmail('nomiadeveloper@Gmail.com')).toBe(true);
+    expect(isResellerFeatureAllowedEmail('awanabuzar945@gmail.com')).toBe(true);
+    expect(isResellerFeatureAllowedEmail('other@example.com')).toBe(false);
+  });
+});
+
+describe('reseller VAT calculations', () => {
+  it('returns zero VAT when no VAT number is configured', () => {
+    expect(calculateResellerVatAmountInCents(45000, null)).toBe(0);
+    expect(calculateResellerVatAmountInCents(45000, '   ')).toBe(0);
+  });
+
+  it('calculates inclusive VAT for registered resellers', () => {
+    expect(calculateResellerVatAmountInCents(45000, '4123456789')).toBe(5870);
+    expect(calculateResellerNetAmountInCents(45000, 5870)).toBe(39130);
+  });
+
+  it('prefers stored VAT values when already recorded', () => {
+    expect(resolveResellerVatAmountInCents(45000, 5869, '4123456789')).toBe(5869);
+    expect(resolveResellerVatAmountInCents(45000, 0, '4123456789')).toBe(5870);
+  });
+});
+
+describe('reseller transaction CSV export', () => {
+  it('includes reseller metadata and invoice columns', () => {
+    const csv = buildResellerTransactionsCsv({
+      resellerOrganisationName: 'Nomia Creator',
+      resellerVatNumber: '4123456789',
+      rows: [
+        {
+          createdAt: new Date('2026-07-03T10:00:00.000Z'),
+          completedAt: new Date('2026-07-03T10:05:00.000Z'),
+          purchaserName: 'Jane Buyer',
+          purchaserEmail: 'jane@example.com',
+          purchaserOrganisationName: 'Buyer Org',
+          credits: 50,
+          grossAmount: 45000,
+          vatAmount: 5870,
+          currency: 'ZAR',
+          paystackReference: 'ref_123',
+          status: 'COMPLETED',
+        },
+      ],
+    });
+
+    expect(csv).toContain('Reseller,"Nomia Creator"');
+    expect(csv).toContain('Reseller VAT Number,"4123456789"');
+    expect(csv).toContain('Jane Buyer');
+    expect(csv).toContain('58.70');
+    expect(csv).toContain('391.30');
+    expect(csv).toContain('ref_123');
+  });
+});
+
+describe('transferOrganisationCredits validation', () => {
+  it('rejects non-positive transfer amounts', async () => {
+    const { transferOrganisationCredits } = await import(
+      '@documenso/ee/server-only/limits/user-credits'
+    );
+
+    await expect(
+      transferOrganisationCredits({
+        fromOrganisationId: 'org_a',
+        toOrganisationId: 'org_b',
+        amount: 0,
+      }),
+    ).rejects.toThrow('Transfer amount must be positive');
+  });
+
+  it('rejects transfers to the same organisation', async () => {
+    const { transferOrganisationCredits } = await import(
+      '@documenso/ee/server-only/limits/user-credits'
+    );
+
+    await expect(
+      transferOrganisationCredits({
+        fromOrganisationId: 'org_a',
+        toOrganisationId: 'org_a',
+        amount: 10,
+      }),
+    ).rejects.toThrow('Cannot transfer credits to the same organisation');
+  });
+});

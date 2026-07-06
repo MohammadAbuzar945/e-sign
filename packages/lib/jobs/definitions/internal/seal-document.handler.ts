@@ -410,6 +410,16 @@ export const run = async ({
     teamId: updatedEnvelope.teamId ?? undefined,
   });
 
+  if (!isRejected) {
+    const { activateResellerFromTermsCompletion } = await import(
+      '@documenso/lib/server-only/reseller/activate-reseller-from-terms-completion'
+    );
+
+    await activateResellerFromTermsCompletion({
+      termsEnvelopeId: envelopeId,
+    });
+  }
+
   // Call external webhook if updatedEnvelope.fromNomia is true with the same payload shape as internal webhooks
   if (updatedEnvelope.fromNomia) {
     console.log('Calling external webhook for document completion');

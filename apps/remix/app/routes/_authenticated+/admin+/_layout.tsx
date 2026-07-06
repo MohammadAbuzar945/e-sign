@@ -3,13 +3,17 @@ import {
   BarChart3,
   FileStack,
   Settings,
+  StoreIcon,
   Trophy,
   Users,
 } from 'lucide-react';
 import { Link, Outlet, redirect, useLocation } from 'react-router';
 
+import { useSession } from '@documenso/lib/client-only/providers/session';
+
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { LicenseClient } from '@documenso/lib/server-only/license/license-client';
+import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { isAdmin } from '@documenso/lib/utils/is-admin';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
@@ -37,6 +41,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   const { license } = loaderData;
   const { pathname } = useLocation();
+  const { user } = useSession();
+
+  const isResellerFeatureAllowed = user.email
+    ? isResellerFeatureAllowedEmail(user.email)
+    : false;
 
   return (
     <div className="mx-auto w-full max-w-screen-xl px-4 md:px-8">
@@ -121,6 +130,22 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
               <Trans>Organisation Insights</Trans>
             </Link>
           </Button>
+
+          {isResellerFeatureAllowed && (
+            <Button
+              variant="ghost"
+              className={cn(
+                'justify-start md:w-full',
+                pathname?.startsWith('/admin/reseller-applications') && 'bg-secondary',
+              )}
+              asChild
+            >
+              <Link to="/admin/reseller-applications">
+                <StoreIcon className="mr-2 h-5 w-5" />
+                <Trans>Reseller Applications</Trans>
+              </Link>
+            </Button>
+          )}
 
           <Button
             variant="ghost"

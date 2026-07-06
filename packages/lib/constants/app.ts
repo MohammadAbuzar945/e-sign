@@ -6,6 +6,8 @@ export const APP_DOCUMENT_UPLOAD_SIZE_LIMIT =
 export const NEXT_PUBLIC_WEBAPP_URL = () =>
   env('NEXT_PUBLIC_WEBAPP_URL') ?? 'http://localhost:3000';
 
+export const getPaystackWebhookUrl = () => `${NEXT_PUBLIC_WEBAPP_URL()}/api/paystack/webhook`;
+
 export const NEXT_PUBLIC_SIGNING_CONTACT_INFO = () =>
   env('NEXT_PUBLIC_SIGNING_CONTACT_INFO') ?? NEXT_PUBLIC_WEBAPP_URL();
 

@@ -6,11 +6,17 @@ import { useForm } from 'react-hook-form';
 import { useRevalidator } from 'react-router';
 import type { z } from 'zod';
 
+import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { getSiteSettings } from '@documenso/lib/server-only/site-settings/get-site-settings';
 import {
   SITE_SETTINGS_BANNER_ID,
   ZSiteSettingsBannerSchema,
 } from '@documenso/lib/server-only/site-settings/schemas/banner';
+import {
+  SITE_SETTINGS_RESELLER_ID,
+  ZSiteSettingsResellerSchema,
+} from '@documenso/lib/server-only/site-settings/schemas/reseller';
+import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { trpc as trpcReact } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
 import { ColorPicker } from '@documenso/ui/primitives/color-picker';
@@ -23,6 +29,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
+import { Input } from '@documenso/ui/primitives/input';
 import { Switch } from '@documenso/ui/primitives/switch';
 import { Textarea } from '@documenso/ui/primitives/textarea';
 import { useToast } from '@documenso/ui/primitives/use-toast';
@@ -32,19 +39,27 @@ import { SettingsHeader } from '~/components/general/settings-header';
 import type { Route } from './+types/site-settings';
 
 const ZBannerFormSchema = ZSiteSettingsBannerSchema;
+const ZResellerFormSchema = ZSiteSettingsResellerSchema;
 
 type TBannerFormSchema = z.infer<typeof ZBannerFormSchema>;
+type TResellerFormSchema = z.infer<typeof ZResellerFormSchema>;
 
-export async function loader() {
-  const banner = await getSiteSettings().then((settings) =>
-    settings.find((setting) => setting.id === SITE_SETTINGS_BANNER_ID),
-  );
+export async function loader({ request }: Route.LoaderArgs) {
+  const { user } = await getSession(request);
+  const settings = await getSiteSettings();
 
-  return { banner };
+  const banner = settings.find((setting) => setting.id === SITE_SETTINGS_BANNER_ID);
+  const reseller = settings.find((setting) => setting.id === SITE_SETTINGS_RESELLER_ID);
+
+  const isResellerFeatureAllowed = user?.email
+    ? isResellerFeatureAllowedEmail(user.email)
+    : false;
+
+  return { banner, reseller, isResellerFeatureAllowed };
 }
 
 export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
-  const { banner } = loaderData;
+  const { banner, reseller, isResellerFeatureAllowed } = loaderData;
 
   const { toast } = useToast();
   const { _ } = useLingui();
@@ -64,6 +79,19 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
   });
 
   const enabled = form.watch('enabled');
+
+  const resellerForm = useForm<TResellerFormSchema>({
+    resolver: zodResolver(ZResellerFormSchema),
+    defaultValues: {
+      id: SITE_SETTINGS_RESELLER_ID,
+      enabled: reseller?.enabled ?? true,
+      data: {
+        termsDocGenTemplateId: reseller?.data?.termsDocGenTemplateId,
+        termsDocGenWorkspaceId: reseller?.data?.termsDocGenWorkspaceId,
+        termsInternalTemplateId: reseller?.data?.termsInternalTemplateId,
+      },
+    },
+  });
 
   const { mutateAsync: updateSiteSetting, isPending: isUpdateSiteSettingLoading } =
     trpcReact.admin.updateSiteSetting.useMutation();
@@ -90,6 +118,25 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
         description: _(
           msg`We encountered an unknown error while attempting to update the banner. Please try again later.`,
         ),
+      });
+    }
+  };
+
+  const onResellerUpdate = async (values: TResellerFormSchema) => {
+    try {
+      await updateSiteSetting(values);
+
+      toast({
+        title: _(msg`Reseller settings updated`),
+        description: _(msg`Reseller T&Cs template configuration has been saved.`),
+        duration: 5000,
+      });
+
+      await revalidate();
+    } catch (err) {
+      toast({
+        title: _(msg`An unknown error occurred`),
+        variant: 'destructive',
       });
     }
   };
@@ -153,7 +200,11 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
 
                         <FormControl>
                           <div>
-                            <ColorPicker {...field} />
+                            <ColorPicker
+                              value={field.value}
+                              onChange={field.onChange}
+                              disabled={!enabled}
+                            />
                           </div>
                         </FormControl>
 
@@ -173,7 +224,11 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
 
                         <FormControl>
                           <div>
-                            <ColorPicker {...field} />
+                            <ColorPicker
+                              value={field.value}
+                              onChange={field.onChange}
+                              disabled={!enabled}
+                            />
                           </div>
                         </FormControl>
 
@@ -218,6 +273,110 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
             </form>
           </Form>
         </div>
+
+        {isResellerFeatureAllowed && (
+        <div className="mt-12">
+          <h2 className="font-semibold">
+            <Trans>Reseller T&Cs</Trans>
+          </h2>
+          <p className="text-muted-foreground mt-2 text-sm">
+            <Trans>
+              Configure the Nomia Africa DocGen template ID or internal E-sign template ID used when
+              sending reseller terms and conditions.
+            </Trans>
+          </p>
+
+          <Form {...resellerForm}>
+            <form
+              className="mt-4 space-y-4"
+              onSubmit={resellerForm.handleSubmit(onResellerUpdate)}
+            >
+              <FormField
+                control={resellerForm.control}
+                name="data.termsDocGenTemplateId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans>DocGen Template ID</Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        value={field.value ?? ''}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          field.onChange(value ? Number(value) : undefined);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans>
+                        Nomia DocGen template ID for reseller T&Cs (e.g. 127).
+                      </Trans>
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={resellerForm.control}
+                name="data.termsDocGenWorkspaceId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans>DocGen Workspace ID</Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        value={field.value ?? ''}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          field.onChange(value ? Number(value) : undefined);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans>
+                        Nomia workspace ID (e.g. 7). Can also be set via NOMIA_DOCGEN_WORKSPACE_ID.
+                      </Trans>
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={resellerForm.control}
+                name="data.termsInternalTemplateId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans>Internal E-sign Template ID</Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        value={field.value ?? ''}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          field.onChange(value ? Number(value) : undefined);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans>Fallback internal template ID if DocGen is not configured.</Trans>
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <Button type="submit" loading={isUpdateSiteSettingLoading}>
+                <Trans>Save reseller T&Cs settings</Trans>
+              </Button>
+            </form>
+          </Form>
+        </div>
+        )}
       </div>
     </div>
   );

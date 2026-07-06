@@ -74,6 +74,7 @@ model User {
   siteSettings       SiteSettings[]
   passkeys           Passkey[]
   userCredits        UserCredits[]
+  resellerApplications ResellerApplication[]
   avatarImage        AvatarImage?           @relation(fields: [avatarImageId], references: [id], onDelete: SetNull)
 
   @@index([email])
@@ -802,6 +803,9 @@ model Organisation {
 
   subscriptions Subscription[]
 
+  resellerApplication ResellerApplication?
+  resellerProfile     ResellerProfile?
+
   @@index([name])
   @@index([ownerUserId])
 }
@@ -1204,4 +1208,145 @@ model UserCredits {
   @@index([organisationId])
   @@index([organisationId, isActive])
   @@index([isActive])
+}
+
+enum ResellerApplicationStatus {
+  PENDING
+  TERMS_SENT
+  TERMS_COMPLETED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ResellerProfileStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ResellerCreditTransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model ResellerApplication {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisationId String       @unique
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  applicantUserId Int
+  applicantUser   User @relation(fields: [applicantUserId], references: [id], onDelete: Cascade)
+
+  status ResellerApplicationStatus @default(PENDING)
+
+  appliedAt          DateTime  @default(now())
+  termsSentAt        DateTime?
+  termsCompletedAt   DateTime?
+  approvedAt         DateTime?
+  rejectedAt         DateTime?
+  rejectionReason    String?
+
+  snapshotOrgName              String
+  snapshotApplicantName        String
+  snapshotApplicantEmail       String
+  snapshotCompletedDocCount    Int
+  snapshotUniqueSignerCount    Int
+  snapshotOrgUserCount         Int
+  snapshotOrgSignupDate        DateTime
+
+  termsTemplateId         String?
+  termsEnvelopeId         String? @unique
+  externalDocGenRequestId String?
+
+  @@index([status])
+  @@index([applicantUserId])
+}
+
+model ResellerProfile {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisationId String       @unique
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  status ResellerProfileStatus @default(ACTIVE)
+
+  affiliateSlug String @unique
+
+  paystackPublicKey     String?
+  paystackSecretKey     String?
+  paystackCallbackUrl   String?
+  vatNumber             String?
+  allowNegativeCredits  Boolean   @default(false)
+  instructionsDismissedAt DateTime?
+
+  packages     ResellerPackage[]
+  transactions ResellerCreditTransaction[] @relation("ResellerTransactions")
+
+  @@index([affiliateSlug])
+  @@index([status])
+}
+
+model ResellerPackage {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resellerProfileId String
+  resellerProfile   ResellerProfile @relation(fields: [resellerProfileId], references: [id], onDelete: Cascade)
+
+  creditAmount     Int
+  priceInCents     Int
+  currency         String  @default("ZAR")
+  catalogPackageId String
+  isEnabled        Boolean @default(false)
+  paystackPlanCode String?
+  paystackPaymentUrl String?
+
+  transactions ResellerCreditTransaction[]
+
+  @@unique([resellerProfileId, catalogPackageId])
+  @@index([resellerProfileId])
+}
+
+model ResellerCreditTransaction {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resellerProfileId String
+  resellerProfile   ResellerProfile @relation("ResellerTransactions", fields: [resellerProfileId], references: [id], onDelete: Cascade)
+
+  resellerOrganisationId   String
+  purchaserOrganisationId  String
+  purchaserUserId          Int
+  packageId                String?
+  package                  ResellerPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+
+  paystackReference String? @unique
+
+  credits      Int
+  grossAmount  Int
+  vatAmount    Int     @default(0)
+  currency     String  @default("ZAR")
+  status       ResellerCreditTransactionStatus @default(PENDING)
+
+  purchaserName            String
+  purchaserEmail           String
+  purchaserOrganisationName String
+
+  completedAt DateTime?
+
+  @@index([resellerProfileId])
+  @@index([resellerOrganisationId])
+  @@index([purchaserOrganisationId])
+  @@index([status])
+  @@index([createdAt])
 }
