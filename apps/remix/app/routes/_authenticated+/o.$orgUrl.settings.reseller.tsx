@@ -14,6 +14,7 @@ import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/org
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { AppError } from '@documenso/lib/errors/app-error';
+import { putFile } from '@documenso/lib/universal/upload/put-file';
 import { buildResellerTransactionsCsv } from '@documenso/lib/utils/build-reseller-transactions-csv';
 import {
   calculateResellerNetAmountInCents,
@@ -54,6 +55,10 @@ import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { SettingsHeader } from '~/components/general/settings-header';
 import { GenericErrorLayout } from '~/components/general/generic-error-layout';
+import {
+  BrandingPreferencesForm,
+  type TBrandingPreferencesFormSchema,
+} from '~/components/forms/branding-preferences-form';
 import { appMetaTags } from '~/utils/meta';
 
 import type { Route } from './+types/o.$orgUrl.settings.reseller';
@@ -258,7 +263,7 @@ export default function OrganisationSettingsResellerPage() {
     <div className="max-w-4xl space-y-8">
       <SettingsHeader
         title={_(msg`Reseller`)}
-        subtitle={_(msg`Manage your affiliate link, Paystack settings, packages, and sales records.`)}
+        subtitle={_(msg`Manage your affiliate link, Paystack settings, branding, packages, and sales records.`)}
       >
         <Dialog>
           <DialogTrigger asChild>
@@ -447,6 +452,54 @@ export default function OrganisationSettingsResellerPage() {
           </fieldset>
         </form>
       </Form>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">
+            <Trans>Affiliate page branding</Trans>
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            <Trans>
+              Customize how your affiliate credit purchase page looks to clients — logo, website,
+              and company details.
+            </Trans>
+          </p>
+        </div>
+
+        <BrandingPreferencesForm
+          context="Reseller"
+          affiliateSlug={profile.affiliateSlug}
+          settings={{
+            brandingEnabled: profile.brandingEnabled,
+            brandingLogo: profile.brandingLogo,
+            brandingUrl: profile.brandingUrl,
+            brandingCompanyDetails: profile.brandingCompanyDetails,
+          }}
+          onFormSubmit={async (data: TBrandingPreferencesFormSchema) => {
+            const { brandingEnabled, brandingLogo, brandingUrl, brandingCompanyDetails } = data;
+
+            let uploadedBrandingLogo: string | null | undefined = profile.brandingLogo;
+
+            if (brandingLogo) {
+              uploadedBrandingLogo = JSON.stringify(await putFile(brandingLogo));
+            }
+
+            if (brandingLogo === null) {
+              uploadedBrandingLogo = null;
+            }
+
+            await updateProfile({
+              organisationId: organisation.id,
+              data: {
+                brandingEnabled: brandingEnabled ?? false,
+                brandingLogo: uploadedBrandingLogo,
+                brandingUrl: brandingUrl || null,
+                brandingCompanyDetails: brandingCompanyDetails || null,
+              },
+            });
+          }}
+        />
+      </div>
 
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">

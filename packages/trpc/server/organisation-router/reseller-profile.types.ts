@@ -30,6 +30,10 @@ export const ZGetResellerProfileResponseSchema = z
     vatNumber: z.string().nullable(),
     allowNegativeCredits: z.boolean(),
     instructionsDismissedAt: z.date().nullable(),
+    brandingEnabled: z.boolean(),
+    brandingLogo: z.string().nullable(),
+    brandingUrl: z.string().nullable(),
+    brandingCompanyDetails: z.string().nullable(),
     packages: z.array(ZResellerPackageSchema),
     catalogPackages: z.array(
       z.object({
@@ -57,6 +61,10 @@ export const ZUpdateResellerProfileRequestSchema = z.object({
     paystackSecretKey: z.string().optional(),
     vatNumber: z.string().optional(),
     instructionsDismissed: z.boolean().optional(),
+    brandingEnabled: z.boolean().optional(),
+    brandingLogo: z.string().nullable().optional(),
+    brandingUrl: z.string().nullable().optional(),
+    brandingCompanyDetails: z.string().nullable().optional(),
   }),
 });
 

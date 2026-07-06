@@ -41,6 +41,10 @@ export const getAffiliateResellerRoute = procedure
       organisationName: profile.organisation.name,
       availableCredits: profile.availableCredits,
       hasPackages: packages.length > 0,
+      brandingEnabled: profile.brandingEnabled,
+      brandingLogo: profile.brandingLogo,
+      brandingUrl: profile.brandingUrl,
+      brandingCompanyDetails: profile.brandingCompanyDetails,
       packages,
     };
   });

@@ -13,6 +13,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@documenso/ui/primitives/card';
@@ -109,26 +110,59 @@ export default function AffiliateResellerPage({ loaderData }: Route.ComponentPro
     );
   }
 
+  const hasBrandingLogo = affiliate.brandingEnabled && affiliate.brandingLogo;
+  const brandingLogoUrl = `/api/branding/logo/reseller/${affiliate.affiliateSlug}`;
+
   return (
-    <div className="mx-auto max-w-3xl space-y-6 py-12">
-      <div>
-        <h1 className="text-3xl font-semibold">
-          <Trans>Buy e-sign credits</Trans>
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          <Trans>Purchase credits from {affiliate.organisationName}</Trans>
-        </p>
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-12">
+      <div className="flex flex-col items-center gap-4 text-center sm:items-start sm:text-left">
+        {hasBrandingLogo && (
+          <div className="flex w-full justify-center sm:justify-start">
+            {affiliate.brandingUrl ? (
+              <a href={affiliate.brandingUrl} target="_blank" rel="noopener noreferrer">
+                <img
+                  src={brandingLogoUrl}
+                  alt={affiliate.organisationName}
+                  className="h-16 w-auto max-w-xs object-contain"
+                />
+              </a>
+            ) : (
+              <img
+                src={brandingLogoUrl}
+                alt={affiliate.organisationName}
+                className="h-16 w-auto max-w-xs object-contain"
+              />
+            )}
+          </div>
+        )}
+
+        <div>
+          <h1 className="text-3xl font-semibold">
+            <Trans>Buy e-sign credits</Trans>
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            <Trans>Purchase credits from {affiliate.organisationName}</Trans>
+          </p>
+        </div>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {affiliate.packages.map((pkg) => (
-          <Card key={pkg.id}>
-            <CardHeader>
-              <CardTitle>{pkg.name}</CardTitle>
-              <CardDescription>{pkg.displayPrice}</CardDescription>
+          <Card key={pkg.id} className="flex flex-col">
+            <CardHeader className="flex-1">
+              <CardTitle className="text-lg">{pkg.name}</CardTitle>
+              <CardDescription className="text-base font-medium text-foreground">
+                {pkg.displayPrice}
+              </CardDescription>
             </CardHeader>
             <CardContent>
+              <p className="text-sm text-muted-foreground">
+                <Trans>{pkg.creditAmount} e-sign credits</Trans>
+              </p>
+            </CardContent>
+            <CardFooter>
               <Button
+                className="w-full"
                 loading={isPending}
                 disabled={!purchaserOrganisation}
                 onClick={async () => {
@@ -143,12 +177,18 @@ export default function AffiliateResellerPage({ loaderData }: Route.ComponentPro
                   });
                 }}
               >
-                <Trans>Buy {pkg.creditAmount} credits</Trans>
+                <Trans>Buy now</Trans>
               </Button>
-            </CardContent>
+            </CardFooter>
           </Card>
         ))}
       </div>
+
+      {affiliate.brandingEnabled && affiliate.brandingCompanyDetails && (
+        <div className="rounded-lg border bg-muted/30 p-4 text-center text-sm text-muted-foreground sm:text-left">
+          <p className="whitespace-pre-wrap">{affiliate.brandingCompanyDetails}</p>
+        </div>
+      )}
 
       <Button variant="ghost" asChild>
         <Link to={purchaserOrganisation ? `/o/${purchaserOrganisation.url}` : '/'}>

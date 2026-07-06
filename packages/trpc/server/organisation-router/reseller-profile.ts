@@ -62,6 +62,10 @@ export const updateResellerProfileRoute = authenticatedProcedure
       paystackSecretKey: data.paystackSecretKey,
       vatNumber: data.vatNumber,
       instructionsDismissed: data.instructionsDismissed,
+      brandingEnabled: data.brandingEnabled,
+      brandingLogo: data.brandingLogo,
+      brandingUrl: data.brandingUrl,
+      brandingCompanyDetails: data.brandingCompanyDetails,
     });
 
     return { success: true as const };

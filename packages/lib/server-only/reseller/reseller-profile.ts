@@ -78,6 +78,10 @@ export type UpdateResellerProfileOptions = {
   paystackCallbackUrl?: string;
   vatNumber?: string;
   instructionsDismissed?: boolean;
+  brandingEnabled?: boolean;
+  brandingLogo?: string | null;
+  brandingUrl?: string | null;
+  brandingCompanyDetails?: string | null;
 };
 
 export const updateResellerProfile = async ({
@@ -87,6 +91,10 @@ export const updateResellerProfile = async ({
   paystackCallbackUrl,
   vatNumber,
   instructionsDismissed,
+  brandingEnabled,
+  brandingLogo,
+  brandingUrl,
+  brandingCompanyDetails,
 }: UpdateResellerProfileOptions) => {
   return await prisma.resellerProfile.update({
     where: { organisationId },
@@ -96,6 +104,10 @@ export const updateResellerProfile = async ({
       paystackCallbackUrl,
       vatNumber,
       instructionsDismissedAt: instructionsDismissed ? new Date() : undefined,
+      brandingEnabled,
+      brandingLogo,
+      brandingUrl,
+      brandingCompanyDetails,
     },
   });
 };

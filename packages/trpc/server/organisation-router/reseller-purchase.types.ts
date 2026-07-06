@@ -21,6 +21,10 @@ export const ZGetAffiliateResellerResponseSchema = z
     organisationName: z.string(),
     availableCredits: z.number(),
     hasPackages: z.boolean(),
+    brandingEnabled: z.boolean(),
+    brandingLogo: z.string().nullable(),
+    brandingUrl: z.string().nullable(),
+    brandingCompanyDetails: z.string().nullable(),
     packages: z.array(
       z.object({
         id: z.string(),

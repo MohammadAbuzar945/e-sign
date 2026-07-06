@@ -1287,6 +1287,11 @@ model ResellerProfile {
   allowNegativeCredits  Boolean   @default(false)
   instructionsDismissedAt DateTime?
 
+  brandingEnabled         Boolean @default(false)
+  brandingLogo            String?
+  brandingUrl             String?
+  brandingCompanyDetails  String?
+
   packages     ResellerPackage[]
   transactions ResellerCreditTransaction[] @relation("ResellerTransactions")
 

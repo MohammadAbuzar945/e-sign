@@ -59,7 +59,8 @@ export type BrandingPreferencesFormProps = {
   canInherit?: boolean;
   settings: SettingsSubset;
   onFormSubmit: (data: TBrandingPreferencesFormSchema) => Promise<void>;
-  context: 'Team' | 'Organisation';
+  context: 'Team' | 'Organisation' | 'Reseller';
+  affiliateSlug?: string;
 };
 
 export function BrandingPreferencesForm({
@@ -67,6 +68,7 @@ export function BrandingPreferencesForm({
   settings,
   onFormSubmit,
   context,
+  affiliateSlug,
 }: BrandingPreferencesFormProps) {
   const { t } = useLingui();
 
@@ -96,7 +98,9 @@ export function BrandingPreferencesForm({
         const logoUrl =
           context === 'Team'
             ? `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/team/${team?.id}`
-            : `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/organisation/${organisation?.id}`;
+            : context === 'Reseller'
+              ? `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/reseller/${affiliateSlug}`
+              : `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/organisation/${organisation?.id}`;
 
         setPreviewUrl(logoUrl);
         setHasLoadedPreview(true);
@@ -104,7 +108,7 @@ export function BrandingPreferencesForm({
     }
 
     setHasLoadedPreview(true);
-  }, [settings.brandingLogo]);
+  }, [settings.brandingLogo, context, affiliateSlug, team?.id, organisation?.id]);
 
   // Cleanup ObjectURL on unmount or when previewUrl changes
   useEffect(() => {
@@ -164,6 +168,8 @@ export function BrandingPreferencesForm({
                 <FormDescription>
                   {context === 'Team' ? (
                     <Trans>Enable custom branding for all documents in this team</Trans>
+                  ) : context === 'Reseller' ? (
+                    <Trans>Enable custom branding on your affiliate credit purchase page</Trans>
                   ) : (
                     <Trans>Enable custom branding for all documents in this organisation</Trans>
                   )}
@@ -320,7 +326,11 @@ export function BrandingPreferencesForm({
                   </FormControl>
 
                   <FormDescription>
-                    <Trans>Additional brand information to display at the bottom of emails</Trans>
+                    {context === 'Reseller' ? (
+                      <Trans>Additional brand information to display on your affiliate page</Trans>
+                    ) : (
+                      <Trans>Additional brand information to display at the bottom of emails</Trans>
+                    )}
 
                     {canInherit && (
                       <span>
