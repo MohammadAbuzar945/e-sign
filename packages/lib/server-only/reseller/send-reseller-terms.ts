@@ -5,7 +5,7 @@ import { DOCUMENSO_INTERNAL_EMAIL } from '@documenso/lib/constants/email';
 import type { ResellerTermsVariableValues } from '@documenso/lib/constants/reseller-terms-variables';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { sendDocument } from '@documenso/lib/server-only/document/send-document';
-import { generateResellerTermsDocument } from '@documenso/lib/server-only/nomia-docgen';
+import { generateResellerTermsDocument, fetchResellerTermsTemplateVariables } from '@documenso/lib/server-only/nomia-docgen';
 import { getResellerSiteSettings } from '@documenso/lib/server-only/site-settings/get-reseller-site-settings';
 import { createDocumentFromTemplate } from '@documenso/lib/server-only/template/create-document-from-template';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
@@ -33,6 +33,7 @@ const getResellerTermsTemplateConfig = async () => {
 
   return {
     termsDocGenTemplateId: resellerSettings?.termsDocGenTemplateId,
+    termsDocGenOrganizationId: resellerSettings?.termsDocGenOrganizationId,
     termsDocGenWorkspaceId: resellerSettings?.termsDocGenWorkspaceId,
     termsInternalTemplateId: resellerSettings?.termsInternalTemplateId,
     docGenApiUrl: resellerSettings?.docGenApiUrl,
@@ -101,6 +102,33 @@ export const sendResellerTerms = async ({
   }
 
   const results = [];
+  let templateVariables: Awaited<ReturnType<typeof fetchResellerTermsTemplateVariables>> | null =
+    null;
+
+  if (templateConfig.termsDocGenTemplateId) {
+    if (!templateConfig.termsDocGenOrganizationId) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message:
+          'Nomia DocGen organization ID is not configured. Set it in Admin Site Settings.',
+      });
+    }
+
+    if (!templateConfig.docGenAuthToken) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message:
+          'Nomia DocGen API credentials are not configured. Set them in Admin Site Settings.',
+      });
+    }
+
+    templateVariables = await fetchResellerTermsTemplateVariables({
+      organizationId: templateConfig.termsDocGenOrganizationId,
+      templateId: templateConfig.termsDocGenTemplateId,
+      credentials: {
+        apiUrl: templateConfig.docGenApiUrl,
+        authToken: templateConfig.docGenAuthToken,
+      },
+    });
+  }
 
   for (const { applicationId, variableValues, docGenOptions } of applications) {
     const application = await prisma.resellerApplication.findUnique({
@@ -163,6 +191,7 @@ export const sendResellerTerms = async ({
           workspaceId: templateConfig.termsDocGenWorkspaceId,
           documentName,
           variableValues,
+          templateVariables: templateVariables ?? [],
           docGenOptions,
           credentials: {
             apiUrl: templateConfig.docGenApiUrl,

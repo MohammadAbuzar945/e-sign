@@ -1,14 +1,8 @@
 import { z } from 'zod';
 
-import { RESELLER_TERMS_TEMPLATE_VARIABLES } from '@documenso/lib/constants/reseller-terms-variables';
 import { ZFindSearchParamsSchema } from '@documenso/lib/types/search-params';
 
-export const ZResellerTermsVariableValuesSchema = z.object(
-  Object.fromEntries(RESELLER_TERMS_TEMPLATE_VARIABLES.map((key) => [key, z.string()])) as Record<
-    (typeof RESELLER_TERMS_TEMPLATE_VARIABLES)[number],
-    z.ZodString
-  >,
-);
+export const ZResellerTermsVariableValuesSchema = z.record(z.string(), z.string());
 
 export const ZSendResellerTermsApplicationSchema = z.object({
   applicationId: z.string(),

@@ -1,9 +1,20 @@
-import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import type { ResellerTermsVariableValues } from '@documenso/lib/constants/reseller-terms-variables';
+
 import {
-  RESELLER_TERMS_ESIGN_SIGNATORY_VARIABLES,
-  RESELLER_TERMS_TEMPLATE_VARIABLES,
-} from '@documenso/lib/constants/reseller-terms-variables';
+  getNomiaApiBaseUrl,
+  isSignatureTemplateVariable,
+  parseTemplateVariableContentFormat,
+  type NomiaDocGenTemplateVariable,
+} from './fetch-template-variables';
+
+export type { NomiaDocGenTemplateVariable } from './fetch-template-variables';
+export {
+  fetchResellerTermsTemplateVariables,
+  getEditableTemplateVariables,
+  getNomiaApiBaseUrl,
+  isSignatureTemplateVariable,
+  parseTemplateVariableContentFormat,
+} from './fetch-template-variables';
 
 export type NomiaDocGenSignatory = {
   fullName: string;
@@ -32,6 +43,7 @@ export type GenerateResellerTermsDocumentOptions = {
   workspaceId: number;
   documentName: string;
   variableValues: ResellerTermsVariableValues;
+  templateVariables: NomiaDocGenTemplateVariable[];
   signatories: NomiaDocGenSignatory[];
   docGenOptions: NomiaDocGenOptions;
   credentials: NomiaDocGenCredentials;
@@ -84,41 +96,38 @@ const PDF_LINK_FIELD_NAMES = [
   'fileUrl',
 ] as const;
 
-const getDefaultDocGenApiBaseUrl = () => {
-  return NEXT_PUBLIC_WEBAPP_URL() === 'https://sign.nomiadocs.com'
-    ? 'https://tapi.nomiadocs.com'
-    : 'https://api.nomiadocs.com';
-};
+const LEGACY_ESIGN_TEXT_VARIABLES = new Set(['Preparedby', 'PreparedByEmail']);
 
-const getDocGenApiBaseUrl = (configuredUrl?: string) => {
-  if (configuredUrl?.trim()) {
-    return configuredUrl.trim().replace(/\/$/, '');
-  }
-
-  return getDefaultDocGenApiBaseUrl();
-};
-
-const buildVariableValuesRows = (
+export const buildVariableValuesRows = (
+  templateVariables: NomiaDocGenTemplateVariable[],
   variableValues: ResellerTermsVariableValues,
   hasEsignFields: boolean,
 ) => {
-  return RESELLER_TERMS_TEMPLATE_VARIABLES.map((variableName) => {
+  return templateVariables.map((variable) => {
+    const contentFormat = parseTemplateVariableContentFormat(variable.content_format);
+    const isSignatureField = isSignatureTemplateVariable(variable);
+
     const entry: {
       variable_name: string;
       value: string;
       type?: string;
       signatory?: number;
     } = {
-      variable_name: variableName,
-      value: variableValues[variableName] ?? '',
+      variable_name: variable.variable_name,
+      value: isSignatureField ? '' : (variableValues[variable.variable_name] ?? ''),
     };
 
-    if (
-      hasEsignFields &&
-      RESELLER_TERMS_ESIGN_SIGNATORY_VARIABLES.includes(
-        variableName as (typeof RESELLER_TERMS_ESIGN_SIGNATORY_VARIABLES)[number],
-      )
-    ) {
+    if (!hasEsignFields) {
+      return entry;
+    }
+
+    if (contentFormat.signatory) {
+      entry.signatory = contentFormat.signatory;
+
+      if (contentFormat.type) {
+        entry.type = contentFormat.type;
+      }
+    } else if (LEGACY_ESIGN_TEXT_VARIABLES.has(variable.variable_name)) {
       entry.type = 'TEXT';
       entry.signatory = 1;
     }
@@ -127,11 +136,12 @@ const buildVariableValuesRows = (
   });
 };
 
-const buildVariableValuesPayload = (
+export const buildVariableValuesPayload = (
+  templateVariables: NomiaDocGenTemplateVariable[],
   variableValues: ResellerTermsVariableValues,
   hasEsignFields: boolean,
 ) => {
-  const rows = buildVariableValuesRows(variableValues, hasEsignFields);
+  const rows = buildVariableValuesRows(templateVariables, variableValues, hasEsignFields);
 
   return JSON.stringify([rows]);
 };
@@ -248,6 +258,7 @@ export const generateResellerTermsDocument = async ({
   workspaceId,
   documentName,
   variableValues,
+  templateVariables,
   signatories,
   docGenOptions,
   credentials,
@@ -266,6 +277,10 @@ export const generateResellerTermsDocument = async ({
     throw new Error('Nomia DocGen auth token is not configured in Admin Site Settings.');
   }
 
+  if (templateVariables.length === 0) {
+    throw new Error('No template variables were provided for reseller T&Cs generation.');
+  }
+
   const hasEsignFields = docGenOptions.buildForEsign || docGenOptions.sendForEsign;
 
   if (hasEsignFields && !esignApiKey) {
@@ -274,7 +289,7 @@ export const generateResellerTermsDocument = async ({
     );
   }
 
-  const docGenApiUrl = getDocGenApiBaseUrl(credentials.apiUrl);
+  const docGenApiUrl = getNomiaApiBaseUrl(credentials.apiUrl);
   const endpoint = credentials.apiEndpoint?.trim() || 'pdf_link';
   const requestUrl = `${docGenApiUrl}/document_records/api/${endpoint}`;
 
@@ -284,7 +299,11 @@ export const generateResellerTermsDocument = async ({
         template_id: templateId,
         name: documentName,
         show_in_nomia: docGenOptions.showInNomia,
-        variable_values: buildVariableValuesPayload(variableValues, hasEsignFields),
+        variable_values: buildVariableValuesPayload(
+          templateVariables,
+          variableValues,
+          hasEsignFields,
+        ),
         dynamic_tables: [],
         dynamic_images: [],
       },

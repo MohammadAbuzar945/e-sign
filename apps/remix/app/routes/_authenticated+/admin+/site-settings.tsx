@@ -87,6 +87,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
       enabled: reseller?.enabled ?? true,
       data: {
         termsDocGenTemplateId: reseller?.data?.termsDocGenTemplateId,
+        termsDocGenOrganizationId: reseller?.data?.termsDocGenOrganizationId,
         termsDocGenWorkspaceId: reseller?.data?.termsDocGenWorkspaceId,
         termsInternalTemplateId: reseller?.data?.termsInternalTemplateId,
         docGenApiUrl: reseller?.data?.docGenApiUrl ?? '',
@@ -403,6 +404,33 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
                     <FormDescription>
                       <Trans>
                         Default e-sign API key used when sending reseller T&Cs for e-signing.
+                      </Trans>
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={resellerForm.control}
+                name="data.termsDocGenOrganizationId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans>DocGen Organization ID</Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        value={field.value ?? ''}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          field.onChange(value ? Number(value) : undefined);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans>
+                        Nomia organization ID used to fetch template variables (e.g. 20).
                       </Trans>
                     </FormDescription>
                   </FormItem>

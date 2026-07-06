@@ -8,12 +8,10 @@ import { z } from 'zod';
 
 import {
   createDefaultResellerTermsVariableValues,
-  RESELLER_TERMS_TEMPLATE_VARIABLES,
-  RESELLER_TERMS_VARIABLE_LABELS,
+  formatResellerTermsVariableLabel,
 } from '@documenso/lib/constants/reseller-terms-variables';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
-import { ZResellerTermsVariableValuesSchema } from '@documenso/trpc/server/admin-router/reseller-applications.types';
 import { Button } from '@documenso/ui/primitives/button';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import {
@@ -50,7 +48,8 @@ type SendResellerTermsDialogProps = {
   onSuccess: () => Promise<void>;
 };
 
-const ZResellerTermsFormSchema = ZResellerTermsVariableValuesSchema.extend({
+const ZResellerTermsFormSchema = z.object({
+  variableValues: z.record(z.string(), z.string()),
   showInNomia: z.boolean(),
   buildForEsign: z.boolean(),
   sendForEsign: z.boolean(),
@@ -59,20 +58,24 @@ const ZResellerTermsFormSchema = ZResellerTermsVariableValuesSchema.extend({
 
 type TResellerTermsFormSchema = z.infer<typeof ZResellerTermsFormSchema>;
 
-const createDefaultFormValues = (application: ResellerApplicationRow | null) => ({
-  ...createDefaultResellerTermsVariableValues({
+const createDefaultFormValues = ({
+  application,
+  templateVariables,
+}: {
+  application: ResellerApplicationRow | null;
+  templateVariables: Array<{ variable_name: string; default_value: string }>;
+}): TResellerTermsFormSchema => ({
+  variableValues: createDefaultResellerTermsVariableValues({
     organisationName: application?.snapshotOrgName ?? '',
     applicantName: application?.snapshotApplicantName ?? '',
     applicantEmail: application?.snapshotApplicantEmail ?? '',
+    templateVariables,
   }),
   showInNomia: true,
   buildForEsign: false,
   sendForEsign: false,
   esignApiKey: '',
 });
-
-const getVariableLabel = (variableName: (typeof RESELLER_TERMS_TEMPLATE_VARIABLES)[number]) =>
-  RESELLER_TERMS_VARIABLE_LABELS[variableName];
 
 export const SendResellerTermsDialog = ({
   application,
@@ -83,7 +86,25 @@ export const SendResellerTermsDialog = ({
   const { _ } = useLingui();
   const { toast } = useToast();
 
-  const defaultValues = useMemo(() => createDefaultFormValues(application), [application]);
+  const {
+    data: templateVariablesData,
+    isLoading: isLoadingTemplateVariables,
+    error: templateVariablesError,
+  } = trpc.admin.resellerApplications.getTermsTemplateVariables.useQuery(undefined, {
+    enabled: open,
+    retry: false,
+  });
+
+  const editableVariables = templateVariablesData?.editableVariables ?? [];
+
+  const defaultValues = useMemo(
+    () =>
+      createDefaultFormValues({
+        application,
+        templateVariables: editableVariables,
+      }),
+    [application, editableVariables],
+  );
 
   const form = useForm<TResellerTermsFormSchema>({
     resolver: zodResolver(ZResellerTermsFormSchema),
@@ -91,10 +112,15 @@ export const SendResellerTermsDialog = ({
   });
 
   useEffect(() => {
-    if (open && application) {
-      form.reset(createDefaultFormValues(application));
+    if (open && application && editableVariables.length > 0) {
+      form.reset(
+        createDefaultFormValues({
+          application,
+          templateVariables: editableVariables,
+        }),
+      );
     }
-  }, [application, form, open]);
+  }, [application, editableVariables, form, open]);
 
   const { mutateAsync: sendTerms, isPending } = trpc.admin.resellerApplications.sendTerms.useMutation({
     onSuccess: async () => {
@@ -122,7 +148,7 @@ export const SendResellerTermsDialog = ({
       return;
     }
 
-    const { showInNomia, buildForEsign, sendForEsign, esignApiKey, ...variableValues } = values;
+    const { variableValues, showInNomia, buildForEsign, sendForEsign, esignApiKey } = values;
 
     await sendTerms({
       applications: [
@@ -140,6 +166,10 @@ export const SendResellerTermsDialog = ({
     });
   };
 
+  const templateVariablesErrorMessage = templateVariablesError
+    ? AppError.parseError(templateVariablesError).message
+    : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -155,9 +185,22 @@ export const SendResellerTermsDialog = ({
           </DialogDescription>
         </DialogHeader>
 
+        {isLoadingTemplateVariables ? (
+          <p className="text-muted-foreground text-sm">
+            <Trans>Loading template variables from Nomia DocGen...</Trans>
+          </p>
+        ) : null}
+
+        {templateVariablesErrorMessage ? (
+          <p className="text-destructive text-sm">{templateVariablesErrorMessage}</p>
+        ) : null}
+
         <Form {...form}>
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-            <fieldset className="space-y-4" disabled={isPending}>
+            <fieldset
+              className="space-y-4"
+              disabled={isPending || isLoadingTemplateVariables || !!templateVariablesErrorMessage}
+            >
               <div className="rounded-md border p-4">
                 <p className="text-sm font-medium">
                   <Trans>Nomia DocGen options</Trans>
@@ -263,22 +306,22 @@ export const SendResellerTermsDialog = ({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-              {RESELLER_TERMS_TEMPLATE_VARIABLES.map((variableName) => (
-                <FormField
-                  key={variableName}
-                  control={form.control}
-                  name={variableName}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{getVariableLabel(variableName)}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
+                {editableVariables.map((variable) => (
+                  <FormField
+                    key={variable.variable_name}
+                    control={form.control}
+                    name={`variableValues.${variable.variable_name}`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{formatResellerTermsVariableLabel(variable.variable_name)}</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
               </div>
             </fieldset>
 
@@ -286,7 +329,15 @@ export const SendResellerTermsDialog = ({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 <Trans>Cancel</Trans>
               </Button>
-              <Button type="submit" loading={isPending}>
+              <Button
+                type="submit"
+                loading={isPending}
+                disabled={
+                  isLoadingTemplateVariables ||
+                  !!templateVariablesErrorMessage ||
+                  editableVariables.length === 0
+                }
+              >
                 <Trans>Send T&Cs</Trans>
               </Button>
             </DialogFooter>

@@ -20,6 +20,7 @@ import {
   rejectResellerApplicationRoute,
   sendResellerTermsRoute,
 } from './reseller-applications';
+import { getResellerTermsTemplateVariablesRoute } from './get-reseller-terms-template-variables';
 import { resealDocumentRoute } from './reseal-document';
 import { resetTwoFactorRoute } from './reset-two-factor-authentication';
 import { resyncLicenseRoute } from './resync-license';
@@ -51,6 +52,7 @@ export const adminRouter = router({
   },
   resellerApplications: {
     find: findResellerApplicationsRoute,
+    getTermsTemplateVariables: getResellerTermsTemplateVariablesRoute,
     sendTerms: sendResellerTermsRoute,
     reject: rejectResellerApplicationRoute,
   },

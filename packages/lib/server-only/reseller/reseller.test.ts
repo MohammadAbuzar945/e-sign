@@ -73,6 +73,57 @@ describe('reseller transaction CSV export', () => {
   });
 });
 
+describe('reseller DocGen template variables', () => {
+  it('builds payload rows from fetched template metadata', async () => {
+    const { buildVariableValuesRows } = await import('@documenso/lib/server-only/nomia-docgen');
+
+    const templateVariables = [
+      {
+        id: 1,
+        variable_name: 'Preparedby',
+        default_value: 'Jane Doe',
+        field_type: 'NAME',
+        fillable_field: false,
+        content_format: '{}',
+        document_template_id: 839,
+      },
+      {
+        id: 2,
+        variable_name: 'ClientSig',
+        default_value: '',
+        field_type: 'NAME',
+        fillable_field: true,
+        content_format:
+          '{"type":"SIGNATURE","signatory":1,"sendForEsign":true,"role":"SIGNER"}',
+        document_template_id: 839,
+      },
+    ];
+
+    const rows = buildVariableValuesRows(
+      templateVariables,
+      {
+        Preparedby: 'Applicant Name',
+      },
+      true,
+    );
+
+    expect(rows).toEqual([
+      {
+        variable_name: 'Preparedby',
+        value: 'Applicant Name',
+        type: 'TEXT',
+        signatory: 1,
+      },
+      {
+        variable_name: 'ClientSig',
+        value: '',
+        type: 'SIGNATURE',
+        signatory: 1,
+      },
+    ]);
+  });
+});
+
 describe('transferOrganisationCredits validation', () => {
   it('rejects non-positive transfer amounts', async () => {
     const { transferOrganisationCredits } = await import(
