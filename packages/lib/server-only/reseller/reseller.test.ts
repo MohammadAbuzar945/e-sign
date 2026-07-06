@@ -5,6 +5,7 @@ import {
   RESELLER_MIN_CREDITS_USED,
   RESELLER_MIN_SUBSCRIPTION_MONTHS,
 } from '@documenso/lib/constants/esign-credit-packages';
+import { buildResellerApplicationTermsCompletionWhere } from '@documenso/lib/server-only/reseller/activate-reseller-from-terms-completion';
 import { buildResellerTransactionsCsv } from '@documenso/lib/utils/build-reseller-transactions-csv';
 import {
   calculateResellerNetAmountInCents,
@@ -70,6 +71,35 @@ describe('reseller transaction CSV export', () => {
     expect(csv).toContain('58.70');
     expect(csv).toContain('391.30');
     expect(csv).toContain('ref_123');
+  });
+});
+
+describe('reseller terms completion matching', () => {
+  it('matches applications by signed envelope id', () => {
+    const where = buildResellerApplicationTermsCompletionWhere({
+      envelopeId: 'envelope_abc',
+    });
+
+    expect(where).toEqual({
+      status: {
+        in: ['TERMS_SENT', 'TERMS_COMPLETED'],
+      },
+      OR: [{ termsEnvelopeId: 'envelope_abc' }],
+    });
+  });
+
+  it('matches applications by DocGen external id', () => {
+    const where = buildResellerApplicationTermsCompletionWhere({
+      envelopeId: 'envelope_abc',
+      envelopeExternalId: 'application_123',
+    });
+
+    expect(where.OR).toEqual([
+      { termsEnvelopeId: 'envelope_abc' },
+      { id: 'application_123' },
+      { externalDocGenRequestId: 'application_123' },
+      { termsEnvelopeId: 'application_123' },
+    ]);
   });
 });
 

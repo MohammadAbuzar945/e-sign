@@ -2,6 +2,7 @@ import { findResellerApplications } from '@documenso/lib/server-only/reseller/fi
 import {
   rejectResellerApplication,
 } from '@documenso/lib/server-only/reseller/process-reseller-paystack-webhook';
+import { retryResellerApplicationActivation } from '@documenso/lib/server-only/reseller/retry-reseller-application-activation';
 import { sendResellerTerms } from '@documenso/lib/server-only/reseller/send-reseller-terms';
 import { assertResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 
@@ -11,6 +12,8 @@ import {
   ZFindResellerApplicationsResponseSchema,
   ZRejectResellerApplicationRequestSchema,
   ZRejectResellerApplicationResponseSchema,
+  ZRetryResellerApplicationActivationRequestSchema,
+  ZRetryResellerApplicationActivationResponseSchema,
   ZSendResellerTermsRequestSchema,
   ZSendResellerTermsResponseSchema,
 } from './reseller-applications.types';
@@ -59,4 +62,15 @@ export const rejectResellerApplicationRoute = adminProcedure
     });
 
     return { success: true as const };
+  });
+
+export const retryResellerApplicationActivationRoute = adminProcedure
+  .input(ZRetryResellerApplicationActivationRequestSchema)
+  .output(ZRetryResellerApplicationActivationResponseSchema)
+  .mutation(async ({ input, ctx }) => {
+    assertResellerFeatureAccess(ctx.user.email);
+
+    return await retryResellerApplicationActivation({
+      applicationId: input.applicationId,
+    });
   });

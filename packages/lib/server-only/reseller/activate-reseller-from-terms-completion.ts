@@ -1,4 +1,5 @@
 import { ResellerApplicationStatus, ResellerProfileStatus } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { nanoid } from 'nanoid';
 
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
@@ -15,22 +16,78 @@ const generateAffiliateSlug = (orgUrl: string) => {
   return `${base}-${nanoid(6)}`;
 };
 
-export const activateResellerFromTermsCompletion = async ({
-  termsEnvelopeId,
-}: {
-  termsEnvelopeId: string;
-}) => {
-  const application = await prisma.resellerApplication.findFirst({
-    where: {
-      termsEnvelopeId,
-      status: {
-        in: [ResellerApplicationStatus.TERMS_SENT, ResellerApplicationStatus.TERMS_COMPLETED],
-      },
+export type ActivateResellerFromTermsCompletionOptions = {
+  envelopeId: string;
+  envelopeExternalId?: string | null;
+  envelopeSecondaryId?: string | null;
+};
+
+export const buildResellerApplicationTermsCompletionWhere = ({
+  envelopeId,
+  envelopeExternalId,
+  envelopeSecondaryId,
+}: ActivateResellerFromTermsCompletionOptions): Prisma.ResellerApplicationWhereInput => {
+  const orConditions: Prisma.ResellerApplicationWhereInput[] = [{ termsEnvelopeId: envelopeId }];
+
+  if (envelopeExternalId) {
+    orConditions.push(
+      { id: envelopeExternalId },
+      { externalDocGenRequestId: envelopeExternalId },
+      { termsEnvelopeId: envelopeExternalId },
+    );
+  }
+
+  if (envelopeSecondaryId) {
+    orConditions.push({ termsEnvelopeId: envelopeSecondaryId });
+  }
+
+  return {
+    status: {
+      in: [ResellerApplicationStatus.TERMS_SENT, ResellerApplicationStatus.TERMS_COMPLETED],
     },
+    OR: orConditions,
+  };
+};
+
+const findResellerApplicationForTermsCompletion = async (
+  options: ActivateResellerFromTermsCompletionOptions,
+) => {
+  return await prisma.resellerApplication.findFirst({
+    where: buildResellerApplicationTermsCompletionWhere(options),
     include: {
       organisation: true,
       applicantUser: true,
     },
+  });
+};
+
+const approveResellerApplication = async ({
+  applicationId,
+  termsEnvelopeId,
+}: {
+  applicationId: string;
+  termsEnvelopeId: string;
+}) => {
+  await prisma.resellerApplication.update({
+    where: { id: applicationId },
+    data: {
+      status: ResellerApplicationStatus.APPROVED,
+      termsCompletedAt: new Date(),
+      approvedAt: new Date(),
+      termsEnvelopeId,
+    },
+  });
+};
+
+export const activateResellerFromTermsCompletion = async ({
+  envelopeId,
+  envelopeExternalId,
+  envelopeSecondaryId,
+}: ActivateResellerFromTermsCompletionOptions) => {
+  const application = await findResellerApplicationForTermsCompletion({
+    envelopeId,
+    envelopeExternalId,
+    envelopeSecondaryId,
   });
 
   if (!application) {
@@ -42,6 +99,13 @@ export const activateResellerFromTermsCompletion = async ({
   });
 
   if (existingProfile) {
+    if (application.status !== ResellerApplicationStatus.APPROVED) {
+      await approveResellerApplication({
+        applicationId: application.id,
+        termsEnvelopeId: envelopeId,
+      });
+    }
+
     return existingProfile;
   }
 
@@ -54,6 +118,7 @@ export const activateResellerFromTermsCompletion = async ({
         status: ResellerApplicationStatus.APPROVED,
         termsCompletedAt: new Date(),
         approvedAt: new Date(),
+        termsEnvelopeId: envelopeId,
       },
     });
 

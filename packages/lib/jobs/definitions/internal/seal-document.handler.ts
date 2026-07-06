@@ -416,7 +416,9 @@ export const run = async ({
     );
 
     await activateResellerFromTermsCompletion({
-      termsEnvelopeId: envelopeId,
+      envelopeId,
+      envelopeExternalId: updatedEnvelope.externalId,
+      envelopeSecondaryId: updatedEnvelope.secondaryId,
     });
   }
 

@@ -18,6 +18,7 @@ import { promoteMemberToOwnerRoute } from './promote-member-to-owner';
 import {
   findResellerApplicationsRoute,
   rejectResellerApplicationRoute,
+  retryResellerApplicationActivationRoute,
   sendResellerTermsRoute,
 } from './reseller-applications';
 import { getResellerTermsTemplateVariablesRoute } from './get-reseller-terms-template-variables';
@@ -55,6 +56,7 @@ export const adminRouter = router({
     getTermsTemplateVariables: getResellerTermsTemplateVariablesRoute,
     sendTerms: sendResellerTermsRoute,
     reject: rejectResellerApplicationRoute,
+    retryActivation: retryResellerApplicationActivationRoute,
   },
   stripe: {
     createCustomer: createStripeCustomerRoute,

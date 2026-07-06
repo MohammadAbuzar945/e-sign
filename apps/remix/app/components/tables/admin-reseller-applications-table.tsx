@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useLingui } from '@lingui/react/macro';
 import { Trans } from '@lingui/react/macro';
 
+import { AppError } from '@documenso/lib/errors/app-error';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { trpc } from '@documenso/trpc/react';
@@ -59,6 +60,29 @@ export const AdminResellerApplicationsTable = () => {
 
     return results.data.find((application) => application.id === selectedApplicationIds[0]) ?? null;
   }, [results.data, selectedApplicationIds]);
+
+  const { mutateAsync: retryActivation, isPending: isRetryingActivation } =
+    trpc.admin.resellerApplications.retryActivation.useMutation({
+      onSuccess: async () => {
+        toast({
+          title: t`Reseller activated`,
+          description: t`The application has been marked as approved.`,
+        });
+
+        setRowSelection({});
+        await refetch();
+      },
+      onError: (error) => {
+        toast({
+          title: t`Activation failed`,
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
+  const canRetryActivation =
+    selectedApplication?.status === 'TERMS_SENT' || selectedApplication?.status === 'TERMS_COMPLETED';
 
   const columns = useMemo(() => {
     return [
@@ -120,7 +144,24 @@ export const AdminResellerApplicationsTable = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          disabled={selectedApplicationIds.length !== 1 || !canRetryActivation || isRetryingActivation}
+          loading={isRetryingActivation}
+          onClick={async () => {
+            if (!selectedApplication) {
+              return;
+            }
+
+            await retryActivation({
+              applicationId: selectedApplication.id,
+            });
+          }}
+        >
+          <Trans>Activate reseller</Trans>
+        </Button>
+
         <Button
           disabled={selectedApplicationIds.length !== 1}
           onClick={() => {

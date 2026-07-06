@@ -71,3 +71,11 @@ export const ZRejectResellerApplicationRequestSchema = z.object({
 export const ZRejectResellerApplicationResponseSchema = z.object({
   success: z.literal(true),
 });
+
+export const ZRetryResellerApplicationActivationRequestSchema = z.object({
+  applicationId: z.string(),
+});
+
+export const ZRetryResellerApplicationActivationResponseSchema = z.object({
+  success: z.literal(true),
+});
