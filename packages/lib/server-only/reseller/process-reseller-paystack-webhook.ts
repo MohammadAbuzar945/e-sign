@@ -9,15 +9,29 @@ import { prisma } from '@documenso/prisma';
 
 import { calculateResellerVatAmountInCents } from '@documenso/lib/utils/reseller-vat';
 
+export const coercePaystackMetadataNumber = (value: unknown) => {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const coerced = Number(value);
+
+  if (!Number.isFinite(coerced)) {
+    return undefined;
+  }
+
+  return coerced;
+};
+
 export type ProcessResellerPaystackWebhookOptions = {
   paystackReference: string;
   metadata: {
     type?: string;
     resellerProfileId?: string;
     purchaserOrganisationId?: string;
-    purchaserUserId?: number;
+    purchaserUserId?: number | string;
     packageId?: string;
-    expectedAmount?: number;
+    expectedAmount?: number | string;
   };
   amountInCents: number;
   purchaserEmail: string;
@@ -83,19 +97,22 @@ export const processResellerPaystackWebhook = async ({
     });
   }
 
+  const expectedAmount = coercePaystackMetadataNumber(metadata.expectedAmount);
+  const purchaserUserId =
+    coercePaystackMetadataNumber(metadata.purchaserUserId) ?? purchaserOrganisation.ownerUserId;
+
   if (pkg.priceInCents !== amountInCents) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'Payment amount does not match package price',
     });
   }
 
-  if (metadata.expectedAmount && metadata.expectedAmount !== amountInCents) {
+  if (expectedAmount !== undefined && expectedAmount !== amountInCents) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'Payment amount mismatch',
     });
   }
 
-  const purchaserUserId = metadata.purchaserUserId ?? purchaserOrganisation.ownerUserId;
   const vatAmount = calculateResellerVatAmountInCents(pkg.priceInCents, profile.vatNumber);
 
   const transaction = await prisma.$transaction(async (tx) => {
