@@ -154,6 +154,20 @@ describe('reseller DocGen template variables', () => {
   });
 });
 
+describe('Paystack reseller webhook metadata', () => {
+  it('coerces string metadata numbers from Paystack', async () => {
+    const { coercePaystackMetadataNumber } = await import(
+      '@documenso/lib/server-only/reseller/process-reseller-paystack-webhook'
+    );
+
+    expect(coercePaystackMetadataNumber('45000')).toBe(45000);
+    expect(coercePaystackMetadataNumber(45000)).toBe(45000);
+    expect(coercePaystackMetadataNumber('5')).toBe(5);
+    expect(coercePaystackMetadataNumber(undefined)).toBeUndefined();
+    expect(coercePaystackMetadataNumber('')).toBeUndefined();
+  });
+});
+
 describe('transferOrganisationCredits validation', () => {
   it('rejects non-positive transfer amounts', async () => {
     const { transferOrganisationCredits } = await import(
