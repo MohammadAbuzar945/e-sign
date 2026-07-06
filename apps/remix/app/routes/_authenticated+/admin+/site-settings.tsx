@@ -89,6 +89,11 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
         termsDocGenTemplateId: reseller?.data?.termsDocGenTemplateId,
         termsDocGenWorkspaceId: reseller?.data?.termsDocGenWorkspaceId,
         termsInternalTemplateId: reseller?.data?.termsInternalTemplateId,
+        docGenApiUrl: reseller?.data?.docGenApiUrl ?? '',
+        docGenAuthToken: reseller?.data?.docGenAuthToken ?? '',
+        docGenApiKey: reseller?.data?.docGenApiKey ?? '',
+        docGenApiEndpoint: reseller?.data?.docGenApiEndpoint ?? 'pdf_link',
+        docGenEsignApiKey: reseller?.data?.docGenEsignApiKey ?? '',
       },
     },
   });
@@ -281,8 +286,8 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
           </h2>
           <p className="text-muted-foreground mt-2 text-sm">
             <Trans>
-              Configure the Nomia Africa DocGen template ID or internal E-sign template ID used when
-              sending reseller terms and conditions.
+              Configure Nomia Africa DocGen credentials and template settings used when sending
+              reseller terms and conditions.
             </Trans>
           </p>
 
@@ -291,6 +296,119 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
               className="mt-4 space-y-4"
               onSubmit={resellerForm.handleSubmit(onResellerUpdate)}
             >
+              <FormField
+                control={resellerForm.control}
+                name="data.docGenApiUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans>DocGen API URL</Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        placeholder="https://api.nomiadocs.com"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans>
+                        Nomia DocGen API base URL. Leave blank to use the default production URL.
+                      </Trans>
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={resellerForm.control}
+                name="data.docGenAuthToken"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans>DocGen Auth Token</Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="password"
+                        autoComplete="off"
+                        value={field.value ?? ''}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans>Sent in the Authorization header for DocGen API requests.</Trans>
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={resellerForm.control}
+                name="data.docGenApiKey"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans>DocGen API Key</Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="password"
+                        autoComplete="off"
+                        value={field.value ?? ''}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans>Workspace API key sent in the request body as api_key.</Trans>
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={resellerForm.control}
+                name="data.docGenApiEndpoint"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans>DocGen API Endpoint</Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ''} placeholder="pdf_link" />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans>Nomia DocGen endpoint name. Defaults to pdf_link.</Trans>
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={resellerForm.control}
+                name="data.docGenEsignApiKey"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans>DocGen E-sign API Key</Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="password"
+                        autoComplete="off"
+                        value={field.value ?? ''}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans>
+                        Default e-sign API key used when sending reseller T&Cs for e-signing.
+                      </Trans>
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={resellerForm.control}
                 name="data.termsDocGenTemplateId"
@@ -337,9 +455,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
                       />
                     </FormControl>
                     <FormDescription>
-                      <Trans>
-                        Nomia workspace ID (e.g. 7). Can also be set via NOMIA_DOCGEN_WORKSPACE_ID.
-                      </Trans>
+                      <Trans>Nomia workspace ID (e.g. 35).</Trans>
                     </FormDescription>
                   </FormItem>
                 )}

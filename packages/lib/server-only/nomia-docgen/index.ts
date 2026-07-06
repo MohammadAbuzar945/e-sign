@@ -4,7 +4,6 @@ import {
   RESELLER_TERMS_ESIGN_SIGNATORY_VARIABLES,
   RESELLER_TERMS_TEMPLATE_VARIABLES,
 } from '@documenso/lib/constants/reseller-terms-variables';
-import { env } from '@documenso/lib/utils/env';
 
 export type NomiaDocGenSignatory = {
   fullName: string;
@@ -20,6 +19,14 @@ export type NomiaDocGenOptions = {
   esignApiKey?: string;
 };
 
+export type NomiaDocGenCredentials = {
+  apiUrl?: string;
+  authToken: string;
+  apiKey: string;
+  apiEndpoint?: string;
+  esignApiKey?: string;
+};
+
 export type GenerateResellerTermsDocumentOptions = {
   templateId: number;
   workspaceId: number;
@@ -27,6 +34,7 @@ export type GenerateResellerTermsDocumentOptions = {
   variableValues: ResellerTermsVariableValues;
   signatories: NomiaDocGenSignatory[];
   docGenOptions: NomiaDocGenOptions;
+  credentials: NomiaDocGenCredentials;
   externalId?: string;
 };
 
@@ -76,16 +84,18 @@ const PDF_LINK_FIELD_NAMES = [
   'fileUrl',
 ] as const;
 
-const getDocGenApiBaseUrl = () => {
-  const configuredUrl = env('NOMIA_DOCGEN_API_URL');
-
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/$/, '');
-  }
-
+const getDefaultDocGenApiBaseUrl = () => {
   return NEXT_PUBLIC_WEBAPP_URL() === 'https://sign.nomiadocs.com'
     ? 'https://tapi.nomiadocs.com'
     : 'https://api.nomiadocs.com';
+};
+
+const getDocGenApiBaseUrl = (configuredUrl?: string) => {
+  if (configuredUrl?.trim()) {
+    return configuredUrl.trim().replace(/\/$/, '');
+  }
+
+  return getDefaultDocGenApiBaseUrl();
 };
 
 const buildVariableValuesRows = (
@@ -240,31 +250,32 @@ export const generateResellerTermsDocument = async ({
   variableValues,
   signatories,
   docGenOptions,
+  credentials,
   externalId,
 }: GenerateResellerTermsDocumentOptions): Promise<GenerateResellerTermsDocumentResult> => {
-  const authToken = env('NOMIA_DOCGEN_AUTH_TOKEN');
-  const apiKey = env('NOMIA_DOCGEN_API_KEY');
+  const authToken = credentials.authToken.trim();
+  const apiKey = credentials.apiKey.trim();
   const esignApiKey =
-    docGenOptions.esignApiKey?.trim() || env('NOMIA_DOCGEN_ESIGN_API_KEY') || undefined;
+    docGenOptions.esignApiKey?.trim() || credentials.esignApiKey?.trim() || undefined;
 
   if (!apiKey) {
-    throw new Error('NOMIA_DOCGEN_API_KEY is not configured.');
+    throw new Error('Nomia DocGen API key is not configured in Admin Site Settings.');
   }
 
   if (!authToken) {
-    throw new Error('NOMIA_DOCGEN_AUTH_TOKEN is not configured.');
+    throw new Error('Nomia DocGen auth token is not configured in Admin Site Settings.');
   }
 
   const hasEsignFields = docGenOptions.buildForEsign || docGenOptions.sendForEsign;
 
   if (hasEsignFields && !esignApiKey) {
     throw new Error(
-      'An e-sign API key is required when build for e-sign or send for e-sign is enabled. Enter it in the form or set NOMIA_DOCGEN_ESIGN_API_KEY.',
+      'An e-sign API key is required when build for e-sign or send for e-sign is enabled. Configure it in Admin Site Settings or enter it in the send form.',
     );
   }
 
-  const docGenApiUrl = getDocGenApiBaseUrl();
-  const endpoint = env('NOMIA_DOCGEN_API_ENDPOINT') ?? 'pdf_link';
+  const docGenApiUrl = getDocGenApiBaseUrl(credentials.apiUrl);
+  const endpoint = credentials.apiEndpoint?.trim() || 'pdf_link';
   const requestUrl = `${docGenApiUrl}/document_records/api/${endpoint}`;
 
   const payload = {

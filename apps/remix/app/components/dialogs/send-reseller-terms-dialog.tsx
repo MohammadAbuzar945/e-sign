@@ -253,7 +253,7 @@ export const SendResellerTermsDialog = ({
                       <FormDescription>
                         <Trans>
                           Optional. Required only when build or send for e-sign is enabled. Uses
-                          the server environment variable if left blank.
+                          the default from Admin Site Settings if left blank.
                         </Trans>
                       </FormDescription>
                       <FormMessage />

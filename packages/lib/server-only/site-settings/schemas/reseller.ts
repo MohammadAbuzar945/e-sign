@@ -10,6 +10,11 @@ export const ZSiteSettingsResellerSchema = ZSiteSettingsBaseSchema.extend({
     termsDocGenTemplateId: z.coerce.number().optional(),
     termsDocGenWorkspaceId: z.coerce.number().optional(),
     termsInternalTemplateId: z.coerce.number().optional(),
+    docGenApiUrl: z.string().trim().optional(),
+    docGenAuthToken: z.string().trim().optional(),
+    docGenApiKey: z.string().trim().optional(),
+    docGenApiEndpoint: z.string().trim().optional(),
+    docGenEsignApiKey: z.string().trim().optional(),
   }),
 });
 

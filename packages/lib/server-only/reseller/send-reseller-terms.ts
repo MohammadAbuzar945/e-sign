@@ -6,11 +6,9 @@ import type { ResellerTermsVariableValues } from '@documenso/lib/constants/resel
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { sendDocument } from '@documenso/lib/server-only/document/send-document';
 import { generateResellerTermsDocument } from '@documenso/lib/server-only/nomia-docgen';
-import { getSiteSettings } from '@documenso/lib/server-only/site-settings/get-site-settings';
-import { SITE_SETTINGS_RESELLER_ID } from '@documenso/lib/server-only/site-settings/schemas/reseller';
+import { getResellerSiteSettings } from '@documenso/lib/server-only/site-settings/get-reseller-site-settings';
 import { createDocumentFromTemplate } from '@documenso/lib/server-only/template/create-document-from-template';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
-import { env } from '@documenso/lib/utils/env';
 import { mapTemplateIdToSecondaryId } from '@documenso/lib/utils/envelope';
 import { prisma } from '@documenso/prisma';
 
@@ -31,13 +29,17 @@ export type SendResellerTermsOptions = {
 };
 
 const getResellerTermsTemplateConfig = async () => {
-  const settings = await getSiteSettings();
-  const resellerSetting = settings.find((setting) => setting.id === SITE_SETTINGS_RESELLER_ID);
+  const resellerSettings = await getResellerSiteSettings();
 
   return {
-    termsDocGenTemplateId: resellerSetting?.data?.termsDocGenTemplateId,
-    termsDocGenWorkspaceId: resellerSetting?.data?.termsDocGenWorkspaceId,
-    termsInternalTemplateId: resellerSetting?.data?.termsInternalTemplateId,
+    termsDocGenTemplateId: resellerSettings?.termsDocGenTemplateId,
+    termsDocGenWorkspaceId: resellerSettings?.termsDocGenWorkspaceId,
+    termsInternalTemplateId: resellerSettings?.termsInternalTemplateId,
+    docGenApiUrl: resellerSettings?.docGenApiUrl,
+    docGenAuthToken: resellerSettings?.docGenAuthToken,
+    docGenApiKey: resellerSettings?.docGenApiKey,
+    docGenApiEndpoint: resellerSettings?.docGenApiEndpoint,
+    docGenEsignApiKey: resellerSettings?.docGenEsignApiKey,
   };
 };
 
@@ -139,13 +141,17 @@ export const sendResellerTerms = async ({
       String(templateConfig.termsInternalTemplateId);
 
     if (templateConfig.termsDocGenTemplateId) {
-      const workspaceId =
-        templateConfig.termsDocGenWorkspaceId?.toString() ?? env('NOMIA_DOCGEN_WORKSPACE_ID');
-
-      if (!workspaceId) {
+      if (!templateConfig.termsDocGenWorkspaceId) {
         throw new AppError(AppErrorCode.INVALID_REQUEST, {
           message:
-            'Nomia DocGen workspace ID is not configured. Set it in Admin Site Settings or NOMIA_DOCGEN_WORKSPACE_ID.',
+            'Nomia DocGen workspace ID is not configured. Set it in Admin Site Settings.',
+        });
+      }
+
+      if (!templateConfig.docGenApiKey || !templateConfig.docGenAuthToken) {
+        throw new AppError(AppErrorCode.INVALID_REQUEST, {
+          message:
+            'Nomia DocGen API credentials are not configured. Set them in Admin Site Settings.',
         });
       }
 
@@ -154,10 +160,17 @@ export const sendResellerTerms = async ({
       try {
         const docGenResult = await generateResellerTermsDocument({
           templateId: templateConfig.termsDocGenTemplateId,
-          workspaceId: Number(workspaceId),
+          workspaceId: templateConfig.termsDocGenWorkspaceId,
           documentName,
           variableValues,
           docGenOptions,
+          credentials: {
+            apiUrl: templateConfig.docGenApiUrl,
+            authToken: templateConfig.docGenAuthToken,
+            apiKey: templateConfig.docGenApiKey,
+            apiEndpoint: templateConfig.docGenApiEndpoint,
+            esignApiKey: templateConfig.docGenEsignApiKey,
+          },
           signatories: [
             {
               fullName: application.snapshotApplicantName,
