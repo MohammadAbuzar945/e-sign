@@ -10,6 +10,7 @@ import {
   createDefaultResellerTermsVariableValues,
   formatResellerTermsVariableLabel,
 } from '@documenso/lib/constants/reseller-terms-variables';
+import type { NomiaDocGenTemplateVariable } from '@documenso/lib/server-only/nomia-docgen/fetch-template-variables';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
@@ -63,7 +64,7 @@ const createDefaultFormValues = ({
   templateVariables,
 }: {
   application: ResellerApplicationRow | null;
-  templateVariables: Array<{ variable_name: string; default_value: string }>;
+  templateVariables: NomiaDocGenTemplateVariable[];
 }): TResellerTermsFormSchema => ({
   variableValues: createDefaultResellerTermsVariableValues({
     organisationName: application?.snapshotOrgName ?? '',
