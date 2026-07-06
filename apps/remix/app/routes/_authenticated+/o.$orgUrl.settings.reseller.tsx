@@ -59,6 +59,10 @@ import {
   BrandingPreferencesForm,
   type TBrandingPreferencesFormSchema,
 } from '~/components/forms/branding-preferences-form';
+import {
+  ResellerAffiliatePageForm,
+  type TResellerAffiliatePageFormSchema,
+} from '~/components/forms/reseller-affiliate-page-form';
 import { appMetaTags } from '~/utils/meta';
 
 import type { Route } from './+types/o.$orgUrl.settings.reseller';
@@ -495,6 +499,37 @@ export default function OrganisationSettingsResellerPage() {
                 brandingLogo: uploadedBrandingLogo,
                 brandingUrl: brandingUrl || null,
                 brandingCompanyDetails: brandingCompanyDetails || null,
+              },
+            });
+          }}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">
+            <Trans>Affiliate page content</Trans>
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            <Trans>
+              Customize the headline, colors, about section, and featured package on your affiliate
+              page.
+            </Trans>
+          </p>
+        </div>
+
+        <ResellerAffiliatePageForm
+          profile={profile}
+          onFormSubmit={async (data: TResellerAffiliatePageFormSchema) => {
+            await updateProfile({
+              organisationId: organisation.id,
+              data: {
+                affiliatePageTitle: data.affiliatePageTitle || null,
+                affiliatePageDescription: data.affiliatePageDescription || null,
+                brandingPrimaryColor: data.brandingPrimaryColor || null,
+                affiliateAboutText: data.affiliateAboutText || null,
+                affiliateSupportEmail: data.affiliateSupportEmail || null,
+                highlightedCatalogPackageId: data.highlightedCatalogPackageId || null,
               },
             });
           }}

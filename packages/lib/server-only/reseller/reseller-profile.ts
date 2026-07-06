@@ -82,6 +82,12 @@ export type UpdateResellerProfileOptions = {
   brandingLogo?: string | null;
   brandingUrl?: string | null;
   brandingCompanyDetails?: string | null;
+  brandingPrimaryColor?: string | null;
+  affiliatePageTitle?: string | null;
+  affiliatePageDescription?: string | null;
+  affiliateAboutText?: string | null;
+  affiliateSupportEmail?: string | null;
+  highlightedCatalogPackageId?: string | null;
 };
 
 export const updateResellerProfile = async ({
@@ -95,6 +101,12 @@ export const updateResellerProfile = async ({
   brandingLogo,
   brandingUrl,
   brandingCompanyDetails,
+  brandingPrimaryColor,
+  affiliatePageTitle,
+  affiliatePageDescription,
+  affiliateAboutText,
+  affiliateSupportEmail,
+  highlightedCatalogPackageId,
 }: UpdateResellerProfileOptions) => {
   return await prisma.resellerProfile.update({
     where: { organisationId },
@@ -108,6 +120,12 @@ export const updateResellerProfile = async ({
       brandingLogo,
       brandingUrl,
       brandingCompanyDetails,
+      brandingPrimaryColor,
+      affiliatePageTitle,
+      affiliatePageDescription,
+      affiliateAboutText,
+      affiliateSupportEmail,
+      highlightedCatalogPackageId,
     },
   });
 };

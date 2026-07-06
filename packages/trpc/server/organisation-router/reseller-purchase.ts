@@ -33,6 +33,7 @@ export const getAffiliateResellerRoute = procedure
         currency: pkg.currency,
         displayPrice: catalog?.displayPrice ?? `${pkg.currency} ${(pkg.priceInCents / 100).toFixed(2)}`,
         name: catalog?.name ?? `${pkg.creditAmount} envelopes`,
+        isHighlighted: profile.highlightedCatalogPackageId === pkg.catalogPackageId,
       };
     });
 
@@ -45,6 +46,13 @@ export const getAffiliateResellerRoute = procedure
       brandingLogo: profile.brandingLogo,
       brandingUrl: profile.brandingUrl,
       brandingCompanyDetails: profile.brandingCompanyDetails,
+      brandingPrimaryColor: profile.brandingPrimaryColor,
+      affiliatePageTitle: profile.affiliatePageTitle,
+      affiliatePageDescription: profile.affiliatePageDescription,
+      affiliateAboutText: profile.affiliateAboutText,
+      affiliateSupportEmail: profile.affiliateSupportEmail,
+      highlightedCatalogPackageId: profile.highlightedCatalogPackageId,
+      vatNumber: profile.vatNumber,
       packages,
     };
   });

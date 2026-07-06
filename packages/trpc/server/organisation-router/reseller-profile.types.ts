@@ -34,6 +34,12 @@ export const ZGetResellerProfileResponseSchema = z
     brandingLogo: z.string().nullable(),
     brandingUrl: z.string().nullable(),
     brandingCompanyDetails: z.string().nullable(),
+    brandingPrimaryColor: z.string().nullable(),
+    affiliatePageTitle: z.string().nullable(),
+    affiliatePageDescription: z.string().nullable(),
+    affiliateAboutText: z.string().nullable(),
+    affiliateSupportEmail: z.string().nullable(),
+    highlightedCatalogPackageId: z.string().nullable(),
     packages: z.array(ZResellerPackageSchema),
     catalogPackages: z.array(
       z.object({
@@ -65,6 +71,12 @@ export const ZUpdateResellerProfileRequestSchema = z.object({
     brandingLogo: z.string().nullable().optional(),
     brandingUrl: z.string().nullable().optional(),
     brandingCompanyDetails: z.string().nullable().optional(),
+    brandingPrimaryColor: z.string().nullable().optional(),
+    affiliatePageTitle: z.string().nullable().optional(),
+    affiliatePageDescription: z.string().nullable().optional(),
+    affiliateAboutText: z.string().nullable().optional(),
+    affiliateSupportEmail: z.union([z.string().email(), z.literal('')]).nullish(),
+    highlightedCatalogPackageId: z.string().nullable().optional(),
   }),
 });
 

@@ -25,6 +25,13 @@ export const ZGetAffiliateResellerResponseSchema = z
     brandingLogo: z.string().nullable(),
     brandingUrl: z.string().nullable(),
     brandingCompanyDetails: z.string().nullable(),
+    brandingPrimaryColor: z.string().nullable(),
+    affiliatePageTitle: z.string().nullable(),
+    affiliatePageDescription: z.string().nullable(),
+    affiliateAboutText: z.string().nullable(),
+    affiliateSupportEmail: z.string().nullable(),
+    highlightedCatalogPackageId: z.string().nullable(),
+    vatNumber: z.string().nullable(),
     packages: z.array(
       z.object({
         id: z.string(),
@@ -34,6 +41,7 @@ export const ZGetAffiliateResellerResponseSchema = z
         currency: z.string(),
         displayPrice: z.string(),
         name: z.string(),
+        isHighlighted: z.boolean(),
       }),
     ),
   })

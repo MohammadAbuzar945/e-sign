@@ -66,6 +66,12 @@ export const updateResellerProfileRoute = authenticatedProcedure
       brandingLogo: data.brandingLogo,
       brandingUrl: data.brandingUrl,
       brandingCompanyDetails: data.brandingCompanyDetails,
+      brandingPrimaryColor: data.brandingPrimaryColor,
+      affiliatePageTitle: data.affiliatePageTitle,
+      affiliatePageDescription: data.affiliatePageDescription,
+      affiliateAboutText: data.affiliateAboutText,
+      affiliateSupportEmail: data.affiliateSupportEmail || null,
+      highlightedCatalogPackageId: data.highlightedCatalogPackageId,
     });
 
     return { success: true as const };

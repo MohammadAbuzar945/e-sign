@@ -1291,6 +1291,12 @@ model ResellerProfile {
   brandingLogo            String?
   brandingUrl             String?
   brandingCompanyDetails  String?
+  brandingPrimaryColor    String?
+  affiliatePageTitle      String?
+  affiliatePageDescription String?
+  affiliateAboutText      String?
+  affiliateSupportEmail   String?
+  highlightedCatalogPackageId String?
 
   packages     ResellerPackage[]
   transactions ResellerCreditTransaction[] @relation("ResellerTransactions")
