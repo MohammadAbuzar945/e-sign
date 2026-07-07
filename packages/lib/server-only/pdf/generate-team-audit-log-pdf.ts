@@ -6,6 +6,7 @@ import { prisma } from '@documenso/prisma';
 import { ZSupportedLanguageCodeSchema } from '../../constants/i18n';
 import { parseTeamAuditLogData } from '../../utils/team-audit-logs';
 import { getTranslations } from '../../utils/i18n';
+import { parseClaimFlags } from '../../utils/parse-claim-flags';
 import { getOrganisationClaimByTeamId } from '../organisation/get-organisation-claims';
 import { renderTeamAuditLogs } from './render-team-audit-logs';
 
@@ -51,7 +52,7 @@ export const generateTeamAuditLogPdf = async (options: GenerateTeamAuditLogPdfOp
   const auditLogPages = await renderTeamAuditLogs({
     team,
     auditLogs,
-    hidePoweredBy: organisationClaim.flags.hidePoweredBy ?? false,
+    hidePoweredBy: parseClaimFlags(organisationClaim.flags).hidePoweredBy ?? false,
     pageWidth,
     pageHeight,
     i18n,
