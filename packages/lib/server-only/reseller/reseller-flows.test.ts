@@ -984,6 +984,61 @@ describe('admin reseller application actions', () => {
     expect(result.status).toBe(ResellerProfileStatus.ACTIVE);
   });
 
+  it('enables negative credits for an active approved reseller', async () => {
+    const { updateResellerAllowNegativeCredits } = await import('./admin-reseller-actions');
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.APPROVED,
+      organisationId: 'org_1',
+    });
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      id: 'profile_1',
+      status: ResellerProfileStatus.ACTIVE,
+      allowNegativeCredits: false,
+    });
+
+    prismaMock.resellerProfile.update.mockResolvedValue({
+      id: 'profile_1',
+      status: ResellerProfileStatus.ACTIVE,
+      allowNegativeCredits: true,
+    });
+
+    const result = await updateResellerAllowNegativeCredits({
+      applicationId: 'app_1',
+      allowNegativeCredits: true,
+    });
+
+    expect(result.allowNegativeCredits).toBe(true);
+    expect(prismaMock.resellerProfile.update).toHaveBeenCalledWith({
+      where: { id: 'profile_1' },
+      data: { allowNegativeCredits: true },
+    });
+  });
+
+  it('rejects negative credit updates for inactive reseller profiles', async () => {
+    const { updateResellerAllowNegativeCredits } = await import('./admin-reseller-actions');
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.APPROVED,
+      organisationId: 'org_1',
+    });
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      id: 'profile_1',
+      status: ResellerProfileStatus.INACTIVE,
+    });
+
+    await expect(
+      updateResellerAllowNegativeCredits({
+        applicationId: 'app_1',
+        allowNegativeCredits: true,
+      }),
+    ).rejects.toThrow('Negative credits can only be configured for active reseller profiles.');
+  });
+
   it('deletes an approved reseller profile and application record', async () => {
     const { deleteReseller } = await import('./admin-reseller-actions');
 
@@ -1306,6 +1361,54 @@ describe('processResellerPaystackWebhook flow', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           credits: { increment: 50 },
+        }),
+      }),
+    );
+    expect(sendResellerInsufficientCreditsEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('credits clients and allows reseller balance to go negative when enabled', async () => {
+    const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
+
+    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue(null);
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      ...profile,
+      allowNegativeCredits: true,
+    });
+    prismaMock.resellerPackage.findUnique.mockResolvedValue(pkg);
+    prismaMock.organisation.findUnique.mockResolvedValue(purchaserOrganisation);
+    prismaMock.organisation.findUniqueOrThrow
+      .mockResolvedValueOnce({ ownerUserId: 1 })
+      .mockResolvedValueOnce({ ownerUserId: 99 });
+    prismaMock.userCredits.findFirst
+      .mockResolvedValueOnce({ id: 'credits_reseller', credits: 0 })
+      .mockResolvedValueOnce({ id: 'credits_buyer', credits: 20 });
+    prismaMock.userCredits.update.mockResolvedValueOnce({ id: 'credits_reseller', credits: -50 });
+    prismaMock.userCredits.update.mockResolvedValueOnce({ id: 'credits_buyer', credits: 70 });
+    prismaMock.resellerCreditTransaction.create.mockResolvedValue({
+      id: 'txn_negative',
+      status: ResellerCreditTransactionStatus.PENDING,
+    });
+    prismaMock.resellerCreditTransaction.update.mockResolvedValue({
+      id: 'txn_negative',
+      status: ResellerCreditTransactionStatus.COMPLETED,
+    });
+
+    const result = await processResellerPaystackWebhook({
+      paystackReference: 'ref_negative',
+      metadata: baseMetadata,
+      amountInCents: 45000,
+      purchaserEmail: 'buyer@example.com',
+      purchaserName: 'Buyer Name',
+    });
+
+    expect(result.fulfilled).toBe(true);
+    expect(prismaMock.userCredits.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.userCredits.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'credits_reseller' },
+        data: expect.objectContaining({
+          credits: { decrement: 50 },
         }),
       }),
     );

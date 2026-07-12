@@ -77,6 +77,7 @@ export const findResellerApplications = async ({
                 id: true,
                 status: true,
                 affiliateSlug: true,
+                allowNegativeCredits: true,
               },
             },
           },

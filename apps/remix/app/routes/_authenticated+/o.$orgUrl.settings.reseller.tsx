@@ -355,16 +355,24 @@ export default function OrganisationSettingsResellerPage() {
         />
       </div>
 
-      <Alert variant="warning">
+      <Alert variant={profile.allowNegativeCredits ? 'neutral' : 'warning'}>
         <AlertTitle>
           <Trans>Credits warning</Trans>
         </AlertTitle>
         <AlertDescription>
-          <Trans>
-            Ensure there are always credits in your account. If a client pays while your balance is
-            too low, the purchase will appear as pending and you will need to recharge and manually
-            transfer the required credits.
-          </Trans>
+          {profile.allowNegativeCredits ? (
+            <Trans>
+              Nomia has enabled negative credits for your reseller account. Client purchases will
+              still receive credits automatically even if your balance is low, and your account may
+              go below zero until you recharge.
+            </Trans>
+          ) : (
+            <Trans>
+              Ensure there are always credits in your account. If a client pays while your balance
+              is too low, the purchase will appear as pending and you will need to recharge and
+              manually transfer the required credits.
+            </Trans>
+          )}
           <p className="mt-2 font-medium">
             <Trans>Available credits: {profile.availableCredits}</Trans>
           </p>

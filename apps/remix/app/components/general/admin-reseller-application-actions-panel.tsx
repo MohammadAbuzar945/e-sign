@@ -17,7 +17,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@documenso/ui/primitives/dropdown-menu';
+import { Label } from '@documenso/ui/primitives/label';
 import { Separator } from '@documenso/ui/primitives/separator';
+import { Switch } from '@documenso/ui/primitives/switch';
 
 const IN_PROGRESS_APPLICATION_STATUSES = ['PENDING', 'TERMS_SENT', 'TERMS_COMPLETED'] as const;
 
@@ -31,12 +33,14 @@ type ResellerApplicationRow = {
   rejectionReason?: string | null;
   resellerProfile?: {
     status: string;
+    allowNegativeCredits?: boolean;
   } | null;
 };
 
 type AdminResellerApplicationActionsPanelProps = {
   application: ResellerApplicationRow;
   isRetryingActivation: boolean;
+  isUpdatingAllowNegativeCredits: boolean;
   onSendTerms: () => void;
   onActivate: () => void;
   onReject: () => void;
@@ -44,11 +48,13 @@ type AdminResellerApplicationActionsPanelProps = {
   onDeactivate: () => void;
   onReactivate: () => void;
   onDelete: () => void;
+  onAllowNegativeCreditsChange: (allowNegativeCredits: boolean) => void;
 };
 
 export const AdminResellerApplicationActionsPanel = ({
   application,
   isRetryingActivation,
+  isUpdatingAllowNegativeCredits,
   onSendTerms,
   onActivate,
   onReject,
@@ -56,6 +62,7 @@ export const AdminResellerApplicationActionsPanel = ({
   onDeactivate,
   onReactivate,
   onDelete,
+  onAllowNegativeCreditsChange,
 }: AdminResellerApplicationActionsPanelProps) => {
   const { t } = useLingui();
 
@@ -72,6 +79,8 @@ export const AdminResellerApplicationActionsPanel = ({
 
   const canDeactivate =
     application.status === 'APPROVED' && application.resellerProfile?.status === 'ACTIVE';
+
+  const canConfigureNegativeCredits = canDeactivate;
 
   const canReactivate =
     application.status === 'APPROVED' &&
@@ -230,6 +239,36 @@ export const AdminResellerApplicationActionsPanel = ({
               </DropdownMenuContent>
             </DropdownMenu>
           </section>
+        )}
+
+        {canConfigureNegativeCredits && (
+          <>
+            <Separator />
+            <section className="space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                <Trans>Credit policy</Trans>
+              </p>
+              <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+                <div className="space-y-1">
+                  <Label htmlFor="allow-negative-credits" className="text-sm font-medium">
+                    <Trans>Allow negative credits</Trans>
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    <Trans>
+                      When enabled, client purchases will always receive credits even if this
+                      reseller balance is insufficient. The reseller account can go below zero.
+                    </Trans>
+                  </p>
+                </div>
+                <Switch
+                  id="allow-negative-credits"
+                  checked={application.resellerProfile?.allowNegativeCredits ?? false}
+                  disabled={isUpdatingAllowNegativeCredits}
+                  onCheckedChange={onAllowNegativeCreditsChange}
+                />
+              </div>
+            </section>
+          </>
         )}
 
         {hasAdminTools && (

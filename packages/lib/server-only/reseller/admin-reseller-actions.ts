@@ -165,6 +165,45 @@ export const reactivateResellerProfile = async ({
   });
 };
 
+export const updateResellerAllowNegativeCredits = async ({
+  applicationId,
+  allowNegativeCredits,
+}: {
+  applicationId: string;
+  allowNegativeCredits: boolean;
+}) => {
+  const application = await getResellerApplicationOrThrow(applicationId);
+
+  if (application.status !== ResellerApplicationStatus.APPROVED) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Only approved reseller applications can update negative credit settings.',
+    });
+  }
+
+  const profile = await prisma.resellerProfile.findUnique({
+    where: { organisationId: application.organisationId },
+  });
+
+  if (!profile) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'Reseller profile not found.',
+    });
+  }
+
+  if (profile.status !== ResellerProfileStatus.ACTIVE) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Negative credits can only be configured for active reseller profiles.',
+    });
+  }
+
+  return await prisma.resellerProfile.update({
+    where: { id: profile.id },
+    data: {
+      allowNegativeCredits,
+    },
+  });
+};
+
 export const deleteReseller = async ({
   applicationId,
 }: {

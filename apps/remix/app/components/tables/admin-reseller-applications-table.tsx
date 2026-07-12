@@ -163,6 +163,29 @@ export const AdminResellerApplicationsTable = () => {
       },
     });
 
+  const { mutateAsync: updateAllowNegativeCredits, isPending: isUpdatingAllowNegativeCredits } =
+    trpc.admin.resellerApplications.updateAllowNegativeCredits.useMutation({
+      onSuccess: async (_result, variables) => {
+        toast({
+          title: variables.allowNegativeCredits
+            ? t`Negative credits enabled`
+            : t`Negative credits disabled`,
+          description: variables.allowNegativeCredits
+            ? t`This reseller can now go below zero when fulfilling client purchases.`
+            : t`This reseller must maintain enough credits before clients are topped up automatically.`,
+        });
+
+        await handleMutationSuccess();
+      },
+      onError: (error) => {
+        toast({
+          title: t`Update failed`,
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
   const columns = useMemo(() => {
     return [
       {
@@ -334,6 +357,7 @@ export const AdminResellerApplicationsTable = () => {
           <AdminResellerApplicationActionsPanel
             application={selectedApplication}
             isRetryingActivation={isRetryingActivation}
+            isUpdatingAllowNegativeCredits={isUpdatingAllowNegativeCredits}
             onSendTerms={() => setIsSendDialogOpen(true)}
             onActivate={async () => {
               await retryActivation({
@@ -345,6 +369,12 @@ export const AdminResellerApplicationsTable = () => {
             onDeactivate={() => setProfileAction('deactivate')}
             onReactivate={() => setProfileAction('reactivate')}
             onDelete={() => setProfileAction('delete')}
+            onAllowNegativeCreditsChange={async (allowNegativeCredits) => {
+              await updateAllowNegativeCredits({
+                applicationId: selectedApplication.id,
+                allowNegativeCredits,
+              });
+            }}
           />
         )}
       </div>
