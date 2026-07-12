@@ -5,7 +5,7 @@ import { InfoIcon, MoreHorizontalIcon } from 'lucide-react';
 import {
   getResellerApplicationStatusLabel,
   isResellerTermsRejectionReason,
-} from '@documenso/lib/server-only/reseller/reject-reseller-application-from-terms-rejection';
+} from '@documenso/lib/constants/reseller-application-status';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';

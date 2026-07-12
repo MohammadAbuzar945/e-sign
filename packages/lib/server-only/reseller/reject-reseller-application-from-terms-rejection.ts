@@ -1,5 +1,9 @@
 import { ResellerApplicationStatus } from '@prisma/client';
 
+import {
+  formatResellerTermsRejectionReason,
+  RESELLER_TERMS_REJECTION_PREFIX,
+} from '@documenso/lib/constants/reseller-application-status';
 import { prisma } from '@documenso/prisma';
 
 import {
@@ -7,37 +11,17 @@ import {
   type ActivateResellerFromTermsCompletionOptions,
 } from './activate-reseller-from-terms-completion';
 
-export const RESELLER_TERMS_REJECTION_PREFIX = 'Rejected by reseller';
+export {
+  formatResellerTermsRejectionReason,
+  getResellerApplicationStatusLabel,
+  isResellerTermsRejectionReason,
+  RESELLER_TERMS_REJECTION_PREFIX,
+} from '@documenso/lib/constants/reseller-application-status';
 
 export type RejectResellerApplicationFromTermsRejectionOptions =
   ActivateResellerFromTermsCompletionOptions & {
     rejectionReason?: string;
   };
-
-export const formatResellerTermsRejectionReason = (rejectionReason?: string) => {
-  const trimmedReason = rejectionReason?.trim();
-
-  if (trimmedReason) {
-    return `${RESELLER_TERMS_REJECTION_PREFIX}: ${trimmedReason}`;
-  }
-
-  return RESELLER_TERMS_REJECTION_PREFIX;
-};
-
-export const isResellerTermsRejectionReason = (rejectionReason?: string | null) => {
-  return rejectionReason?.startsWith(RESELLER_TERMS_REJECTION_PREFIX) ?? false;
-};
-
-export const getResellerApplicationStatusLabel = (
-  status: string,
-  rejectionReason?: string | null,
-) => {
-  if (status === 'REJECTED' && isResellerTermsRejectionReason(rejectionReason)) {
-    return 'Rejected by reseller';
-  }
-
-  return status;
-};
 
 export const rejectResellerApplicationFromTermsRejection = async ({
   envelopeId,

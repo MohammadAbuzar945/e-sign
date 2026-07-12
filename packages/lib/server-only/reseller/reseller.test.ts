@@ -30,6 +30,10 @@ describe('reseller constants', () => {
     expect(isResellerFeatureAllowedEmail('awanabuzar945@gmail.com')).toBe(true);
     expect(isResellerFeatureAllowedEmail('other@example.com')).toBe(false);
   });
+
+  it('allows seeded E2E test emails outside production', () => {
+    expect(isResellerFeatureAllowedEmail('reseller-e2e@test.documenso.com')).toBe(true);
+  });
 });
 
 describe('reseller VAT calculations', () => {

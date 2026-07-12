@@ -4,7 +4,7 @@ import { CheckCircle2Icon, CircleIcon, XCircleIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { ResellerApplicationSummary } from '@documenso/lib/server-only/reseller/get-reseller-eligibility';
-import { isResellerTermsRejectionReason } from '@documenso/lib/server-only/reseller/reject-reseller-application-from-terms-rejection';
+import { isResellerTermsRejectionReason } from '@documenso/lib/constants/reseller-application-status';
 import { cn } from '@documenso/ui/lib/utils';
 
 type TimelineStep = {

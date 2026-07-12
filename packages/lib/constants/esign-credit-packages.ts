@@ -145,7 +145,20 @@ export const RESELLER_FEATURE_ALLOWED_EMAILS = [
 /** @deprecated Use RESELLER_FEATURE_ALLOWED_EMAILS */
 export const RESELLER_ELIGIBILITY_BYPASS_EMAILS = RESELLER_FEATURE_ALLOWED_EMAILS;
 
-export const isResellerFeatureAllowedEmail = (email: string) =>
-  (RESELLER_FEATURE_ALLOWED_EMAILS as readonly string[]).includes(email.toLowerCase());
+const RESELLER_E2E_TEST_EMAIL_DOMAIN = 'test.documenso.com';
+
+export const isResellerFeatureAllowedEmail = (email: string) => {
+  const normalizedEmail = email.toLowerCase();
+
+  if ((RESELLER_FEATURE_ALLOWED_EMAILS as readonly string[]).includes(normalizedEmail)) {
+    return true;
+  }
+
+  if (!isProduction && normalizedEmail.endsWith(`@${RESELLER_E2E_TEST_EMAIL_DOMAIN}`)) {
+    return true;
+  }
+
+  return false;
+};
 
 export const isResellerEligibilityBypassEmail = isResellerFeatureAllowedEmail;
