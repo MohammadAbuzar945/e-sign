@@ -54,7 +54,7 @@ export const run = async ({
 }) => {
   const { documentId, sendEmail = true, isResealing = false, requestMetadata } = payload;
 
-  const { envelopeId, envelopeStatus, isRejected } = await io.runTask('seal-document', async () => {
+  const { envelopeId, envelopeStatus, isRejected, rejectionReason } = await io.runTask('seal-document', async () => {
     const envelope = await prisma.envelope.findFirstOrThrow({
       where: {
         type: EnvelopeType.DOCUMENT,
@@ -373,6 +373,7 @@ export const run = async ({
       envelopeId: envelope.id,
       envelopeStatus: envelope.status,
       isRejected,
+      rejectionReason,
     };
   });
 

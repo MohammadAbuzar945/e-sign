@@ -26,6 +26,7 @@ export const ZFindResellerApplicationsResponseSchema = z.object({
       status: z.string(),
       appliedAt: z.date(),
       termsSentAt: z.date().nullable(),
+      rejectionReason: z.string().nullable().optional(),
       snapshotOrgName: z.string(),
       snapshotApplicantName: z.string(),
       snapshotApplicantEmail: z.string(),
