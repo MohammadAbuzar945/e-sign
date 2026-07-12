@@ -3,11 +3,12 @@ name: Deploy Staging
 on:
   push:
     branches:
-      - nomia-kba # TODO: change to your staging branch name
+      - nomia-kba
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Staging Deployment
 
     steps:
       - name: Deploy to staging server
