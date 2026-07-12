@@ -1,5 +1,8 @@
-import { z } from "zod";
-import { createTransaction } from "@documenso/lib/server-only/paystack";
+import { z } from 'zod';
+
+import { createPendingOrganisationCreditPurchase } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
+import { createTransaction } from '@documenso/lib/server-only/paystack';
+import { prisma } from '@documenso/prisma';
 
 const createTransactionSchema = z.object({
   email: z.string().email(),
@@ -15,20 +18,20 @@ const createTransactionSchema = z.object({
     .optional(),
 });
 
-interface CreateTransactionResponse {
+type CreateTransactionResponse = {
   success: boolean;
   data?: {
     authorization_url: string;
     reference: string;
   };
   error?: string;
-}
+};
 
 export async function action({ request }: { request: Request }) {
   try {
     const body = await request.json();
     const validatedData = createTransactionSchema.parse(body);
-    
+
     const transactionData = {
       ...validatedData,
       metadata: validatedData.metadata,
@@ -40,10 +43,36 @@ export async function action({ request }: { request: Request }) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: transaction.message || "Failed to initialize transaction",
+          error: transaction.message || 'Failed to initialize transaction',
         } satisfies CreateTransactionResponse),
-        { status: 500 }
+        { status: 500 },
       );
+    }
+
+    const organisationId = validatedData.metadata?.organisationId;
+    const credits = validatedData.metadata?.value;
+
+    if (
+      typeof organisationId === 'string' &&
+      organisationId.length > 0 &&
+      typeof credits === 'number' &&
+      credits > 0
+    ) {
+      const user = await prisma.user.findUnique({
+        where: {
+          email: validatedData.email,
+        },
+      });
+
+      if (user) {
+        await createPendingOrganisationCreditPurchase({
+          paystackReference: transaction.data.reference,
+          organisationId,
+          userId: user.id,
+          credits,
+          grossAmount: validatedData.amount,
+        });
+      }
     }
 
     return new Response(
@@ -54,23 +83,22 @@ export async function action({ request }: { request: Request }) {
           reference: transaction.data.reference,
         },
       } satisfies CreateTransactionResponse),
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Invalid request data",
+          error: 'Invalid request data',
         } satisfies CreateTransactionResponse),
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.error("Paystack transaction error:", error);
+    console.error('Paystack transaction error:', error);
 
-    // Extract Paystack error message from AxiosError
-    let errorMessage = "Internal server error";
+    let errorMessage = 'Internal server error';
     let statusCode = 500;
 
     if (
@@ -85,9 +113,10 @@ export async function action({ request }: { request: Request }) {
       'message' in error.response.data
     ) {
       errorMessage = String(error.response.data.message);
-      statusCode = 'status' in error.response && typeof error.response.status === 'number' 
-        ? error.response.status 
-        : 500;
+      statusCode =
+        'status' in error.response && typeof error.response.status === 'number'
+          ? error.response.status
+          : 500;
     }
 
     return new Response(
@@ -95,7 +124,7 @@ export async function action({ request }: { request: Request }) {
         success: false,
         error: errorMessage,
       } satisfies CreateTransactionResponse),
-      { status: statusCode }
+      { status: statusCode },
     );
   }
 }

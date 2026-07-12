@@ -246,6 +246,28 @@ export async function action({ request }: { request: Request }) {
         });
       }
     }
+    else if (event.event === 'charge.failed') {
+      const { metadata, reference } = event.data as {
+        metadata?: {
+          type?: string;
+          resellerCreditTransactionId?: string;
+        };
+        reference?: string;
+      };
+
+      if (metadata?.type === 'reseller-credit-purchase') {
+        const { processResellerPaystackPaymentFailed } = await import(
+          '@documenso/lib/server-only/reseller/process-reseller-paystack-payment-failed'
+        );
+
+        await processResellerPaystackPaymentFailed({
+          paystackReference: reference ?? '',
+          metadata,
+        });
+
+        return new Response(JSON.stringify({ success: true }), { status: 200 });
+      }
+    }
     else if (event.event === 'charge.success') {
 
       const { customer, metadata, plan, reference, amount } = event.data as {
@@ -259,6 +281,7 @@ export async function action({ request }: { request: Request }) {
           purchaserUserId?: number;
           packageId?: string;
           expectedAmount?: number;
+          resellerCreditTransactionId?: string;
         };
         plan?: { plan_code?: string };
         reference?: string;
@@ -321,14 +344,28 @@ export async function action({ request }: { request: Request }) {
           return new Response(JSON.stringify({ success: false, error: 'Organisation not found' }), { status: 400 });
         }
 
-        //update organisation credits when value is present in metadata
-        const userCreditsRecord = await ensureOrganisationCredits(organisation.id, user.id);
         const creditsToAdd = Number(refferCredits);
+        const grossAmount = Number(amount ?? 0);
+        const userCreditsRecord = await ensureOrganisationCredits(organisation.id, user.id);
 
         if (userCreditsRecord && !Number.isNaN(creditsToAdd) && creditsToAdd > 0) {
           await prisma.userCredits.update({
             where: { id: userCreditsRecord.id },
             data: { credits: Number(userCreditsRecord.credits) + creditsToAdd },
+          });
+        }
+
+        if (reference && !Number.isNaN(creditsToAdd) && creditsToAdd > 0 && grossAmount > 0) {
+          const { completeOrganisationCreditPurchase } = await import(
+            '@documenso/lib/server-only/billing/record-organisation-credit-purchase'
+          );
+
+          await completeOrganisationCreditPurchase({
+            paystackReference: reference,
+            organisationId: organisation.id,
+            userId: user.id,
+            credits: creditsToAdd,
+            grossAmount,
           });
         }
 

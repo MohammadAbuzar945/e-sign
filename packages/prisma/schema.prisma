@@ -74,6 +74,7 @@ model User {
   siteSettings       SiteSettings[]
   passkeys           Passkey[]
   userCredits        UserCredits[]
+  creditPurchases    OrganisationCreditPurchase[]
   resellerApplications ResellerApplication[]
   avatarImage        AvatarImage?           @relation(fields: [avatarImageId], references: [id], onDelete: SetNull)
 
@@ -802,6 +803,7 @@ model Organisation {
   organisationAuthenticationPortal   OrganisationAuthenticationPortal @relation(fields: [organisationAuthenticationPortalId], references: [id])
 
   subscriptions Subscription[]
+  creditPurchases OrganisationCreditPurchase[]
 
   resellerApplication ResellerApplication?
   resellerProfile     ResellerProfile?
@@ -1208,6 +1210,35 @@ model UserCredits {
   @@index([organisationId])
   @@index([organisationId, isActive])
   @@index([isActive])
+}
+
+enum OrganisationCreditPurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model OrganisationCreditPurchase {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  paystackReference String @unique
+  credits           Int
+  grossAmount       Int
+  currency          String @default("ZAR")
+  status            OrganisationCreditPurchaseStatus @default(PENDING)
+  completedAt       DateTime?
+
+  @@index([organisationId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 enum ResellerApplicationStatus {

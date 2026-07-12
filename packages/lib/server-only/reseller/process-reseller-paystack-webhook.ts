@@ -8,6 +8,11 @@ import { prisma } from '@documenso/prisma';
 
 import { calculateResellerVatAmountInCents } from '@documenso/lib/utils/reseller-vat';
 
+import {
+  atomicDecrementOrganisationCredits,
+  atomicIncrementOrganisationCredits,
+} from './reseller-credit-transfer';
+
 export const coercePaystackMetadataNumber = (value: unknown) => {
   if (value === undefined || value === null || value === '') {
     return undefined;
@@ -31,10 +36,41 @@ export type ProcessResellerPaystackWebhookOptions = {
     purchaserUserId?: number | string;
     packageId?: string;
     expectedAmount?: number | string;
+    resellerCreditTransactionId?: string;
   };
   amountInCents: number;
   purchaserEmail: string;
   purchaserName?: string;
+};
+
+const findExistingResellerCreditTransaction = async ({
+  paystackReference,
+  resellerCreditTransactionId,
+}: {
+  paystackReference: string;
+  resellerCreditTransactionId?: string;
+}) => {
+  if (paystackReference) {
+    const transactionByReference = await prisma.resellerCreditTransaction.findUnique({
+      where: {
+        paystackReference,
+      },
+    });
+
+    if (transactionByReference) {
+      return transactionByReference;
+    }
+  }
+
+  if (!resellerCreditTransactionId) {
+    return null;
+  }
+
+  return prisma.resellerCreditTransaction.findUnique({
+    where: {
+      id: resellerCreditTransactionId,
+    },
+  });
 };
 
 export const processResellerPaystackWebhook = async ({
@@ -54,12 +90,19 @@ export const processResellerPaystackWebhook = async ({
     });
   }
 
-  const existingTransaction = await prisma.resellerCreditTransaction.findUnique({
-    where: { paystackReference },
+  const existingTransaction = await findExistingResellerCreditTransaction({
+    paystackReference,
+    resellerCreditTransactionId: metadata.resellerCreditTransactionId,
   });
 
   if (existingTransaction?.status === ResellerCreditTransactionStatus.COMPLETED) {
     return { handled: true as const, duplicate: true };
+  }
+
+  if (existingTransaction?.status === ResellerCreditTransactionStatus.FAILED) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'This reseller purchase is no longer available',
+    });
   }
 
   const [profile, pkg, purchaserOrganisation] = await Promise.all([
@@ -113,6 +156,7 @@ export const processResellerPaystackWebhook = async ({
   }
 
   const vatAmount = calculateResellerVatAmountInCents(pkg.priceInCents, profile.vatNumber);
+  const hasReservedCredits = existingTransaction?.status === ResellerCreditTransactionStatus.PENDING;
 
   const transaction = await prisma.$transaction(async (tx) => {
     const pendingTransaction =
@@ -136,84 +180,49 @@ export const processResellerPaystackWebhook = async ({
         },
       }));
 
-    const fromOrganisation = await tx.organisation.findUniqueOrThrow({
-      where: { id: profile.organisationId },
-      select: { ownerUserId: true },
-    });
-
     const toOrganisation = await tx.organisation.findUniqueOrThrow({
       where: { id: purchaserOrganisation.id },
       select: { ownerUserId: true },
     });
 
-    let fromCredits = await tx.userCredits.findFirst({
-      where: {
-        organisationId: profile.organisationId,
-        isActive: true,
-      },
-    });
-
-    if (!fromCredits) {
-      fromCredits = await tx.userCredits.create({
-        data: {
-          userId: fromOrganisation.ownerUserId,
-          organisationId: profile.organisationId,
-          credits: 0,
-          isActive: true,
-        },
-      });
-    }
-
-    if (!profile.allowNegativeCredits && fromCredits.credits < pkg.creditAmount) {
-      throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message: 'Insufficient reseller credits',
-      });
-    }
-
-    let toCredits = await tx.userCredits.findFirst({
-      where: {
+    if (hasReservedCredits) {
+      await atomicIncrementOrganisationCredits(tx, {
         organisationId: purchaserOrganisation.id,
-        isActive: true,
-      },
-    });
+        ownerUserId: toOrganisation.ownerUserId,
+        amount: pkg.creditAmount,
+      });
+    } else {
+      const fromOrganisation = await tx.organisation.findUniqueOrThrow({
+        where: { id: profile.organisationId },
+        select: { ownerUserId: true },
+      });
 
-    if (!toCredits) {
-      toCredits = await tx.userCredits.create({
-        data: {
-          userId: toOrganisation.ownerUserId,
-          organisationId: purchaserOrganisation.id,
-          credits: 0,
-          isActive: true,
-        },
+      await atomicDecrementOrganisationCredits(tx, {
+        organisationId: profile.organisationId,
+        ownerUserId: fromOrganisation.ownerUserId,
+        amount: pkg.creditAmount,
+        allowNegative: profile.allowNegativeCredits,
+      });
+
+      await atomicIncrementOrganisationCredits(tx, {
+        organisationId: purchaserOrganisation.id,
+        ownerUserId: toOrganisation.ownerUserId,
+        amount: pkg.creditAmount,
       });
     }
-
-    await tx.userCredits.update({
-      where: { id: fromCredits.id },
-      data: {
-        credits: fromCredits.credits - pkg.creditAmount,
-        lastUpdatedAt: new Date(),
-      },
-    });
-
-    await tx.userCredits.update({
-      where: { id: toCredits.id },
-      data: {
-        credits: toCredits.credits + pkg.creditAmount,
-        lastUpdatedAt: new Date(),
-      },
-    });
 
     return await tx.resellerCreditTransaction.update({
       where: { id: pendingTransaction.id },
       data: {
+        paystackReference,
         status: ResellerCreditTransactionStatus.COMPLETED,
         completedAt: new Date(),
         vatAmount,
+        purchaserName: purchaserName ?? purchaserOrganisation.owner.name ?? purchaserEmail,
+        purchaserEmail,
       },
     });
   });
 
   return { handled: true as const, transaction };
 };
-
