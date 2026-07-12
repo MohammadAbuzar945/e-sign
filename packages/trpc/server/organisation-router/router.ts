@@ -20,6 +20,7 @@ import { getOrganisationsRoute } from './get-organisations';
 import { getResellerEligibilityRoute } from './get-reseller-eligibility';
 import { leaveOrganisationRoute } from './leave-organisation';
 import { resendOrganisationMemberInviteRoute } from './resend-organisation-member-invite';
+import { checkResellerAffiliateSlugRoute } from './check-reseller-affiliate-slug';
 import {
   exportResellerTransactionsRoute,
 } from './export-reseller-transactions';
@@ -29,6 +30,7 @@ import {
   updateResellerPackagesRoute,
   updateResellerProfileRoute,
 } from './reseller-profile';
+import { updateResellerAffiliateSlugRoute } from './update-reseller-affiliate-slug';
 import {
   getAffiliateResellerRoute,
   initializeResellerPurchaseRoute,
@@ -74,6 +76,8 @@ export const organisationRouter = router({
     apply: applyResellerRoute,
     getProfile: getResellerProfileRoute,
     updateProfile: updateResellerProfileRoute,
+    checkAffiliateSlug: checkResellerAffiliateSlugRoute,
+    updateAffiliateSlug: updateResellerAffiliateSlugRoute,
     updatePackages: updateResellerPackagesRoute,
     findTransactions: findResellerTransactionsRoute,
     exportTransactions: exportResellerTransactionsRoute,

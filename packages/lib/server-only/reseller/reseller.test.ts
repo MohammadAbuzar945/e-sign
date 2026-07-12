@@ -5,6 +5,12 @@ import {
   RESELLER_MIN_CREDITS_USED,
   RESELLER_MIN_SUBSCRIPTION_MONTHS,
 } from '@documenso/lib/constants/esign-credit-packages';
+import {
+  buildAffiliateUrl,
+  getSuggestedAffiliateSlug,
+  normalizeAffiliateSlugInput,
+  validateAffiliateSlug,
+} from '@documenso/lib/utils/affiliate-slug';
 import { buildResellerApplicationTermsCompletionWhere } from '@documenso/lib/server-only/reseller/activate-reseller-from-terms-completion';
 import { buildResellerTransactionsCsv } from '@documenso/lib/utils/build-reseller-transactions-csv';
 import {
@@ -71,6 +77,37 @@ describe('reseller transaction CSV export', () => {
     expect(csv).toContain('58.70');
     expect(csv).toContain('391.30');
     expect(csv).toContain('ref_123');
+  });
+});
+
+describe('affiliate slug validation', () => {
+  it('normalizes user input into a URL-safe slug', () => {
+    expect(normalizeAffiliateSlugInput(' Acme Corp! ')).toBe('acme-corp');
+    expect(normalizeAffiliateSlugInput('ACME__CORP')).toBe('acme-corp');
+  });
+
+  it('accepts valid affiliate slugs', () => {
+    expect(validateAffiliateSlug('acme-corp')).toEqual({
+      valid: true,
+      slug: 'acme-corp',
+    });
+  });
+
+  it('rejects reserved and invalid affiliate slugs', () => {
+    expect(validateAffiliateSlug('admin').valid).toBe(false);
+    expect(validateAffiliateSlug('ab').valid).toBe(false);
+    expect(validateAffiliateSlug('@@').valid).toBe(false);
+  });
+
+  it('suggests organisation URLs as affiliate slugs', () => {
+    expect(getSuggestedAffiliateSlug('acme-corp')).toBe('acme-corp');
+    expect(getSuggestedAffiliateSlug('ab')).toBe('');
+  });
+
+  it('builds affiliate URLs from slugs', () => {
+    expect(buildAffiliateUrl('acme-corp', 'https://example.com')).toBe(
+      'https://example.com/r/acme-corp',
+    );
   });
 });
 

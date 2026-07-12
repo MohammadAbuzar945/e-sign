@@ -63,6 +63,7 @@ const prismaMock = vi.hoisted(() => ({
   },
   user: {
     findUniqueOrThrow: vi.fn(),
+    findMany: vi.fn(),
   },
   userCredits: {
     findFirst: vi.fn(),
@@ -75,6 +76,10 @@ const prismaMock = vi.hoisted(() => ({
 const sendResellerWelcomeEmailMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 const sendResellerRejectionEmailMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+const sendResellerApplicationAdminNotificationMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(undefined),
+);
 
 const getOrganisationCreditsMock = vi.hoisted(() => vi.fn());
 
@@ -92,6 +97,10 @@ vi.mock('@documenso/lib/server-only/reseller/send-reseller-welcome-email', () =>
 
 vi.mock('@documenso/lib/server-only/reseller/send-reseller-rejection-email', () => ({
   sendResellerRejectionEmail: sendResellerRejectionEmailMock,
+}));
+
+vi.mock('@documenso/lib/server-only/reseller/send-reseller-application-admin-notification', () => ({
+  sendResellerApplicationAdminNotification: sendResellerApplicationAdminNotificationMock,
 }));
 
 vi.mock('@documenso/ee/server-only/limits/user-credits', () => ({
@@ -307,6 +316,13 @@ describe('createResellerApplication flow', () => {
     const createdApplication = {
       id: 'app_1',
       status: ResellerApplicationStatus.PENDING,
+      snapshotOrgName: 'Acme Corp',
+      snapshotApplicantName: 'Jane Applicant',
+      snapshotApplicantEmail: ALLOWED_EMAIL,
+      snapshotCompletedDocCount: 75,
+      snapshotUniqueSignerCount: 12,
+      snapshotOrgUserCount: 4,
+      snapshotOrgSignupDate: orgCreatedAt,
     };
 
     prismaMock.resellerApplication.create.mockResolvedValue(createdApplication);
@@ -332,6 +348,16 @@ describe('createResellerApplication flow', () => {
         snapshotOrgSignupDate: orgCreatedAt,
       }),
     });
+    expect(sendResellerApplicationAdminNotificationMock).toHaveBeenCalledWith({
+      applicationId: 'app_1',
+      organisationName: 'Acme Corp',
+      applicantName: 'Jane Applicant',
+      applicantEmail: ALLOWED_EMAIL,
+      completedDocumentCount: 75,
+      uniqueSignerCount: 12,
+      organisationUserCount: 4,
+      organisationSignupDate: orgCreatedAt,
+    });
   });
 
   it('rejects ineligible organisations', async () => {
@@ -351,6 +377,8 @@ describe('createResellerApplication flow', () => {
         applicantUserEmail: ALLOWED_EMAIL,
       }),
     ).rejects.toThrow('An application is already in progress for this organisation.');
+
+    expect(sendResellerApplicationAdminNotificationMock).not.toHaveBeenCalled();
   });
 });
 
@@ -397,7 +425,7 @@ describe('activateResellerFromTermsCompletion flow', () => {
     const createdProfile = {
       id: 'profile_1',
       organisationId: 'org_1',
-      affiliateSlug: 'acme-corp-abc123',
+      affiliateSlug: 'acme-corp',
       status: ResellerProfileStatus.ACTIVE,
     };
 
@@ -414,6 +442,13 @@ describe('activateResellerFromTermsCompletion flow', () => {
     });
 
     expect(result).toEqual(createdProfile);
+    expect(prismaMock.resellerProfile.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organisationId: 'org_1',
+        status: ResellerProfileStatus.ACTIVE,
+        affiliateSlug: 'acme-corp',
+      }),
+    });
     expect(prismaMock.resellerPackage.createMany).toHaveBeenCalledWith({
       data: expect.arrayContaining([
         expect.objectContaining({
@@ -429,7 +464,47 @@ describe('activateResellerFromTermsCompletion flow', () => {
       organisationName: 'Acme Corp',
       applicantEmail: ALLOWED_EMAIL,
       applicantName: 'Jane Applicant',
+      affiliateSlug: 'acme-corp',
+    });
+  });
+
+  it('falls back to a suffixed slug when the organisation URL is already taken', async () => {
+    const { activateResellerFromTermsCompletion } = await import(
+      './activate-reseller-from-terms-completion'
+    );
+
+    prismaMock.resellerApplication.findFirst.mockResolvedValue(application);
+    prismaMock.resellerProfile.findUnique.mockImplementation(async ({ where }) => {
+      if ('affiliateSlug' in where && where.affiliateSlug === 'acme-corp') {
+        return { organisationId: 'other_org' };
+      }
+
+      return null;
+    });
+
+    const createdProfile = {
+      id: 'profile_1',
+      organisationId: 'org_1',
       affiliateSlug: 'acme-corp-abc123',
+      status: ResellerProfileStatus.ACTIVE,
+    };
+
+    prismaMock.resellerProfile.create.mockResolvedValue(createdProfile);
+    prismaMock.resellerApplication.update.mockResolvedValue({
+      ...application,
+      status: ResellerApplicationStatus.APPROVED,
+    });
+    prismaMock.resellerPackage.createMany.mockResolvedValue({ count: ESIGN_CREDIT_PACKAGES.length });
+
+    const result = await activateResellerFromTermsCompletion({
+      envelopeId: 'envelope_abc',
+    });
+
+    expect(result).toEqual(createdProfile);
+    expect(prismaMock.resellerProfile.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        affiliateSlug: expect.stringMatching(/^acme-corp-[a-zA-Z0-9_-]{6,}$/),
+      }),
     });
   });
 
@@ -1194,6 +1269,107 @@ describe('reseller transactions flow', () => {
         take: RESELLER_TRANSACTION_EXPORT_LIMIT,
       }),
     );
+  });
+});
+
+describe('reseller affiliate slug flow', () => {
+  it('reports availability for valid unused slugs', async () => {
+    const { checkResellerAffiliateSlugAvailability } = await import('./affiliate-slug');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+
+    const result = await checkResellerAffiliateSlugAvailability({
+      organisationId: 'org_1',
+      affiliateSlug: 'acme-partner',
+    });
+
+    expect(result).toEqual({
+      isValid: true,
+      isAvailable: true,
+      normalizedSlug: 'acme-partner',
+      message: null,
+    });
+  });
+
+  it('reports taken slugs as unavailable', async () => {
+    const { checkResellerAffiliateSlugAvailability } = await import('./affiliate-slug');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      organisationId: 'org_2',
+    });
+
+    const result = await checkResellerAffiliateSlugAvailability({
+      organisationId: 'org_1',
+      affiliateSlug: 'acme-partner',
+    });
+
+    expect(result.isAvailable).toBe(false);
+    expect(result.message).toBe('This affiliate URL is already in use.');
+  });
+
+  it('treats the current organisation slug as available', async () => {
+    const { checkResellerAffiliateSlugAvailability } = await import('./affiliate-slug');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      organisationId: 'org_1',
+    });
+
+    const result = await checkResellerAffiliateSlugAvailability({
+      organisationId: 'org_1',
+      affiliateSlug: 'acme-partner',
+    });
+
+    expect(result.isAvailable).toBe(true);
+  });
+
+  it('updates affiliate slug when the new value is unique', async () => {
+    const { updateResellerAffiliateSlug } = await import('./affiliate-slug');
+
+    prismaMock.resellerProfile.findUnique
+      .mockResolvedValueOnce({
+        id: 'profile_1',
+        organisationId: 'org_1',
+        affiliateSlug: 'old-slug',
+      })
+      .mockResolvedValueOnce(null);
+
+    prismaMock.resellerProfile.update.mockResolvedValue({
+      id: 'profile_1',
+      organisationId: 'org_1',
+      affiliateSlug: 'new-slug',
+    });
+
+    const result = await updateResellerAffiliateSlug({
+      organisationId: 'org_1',
+      affiliateSlug: 'new-slug',
+    });
+
+    expect(result.affiliateSlug).toBe('new-slug');
+    expect(prismaMock.resellerProfile.update).toHaveBeenCalledWith({
+      where: { organisationId: 'org_1' },
+      data: { affiliateSlug: 'new-slug' },
+    });
+  });
+
+  it('rejects duplicate affiliate slugs', async () => {
+    const { updateResellerAffiliateSlug } = await import('./affiliate-slug');
+
+    prismaMock.resellerProfile.findUnique
+      .mockResolvedValueOnce({
+        id: 'profile_1',
+        organisationId: 'org_1',
+        affiliateSlug: 'old-slug',
+      })
+      .mockResolvedValueOnce({
+        organisationId: 'org_2',
+      });
+
+    await expect(
+      updateResellerAffiliateSlug({
+        organisationId: 'org_1',
+        affiliateSlug: 'taken-slug',
+      }),
+    ).rejects.toThrow('This affiliate URL is already in use. Please choose another.');
   });
 });
 

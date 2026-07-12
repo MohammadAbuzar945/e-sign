@@ -51,7 +51,7 @@ export default function AdminResellerApplicationsPage() {
         subtitle={_(msg`Review organisations that have applied to become resellers.`)}
       />
 
-      <div className="mt-6">
+      <div className="mt-6 rounded-lg border bg-background p-4">
         <Input
           type="search"
           placeholder={_(msg`Search by organisation, applicant, or email`)}
@@ -60,7 +60,7 @@ export default function AdminResellerApplicationsPage() {
         />
       </div>
 
-      <div className="mt-6">
+      <div className="mt-8">
         <AdminResellerApplicationsTable />
       </div>
     </div>

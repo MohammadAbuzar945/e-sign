@@ -5,6 +5,7 @@ import { prisma } from '@documenso/prisma';
 
 import { getOrganisationResellerMetrics } from './get-reseller-eligibility';
 import { getResellerEligibility } from './get-reseller-eligibility';
+import { sendResellerApplicationAdminNotification } from './send-reseller-application-admin-notification';
 
 export type CreateResellerApplicationOptions = {
   organisationId: string;
@@ -39,7 +40,7 @@ export const createResellerApplication = async ({
 
   const metrics = await getOrganisationResellerMetrics(organisationId);
 
-  return await prisma.resellerApplication.create({
+  const application = await prisma.resellerApplication.create({
     data: {
       organisationId,
       applicantUserId,
@@ -53,4 +54,17 @@ export const createResellerApplication = async ({
       snapshotOrgSignupDate: organisation.createdAt,
     },
   });
+
+  await sendResellerApplicationAdminNotification({
+    applicationId: application.id,
+    organisationName: application.snapshotOrgName,
+    applicantName: application.snapshotApplicantName,
+    applicantEmail: application.snapshotApplicantEmail,
+    completedDocumentCount: application.snapshotCompletedDocCount,
+    uniqueSignerCount: application.snapshotUniqueSignerCount,
+    organisationUserCount: application.snapshotOrgUserCount,
+    organisationSignupDate: application.snapshotOrgSignupDate,
+  });
+
+  return application;
 };

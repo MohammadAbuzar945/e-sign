@@ -63,6 +63,7 @@ import {
   ResellerAffiliatePageForm,
   type TResellerAffiliatePageFormSchema,
 } from '~/components/forms/reseller-affiliate-page-form';
+import { ResellerAffiliateSlugForm } from '~/components/forms/reseller-affiliate-slug-form';
 import { appMetaTags } from '~/utils/meta';
 
 import type { Route } from './+types/o.$orgUrl.settings.reseller';
@@ -324,18 +325,11 @@ export default function OrganisationSettingsResellerPage() {
         </Dialog>
       </SettingsHeader>
 
-      <Alert variant="neutral">
-        <AlertTitle>
-          <Trans>Affiliate link</Trans>
-        </AlertTitle>
-        <AlertDescription className="mt-2 flex items-center gap-2">
-          <span className="break-all">{profile.affiliateUrl}</span>
-          <CopyTextButton
-            value={profile.affiliateUrl}
-            onCopySuccess={() => toast({ title: _(msg`Link copied`) })}
-          />
-        </AlertDescription>
-      </Alert>
+      <ResellerAffiliateSlugForm
+        organisationId={organisation.id}
+        affiliateSlug={profile.affiliateSlug}
+        suggestedSlug={profile.organisation.url}
+      />
 
       <Alert variant="warning">
         <AlertTitle>

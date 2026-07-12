@@ -1,20 +1,11 @@
 import { ResellerApplicationStatus, ResellerProfileStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
-import { nanoid } from 'nanoid';
 
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
 import { prisma } from '@documenso/prisma';
 
+import { resolveInitialAffiliateSlug } from './affiliate-slug';
 import { sendResellerWelcomeEmail } from './send-reseller-welcome-email';
-
-const generateAffiliateSlug = (orgUrl: string) => {
-  const base = orgUrl
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-  return `${base}-${nanoid(6)}`;
-};
 
 export type ActivateResellerFromTermsCompletionOptions = {
   envelopeId: string;
@@ -109,9 +100,12 @@ export const activateResellerFromTermsCompletion = async ({
     return existingProfile;
   }
 
-  const affiliateSlug = generateAffiliateSlug(application.organisation.url);
-
   const profile = await prisma.$transaction(async (tx) => {
+    const affiliateSlug = await resolveInitialAffiliateSlug({
+      orgUrl: application.organisation.url,
+      client: tx,
+    });
+
     await tx.resellerApplication.update({
       where: { id: application.id },
       data: {

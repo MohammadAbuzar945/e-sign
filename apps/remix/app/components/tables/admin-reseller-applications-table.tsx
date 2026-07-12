@@ -8,6 +8,7 @@ import { AppError } from '@documenso/lib/errors/app-error';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { trpc } from '@documenso/trpc/react';
+import { AdminResellerApplicationActionsPanel } from '~/components/general/admin-reseller-application-actions-panel';
 import { AdminResellerApplicationActionDialog } from '~/components/dialogs/admin-reseller-application-action-dialog';
 import { SendResellerTermsDialog } from '~/components/dialogs/send-reseller-terms-dialog';
 import type { DataTableColumnDef } from '@documenso/ui/primitives/data-table';
@@ -24,13 +25,10 @@ import {
   AlertDialogTitle,
 } from '@documenso/ui/primitives/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
-import { Button } from '@documenso/ui/primitives/button';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-
-const IN_PROGRESS_APPLICATION_STATUSES = ['PENDING', 'TERMS_SENT', 'TERMS_COMPLETED'] as const;
 
 export const AdminResellerApplicationsTable = () => {
   const { t } = useLingui();
@@ -163,32 +161,6 @@ export const AdminResellerApplicationsTable = () => {
       },
     });
 
-  const canSendTerms =
-    selectedApplication?.status === 'PENDING' || selectedApplication?.status === 'TERMS_SENT';
-
-  const canRetryActivation =
-    selectedApplication?.status === 'TERMS_SENT' || selectedApplication?.status === 'TERMS_COMPLETED';
-
-  const canRejectOrCancel =
-    selectedApplication?.status !== undefined &&
-    IN_PROGRESS_APPLICATION_STATUSES.includes(
-      selectedApplication.status as (typeof IN_PROGRESS_APPLICATION_STATUSES)[number],
-    );
-
-  const canDeactivateReseller =
-    selectedApplication?.status === 'APPROVED' &&
-    selectedApplication.resellerProfile?.status === 'ACTIVE';
-
-  const canReactivateReseller =
-    selectedApplication?.status === 'APPROVED' &&
-    (selectedApplication.resellerProfile?.status === 'INACTIVE' ||
-      selectedApplication.resellerProfile?.status === 'SUSPENDED');
-
-  const canDeleteReseller =
-    selectedApplication?.status === 'APPROVED' &&
-    selectedApplication.resellerProfile !== null &&
-    selectedApplication.resellerProfile !== undefined;
-
   const columns = useMemo(() => {
     return [
       {
@@ -253,101 +225,6 @@ export const AdminResellerApplicationsTable = () => {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border bg-muted/30 p-4">
-        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium">
-              <Trans>Application actions</Trans>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {selectedApplicationIds.length === 1 ? (
-                <Trans>Select an action for the selected application.</Trans>
-              ) : (
-                <Trans>Select exactly one application in the table below to enable these actions.</Trans>
-              )}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          disabled={selectedApplicationIds.length !== 1 || !canRetryActivation || isRetryingActivation}
-          loading={isRetryingActivation}
-          onClick={async () => {
-            if (!selectedApplication) {
-              return;
-            }
-
-            await retryActivation({
-              applicationId: selectedApplication.id,
-            });
-          }}
-        >
-          <Trans>Activate reseller</Trans>
-        </Button>
-
-        <Button
-          disabled={selectedApplicationIds.length !== 1 || !canSendTerms}
-          onClick={() => {
-            if (selectedApplicationIds.length !== 1) {
-              toast({
-                title: t`Select one application`,
-                description: t`Select exactly one application to enter T&C variables before sending.`,
-                variant: 'destructive',
-              });
-
-              return;
-            }
-
-            setIsSendDialogOpen(true);
-          }}
-        >
-          <Trans>Send T&Cs</Trans>
-        </Button>
-
-        <Button
-          variant="outline"
-          disabled={selectedApplicationIds.length !== 1 || !canReactivateReseller || isReactivating}
-          onClick={() => setProfileAction('reactivate')}
-        >
-          <Trans>Reactivate reseller</Trans>
-        </Button>
-
-        <Button
-          variant="destructive"
-          disabled={selectedApplicationIds.length !== 1 || !canDeactivateReseller || isDeactivating}
-          onClick={() => setProfileAction('deactivate')}
-        >
-          <Trans>Deactivate reseller</Trans>
-        </Button>
-
-        <Button
-          variant="outline"
-          disabled={selectedApplicationIds.length !== 1 || !canRejectOrCancel}
-          onClick={() => setApplicationAction('cancel')}
-        >
-          <Trans>Cancel</Trans>
-        </Button>
-
-        <Button
-          variant="destructive"
-          disabled={selectedApplicationIds.length !== 1 || !canRejectOrCancel}
-          onClick={() => setApplicationAction('reject')}
-        >
-          <Trans>Reject</Trans>
-        </Button>
-
-        <Button
-          variant="destructive"
-          disabled={selectedApplicationIds.length !== 1 || !canDeleteReseller || isDeleting}
-          onClick={() => setProfileAction('delete')}
-        >
-          <Trans>Delete reseller</Trans>
-        </Button>
-        </div>
-      </div>
-
       {isLoadingError && (
         <Alert variant="destructive">
           <AlertTitle>
@@ -361,6 +238,95 @@ export const AdminResellerApplicationsTable = () => {
           </AlertDescription>
         </Alert>
       )}
+
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1 space-y-4">
+          {!selectedApplication && selectedApplicationIds.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              <Trans>Select an application in the table to view details and available actions.</Trans>
+            </p>
+          )}
+
+          {selectedApplicationIds.length > 1 && (
+            <p className="text-sm text-muted-foreground">
+              <Trans>Select exactly one application to manage individual actions.</Trans>
+            </p>
+          )}
+
+          <DataTable
+            columns={columns}
+            data={results.data}
+            perPage={results.perPage}
+            currentPage={results.currentPage}
+            totalPages={results.totalPages}
+            onPaginationChange={onPaginationChange}
+            rowSelection={rowSelection}
+            onRowSelectionChange={setRowSelection}
+            getRowId={(row) => row.id}
+            error={{
+              enable: isLoadingError,
+            }}
+            skeleton={{
+              enable: isLoading,
+              rows: 3,
+              component: (
+                <>
+                  <TableCell>
+                    <Skeleton className="h-4 w-4 rounded" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-12 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-20 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-12 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-12 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-16 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-16 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-16 rounded-full" />
+                  </TableCell>
+                </>
+              ),
+            }}
+          >
+            {(table) => <DataTablePagination additionalInformation="VisibleCount" table={table} />}
+          </DataTable>
+        </div>
+
+        {selectedApplication && (
+          <AdminResellerApplicationActionsPanel
+            application={selectedApplication}
+            isRetryingActivation={isRetryingActivation}
+            onSendTerms={() => setIsSendDialogOpen(true)}
+            onActivate={async () => {
+              await retryActivation({
+                applicationId: selectedApplication.id,
+              });
+            }}
+            onReject={() => setApplicationAction('reject')}
+            onCancel={() => setApplicationAction('cancel')}
+            onDeactivate={() => setProfileAction('deactivate')}
+            onReactivate={() => setProfileAction('reactivate')}
+            onDelete={() => setProfileAction('delete')}
+          />
+        )}
+      </div>
 
       <SendResellerTermsDialog
         application={selectedApplication}
@@ -394,29 +360,29 @@ export const AdminResellerApplicationsTable = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {profileAction === 'deactivate' ? (
-                <Trans>Deactivate reseller</Trans>
+                <Trans>Deactivate</Trans>
               ) : profileAction === 'delete' ? (
-                <Trans>Delete reseller</Trans>
+                <Trans>Delete</Trans>
               ) : (
-                <Trans>Reactivate reseller</Trans>
+                <Trans>Reactivate</Trans>
               )}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {profileAction === 'deactivate' ? (
                 <Trans>
-                  Deactivating {selectedApplication?.snapshotOrgName ?? 'this reseller'} will disable
-                  their affiliate page and block new credit purchases until reactivated.
+                  Deactivating {selectedApplication?.snapshotOrgName ?? 'this organisation'} will
+                  disable their affiliate page and block new credit purchases until reactivated.
                 </Trans>
               ) : profileAction === 'delete' ? (
                 <Trans>
-                  Deleting {selectedApplication?.snapshotOrgName ?? 'this reseller'} permanently
+                  Deleting {selectedApplication?.snapshotOrgName ?? 'this organisation'} permanently
                   removes their reseller profile, packages, transaction history, and application
                   record. The organisation can apply again later. This cannot be undone.
                 </Trans>
               ) : (
                 <Trans>
-                  Reactivating {selectedApplication?.snapshotOrgName ?? 'this reseller'} will restore
-                  their affiliate page and allow credit purchases again.
+                  Reactivating {selectedApplication?.snapshotOrgName ?? 'this organisation'} will
+                  restore their affiliate page and allow credit purchases again.
                 </Trans>
               )}
             </AlertDialogDescription>
@@ -426,6 +392,7 @@ export const AdminResellerApplicationsTable = () => {
               <Trans>Close</Trans>
             </AlertDialogCancel>
             <AlertDialogAction
+              className={profileAction === 'reactivate' ? undefined : 'bg-destructive hover:bg-destructive/90'}
               disabled={
                 !selectedApplication || isDeactivating || isReactivating || isDeleting
               }
@@ -456,71 +423,16 @@ export const AdminResellerApplicationsTable = () => {
               }}
             >
               {profileAction === 'deactivate' ? (
-                <Trans>Deactivate reseller</Trans>
+                <Trans>Deactivate</Trans>
               ) : profileAction === 'delete' ? (
-                <Trans>Delete reseller</Trans>
+                <Trans>Delete</Trans>
               ) : (
-                <Trans>Reactivate reseller</Trans>
+                <Trans>Reactivate</Trans>
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <DataTable
-        columns={columns}
-        data={results.data}
-        perPage={results.perPage}
-        currentPage={results.currentPage}
-        totalPages={results.totalPages}
-        onPaginationChange={onPaginationChange}
-        rowSelection={rowSelection}
-        onRowSelectionChange={setRowSelection}
-        getRowId={(row) => row.id}
-        error={{
-          enable: isLoadingError,
-        }}
-        skeleton={{
-          enable: isLoading,
-          rows: 3,
-          component: (
-            <>
-              <TableCell>
-                <Skeleton className="h-4 w-4 rounded" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-24 rounded-full" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-32 rounded-full" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-12 rounded-full" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-20 rounded-full" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-12 rounded-full" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-12 rounded-full" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-16 rounded-full" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-16 rounded-full" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-16 rounded-full" />
-              </TableCell>
-            </>
-          ),
-        }}
-      >
-        {(table) => <DataTablePagination additionalInformation="VisibleCount" table={table} />}
-      </DataTable>
     </div>
   );
 };
