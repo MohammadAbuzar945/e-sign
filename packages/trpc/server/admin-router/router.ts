@@ -17,6 +17,7 @@ import { getUserRoute } from './get-user';
 import { promoteMemberToOwnerRoute } from './promote-member-to-owner';
 import { cancelResellerApplicationRoute } from './cancel-reseller-application';
 import { deactivateResellerProfileRoute } from './deactivate-reseller-profile';
+import { deleteResellerRoute } from './delete-reseller';
 import {
   findResellerApplicationsRoute,
   rejectResellerApplicationRoute,
@@ -63,6 +64,7 @@ export const adminRouter = router({
     retryActivation: retryResellerApplicationActivationRoute,
     deactivate: deactivateResellerProfileRoute,
     reactivate: reactivateResellerProfileRoute,
+    delete: deleteResellerRoute,
   },
   stripe: {
     createCustomer: createStripeCustomerRoute,

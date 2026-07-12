@@ -69,7 +69,7 @@ export const AdminResellerApplicationActionDialog = ({
 
         toast({
           title: t`Application rejected`,
-          description: t`The reseller application has been rejected.`,
+          description: t`The reseller application has been rejected and the applicant has been emailed.`,
         });
       }
 
@@ -98,9 +98,9 @@ export const AdminResellerApplicationActionDialog = ({
 
   const title =
     action === 'reject' ? (
-      <Trans>Reject application</Trans>
+      <Trans>Reject</Trans>
     ) : (
-      <Trans>Cancel application</Trans>
+      <Trans>Cancel</Trans>
     );
 
   const description =
@@ -152,7 +152,7 @@ export const AdminResellerApplicationActionDialog = ({
             <Trans>Close</Trans>
           </Button>
           <Button variant="destructive" loading={isPending} onClick={handleSubmit}>
-            {action === 'reject' ? <Trans>Reject application</Trans> : <Trans>Cancel application</Trans>}
+            {action === 'reject' ? <Trans>Reject</Trans> : <Trans>Cancel</Trans>}
           </Button>
         </DialogFooter>
       </DialogContent>

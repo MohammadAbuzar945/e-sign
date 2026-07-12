@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@documenso/ui/primitives/alert-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
@@ -37,7 +38,9 @@ export const AdminResellerApplicationsTable = () => {
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [applicationAction, setApplicationAction] = useState<'reject' | 'cancel' | null>(null);
-  const [profileAction, setProfileAction] = useState<'deactivate' | 'reactivate' | null>(null);
+  const [profileAction, setProfileAction] = useState<'deactivate' | 'reactivate' | 'delete' | null>(
+    null,
+  );
 
   const [searchParams] = useSearchParams();
   const updateSearchParams = useUpdateSearchParams();
@@ -140,6 +143,26 @@ export const AdminResellerApplicationsTable = () => {
       },
     });
 
+  const { mutateAsync: deleteReseller, isPending: isDeleting } =
+    trpc.admin.resellerApplications.delete.useMutation({
+      onSuccess: async () => {
+        toast({
+          title: t`Reseller deleted`,
+          description: t`The reseller profile and application record have been removed.`,
+        });
+
+        setProfileAction(null);
+        await handleMutationSuccess();
+      },
+      onError: (error) => {
+        toast({
+          title: t`Delete failed`,
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
   const canSendTerms =
     selectedApplication?.status === 'PENDING' || selectedApplication?.status === 'TERMS_SENT';
 
@@ -160,6 +183,11 @@ export const AdminResellerApplicationsTable = () => {
     selectedApplication?.status === 'APPROVED' &&
     (selectedApplication.resellerProfile?.status === 'INACTIVE' ||
       selectedApplication.resellerProfile?.status === 'SUSPENDED');
+
+  const canDeleteReseller =
+    selectedApplication?.status === 'APPROVED' &&
+    selectedApplication.resellerProfile !== null &&
+    selectedApplication.resellerProfile !== undefined;
 
   const columns = useMemo(() => {
     return [
@@ -225,7 +253,23 @@ export const AdminResellerApplicationsTable = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="rounded-lg border bg-muted/30 p-4">
+        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">
+              <Trans>Application actions</Trans>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {selectedApplicationIds.length === 1 ? (
+                <Trans>Select an action for the selected application.</Trans>
+              ) : (
+                <Trans>Select exactly one application in the table below to enable these actions.</Trans>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
         <Button
           variant="outline"
           disabled={selectedApplicationIds.length !== 1 || !canRetryActivation || isRetryingActivation}
@@ -283,7 +327,7 @@ export const AdminResellerApplicationsTable = () => {
           disabled={selectedApplicationIds.length !== 1 || !canRejectOrCancel}
           onClick={() => setApplicationAction('cancel')}
         >
-          <Trans>Cancel application</Trans>
+          <Trans>Cancel</Trans>
         </Button>
 
         <Button
@@ -291,9 +335,32 @@ export const AdminResellerApplicationsTable = () => {
           disabled={selectedApplicationIds.length !== 1 || !canRejectOrCancel}
           onClick={() => setApplicationAction('reject')}
         >
-          <Trans>Reject application</Trans>
+          <Trans>Reject</Trans>
         </Button>
+
+        <Button
+          variant="destructive"
+          disabled={selectedApplicationIds.length !== 1 || !canDeleteReseller || isDeleting}
+          onClick={() => setProfileAction('delete')}
+        >
+          <Trans>Delete reseller</Trans>
+        </Button>
+        </div>
       </div>
+
+      {isLoadingError && (
+        <Alert variant="destructive">
+          <AlertTitle>
+            <Trans>Unable to load applications</Trans>
+          </AlertTitle>
+          <AlertDescription>
+            <Trans>
+              The reseller applications list failed to load. If you recently deployed, rebuild the
+              server image without cache and confirm the latest commit is running.
+            </Trans>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <SendResellerTermsDialog
         application={selectedApplication}
@@ -328,6 +395,8 @@ export const AdminResellerApplicationsTable = () => {
             <AlertDialogTitle>
               {profileAction === 'deactivate' ? (
                 <Trans>Deactivate reseller</Trans>
+              ) : profileAction === 'delete' ? (
+                <Trans>Delete reseller</Trans>
               ) : (
                 <Trans>Reactivate reseller</Trans>
               )}
@@ -338,6 +407,12 @@ export const AdminResellerApplicationsTable = () => {
                   Deactivating {selectedApplication?.snapshotOrgName ?? 'this reseller'} will disable
                   their affiliate page and block new credit purchases until reactivated.
                 </Trans>
+              ) : profileAction === 'delete' ? (
+                <Trans>
+                  Deleting {selectedApplication?.snapshotOrgName ?? 'this reseller'} permanently
+                  removes their reseller profile, packages, transaction history, and application
+                  record. The organisation can apply again later. This cannot be undone.
+                </Trans>
               ) : (
                 <Trans>
                   Reactivating {selectedApplication?.snapshotOrgName ?? 'this reseller'} will restore
@@ -347,11 +422,13 @@ export const AdminResellerApplicationsTable = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeactivating || isReactivating}>
+            <AlertDialogCancel disabled={isDeactivating || isReactivating || isDeleting}>
               <Trans>Close</Trans>
             </AlertDialogCancel>
             <AlertDialogAction
-              disabled={!selectedApplication || isDeactivating || isReactivating}
+              disabled={
+                !selectedApplication || isDeactivating || isReactivating || isDeleting
+              }
               onClick={async (event) => {
                 event.preventDefault();
 
@@ -370,10 +447,18 @@ export const AdminResellerApplicationsTable = () => {
                     applicationId: selectedApplication.id,
                   });
                 }
+
+                if (profileAction === 'delete') {
+                  await deleteReseller({
+                    applicationId: selectedApplication.id,
+                  });
+                }
               }}
             >
               {profileAction === 'deactivate' ? (
                 <Trans>Deactivate reseller</Trans>
+              ) : profileAction === 'delete' ? (
+                <Trans>Delete reseller</Trans>
               ) : (
                 <Trans>Reactivate reseller</Trans>
               )}

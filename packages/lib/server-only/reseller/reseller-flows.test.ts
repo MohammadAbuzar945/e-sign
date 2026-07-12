@@ -37,11 +37,13 @@ const prismaMock = vi.hoisted(() => ({
     findFirst: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    delete: vi.fn(),
   },
   resellerProfile: {
     findUnique: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    delete: vi.fn(),
   },
   resellerPackage: {
     findUnique: vi.fn(),
@@ -72,6 +74,8 @@ const prismaMock = vi.hoisted(() => ({
 
 const sendResellerWelcomeEmailMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
+const sendResellerRejectionEmailMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
 const getOrganisationCreditsMock = vi.hoisted(() => vi.fn());
 
 const createTransactionMock = vi.hoisted(() => vi.fn());
@@ -84,6 +88,10 @@ vi.mock('@documenso/prisma', () => ({
 
 vi.mock('@documenso/lib/server-only/reseller/send-reseller-welcome-email', () => ({
   sendResellerWelcomeEmail: sendResellerWelcomeEmailMock,
+}));
+
+vi.mock('@documenso/lib/server-only/reseller/send-reseller-rejection-email', () => ({
+  sendResellerRejectionEmail: sendResellerRejectionEmailMock,
 }));
 
 vi.mock('@documenso/ee/server-only/limits/user-credits', () => ({
@@ -556,12 +564,15 @@ describe('retryResellerApplicationActivation flow', () => {
 });
 
 describe('admin reseller application actions', () => {
-  it('marks application as rejected with optional reason', async () => {
+  it('marks application as rejected with optional reason and emails applicant', async () => {
     const { rejectResellerApplication } = await import('./admin-reseller-actions');
 
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
       id: 'app_1',
       status: ResellerApplicationStatus.PENDING,
+      snapshotOrgName: 'Acme Corp',
+      snapshotApplicantName: 'Jane Applicant',
+      snapshotApplicantEmail: 'jane@example.com',
     });
 
     const rejectedApplication = {
@@ -578,6 +589,12 @@ describe('admin reseller application actions', () => {
     });
 
     expect(result).toEqual(rejectedApplication);
+    expect(sendResellerRejectionEmailMock).toHaveBeenCalledWith({
+      organisationName: 'Acme Corp',
+      applicantName: 'Jane Applicant',
+      applicantEmail: 'jane@example.com',
+      rejectionReason: 'Does not meet criteria',
+    });
   });
 
   it('rejects in-progress applications only', async () => {
@@ -675,6 +692,60 @@ describe('admin reseller application actions', () => {
     });
 
     expect(result.status).toBe(ResellerProfileStatus.ACTIVE);
+  });
+
+  it('deletes an approved reseller profile and application record', async () => {
+    const { deleteReseller } = await import('./admin-reseller-actions');
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.APPROVED,
+      organisationId: 'org_1',
+    });
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      id: 'profile_1',
+      organisationId: 'org_1',
+    });
+
+    prismaMock.resellerCreditTransaction.count.mockResolvedValue(0);
+    prismaMock.resellerProfile.delete.mockResolvedValue({ id: 'profile_1' });
+    prismaMock.resellerApplication.delete.mockResolvedValue({ id: 'app_1' });
+
+    const result = await deleteReseller({
+      applicationId: 'app_1',
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.resellerProfile.delete).toHaveBeenCalledWith({
+      where: { id: 'profile_1' },
+    });
+    expect(prismaMock.resellerApplication.delete).toHaveBeenCalledWith({
+      where: { id: 'app_1' },
+    });
+  });
+
+  it('blocks delete when pending credit purchases exist', async () => {
+    const { deleteReseller } = await import('./admin-reseller-actions');
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.APPROVED,
+      organisationId: 'org_1',
+    });
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      id: 'profile_1',
+      organisationId: 'org_1',
+    });
+
+    prismaMock.resellerCreditTransaction.count.mockResolvedValue(1);
+
+    await expect(
+      deleteReseller({
+        applicationId: 'app_1',
+      }),
+    ).rejects.toThrow('Cannot delete this reseller while credit purchases are still pending.');
   });
 });
 

@@ -101,7 +101,7 @@ export const findResellerApplications = async ({
 
       return {
         ...application,
-        resellerProfile: application.organisation.resellerProfile,
+        resellerProfile: application.organisation.resellerProfile ?? null,
         liveCompletedDocCount: metrics.completedDocumentCount,
         liveUniqueSignerCount: metrics.uniqueSignerCount,
         liveOrgUserCount: metrics.orgUserCount,

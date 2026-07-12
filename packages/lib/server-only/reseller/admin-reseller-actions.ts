@@ -1,10 +1,13 @@
 import {
   ResellerApplicationStatus,
+  ResellerCreditTransactionStatus,
   ResellerProfileStatus,
 } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
+
+import { sendResellerRejectionEmail } from './send-reseller-rejection-email';
 
 const IN_PROGRESS_APPLICATION_STATUSES: ResellerApplicationStatus[] = [
   ResellerApplicationStatus.PENDING,
@@ -45,7 +48,7 @@ export const rejectResellerApplication = async ({
 
   assertApplicationInProgress(application.status);
 
-  return await prisma.resellerApplication.update({
+  const updatedApplication = await prisma.resellerApplication.update({
     where: { id: applicationId },
     data: {
       status: ResellerApplicationStatus.REJECTED,
@@ -53,6 +56,15 @@ export const rejectResellerApplication = async ({
       rejectionReason,
     },
   });
+
+  await sendResellerRejectionEmail({
+    organisationName: application.snapshotOrgName,
+    applicantName: application.snapshotApplicantName,
+    applicantEmail: application.snapshotApplicantEmail,
+    rejectionReason,
+  });
+
+  return updatedApplication;
 };
 
 export const cancelResellerApplication = async ({
@@ -151,4 +163,53 @@ export const reactivateResellerProfile = async ({
       status: ResellerProfileStatus.ACTIVE,
     },
   });
+};
+
+export const deleteReseller = async ({
+  applicationId,
+}: {
+  applicationId: string;
+}) => {
+  const application = await getResellerApplicationOrThrow(applicationId);
+
+  if (application.status !== ResellerApplicationStatus.APPROVED) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Only approved resellers can be deleted.',
+    });
+  }
+
+  const profile = await prisma.resellerProfile.findUnique({
+    where: { organisationId: application.organisationId },
+  });
+
+  if (!profile) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'Reseller profile not found.',
+    });
+  }
+
+  const pendingTransactions = await prisma.resellerCreditTransaction.count({
+    where: {
+      resellerProfileId: profile.id,
+      status: ResellerCreditTransactionStatus.PENDING,
+    },
+  });
+
+  if (pendingTransactions > 0) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Cannot delete this reseller while credit purchases are still pending.',
+    });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.resellerProfile.delete({
+      where: { id: profile.id },
+    });
+
+    await tx.resellerApplication.delete({
+      where: { id: applicationId },
+    });
+  });
+
+  return { success: true as const };
 };
