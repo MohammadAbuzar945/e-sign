@@ -1,0 +1,30 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - nomia-kba # TODO: change to your staging branch name
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to staging server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.STAGING_SERVER_HOST }}
+          username: ${{ secrets.STAGING_SERVER_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.STAGING_SERVER_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+            cd "${{ secrets.STAGING_DEPLOY_PATH }}"
+            git fetch origin
+            git checkout "${{ github.ref_name }}"
+            git pull origin "${{ github.ref_name }}"
+            npm ci
+            npm run build
+            npm run prisma:migrate-deploy
+            pm2 restart 1
