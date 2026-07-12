@@ -25,6 +25,7 @@ export const ZGetResellerProfileResponseSchema = z
     affiliateSlug: z.string(),
     affiliateUrl: z.string(),
     availableCredits: z.number(),
+    hasPaystackConfigured: z.boolean(),
     paystackPublicKey: z.string().nullable(),
     paystackWebhookUrl: z.string(),
     vatNumber: z.string().nullable(),

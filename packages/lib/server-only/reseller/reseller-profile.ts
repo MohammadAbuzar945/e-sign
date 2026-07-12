@@ -36,6 +36,7 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
     availableCredits,
     affiliateUrl: `${NEXT_PUBLIC_WEBAPP_URL()}/r/${profile.affiliateSlug}`,
     paystackWebhookUrl: getPaystackWebhookUrl(),
+    hasPaystackConfigured: Boolean(profile.paystackPublicKey && profile.paystackSecretKey),
     catalogPackages: ESIGN_CREDIT_PACKAGES,
   };
 };

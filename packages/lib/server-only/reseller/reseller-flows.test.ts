@@ -224,6 +224,7 @@ describe('getResellerEligibility flow', () => {
     expect(eligibility.reasons).toHaveLength(0);
     expect(eligibility.hasActiveApplication).toBe(false);
     expect(eligibility.hasActiveResellerProfile).toBe(false);
+    expect(eligibility.application).toBeNull();
   });
 
   it('blocks allowlisted org with an active application in progress', async () => {
@@ -233,6 +234,12 @@ describe('getResellerEligibility flow', () => {
     setupSubscription();
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
       status: ResellerApplicationStatus.PENDING,
+      appliedAt: new Date('2026-01-01'),
+      termsSentAt: null,
+      termsCompletedAt: null,
+      approvedAt: null,
+      rejectedAt: null,
+      rejectionReason: null,
     });
     prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
 
@@ -243,6 +250,7 @@ describe('getResellerEligibility flow', () => {
 
     expect(eligibility.isEligible).toBe(false);
     expect(eligibility.hasActiveApplication).toBe(true);
+    expect(eligibility.application?.status).toBe(ResellerApplicationStatus.PENDING);
     expect(eligibility.reasons).toContain(
       'An application is already in progress for this organisation.',
     );
@@ -255,6 +263,12 @@ describe('getResellerEligibility flow', () => {
     setupSubscription();
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
       status: ResellerApplicationStatus.REJECTED,
+      appliedAt: new Date('2026-01-01'),
+      termsSentAt: null,
+      termsCompletedAt: null,
+      approvedAt: null,
+      rejectedAt: new Date('2026-01-05'),
+      rejectionReason: 'Insufficient activity',
     });
     prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
 
@@ -265,6 +279,7 @@ describe('getResellerEligibility flow', () => {
 
     expect(eligibility.isEligible).toBe(true);
     expect(eligibility.hasActiveApplication).toBe(false);
+    expect(eligibility.application?.status).toBe(ResellerApplicationStatus.REJECTED);
   });
 
   it('blocks allowlisted org that already has a reseller profile', async () => {

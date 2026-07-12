@@ -1,7 +1,18 @@
+import { ResellerApplicationStatus } from '@prisma/client';
 import { z } from 'zod';
 
 export const ZGetResellerEligibilityRequestSchema = z.object({
   organisationId: z.string(),
+});
+
+export const ZResellerApplicationSummarySchema = z.object({
+  status: z.nativeEnum(ResellerApplicationStatus),
+  appliedAt: z.date(),
+  termsSentAt: z.date().nullable(),
+  termsCompletedAt: z.date().nullable(),
+  approvedAt: z.date().nullable(),
+  rejectedAt: z.date().nullable(),
+  rejectionReason: z.string().nullable(),
 });
 
 export const ZGetResellerEligibilityResponseSchema = z.object({
@@ -13,5 +24,6 @@ export const ZGetResellerEligibilityResponseSchema = z.object({
   subscriptionStartDate: z.date().nullable(),
   hasActiveApplication: z.boolean(),
   hasActiveResellerProfile: z.boolean(),
+  application: ZResellerApplicationSummarySchema.nullable(),
   reasons: z.array(z.string()),
 });

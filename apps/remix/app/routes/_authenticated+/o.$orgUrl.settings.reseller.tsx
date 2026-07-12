@@ -64,6 +64,7 @@ import {
   type TResellerAffiliatePageFormSchema,
 } from '~/components/forms/reseller-affiliate-page-form';
 import { ResellerAffiliateSlugForm } from '~/components/forms/reseller-affiliate-slug-form';
+import { ResellerOnboardingChecklist } from '~/components/general/reseller-onboarding-checklist';
 import { appMetaTags } from '~/utils/meta';
 
 import type { Route } from './+types/o.$orgUrl.settings.reseller';
@@ -264,6 +265,17 @@ export default function OrganisationSettingsResellerPage() {
     setTransactionPage(1);
   };
 
+  const hasEnabledPackage = profile.packages.some((pkg) => pkg.isEnabled);
+  const hasCustomizedBranding =
+    profile.affiliateSlug !== profile.organisation.url ||
+    profile.brandingEnabled ||
+    Boolean(profile.brandingLogo) ||
+    Boolean(profile.brandingUrl) ||
+    Boolean(profile.brandingCompanyDetails) ||
+    Boolean(profile.brandingPrimaryColor) ||
+    Boolean(profile.affiliatePageTitle) ||
+    Boolean(profile.affiliateAboutText);
+
   return (
     <div className="max-w-4xl space-y-8">
       <SettingsHeader
@@ -325,11 +337,23 @@ export default function OrganisationSettingsResellerPage() {
         </Dialog>
       </SettingsHeader>
 
-      <ResellerAffiliateSlugForm
+      <ResellerOnboardingChecklist
         organisationId={organisation.id}
+        affiliateUrl={profile.affiliateUrl}
         affiliateSlug={profile.affiliateSlug}
-        suggestedSlug={profile.organisation.url}
+        hasPaystackConfigured={profile.hasPaystackConfigured}
+        hasEnabledPackage={hasEnabledPackage}
+        hasCustomizedBranding={hasCustomizedBranding}
+        onCopySuccess={() => toast({ title: _(msg`Affiliate link copied`) })}
       />
+
+      <div id="reseller-setup-branding">
+        <ResellerAffiliateSlugForm
+          organisationId={organisation.id}
+          affiliateSlug={profile.affiliateSlug}
+          suggestedSlug={profile.organisation.url}
+        />
+      </div>
 
       <Alert variant="warning">
         <AlertTitle>
@@ -349,6 +373,7 @@ export default function OrganisationSettingsResellerPage() {
 
       <Form {...form}>
         <form
+          id="reseller-setup-paystack"
           className="space-y-4"
           autoComplete="off"
           onSubmit={form.handleSubmit(async (values) => {
@@ -483,7 +508,7 @@ export default function OrganisationSettingsResellerPage() {
         </form>
       </Form>
 
-      <div className="space-y-4">
+      <div id="reseller-setup-branding-content" className="space-y-4">
         <div className="space-y-2">
           <h2 className="text-lg font-semibold">
             <Trans>Affiliate page branding</Trans>
@@ -562,7 +587,7 @@ export default function OrganisationSettingsResellerPage() {
         />
       </div>
 
-      <div className="space-y-4">
+      <div id="reseller-setup-packages" className="space-y-4">
         <h2 className="text-lg font-semibold">
           <Trans>Package sizes</Trans>
         </h2>

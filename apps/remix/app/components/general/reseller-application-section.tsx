@@ -24,6 +24,8 @@ import {
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
+import { ResellerApplicationTimeline } from '~/components/general/reseller-application-timeline';
+
 type EligibilityRequirementProps = {
   isMet: boolean;
   title: ReactNode;
@@ -312,6 +314,10 @@ export const ResellerApplicationSection = () => {
                 terms for review.
               </Trans>
             </p>
+          ) : null}
+
+          {!isLoading && eligibility?.application && !isActiveReseller ? (
+            <ResellerApplicationTimeline application={eligibility.application} />
           ) : null}
         </div>
       </section>

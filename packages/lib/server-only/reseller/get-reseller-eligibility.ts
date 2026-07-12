@@ -1,4 +1,4 @@
-import { DocumentStatus, EnvelopeType, SubscriptionStatus } from '@prisma/client';
+import { DocumentStatus, EnvelopeType, ResellerApplicationStatus, SubscriptionStatus } from '@prisma/client';
 
 import {
   isResellerFeatureAllowedEmail,
@@ -59,6 +59,16 @@ export const getOrganisationResellerMetrics = async (
   };
 };
 
+export type ResellerApplicationSummary = {
+  status: ResellerApplicationStatus;
+  appliedAt: Date;
+  termsSentAt: Date | null;
+  termsCompletedAt: Date | null;
+  approvedAt: Date | null;
+  rejectedAt: Date | null;
+  rejectionReason: string | null;
+};
+
 export type ResellerEligibility = {
   isEligible: boolean;
   creditsUsed: number;
@@ -68,6 +78,7 @@ export type ResellerEligibility = {
   subscriptionStartDate: Date | null;
   hasActiveApplication: boolean;
   hasActiveResellerProfile: boolean;
+  application: ResellerApplicationSummary | null;
   reasons: string[];
 };
 
@@ -88,6 +99,7 @@ export const getResellerEligibility = async ({
       subscriptionStartDate: null,
       hasActiveApplication: false,
       hasActiveResellerProfile: false,
+      application: null,
       reasons: [RESELLER_FEATURE_ACCESS_DENIED_MESSAGE],
     };
   }
@@ -151,6 +163,18 @@ export const getResellerEligibility = async ({
   const meetsRequirements =
     hasEligibilityBypass || (hasCreditsRequirement && hasSubscriptionTenure);
 
+  const applicationSummary: ResellerApplicationSummary | null = existingApplication
+    ? {
+        status: existingApplication.status,
+        appliedAt: existingApplication.appliedAt,
+        termsSentAt: existingApplication.termsSentAt,
+        termsCompletedAt: existingApplication.termsCompletedAt,
+        approvedAt: existingApplication.approvedAt,
+        rejectedAt: existingApplication.rejectedAt,
+        rejectionReason: existingApplication.rejectionReason,
+      }
+    : null;
+
   return {
     isEligible: meetsRequirements && reasons.length === 0,
     creditsUsed,
@@ -162,6 +186,7 @@ export const getResellerEligibility = async ({
       existingApplication && !['REJECTED', 'CANCELLED'].includes(existingApplication.status),
     ),
     hasActiveResellerProfile: Boolean(existingProfile),
+    application: applicationSummary,
     reasons,
   };
 };
