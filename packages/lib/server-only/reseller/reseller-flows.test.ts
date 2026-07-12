@@ -403,6 +403,79 @@ describe('createResellerApplication flow', () => {
     });
   });
 
+  it('resets a rejected application instead of creating a duplicate', async () => {
+    const { createResellerApplication } = await import('./create-reseller-application');
+
+    setupOrganisationMetrics({
+      completedDocumentCount: 80,
+      creditsConsumed: 60,
+      uniqueSignerCount: 15,
+      orgUserCount: 5,
+    });
+    setupSubscription();
+
+    const orgCreatedAt = new Date('2025-01-01T00:00:00.000Z');
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.REJECTED,
+      appliedAt: new Date('2026-01-01'),
+      termsSentAt: new Date('2026-01-02'),
+      termsCompletedAt: null,
+      approvedAt: null,
+      rejectedAt: new Date('2026-01-05'),
+      rejectionReason: 'Rejected by reseller: Declined',
+    });
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+
+    prismaMock.organisation.findUniqueOrThrow.mockResolvedValue({
+      id: 'org_1',
+      name: 'Acme Corp',
+      createdAt: orgCreatedAt,
+    });
+
+    prismaMock.user.findUniqueOrThrow.mockResolvedValue({
+      id: 42,
+      name: 'Jane Applicant',
+      email: ALLOWED_EMAIL,
+    });
+
+    const resetApplication = {
+      id: 'app_1',
+      status: ResellerApplicationStatus.PENDING,
+      snapshotOrgName: 'Acme Corp',
+      snapshotApplicantName: 'Jane Applicant',
+      snapshotApplicantEmail: ALLOWED_EMAIL,
+      snapshotCompletedDocCount: 80,
+      snapshotUniqueSignerCount: 15,
+      snapshotOrgUserCount: 5,
+      snapshotOrgSignupDate: orgCreatedAt,
+    };
+
+    prismaMock.resellerApplication.update.mockResolvedValue(resetApplication);
+
+    const result = await createResellerApplication({
+      organisationId: 'org_1',
+      applicantUserId: 42,
+      applicantUserEmail: ALLOWED_EMAIL,
+    });
+
+    expect(result).toEqual(resetApplication);
+    expect(prismaMock.resellerApplication.create).not.toHaveBeenCalled();
+    expect(prismaMock.resellerApplication.update).toHaveBeenCalledWith({
+      where: { id: 'app_1' },
+      data: expect.objectContaining({
+        status: ResellerApplicationStatus.PENDING,
+        rejectionReason: null,
+        rejectedAt: null,
+        termsSentAt: null,
+        termsEnvelopeId: null,
+        snapshotCompletedDocCount: 80,
+      }),
+    });
+    expect(sendResellerApplicationAdminNotificationMock).toHaveBeenCalled();
+  });
+
   it('rejects ineligible organisations', async () => {
     const { createResellerApplication } = await import('./create-reseller-application');
 

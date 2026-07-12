@@ -40,20 +40,46 @@ export const createResellerApplication = async ({
 
   const metrics = await getOrganisationResellerMetrics(organisationId);
 
-  const application = await prisma.resellerApplication.create({
-    data: {
-      organisationId,
-      applicantUserId,
-      status: ResellerApplicationStatus.PENDING,
-      snapshotOrgName: organisation.name,
-      snapshotApplicantName: applicant.name ?? applicant.email,
-      snapshotApplicantEmail: applicant.email,
-      snapshotCompletedDocCount: metrics.completedDocumentCount,
-      snapshotUniqueSignerCount: metrics.uniqueSignerCount,
-      snapshotOrgUserCount: metrics.orgUserCount,
-      snapshotOrgSignupDate: organisation.createdAt,
-    },
+  const applicationData = {
+    applicantUserId,
+    status: ResellerApplicationStatus.PENDING,
+    appliedAt: new Date(),
+    termsSentAt: null,
+    termsCompletedAt: null,
+    approvedAt: null,
+    rejectedAt: null,
+    rejectionReason: null,
+    snapshotOrgName: organisation.name,
+    snapshotApplicantName: applicant.name ?? applicant.email,
+    snapshotApplicantEmail: applicant.email,
+    snapshotCompletedDocCount: metrics.completedDocumentCount,
+    snapshotUniqueSignerCount: metrics.uniqueSignerCount,
+    snapshotOrgUserCount: metrics.orgUserCount,
+    snapshotOrgSignupDate: organisation.createdAt,
+    termsTemplateId: null,
+    termsEnvelopeId: null,
+    externalDocGenRequestId: null,
+  };
+
+  const existingApplication = await prisma.resellerApplication.findUnique({
+    where: { organisationId },
   });
+
+  const application =
+    existingApplication &&
+    [ResellerApplicationStatus.REJECTED, ResellerApplicationStatus.CANCELLED].includes(
+      existingApplication.status,
+    )
+      ? await prisma.resellerApplication.update({
+          where: { id: existingApplication.id },
+          data: applicationData,
+        })
+      : await prisma.resellerApplication.create({
+          data: {
+            organisationId,
+            ...applicationData,
+          },
+        });
 
   await sendResellerApplicationAdminNotification({
     applicationId: application.id,
