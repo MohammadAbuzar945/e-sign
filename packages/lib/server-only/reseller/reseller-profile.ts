@@ -109,11 +109,13 @@ export const updateResellerProfile = async ({
   affiliateSupportEmail,
   highlightedCatalogPackageId,
 }: UpdateResellerProfileOptions) => {
+  const trimmedSecretKey = paystackSecretKey?.trim();
+
   return await prisma.resellerProfile.update({
     where: { organisationId },
     data: {
       paystackPublicKey,
-      paystackSecretKey,
+      ...(trimmedSecretKey ? { paystackSecretKey: trimmedSecretKey } : {}),
       paystackCallbackUrl,
       vatNumber,
       instructionsDismissedAt: instructionsDismissed ? new Date() : undefined,

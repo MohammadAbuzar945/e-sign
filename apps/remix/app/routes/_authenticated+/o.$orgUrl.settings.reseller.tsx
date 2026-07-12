@@ -356,6 +356,7 @@ export default function OrganisationSettingsResellerPage() {
       <Form {...form}>
         <form
           className="space-y-4"
+          autoComplete="off"
           onSubmit={form.handleSubmit(async (values) => {
             await updateProfile({
               organisationId: organisation.id,
@@ -406,7 +407,19 @@ export default function OrganisationSettingsResellerPage() {
                     <Trans>Paystack public key</Trans>
                   </FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input
+                      {...field}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
+                      inputMode="text"
+                      placeholder="pk_live_..."
+                      className="font-mono"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -422,8 +435,27 @@ export default function OrganisationSettingsResellerPage() {
                     <Trans>Paystack secret key</Trans>
                   </FormLabel>
                   <FormControl>
-                    <Input type="password" {...field} />
+                    <Input
+                      {...field}
+                      type="text"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
+                      inputMode="text"
+                      placeholder="sk_live_..."
+                      className="font-mono"
+                    />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    <Trans>
+                      Leave blank to keep your existing secret key. Paste a new key only when you
+                      want to replace it.
+                    </Trans>
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

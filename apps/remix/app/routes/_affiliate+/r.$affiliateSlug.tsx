@@ -1,6 +1,7 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
@@ -33,6 +34,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const { _ } = useLingui();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
   const { sessionData } = useOptionalSession();
 
   const isAuthenticated = Boolean(sessionData);
@@ -45,12 +47,14 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     affiliateSlug,
   });
 
-  const { mutateAsync: initializePurchase, isPending } =
+  const { mutateAsync: initializePurchase } =
     trpc.organisation.reseller.initializePurchase.useMutation({
       onSuccess: (result) => {
         window.location.href = result.authorizationUrl;
       },
       onError: (error) => {
+        setPurchasingPackageId(null);
+
         toast({
           title: _(msg`Purchase failed`),
           description: AppError.parseError(error).message,
@@ -75,6 +79,8 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       });
       return;
     }
+
+    setPurchasingPackageId(packageId);
 
     await initializePurchase({
       affiliateSlug,
@@ -228,7 +234,8 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
             <CardFooter className="flex flex-col gap-2">
               <Button
                 className="w-full"
-                loading={isPending}
+                loading={purchasingPackageId === pkg.id}
+                disabled={purchasingPackageId !== null && purchasingPackageId !== pkg.id}
                 style={primaryColor ? { backgroundColor: primaryColor } : undefined}
                 onClick={() => handleBuyNow(pkg.id)}
               >
