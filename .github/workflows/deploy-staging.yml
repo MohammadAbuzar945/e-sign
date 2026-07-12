@@ -21,6 +21,11 @@ jobs:
           script_stop: true
           script: |
             set -e
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            nvm use default
+            echo "Using node: $(which node) ($(node -v))"
+            echo "Using npm: $(which npm) ($(npm -v))"
             cd "${{ secrets.STAGING_DEPLOY_PATH }}"
             git fetch origin
             git checkout "${{ github.ref_name }}"
@@ -28,4 +33,4 @@ jobs:
             npm ci
             npm run build
             npm run prisma:migrate-deploy
-            pm2 restart 1
+            pm2 restart 1 --update-env
