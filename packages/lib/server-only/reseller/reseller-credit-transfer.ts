@@ -1,7 +1,6 @@
 import { ResellerCreditTransactionStatus, type Prisma } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { prisma } from '@documenso/prisma';
 
 type TransactionClient = Prisma.TransactionClient;
 
@@ -134,61 +133,57 @@ export const atomicIncrementOrganisationCredits = async (
   });
 };
 
-export const releaseResellerCreditReservation = async ({
-  transactionId,
-  paystackReference,
-}: {
-  transactionId?: string;
-  paystackReference?: string;
-}) => {
-  if (!transactionId && !paystackReference) {
-    return { released: false as const };
+export const tryAtomicDecrementOrganisationCredits = async (
+  tx: TransactionClient,
+  {
+    organisationId,
+    ownerUserId,
+    amount,
+    allowNegative = false,
+  }: OrganisationCreditsTarget & {
+    amount: number;
+    allowNegative?: boolean;
+  },
+) => {
+  if (amount <= 0) {
+    return false;
   }
 
-  return prisma.$transaction(async (tx) => {
-    const pendingTransaction = transactionId
-      ? await tx.resellerCreditTransaction.findUnique({
-          where: {
-            id: transactionId,
-          },
-        })
-      : await tx.resellerCreditTransaction.findUnique({
-          where: {
-            paystackReference,
-          },
-        });
+  const creditsRow = await ensureActiveOrganisationCredits(tx, {
+    organisationId,
+    ownerUserId,
+  });
 
-    if (!pendingTransaction || pendingTransaction.status !== ResellerCreditTransactionStatus.PENDING) {
-      return { released: false as const };
-    }
-
-    const resellerOrganisation = await tx.organisation.findUniqueOrThrow({
+  if (!allowNegative) {
+    const decrementResult = await tx.userCredits.updateMany({
       where: {
-        id: pendingTransaction.resellerOrganisationId,
-      },
-      select: {
-        ownerUserId: true,
-      },
-    });
-
-    await atomicIncrementOrganisationCredits(tx, {
-      organisationId: pendingTransaction.resellerOrganisationId,
-      ownerUserId: resellerOrganisation.ownerUserId,
-      amount: pendingTransaction.credits,
-    });
-
-    await tx.resellerCreditTransaction.update({
-      where: {
-        id: pendingTransaction.id,
+        id: creditsRow.id,
+        credits: {
+          gte: amount,
+        },
       },
       data: {
-        status: ResellerCreditTransactionStatus.FAILED,
+        credits: {
+          decrement: amount,
+        },
+        lastUpdatedAt: new Date(),
       },
     });
 
-    return {
-      released: true as const,
-      transactionId: pendingTransaction.id,
-    };
+    return decrementResult.count > 0;
+  }
+
+  await tx.userCredits.update({
+    where: {
+      id: creditsRow.id,
+    },
+    data: {
+      credits: {
+        decrement: amount,
+      },
+      lastUpdatedAt: new Date(),
+    },
   });
+
+  return true;
 };

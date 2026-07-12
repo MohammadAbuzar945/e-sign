@@ -87,6 +87,10 @@ const getOrganisationCreditsMock = vi.hoisted(() => vi.fn());
 
 const createTransactionMock = vi.hoisted(() => vi.fn());
 
+const sendResellerInsufficientCreditsEmailMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(undefined),
+);
+
 const getResellerSiteSettingsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@documenso/prisma', () => ({
@@ -111,6 +115,10 @@ vi.mock('@documenso/ee/server-only/limits/user-credits', () => ({
 
 vi.mock('@documenso/lib/server-only/paystack', () => ({
   createTransaction: createTransactionMock,
+}));
+
+vi.mock('./send-reseller-insufficient-credits-email', () => ({
+  sendResellerInsufficientCreditsEmail: sendResellerInsufficientCreditsEmailMock,
 }));
 
 vi.mock('@documenso/lib/server-only/site-settings/get-reseller-site-settings', () => ({
@@ -1086,41 +1094,10 @@ describe('initializeResellerPurchase flow', () => {
     },
   };
 
-  const purchaserOrganisation = {
-    id: 'buyer_org',
-    name: 'Buyer Org',
-    ownerUserId: 99,
-    owner: {
-      name: 'Buyer Name',
-    },
-  };
-
-  const setupInitializeReservationMocks = () => {
-    prismaMock.organisation.findUnique.mockResolvedValue(purchaserOrganisation);
-    prismaMock.organisation.findUniqueOrThrow.mockResolvedValue({ ownerUserId: 1 });
-    prismaMock.userCredits.findFirst.mockResolvedValue({ id: 'credits_reseller', credits: 100 });
-    prismaMock.userCredits.updateMany.mockResolvedValue({ count: 1 });
-    prismaMock.userCredits.findUniqueOrThrow.mockResolvedValue({ id: 'credits_reseller', credits: 50 });
-    prismaMock.resellerCreditTransaction.create.mockResolvedValue({
-      id: 'txn_pending_1',
-      status: ResellerCreditTransactionStatus.PENDING,
-    });
-    prismaMock.resellerCreditTransaction.update.mockResolvedValue({
-      id: 'txn_pending_1',
-      status: ResellerCreditTransactionStatus.PENDING,
-      paystackReference: 'ref_abc',
-    });
-    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue({
-      id: 'txn_pending_1',
-      status: ResellerCreditTransactionStatus.PENDING,
-    });
-  };
-
   it('initializes Paystack transaction for valid purchase', async () => {
     const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
 
     prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
-    setupInitializeReservationMocks();
     createTransactionMock.mockResolvedValue({
       status: true,
       data: {
@@ -1139,25 +1116,6 @@ describe('initializeResellerPurchase flow', () => {
 
     expect(result.authorizationUrl).toBe('https://paystack.test/pay');
     expect(result.reference).toBe('ref_abc');
-    expect(prismaMock.userCredits.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          id: 'credits_reseller',
-          credits: { gte: 50 },
-        }),
-        data: expect.objectContaining({
-          credits: { decrement: 50 },
-        }),
-      }),
-    );
-    expect(prismaMock.resellerCreditTransaction.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          status: ResellerCreditTransactionStatus.PENDING,
-          credits: 50,
-        }),
-      }),
-    );
     expect(createTransactionMock).toHaveBeenCalledWith(
       expect.objectContaining({
         email: 'buyer@example.com',
@@ -1167,10 +1125,10 @@ describe('initializeResellerPurchase flow', () => {
           resellerProfileId: 'profile_1',
           purchaserOrganisationId: 'buyer_org',
           packageId: 'pkg_1',
-          resellerCreditTransactionId: 'txn_pending_1',
         }),
       }),
     );
+    expect(prismaMock.resellerCreditTransaction.create).not.toHaveBeenCalled();
   });
 
   it('blocks self-purchase from the reseller organisation', async () => {
@@ -1189,62 +1147,28 @@ describe('initializeResellerPurchase flow', () => {
     ).rejects.toThrow('You cannot purchase credits from your own reseller account');
   });
 
-  it('blocks purchase when reseller has insufficient credits', async () => {
+  it('allows checkout even when reseller has insufficient credits', async () => {
     const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
 
     prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
-    prismaMock.organisation.findUnique.mockResolvedValue(purchaserOrganisation);
-    prismaMock.organisation.findUniqueOrThrow.mockResolvedValue({ ownerUserId: 1 });
-    prismaMock.userCredits.findFirst.mockResolvedValue({ id: 'credits_reseller', credits: 10 });
-    prismaMock.userCredits.updateMany.mockResolvedValue({ count: 0 });
-
-    await expect(
-      initializeResellerPurchase({
-        affiliateSlug: 'acme-reseller',
-        packageId: 'pkg_1',
-        purchaserOrganisationId: 'buyer_org',
-        purchaserUserId: 99,
-        purchaserEmail: 'buyer@example.com',
-      }),
-    ).rejects.toThrow('Insufficient reseller credits');
-    expect(createTransactionMock).not.toHaveBeenCalled();
-  });
-
-  it('releases reserved credits when Paystack initialization fails', async () => {
-    const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
-
-    prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
-    setupInitializeReservationMocks();
     createTransactionMock.mockResolvedValue({
-      status: false,
-      message: 'Paystack unavailable',
-      data: null,
+      status: true,
+      data: {
+        authorization_url: 'https://paystack.test/pay',
+        reference: 'ref_abc',
+      },
     });
-    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue({
-      id: 'txn_pending_1',
-      status: ResellerCreditTransactionStatus.PENDING,
-      resellerOrganisationId: 'reseller_org',
-      credits: 50,
+
+    const result = await initializeResellerPurchase({
+      affiliateSlug: 'acme-reseller',
+      packageId: 'pkg_1',
+      purchaserOrganisationId: 'buyer_org',
+      purchaserUserId: 99,
+      purchaserEmail: 'buyer@example.com',
     });
-    prismaMock.userCredits.update.mockResolvedValue({ id: 'credits_reseller', credits: 100 });
 
-    await expect(
-      initializeResellerPurchase({
-        affiliateSlug: 'acme-reseller',
-        packageId: 'pkg_1',
-        purchaserOrganisationId: 'buyer_org',
-        purchaserUserId: 99,
-        purchaserEmail: 'buyer@example.com',
-      }),
-    ).rejects.toThrow('Paystack unavailable');
-
-    expect(prismaMock.userCredits.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          credits: { increment: 50 },
-        }),
-      }),
-    );
+    expect(result.reference).toBe('ref_abc');
+    expect(createTransactionMock).toHaveBeenCalled();
   });
 
   it('rejects disabled or missing packages', async () => {
@@ -1293,6 +1217,10 @@ describe('processResellerPaystackWebhook flow', () => {
     organisation: {
       id: 'reseller_org',
       name: 'Reseller Org',
+      url: 'reseller-org',
+      owner: {
+        email: 'reseller@example.com',
+      },
     },
   };
 
@@ -1314,28 +1242,18 @@ describe('processResellerPaystackWebhook flow', () => {
     },
   };
 
-  const setupSuccessfulWebhookMocks = ({
-    withReservedCredits = true,
-  }: {
-    withReservedCredits?: boolean;
-  } = {}) => {
-    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue(
-      withReservedCredits
-        ? {
-            id: 'txn_1',
-            status: ResellerCreditTransactionStatus.PENDING,
-            credits: 50,
-          }
-        : null,
-    );
+  const setupSuccessfulWebhookMocks = () => {
+    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue(null);
     prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
     prismaMock.resellerPackage.findUnique.mockResolvedValue(pkg);
     prismaMock.organisation.findUnique.mockResolvedValue(purchaserOrganisation);
-    prismaMock.organisation.findUniqueOrThrow.mockResolvedValue({ ownerUserId: 99 });
-    prismaMock.userCredits.findFirst.mockResolvedValue({ id: 'credits_buyer', credits: 20 });
+    prismaMock.organisation.findUniqueOrThrow
+      .mockResolvedValueOnce({ ownerUserId: 1 })
+      .mockResolvedValueOnce({ ownerUserId: 99 });
+    prismaMock.userCredits.findFirst
+      .mockResolvedValueOnce({ id: 'credits_reseller', credits: 100 })
+      .mockResolvedValueOnce({ id: 'credits_buyer', credits: 20 });
     prismaMock.userCredits.updateMany.mockResolvedValue({ count: 1 });
-    prismaMock.userCredits.findUniqueOrThrow.mockResolvedValue({ id: 'credits_reseller', credits: 50 });
-    prismaMock.userCredits.update.mockResolvedValue({ id: 'credits_buyer', credits: 70 });
     prismaMock.resellerCreditTransaction.create.mockResolvedValue({
       id: 'txn_1',
       status: ResellerCreditTransactionStatus.PENDING,
@@ -1344,6 +1262,7 @@ describe('processResellerPaystackWebhook flow', () => {
       id: 'txn_1',
       status: ResellerCreditTransactionStatus.COMPLETED,
     });
+    prismaMock.userCredits.update.mockResolvedValue({ id: 'credits_buyer', credits: 70 });
   };
 
   it('ignores non-reseller webhook events', async () => {
@@ -1362,7 +1281,7 @@ describe('processResellerPaystackWebhook flow', () => {
   it('transfers credits and completes transaction on successful payment', async () => {
     const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
 
-    setupSuccessfulWebhookMocks({ withReservedCredits: true });
+    setupSuccessfulWebhookMocks();
 
     const result = await processResellerPaystackWebhook({
       paystackReference: 'ref_success',
@@ -1373,35 +1292,8 @@ describe('processResellerPaystackWebhook flow', () => {
     });
 
     expect(result.handled).toBe(true);
+    expect(result.fulfilled).toBe(true);
     expect(result).toHaveProperty('transaction');
-    expect(prismaMock.userCredits.updateMany).not.toHaveBeenCalled();
-    expect(prismaMock.userCredits.update).toHaveBeenCalledWith({
-      where: { id: 'credits_buyer' },
-      data: expect.objectContaining({
-        credits: { increment: 50 },
-      }),
-    });
-  });
-
-  it('uses atomic transfer for legacy purchases without a reservation', async () => {
-    const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
-
-    setupSuccessfulWebhookMocks({ withReservedCredits: false });
-    prismaMock.organisation.findUniqueOrThrow
-      .mockResolvedValueOnce({ ownerUserId: 1 })
-      .mockResolvedValueOnce({ ownerUserId: 99 });
-    prismaMock.userCredits.findFirst
-      .mockResolvedValueOnce({ id: 'credits_reseller', credits: 100 })
-      .mockResolvedValueOnce({ id: 'credits_buyer', credits: 20 });
-
-    await processResellerPaystackWebhook({
-      paystackReference: 'ref_legacy',
-      metadata: baseMetadata,
-      amountInCents: 45000,
-      purchaserEmail: 'buyer@example.com',
-      purchaserName: 'Buyer Name',
-    });
-
     expect(prismaMock.userCredits.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -1417,6 +1309,49 @@ describe('processResellerPaystackWebhook flow', () => {
         }),
       }),
     );
+    expect(sendResellerInsufficientCreditsEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('records pending manual transfer and emails reseller when credits are insufficient', async () => {
+    const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
+
+    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue(null);
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
+    prismaMock.resellerPackage.findUnique.mockResolvedValue(pkg);
+    prismaMock.organisation.findUnique.mockResolvedValue(purchaserOrganisation);
+    prismaMock.organisation.findUniqueOrThrow
+      .mockResolvedValueOnce({ ownerUserId: 1 })
+      .mockResolvedValueOnce({ ownerUserId: 99 });
+    prismaMock.userCredits.findFirst.mockResolvedValueOnce({ id: 'credits_reseller', credits: 5 });
+    prismaMock.userCredits.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.resellerCreditTransaction.create.mockResolvedValue({
+      id: 'txn_pending_manual',
+      status: ResellerCreditTransactionStatus.PENDING,
+    });
+
+    const result = await processResellerPaystackWebhook({
+      paystackReference: 'ref_low_credits',
+      metadata: baseMetadata,
+      amountInCents: 45000,
+      purchaserEmail: 'buyer@example.com',
+      purchaserName: 'Buyer Name',
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        handled: true,
+        fulfilled: false,
+        awaitingManualTransfer: true,
+      }),
+    );
+    expect(sendResellerInsufficientCreditsEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resellerOwnerEmail: 'reseller@example.com',
+        purchaserOrganisationName: 'Buyer Org',
+        creditsRequired: 50,
+      }),
+    );
+    expect(prismaMock.userCredits.update).not.toHaveBeenCalled();
   });
 
   it('returns duplicate for already completed transactions', async () => {
@@ -1433,7 +1368,7 @@ describe('processResellerPaystackWebhook flow', () => {
       purchaserEmail: 'buyer@example.com',
     });
 
-    expect(result).toEqual({ handled: true, duplicate: true });
+    expect(result).toEqual({ handled: true, duplicate: true, fulfilled: true });
     expect(prismaMock.resellerProfile.findUnique).not.toHaveBeenCalled();
   });
 
@@ -1455,31 +1390,38 @@ describe('processResellerPaystackWebhook flow', () => {
     ).rejects.toThrow('Payment amount does not match package price');
   });
 
-  it('rejects purchases when reseller has insufficient credits', async () => {
+  it('retries fulfillment for pending transactions when credits become available', async () => {
     const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
 
-    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue(null);
+    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue({
+      id: 'txn_pending_manual',
+      status: ResellerCreditTransactionStatus.PENDING,
+    });
     prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
     prismaMock.resellerPackage.findUnique.mockResolvedValue(pkg);
     prismaMock.organisation.findUnique.mockResolvedValue(purchaserOrganisation);
     prismaMock.organisation.findUniqueOrThrow
       .mockResolvedValueOnce({ ownerUserId: 1 })
       .mockResolvedValueOnce({ ownerUserId: 99 });
-    prismaMock.userCredits.findFirst.mockResolvedValueOnce({ id: 'credits_reseller', credits: 5 });
-    prismaMock.userCredits.updateMany.mockResolvedValue({ count: 0 });
-    prismaMock.resellerCreditTransaction.create.mockResolvedValue({
-      id: 'txn_1',
-      status: ResellerCreditTransactionStatus.PENDING,
+    prismaMock.userCredits.findFirst
+      .mockResolvedValueOnce({ id: 'credits_reseller', credits: 100 })
+      .mockResolvedValueOnce({ id: 'credits_buyer', credits: 20 });
+    prismaMock.userCredits.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.userCredits.update.mockResolvedValue({ id: 'credits_buyer', credits: 70 });
+    prismaMock.resellerCreditTransaction.update.mockResolvedValue({
+      id: 'txn_pending_manual',
+      status: ResellerCreditTransactionStatus.COMPLETED,
     });
 
-    await expect(
-      processResellerPaystackWebhook({
-        paystackReference: 'ref_low_credits',
-        metadata: baseMetadata,
-        amountInCents: 45000,
-        purchaserEmail: 'buyer@example.com',
-      }),
-    ).rejects.toThrow('Insufficient reseller credits');
+    const result = await processResellerPaystackWebhook({
+      paystackReference: 'ref_retry',
+      metadata: baseMetadata,
+      amountInCents: 45000,
+      purchaserEmail: 'buyer@example.com',
+    });
+
+    expect(result.fulfilled).toBe(true);
+    expect(sendResellerInsufficientCreditsEmailMock).not.toHaveBeenCalled();
   });
 });
 

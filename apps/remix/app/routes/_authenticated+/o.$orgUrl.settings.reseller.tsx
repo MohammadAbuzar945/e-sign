@@ -361,9 +361,9 @@ export default function OrganisationSettingsResellerPage() {
         </AlertTitle>
         <AlertDescription>
           <Trans>
-            Ensure there are always credits in your account. Clients will not be able to purchase if
-            no credits are available unless negative credits have been enabled for your account by
-            Nomia.
+            Ensure there are always credits in your account. If a client pays while your balance is
+            too low, the purchase will appear as pending and you will need to recharge and manually
+            transfer the required credits.
           </Trans>
           <p className="mt-2 font-medium">
             <Trans>Available credits: {profile.availableCredits}</Trans>
@@ -780,7 +780,15 @@ export default function OrganisationSettingsResellerPage() {
                   <TableCell>
                     {formatCentsAsDecimal(netAmount)} {transaction.currency}
                   </TableCell>
-                  <TableCell>{transaction.status}</TableCell>
+                  <TableCell>
+                    {transaction.status === 'PENDING' ? (
+                      <span className="text-amber-700">
+                        <Trans>Pending manual transfer</Trans>
+                      </span>
+                    ) : (
+                      transaction.status
+                    )}
+                  </TableCell>
                 </TableRow>
               );
             })}

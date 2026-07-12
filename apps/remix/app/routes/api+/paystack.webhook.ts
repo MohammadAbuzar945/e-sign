@@ -246,28 +246,6 @@ export async function action({ request }: { request: Request }) {
         });
       }
     }
-    else if (event.event === 'charge.failed') {
-      const { metadata, reference } = event.data as {
-        metadata?: {
-          type?: string;
-          resellerCreditTransactionId?: string;
-        };
-        reference?: string;
-      };
-
-      if (metadata?.type === 'reseller-credit-purchase') {
-        const { processResellerPaystackPaymentFailed } = await import(
-          '@documenso/lib/server-only/reseller/process-reseller-paystack-payment-failed'
-        );
-
-        await processResellerPaystackPaymentFailed({
-          paystackReference: reference ?? '',
-          metadata,
-        });
-
-        return new Response(JSON.stringify({ success: true }), { status: 200 });
-      }
-    }
     else if (event.event === 'charge.success') {
 
       const { customer, metadata, plan, reference, amount } = event.data as {
@@ -281,7 +259,6 @@ export async function action({ request }: { request: Request }) {
           purchaserUserId?: number;
           packageId?: string;
           expectedAmount?: number;
-          resellerCreditTransactionId?: string;
         };
         plan?: { plan_code?: string };
         reference?: string;
