@@ -2,27 +2,42 @@ import { useMemo, useState } from 'react';
 
 import { useLingui } from '@lingui/react/macro';
 import { Trans } from '@lingui/react/macro';
+import { useSearchParams } from 'react-router';
 
 import { AppError } from '@documenso/lib/errors/app-error';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { trpc } from '@documenso/trpc/react';
+import { AdminResellerApplicationActionDialog } from '~/components/dialogs/admin-reseller-application-action-dialog';
 import { SendResellerTermsDialog } from '~/components/dialogs/send-reseller-terms-dialog';
 import type { DataTableColumnDef } from '@documenso/ui/primitives/data-table';
 import { DataTable } from '@documenso/ui/primitives/data-table';
 import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@documenso/ui/primitives/alert-dialog';
 import { Button } from '@documenso/ui/primitives/button';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { useSearchParams } from 'react-router';
+
+const IN_PROGRESS_APPLICATION_STATUSES = ['PENDING', 'TERMS_SENT', 'TERMS_COMPLETED'] as const;
 
 export const AdminResellerApplicationsTable = () => {
   const { t } = useLingui();
   const { toast } = useToast();
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [applicationAction, setApplicationAction] = useState<'reject' | 'cancel' | null>(null);
+  const [profileAction, setProfileAction] = useState<'deactivate' | 'reactivate' | null>(null);
 
   const [searchParams] = useSearchParams();
   const updateSearchParams = useUpdateSearchParams();
@@ -61,6 +76,11 @@ export const AdminResellerApplicationsTable = () => {
     return results.data.find((application) => application.id === selectedApplicationIds[0]) ?? null;
   }, [results.data, selectedApplicationIds]);
 
+  const handleMutationSuccess = async () => {
+    setRowSelection({});
+    await refetch();
+  };
+
   const { mutateAsync: retryActivation, isPending: isRetryingActivation } =
     trpc.admin.resellerApplications.retryActivation.useMutation({
       onSuccess: async () => {
@@ -69,8 +89,7 @@ export const AdminResellerApplicationsTable = () => {
           description: t`The application has been marked as approved.`,
         });
 
-        setRowSelection({});
-        await refetch();
+        await handleMutationSuccess();
       },
       onError: (error) => {
         toast({
@@ -81,8 +100,66 @@ export const AdminResellerApplicationsTable = () => {
       },
     });
 
+  const { mutateAsync: deactivateReseller, isPending: isDeactivating } =
+    trpc.admin.resellerApplications.deactivate.useMutation({
+      onSuccess: async () => {
+        toast({
+          title: t`Reseller deactivated`,
+          description: t`The reseller profile has been deactivated.`,
+        });
+
+        setProfileAction(null);
+        await handleMutationSuccess();
+      },
+      onError: (error) => {
+        toast({
+          title: t`Deactivation failed`,
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
+  const { mutateAsync: reactivateReseller, isPending: isReactivating } =
+    trpc.admin.resellerApplications.reactivate.useMutation({
+      onSuccess: async () => {
+        toast({
+          title: t`Reseller reactivated`,
+          description: t`The reseller profile is active again.`,
+        });
+
+        setProfileAction(null);
+        await handleMutationSuccess();
+      },
+      onError: (error) => {
+        toast({
+          title: t`Reactivation failed`,
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
+  const canSendTerms =
+    selectedApplication?.status === 'PENDING' || selectedApplication?.status === 'TERMS_SENT';
+
   const canRetryActivation =
     selectedApplication?.status === 'TERMS_SENT' || selectedApplication?.status === 'TERMS_COMPLETED';
+
+  const canRejectOrCancel =
+    selectedApplication?.status !== undefined &&
+    IN_PROGRESS_APPLICATION_STATUSES.includes(
+      selectedApplication.status as (typeof IN_PROGRESS_APPLICATION_STATUSES)[number],
+    );
+
+  const canDeactivateReseller =
+    selectedApplication?.status === 'APPROVED' &&
+    selectedApplication.resellerProfile?.status === 'ACTIVE';
+
+  const canReactivateReseller =
+    selectedApplication?.status === 'APPROVED' &&
+    (selectedApplication.resellerProfile?.status === 'INACTIVE' ||
+      selectedApplication.resellerProfile?.status === 'SUSPENDED');
 
   const columns = useMemo(() => {
     return [
@@ -132,8 +209,12 @@ export const AdminResellerApplicationsTable = () => {
         cell: ({ row }) => row.original.liveOrgUserCount,
       },
       {
-        header: t`Status`,
+        header: t`Application status`,
         accessorKey: 'status',
+      },
+      {
+        header: t`Reseller status`,
+        cell: ({ row }) => row.original.resellerProfile?.status ?? '—',
       },
       {
         header: t`Applied`,
@@ -144,7 +225,7 @@ export const AdminResellerApplicationsTable = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button
           variant="outline"
           disabled={selectedApplicationIds.length !== 1 || !canRetryActivation || isRetryingActivation}
@@ -163,7 +244,7 @@ export const AdminResellerApplicationsTable = () => {
         </Button>
 
         <Button
-          disabled={selectedApplicationIds.length !== 1}
+          disabled={selectedApplicationIds.length !== 1 || !canSendTerms}
           onClick={() => {
             if (selectedApplicationIds.length !== 1) {
               toast({
@@ -180,17 +261,126 @@ export const AdminResellerApplicationsTable = () => {
         >
           <Trans>Send T&Cs</Trans>
         </Button>
+
+        <Button
+          variant="outline"
+          disabled={selectedApplicationIds.length !== 1 || !canReactivateReseller || isReactivating}
+          onClick={() => setProfileAction('reactivate')}
+        >
+          <Trans>Reactivate reseller</Trans>
+        </Button>
+
+        <Button
+          variant="destructive"
+          disabled={selectedApplicationIds.length !== 1 || !canDeactivateReseller || isDeactivating}
+          onClick={() => setProfileAction('deactivate')}
+        >
+          <Trans>Deactivate reseller</Trans>
+        </Button>
+
+        <Button
+          variant="outline"
+          disabled={selectedApplicationIds.length !== 1 || !canRejectOrCancel}
+          onClick={() => setApplicationAction('cancel')}
+        >
+          <Trans>Cancel application</Trans>
+        </Button>
+
+        <Button
+          variant="destructive"
+          disabled={selectedApplicationIds.length !== 1 || !canRejectOrCancel}
+          onClick={() => setApplicationAction('reject')}
+        >
+          <Trans>Reject application</Trans>
+        </Button>
       </div>
 
       <SendResellerTermsDialog
         application={selectedApplication}
         open={isSendDialogOpen}
         onOpenChange={setIsSendDialogOpen}
-        onSuccess={async () => {
-          setRowSelection({});
-          await refetch();
-        }}
+        onSuccess={handleMutationSuccess}
       />
+
+      <AdminResellerApplicationActionDialog
+        action={applicationAction ?? 'reject'}
+        applicationId={applicationAction ? selectedApplication?.id ?? null : null}
+        organisationName={selectedApplication?.snapshotOrgName ?? null}
+        open={applicationAction !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setApplicationAction(null);
+          }
+        }}
+        onSuccess={handleMutationSuccess}
+      />
+
+      <AlertDialog
+        open={profileAction !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setProfileAction(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {profileAction === 'deactivate' ? (
+                <Trans>Deactivate reseller</Trans>
+              ) : (
+                <Trans>Reactivate reseller</Trans>
+              )}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {profileAction === 'deactivate' ? (
+                <Trans>
+                  Deactivating {selectedApplication?.snapshotOrgName ?? 'this reseller'} will disable
+                  their affiliate page and block new credit purchases until reactivated.
+                </Trans>
+              ) : (
+                <Trans>
+                  Reactivating {selectedApplication?.snapshotOrgName ?? 'this reseller'} will restore
+                  their affiliate page and allow credit purchases again.
+                </Trans>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeactivating || isReactivating}>
+              <Trans>Close</Trans>
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!selectedApplication || isDeactivating || isReactivating}
+              onClick={async (event) => {
+                event.preventDefault();
+
+                if (!selectedApplication) {
+                  return;
+                }
+
+                if (profileAction === 'deactivate') {
+                  await deactivateReseller({
+                    applicationId: selectedApplication.id,
+                  });
+                }
+
+                if (profileAction === 'reactivate') {
+                  await reactivateReseller({
+                    applicationId: selectedApplication.id,
+                  });
+                }
+              }}
+            >
+              {profileAction === 'deactivate' ? (
+                <Trans>Deactivate reseller</Trans>
+              ) : (
+                <Trans>Reactivate reseller</Trans>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <DataTable
         columns={columns}
@@ -230,6 +420,9 @@ export const AdminResellerApplicationsTable = () => {
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-12 rounded-full" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-16 rounded-full" />
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-16 rounded-full" />

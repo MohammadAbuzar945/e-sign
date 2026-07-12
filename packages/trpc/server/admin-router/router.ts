@@ -15,6 +15,8 @@ import { findSubscriptionClaimsRoute } from './find-subscription-claims';
 import { getAdminOrganisationRoute } from './get-admin-organisation';
 import { getUserRoute } from './get-user';
 import { promoteMemberToOwnerRoute } from './promote-member-to-owner';
+import { cancelResellerApplicationRoute } from './cancel-reseller-application';
+import { deactivateResellerProfileRoute } from './deactivate-reseller-profile';
 import {
   findResellerApplicationsRoute,
   rejectResellerApplicationRoute,
@@ -22,6 +24,7 @@ import {
   sendResellerTermsRoute,
 } from './reseller-applications';
 import { getResellerTermsTemplateVariablesRoute } from './get-reseller-terms-template-variables';
+import { reactivateResellerProfileRoute } from './reactivate-reseller-profile';
 import { resealDocumentRoute } from './reseal-document';
 import { resetTwoFactorRoute } from './reset-two-factor-authentication';
 import { resyncLicenseRoute } from './resync-license';
@@ -56,7 +59,10 @@ export const adminRouter = router({
     getTermsTemplateVariables: getResellerTermsTemplateVariablesRoute,
     sendTerms: sendResellerTermsRoute,
     reject: rejectResellerApplicationRoute,
+    cancel: cancelResellerApplicationRoute,
     retryActivation: retryResellerApplicationActivationRoute,
+    deactivate: deactivateResellerProfileRoute,
+    reactivate: reactivateResellerProfileRoute,
   },
   stripe: {
     createCustomer: createStripeCustomerRoute,

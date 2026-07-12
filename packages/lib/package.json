@@ -12,7 +12,9 @@
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "clean": "rimraf node_modules"
+    "clean": "rimraf node_modules",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "3.0.81",
@@ -67,6 +69,8 @@
   "devDependencies": {
     "@playwright/browser-chromium": "1.56.1",
     "@types/luxon": "^3.7.1",
-    "@types/pg": "^8.15.6"
+    "@types/pg": "^8.15.6",
+    "@vitejs/plugin-react": "^4.7.0",
+    "vitest": "^4.1.10"
   }
 }

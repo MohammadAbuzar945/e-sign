@@ -42,6 +42,13 @@ export const ZFindResellerApplicationsResponseSchema = z.object({
         url: z.string(),
         createdAt: z.date(),
       }),
+      resellerProfile: z
+        .object({
+          id: z.string(),
+          status: z.string(),
+          affiliateSlug: z.string(),
+        })
+        .nullable(),
       applicantUser: z.object({
         id: z.number(),
         name: z.string().nullable(),

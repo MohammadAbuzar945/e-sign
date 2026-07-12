@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { ResellerProfileStatus } from '@prisma/client';
 
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { getPaystackWebhookUrl, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
@@ -59,7 +60,7 @@ export const getResellerProfileByAffiliateSlug = async (affiliateSlug: string) =
     },
   });
 
-  if (!profile) {
+  if (!profile || profile.status !== ResellerProfileStatus.ACTIVE) {
     return null;
   }
 

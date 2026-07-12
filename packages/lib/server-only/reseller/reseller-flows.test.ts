@@ -1,0 +1,1134 @@
+import {
+  DocumentStatus,
+  EnvelopeType,
+  ResellerApplicationStatus,
+  ResellerCreditTransactionStatus,
+  ResellerProfileStatus,
+  SubscriptionStatus,
+} from '@prisma/client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import {
+  assertResellerFeatureAccess,
+  RESELLER_FEATURE_ACCESS_DENIED_MESSAGE,
+} from '@documenso/lib/utils/reseller-feature-access';
+import { formatCentsAsDecimal } from '@documenso/lib/utils/reseller-vat';
+
+const prismaMock = vi.hoisted(() => ({
+  envelope: {
+    count: vi.fn(),
+    findFirst: vi.fn(),
+  },
+  $queryRaw: vi.fn(),
+  organisationMember: {
+    count: vi.fn(),
+  },
+  team: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+  },
+  subscription: {
+    findFirst: vi.fn(),
+  },
+  resellerApplication: {
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  },
+  resellerProfile: {
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  },
+  resellerPackage: {
+    findUnique: vi.fn(),
+    createMany: vi.fn(),
+    update: vi.fn(),
+  },
+  resellerCreditTransaction: {
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    count: vi.fn(),
+    findMany: vi.fn(),
+    update: vi.fn(),
+  },
+  organisation: {
+    findUnique: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
+  },
+  user: {
+    findUniqueOrThrow: vi.fn(),
+  },
+  userCredits: {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  },
+  $transaction: vi.fn(),
+}));
+
+const sendResellerWelcomeEmailMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+const getOrganisationCreditsMock = vi.hoisted(() => vi.fn());
+
+const createTransactionMock = vi.hoisted(() => vi.fn());
+
+const getResellerSiteSettingsMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@documenso/prisma', () => ({
+  prisma: prismaMock,
+}));
+
+vi.mock('@documenso/lib/server-only/reseller/send-reseller-welcome-email', () => ({
+  sendResellerWelcomeEmail: sendResellerWelcomeEmailMock,
+}));
+
+vi.mock('@documenso/ee/server-only/limits/user-credits', () => ({
+  getOrganisationCredits: getOrganisationCreditsMock,
+}));
+
+vi.mock('@documenso/lib/server-only/paystack', () => ({
+  createTransaction: createTransactionMock,
+}));
+
+vi.mock('@documenso/lib/server-only/site-settings/get-reseller-site-settings', () => ({
+  getResellerSiteSettings: getResellerSiteSettingsMock,
+}));
+
+vi.mock('@documenso/lib/server-only/document/send-document', () => ({
+  sendDocument: vi.fn(),
+}));
+
+vi.mock('@documenso/lib/server-only/nomia-docgen', () => ({
+  generateResellerTermsDocument: vi.fn(),
+  fetchResellerTermsTemplateVariables: vi.fn(),
+}));
+
+vi.mock('@documenso/lib/server-only/template/create-document-from-template', () => ({
+  createDocumentFromTemplate: vi.fn(),
+}));
+
+import { sendResellerTerms } from './send-reseller-terms';
+
+const ALLOWED_EMAIL = 'nomiadeveloper@gmail.com';
+
+const setupOrganisationMetrics = ({
+  completedDocumentCount = 60,
+  creditsConsumed = 60,
+  uniqueSignerCount = 10,
+  orgUserCount = 3,
+}: {
+  completedDocumentCount?: number;
+  creditsConsumed?: number;
+  uniqueSignerCount?: number;
+  orgUserCount?: number;
+} = {}) => {
+  prismaMock.envelope.count.mockResolvedValue(completedDocumentCount);
+  prismaMock.$queryRaw.mockResolvedValue([{ count: BigInt(uniqueSignerCount) }]);
+  prismaMock.organisationMember.count.mockResolvedValue(orgUserCount);
+  prismaMock.team.findMany.mockResolvedValue([{ creditConsumed: creditsConsumed }]);
+};
+
+const setupSubscription = (monthsAgo = 3) => {
+  const createdAt = new Date();
+  createdAt.setMonth(createdAt.getMonth() - monthsAgo);
+
+  prismaMock.subscription.findFirst.mockResolvedValue({
+    createdAt,
+    status: SubscriptionStatus.ACTIVE,
+  });
+};
+
+const setupNoActiveApplicationOrProfile = () => {
+  prismaMock.resellerApplication.findUnique.mockResolvedValue(null);
+  prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+
+  prismaMock.$transaction.mockImplementation(async (callback: (tx: typeof prismaMock) => unknown) => {
+    return callback(prismaMock);
+  });
+});
+
+describe('reseller feature access', () => {
+  it('allows allowlisted emails', () => {
+    expect(() => assertResellerFeatureAccess(ALLOWED_EMAIL)).not.toThrow();
+  });
+
+  it('rejects non-allowlisted emails', () => {
+    expect(() => assertResellerFeatureAccess('other@example.com')).toThrow(AppError);
+
+    try {
+      assertResellerFeatureAccess('other@example.com');
+    } catch (error) {
+      const appError = error as AppError;
+      expect(appError.code).toBe(AppErrorCode.UNAUTHORIZED);
+      expect(appError.message).toBe(RESELLER_FEATURE_ACCESS_DENIED_MESSAGE);
+    }
+  });
+
+  it('rejects missing email', () => {
+    expect(() => assertResellerFeatureAccess(null)).toThrow(AppError);
+  });
+});
+
+describe('getResellerEligibility flow', () => {
+  it('denies non-allowlisted users before checking organisation metrics', async () => {
+    const { getResellerEligibility } = await import('./get-reseller-eligibility');
+
+    const eligibility = await getResellerEligibility({
+      organisationId: 'org_1',
+      userEmail: 'other@example.com',
+    });
+
+    expect(eligibility.isEligible).toBe(false);
+    expect(eligibility.reasons).toContain(RESELLER_FEATURE_ACCESS_DENIED_MESSAGE);
+    expect(prismaMock.envelope.count).not.toHaveBeenCalled();
+  });
+
+  it('returns eligible for allowlisted org without active application or profile', async () => {
+    const { getResellerEligibility } = await import('./get-reseller-eligibility');
+
+    setupOrganisationMetrics();
+    setupSubscription();
+    setupNoActiveApplicationOrProfile();
+
+    const eligibility = await getResellerEligibility({
+      organisationId: 'org_1',
+      userEmail: ALLOWED_EMAIL,
+    });
+
+    expect(eligibility.isEligible).toBe(true);
+    expect(eligibility.reasons).toHaveLength(0);
+    expect(eligibility.hasActiveApplication).toBe(false);
+    expect(eligibility.hasActiveResellerProfile).toBe(false);
+  });
+
+  it('blocks allowlisted org with an active application in progress', async () => {
+    const { getResellerEligibility } = await import('./get-reseller-eligibility');
+
+    setupOrganisationMetrics();
+    setupSubscription();
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      status: ResellerApplicationStatus.PENDING,
+    });
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+
+    const eligibility = await getResellerEligibility({
+      organisationId: 'org_1',
+      userEmail: ALLOWED_EMAIL,
+    });
+
+    expect(eligibility.isEligible).toBe(false);
+    expect(eligibility.hasActiveApplication).toBe(true);
+    expect(eligibility.reasons).toContain(
+      'An application is already in progress for this organisation.',
+    );
+  });
+
+  it('allows re-application after rejection', async () => {
+    const { getResellerEligibility } = await import('./get-reseller-eligibility');
+
+    setupOrganisationMetrics();
+    setupSubscription();
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      status: ResellerApplicationStatus.REJECTED,
+    });
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+
+    const eligibility = await getResellerEligibility({
+      organisationId: 'org_1',
+      userEmail: ALLOWED_EMAIL,
+    });
+
+    expect(eligibility.isEligible).toBe(true);
+    expect(eligibility.hasActiveApplication).toBe(false);
+  });
+
+  it('blocks allowlisted org that already has a reseller profile', async () => {
+    const { getResellerEligibility } = await import('./get-reseller-eligibility');
+
+    setupOrganisationMetrics();
+    setupSubscription();
+    prismaMock.resellerApplication.findUnique.mockResolvedValue(null);
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({ id: 'profile_1' });
+
+    const eligibility = await getResellerEligibility({
+      organisationId: 'org_1',
+      userEmail: ALLOWED_EMAIL,
+    });
+
+    expect(eligibility.isEligible).toBe(false);
+    expect(eligibility.hasActiveResellerProfile).toBe(true);
+    expect(eligibility.reasons).toContain('This organisation is already an active reseller.');
+  });
+});
+
+describe('createResellerApplication flow', () => {
+  it('creates a pending application with organisation snapshot metrics', async () => {
+    const { createResellerApplication } = await import('./create-reseller-application');
+
+    setupOrganisationMetrics({
+      completedDocumentCount: 75,
+      creditsConsumed: 55,
+      uniqueSignerCount: 12,
+      orgUserCount: 4,
+    });
+    setupSubscription();
+    setupNoActiveApplicationOrProfile();
+
+    const orgCreatedAt = new Date('2025-01-01T00:00:00.000Z');
+
+    prismaMock.organisation.findUniqueOrThrow.mockResolvedValue({
+      id: 'org_1',
+      name: 'Acme Corp',
+      createdAt: orgCreatedAt,
+    });
+
+    prismaMock.user.findUniqueOrThrow.mockResolvedValue({
+      id: 42,
+      name: 'Jane Applicant',
+      email: ALLOWED_EMAIL,
+    });
+
+    const createdApplication = {
+      id: 'app_1',
+      status: ResellerApplicationStatus.PENDING,
+    };
+
+    prismaMock.resellerApplication.create.mockResolvedValue(createdApplication);
+
+    const result = await createResellerApplication({
+      organisationId: 'org_1',
+      applicantUserId: 42,
+      applicantUserEmail: ALLOWED_EMAIL,
+    });
+
+    expect(result).toEqual(createdApplication);
+    expect(prismaMock.resellerApplication.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organisationId: 'org_1',
+        applicantUserId: 42,
+        status: ResellerApplicationStatus.PENDING,
+        snapshotOrgName: 'Acme Corp',
+        snapshotApplicantName: 'Jane Applicant',
+        snapshotApplicantEmail: ALLOWED_EMAIL,
+        snapshotCompletedDocCount: 75,
+        snapshotUniqueSignerCount: 12,
+        snapshotOrgUserCount: 4,
+        snapshotOrgSignupDate: orgCreatedAt,
+      }),
+    });
+  });
+
+  it('rejects ineligible organisations', async () => {
+    const { createResellerApplication } = await import('./create-reseller-application');
+
+    setupOrganisationMetrics();
+    setupSubscription();
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      status: ResellerApplicationStatus.TERMS_SENT,
+    });
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+
+    await expect(
+      createResellerApplication({
+        organisationId: 'org_1',
+        applicantUserId: 42,
+        applicantUserEmail: ALLOWED_EMAIL,
+      }),
+    ).rejects.toThrow('An application is already in progress for this organisation.');
+  });
+});
+
+describe('activateResellerFromTermsCompletion flow', () => {
+  const application = {
+    id: 'app_1',
+    organisationId: 'org_1',
+    status: ResellerApplicationStatus.TERMS_SENT,
+    snapshotApplicantEmail: ALLOWED_EMAIL,
+    snapshotApplicantName: 'Jane Applicant',
+    organisation: {
+      id: 'org_1',
+      name: 'Acme Corp',
+      url: 'acme-corp',
+    },
+    applicantUser: {
+      id: 42,
+      email: ALLOWED_EMAIL,
+    },
+  };
+
+  it('returns null when no matching application exists', async () => {
+    const { activateResellerFromTermsCompletion } = await import(
+      './activate-reseller-from-terms-completion'
+    );
+
+    prismaMock.resellerApplication.findFirst.mockResolvedValue(null);
+
+    const result = await activateResellerFromTermsCompletion({
+      envelopeId: 'envelope_abc',
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it('creates profile, packages, and sends welcome email on terms completion', async () => {
+    const { activateResellerFromTermsCompletion } = await import(
+      './activate-reseller-from-terms-completion'
+    );
+
+    prismaMock.resellerApplication.findFirst.mockResolvedValue(application);
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+
+    const createdProfile = {
+      id: 'profile_1',
+      organisationId: 'org_1',
+      affiliateSlug: 'acme-corp-abc123',
+      status: ResellerProfileStatus.ACTIVE,
+    };
+
+    prismaMock.resellerProfile.create.mockResolvedValue(createdProfile);
+    prismaMock.resellerApplication.update.mockResolvedValue({
+      ...application,
+      status: ResellerApplicationStatus.APPROVED,
+    });
+    prismaMock.resellerPackage.createMany.mockResolvedValue({ count: ESIGN_CREDIT_PACKAGES.length });
+
+    const result = await activateResellerFromTermsCompletion({
+      envelopeId: 'envelope_abc',
+      envelopeExternalId: 'app_1',
+    });
+
+    expect(result).toEqual(createdProfile);
+    expect(prismaMock.resellerPackage.createMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining([
+        expect.objectContaining({
+          creditAmount: ESIGN_CREDIT_PACKAGES[0]?.credits,
+          isEnabled: false,
+        }),
+      ]),
+    });
+    expect(prismaMock.resellerPackage.createMany.mock.calls[0]?.[0].data).toHaveLength(
+      ESIGN_CREDIT_PACKAGES.length,
+    );
+    expect(sendResellerWelcomeEmailMock).toHaveBeenCalledWith({
+      organisationName: 'Acme Corp',
+      applicantEmail: ALLOWED_EMAIL,
+      applicantName: 'Jane Applicant',
+      affiliateSlug: 'acme-corp-abc123',
+    });
+  });
+
+  it('approves application without recreating profile when profile already exists', async () => {
+    const { activateResellerFromTermsCompletion } = await import(
+      './activate-reseller-from-terms-completion'
+    );
+
+    const existingProfile = {
+      id: 'profile_1',
+      organisationId: 'org_1',
+      affiliateSlug: 'acme-corp-existing',
+    };
+
+    prismaMock.resellerApplication.findFirst.mockResolvedValue(application);
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(existingProfile);
+
+    const result = await activateResellerFromTermsCompletion({
+      envelopeId: 'envelope_abc',
+    });
+
+    expect(result).toEqual(existingProfile);
+    expect(prismaMock.resellerProfile.create).not.toHaveBeenCalled();
+    expect(prismaMock.resellerApplication.update).toHaveBeenCalledWith({
+      where: { id: 'app_1' },
+      data: expect.objectContaining({
+        status: ResellerApplicationStatus.APPROVED,
+        termsEnvelopeId: 'envelope_abc',
+      }),
+    });
+    expect(sendResellerWelcomeEmailMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('retryResellerApplicationActivation flow', () => {
+  it('activates reseller when a completed terms envelope exists', async () => {
+    const { retryResellerApplicationActivation } = await import(
+      './retry-reseller-application-activation'
+    );
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.TERMS_SENT,
+      termsEnvelopeId: 'envelope_abc',
+      externalDocGenRequestId: null,
+    });
+
+    prismaMock.envelope.findFirst.mockResolvedValue({
+      id: 'envelope_abc',
+      externalId: 'app_1',
+      secondaryId: null,
+      type: EnvelopeType.DOCUMENT,
+      status: DocumentStatus.COMPLETED,
+    });
+
+    prismaMock.resellerApplication.findFirst.mockResolvedValue({
+      id: 'app_1',
+      organisationId: 'org_1',
+      status: ResellerApplicationStatus.TERMS_SENT,
+      snapshotApplicantEmail: ALLOWED_EMAIL,
+      snapshotApplicantName: 'Jane Applicant',
+      organisation: {
+        id: 'org_1',
+        name: 'Acme Corp',
+        url: 'acme-corp',
+      },
+      applicantUser: {
+        id: 42,
+        email: ALLOWED_EMAIL,
+      },
+    });
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+    prismaMock.resellerProfile.create.mockResolvedValue({
+      id: 'profile_1',
+      affiliateSlug: 'acme-corp-xyz',
+    });
+    prismaMock.resellerPackage.createMany.mockResolvedValue({ count: ESIGN_CREDIT_PACKAGES.length });
+
+    const result = await retryResellerApplicationActivation({
+      applicationId: 'app_1',
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.envelope.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          type: EnvelopeType.DOCUMENT,
+          status: DocumentStatus.COMPLETED,
+        }),
+      }),
+    );
+  });
+
+  it('rejects activation for applications without sent terms', async () => {
+    const { retryResellerApplicationActivation } = await import(
+      './retry-reseller-application-activation'
+    );
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.PENDING,
+    });
+
+    await expect(
+      retryResellerApplicationActivation({
+        applicationId: 'app_1',
+      }),
+    ).rejects.toThrow('Only applications with sent terms can be activated.');
+  });
+
+  it('rejects activation when no completed envelope is found', async () => {
+    const { retryResellerApplicationActivation } = await import(
+      './retry-reseller-application-activation'
+    );
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.TERMS_SENT,
+      termsEnvelopeId: null,
+      externalDocGenRequestId: null,
+    });
+
+    prismaMock.envelope.findFirst.mockResolvedValue(null);
+
+    await expect(
+      retryResellerApplicationActivation({
+        applicationId: 'app_1',
+      }),
+    ).rejects.toThrow('No completed reseller terms document was found for this application.');
+  });
+});
+
+describe('admin reseller application actions', () => {
+  it('marks application as rejected with optional reason', async () => {
+    const { rejectResellerApplication } = await import('./admin-reseller-actions');
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.PENDING,
+    });
+
+    const rejectedApplication = {
+      id: 'app_1',
+      status: ResellerApplicationStatus.REJECTED,
+      rejectionReason: 'Does not meet criteria',
+    };
+
+    prismaMock.resellerApplication.update.mockResolvedValue(rejectedApplication);
+
+    const result = await rejectResellerApplication({
+      applicationId: 'app_1',
+      rejectionReason: 'Does not meet criteria',
+    });
+
+    expect(result).toEqual(rejectedApplication);
+  });
+
+  it('rejects in-progress applications only', async () => {
+    const { rejectResellerApplication } = await import('./admin-reseller-actions');
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.APPROVED,
+    });
+
+    await expect(
+      rejectResellerApplication({
+        applicationId: 'app_1',
+      }),
+    ).rejects.toThrow('This application can no longer be rejected or cancelled.');
+  });
+
+  it('marks application as cancelled with optional reason', async () => {
+    const { cancelResellerApplication } = await import('./admin-reseller-actions');
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.TERMS_SENT,
+    });
+
+    const cancelledApplication = {
+      id: 'app_1',
+      status: ResellerApplicationStatus.CANCELLED,
+    };
+
+    prismaMock.resellerApplication.update.mockResolvedValue(cancelledApplication);
+
+    const result = await cancelResellerApplication({
+      applicationId: 'app_1',
+      cancellationReason: 'Withdrawn by admin',
+    });
+
+    expect(result).toEqual(cancelledApplication);
+    expect(prismaMock.resellerApplication.update).toHaveBeenCalledWith({
+      where: { id: 'app_1' },
+      data: expect.objectContaining({
+        status: ResellerApplicationStatus.CANCELLED,
+        rejectionReason: 'Withdrawn by admin',
+      }),
+    });
+  });
+
+  it('deactivates an active reseller profile', async () => {
+    const { deactivateResellerProfile } = await import('./admin-reseller-actions');
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.APPROVED,
+      organisationId: 'org_1',
+    });
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      id: 'profile_1',
+      status: ResellerProfileStatus.ACTIVE,
+    });
+
+    prismaMock.resellerProfile.update.mockResolvedValue({
+      id: 'profile_1',
+      status: ResellerProfileStatus.INACTIVE,
+    });
+
+    const result = await deactivateResellerProfile({
+      applicationId: 'app_1',
+    });
+
+    expect(result.status).toBe(ResellerProfileStatus.INACTIVE);
+  });
+
+  it('reactivates an inactive reseller profile', async () => {
+    const { reactivateResellerProfile } = await import('./admin-reseller-actions');
+
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.APPROVED,
+      organisationId: 'org_1',
+    });
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      id: 'profile_1',
+      status: ResellerProfileStatus.INACTIVE,
+    });
+
+    prismaMock.resellerProfile.update.mockResolvedValue({
+      id: 'profile_1',
+      status: ResellerProfileStatus.ACTIVE,
+    });
+
+    const result = await reactivateResellerProfile({
+      applicationId: 'app_1',
+    });
+
+    expect(result.status).toBe(ResellerProfileStatus.ACTIVE);
+  });
+});
+
+describe('sendResellerTerms flow', () => {
+  it('requires a configured terms template', async () => {
+    getResellerSiteSettingsMock.mockResolvedValue({});
+
+    await expect(
+      sendResellerTerms({
+        applications: [],
+        requestMetadata: {
+          ipAddress: '127.0.0.1',
+          userAgent: 'vitest',
+        },
+      }),
+    ).rejects.toThrow('Reseller T&Cs template is not configured');
+  });
+
+  it('requires DocGen organization id when DocGen template is configured', async () => {
+    getResellerSiteSettingsMock.mockResolvedValue({
+      termsDocGenTemplateId: 839,
+    });
+
+    await expect(
+      sendResellerTerms({
+        applications: [],
+        requestMetadata: {
+          ipAddress: '127.0.0.1',
+          userAgent: 'vitest',
+        },
+      }),
+    ).rejects.toThrow('Nomia DocGen organization ID is not configured');
+  });
+});
+
+describe('initializeResellerPurchase flow', () => {
+  const profile = {
+    id: 'profile_1',
+    organisationId: 'reseller_org',
+    affiliateSlug: 'acme-reseller',
+    status: ResellerProfileStatus.ACTIVE,
+    allowNegativeCredits: false,
+    packages: [
+      {
+        id: 'pkg_1',
+        isEnabled: true,
+        creditAmount: 50,
+        priceInCents: 45000,
+        currency: 'ZAR',
+      },
+    ],
+    organisation: {
+      id: 'reseller_org',
+      name: 'Reseller Org',
+    },
+  };
+
+  it('initializes Paystack transaction for valid purchase', async () => {
+    const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
+    getOrganisationCreditsMock.mockResolvedValue(100);
+    createTransactionMock.mockResolvedValue({
+      status: true,
+      data: {
+        authorization_url: 'https://paystack.test/pay',
+        reference: 'ref_abc',
+      },
+    });
+
+    const result = await initializeResellerPurchase({
+      affiliateSlug: 'acme-reseller',
+      packageId: 'pkg_1',
+      purchaserOrganisationId: 'buyer_org',
+      purchaserUserId: 99,
+      purchaserEmail: 'buyer@example.com',
+    });
+
+    expect(result.authorizationUrl).toBe('https://paystack.test/pay');
+    expect(result.reference).toBe('ref_abc');
+    expect(createTransactionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'buyer@example.com',
+        amount: 45000,
+        metadata: expect.objectContaining({
+          type: 'reseller-credit-purchase',
+          resellerProfileId: 'profile_1',
+          purchaserOrganisationId: 'buyer_org',
+          packageId: 'pkg_1',
+        }),
+      }),
+    );
+  });
+
+  it('blocks self-purchase from the reseller organisation', async () => {
+    const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
+
+    await expect(
+      initializeResellerPurchase({
+        affiliateSlug: 'acme-reseller',
+        packageId: 'pkg_1',
+        purchaserOrganisationId: 'reseller_org',
+        purchaserUserId: 99,
+        purchaserEmail: 'buyer@example.com',
+      }),
+    ).rejects.toThrow('You cannot purchase credits from your own reseller account');
+  });
+
+  it('blocks purchase when reseller has insufficient credits', async () => {
+    const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
+    getOrganisationCreditsMock.mockResolvedValue(10);
+
+    await expect(
+      initializeResellerPurchase({
+        affiliateSlug: 'acme-reseller',
+        packageId: 'pkg_1',
+        purchaserOrganisationId: 'buyer_org',
+        purchaserUserId: 99,
+        purchaserEmail: 'buyer@example.com',
+      }),
+    ).rejects.toThrow('does not currently have enough credits available');
+  });
+
+  it('rejects disabled or missing packages', async () => {
+    const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      ...profile,
+      packages: [
+        {
+          id: 'pkg_1',
+          isEnabled: false,
+          creditAmount: 50,
+          priceInCents: 45000,
+        },
+      ],
+    });
+
+    await expect(
+      initializeResellerPurchase({
+        affiliateSlug: 'acme-reseller',
+        packageId: 'pkg_1',
+        purchaserOrganisationId: 'buyer_org',
+        purchaserUserId: 99,
+        purchaserEmail: 'buyer@example.com',
+      }),
+    ).rejects.toThrow('Package is not available for purchase');
+  });
+});
+
+describe('processResellerPaystackWebhook flow', () => {
+  const baseMetadata = {
+    type: 'reseller-credit-purchase' as const,
+    resellerProfileId: 'profile_1',
+    purchaserOrganisationId: 'buyer_org',
+    purchaserUserId: 99,
+    packageId: 'pkg_1',
+    expectedAmount: 45000,
+  };
+
+  const profile = {
+    id: 'profile_1',
+    organisationId: 'reseller_org',
+    status: ResellerProfileStatus.ACTIVE,
+    vatNumber: '4123456789',
+    allowNegativeCredits: false,
+    organisation: {
+      id: 'reseller_org',
+      name: 'Reseller Org',
+    },
+  };
+
+  const pkg = {
+    id: 'pkg_1',
+    resellerProfileId: 'profile_1',
+    isEnabled: true,
+    creditAmount: 50,
+    priceInCents: 45000,
+    currency: 'ZAR',
+  };
+
+  const purchaserOrganisation = {
+    id: 'buyer_org',
+    name: 'Buyer Org',
+    ownerUserId: 99,
+    owner: {
+      name: 'Buyer Name',
+    },
+  };
+
+  const setupSuccessfulWebhookMocks = () => {
+    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue(null);
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
+    prismaMock.resellerPackage.findUnique.mockResolvedValue(pkg);
+    prismaMock.organisation.findUnique.mockResolvedValue(purchaserOrganisation);
+    prismaMock.organisation.findUniqueOrThrow
+      .mockResolvedValueOnce({ ownerUserId: 1 })
+      .mockResolvedValueOnce({ ownerUserId: 99 });
+    prismaMock.userCredits.findFirst
+      .mockResolvedValueOnce({ id: 'credits_reseller', credits: 100 })
+      .mockResolvedValueOnce({ id: 'credits_buyer', credits: 20 });
+    prismaMock.resellerCreditTransaction.create.mockResolvedValue({
+      id: 'txn_1',
+      status: ResellerCreditTransactionStatus.PENDING,
+    });
+    prismaMock.resellerCreditTransaction.update.mockResolvedValue({
+      id: 'txn_1',
+      status: ResellerCreditTransactionStatus.COMPLETED,
+    });
+  };
+
+  it('ignores non-reseller webhook events', async () => {
+    const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
+
+    const result = await processResellerPaystackWebhook({
+      paystackReference: 'ref_1',
+      metadata: { type: 'other-event' },
+      amountInCents: 45000,
+      purchaserEmail: 'buyer@example.com',
+    });
+
+    expect(result).toEqual({ handled: false });
+  });
+
+  it('transfers credits and completes transaction on successful payment', async () => {
+    const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
+
+    setupSuccessfulWebhookMocks();
+
+    const result = await processResellerPaystackWebhook({
+      paystackReference: 'ref_success',
+      metadata: baseMetadata,
+      amountInCents: 45000,
+      purchaserEmail: 'buyer@example.com',
+      purchaserName: 'Buyer Name',
+    });
+
+    expect(result.handled).toBe(true);
+    expect(result).toHaveProperty('transaction');
+    expect(prismaMock.userCredits.update).toHaveBeenCalledWith({
+      where: { id: 'credits_reseller' },
+      data: expect.objectContaining({ credits: 50 }),
+    });
+    expect(prismaMock.userCredits.update).toHaveBeenCalledWith({
+      where: { id: 'credits_buyer' },
+      data: expect.objectContaining({ credits: 70 }),
+    });
+  });
+
+  it('returns duplicate for already completed transactions', async () => {
+    const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
+
+    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue({
+      status: ResellerCreditTransactionStatus.COMPLETED,
+    });
+
+    const result = await processResellerPaystackWebhook({
+      paystackReference: 'ref_dup',
+      metadata: baseMetadata,
+      amountInCents: 45000,
+      purchaserEmail: 'buyer@example.com',
+    });
+
+    expect(result).toEqual({ handled: true, duplicate: true });
+    expect(prismaMock.resellerProfile.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('rejects payments with mismatched amounts', async () => {
+    const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
+
+    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue(null);
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
+    prismaMock.resellerPackage.findUnique.mockResolvedValue(pkg);
+    prismaMock.organisation.findUnique.mockResolvedValue(purchaserOrganisation);
+
+    await expect(
+      processResellerPaystackWebhook({
+        paystackReference: 'ref_mismatch',
+        metadata: baseMetadata,
+        amountInCents: 100,
+        purchaserEmail: 'buyer@example.com',
+      }),
+    ).rejects.toThrow('Payment amount does not match package price');
+  });
+
+  it('rejects purchases when reseller has insufficient credits', async () => {
+    const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
+
+    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue(null);
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
+    prismaMock.resellerPackage.findUnique.mockResolvedValue(pkg);
+    prismaMock.organisation.findUnique.mockResolvedValue(purchaserOrganisation);
+    prismaMock.organisation.findUniqueOrThrow
+      .mockResolvedValueOnce({ ownerUserId: 1 })
+      .mockResolvedValueOnce({ ownerUserId: 99 });
+    prismaMock.userCredits.findFirst.mockResolvedValueOnce({ id: 'credits_reseller', credits: 5 });
+    prismaMock.resellerCreditTransaction.create.mockResolvedValue({
+      id: 'txn_1',
+      status: ResellerCreditTransactionStatus.PENDING,
+    });
+
+    await expect(
+      processResellerPaystackWebhook({
+        paystackReference: 'ref_low_credits',
+        metadata: baseMetadata,
+        amountInCents: 45000,
+        purchaserEmail: 'buyer@example.com',
+      }),
+    ).rejects.toThrow('Insufficient reseller credits');
+  });
+});
+
+describe('reseller profile and packages flow', () => {
+  it('returns null profile data for organisations without a reseller profile', async () => {
+    const { getResellerProfileByOrganisationId } = await import('./reseller-profile');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+
+    const profile = await getResellerProfileByOrganisationId('org_1');
+
+    expect(profile).toBeNull();
+  });
+
+  it('returns only enabled packages on public affiliate lookup', async () => {
+    const { getResellerProfileByAffiliateSlug } = await import('./reseller-profile');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      id: 'profile_1',
+      organisationId: 'org_1',
+      affiliateSlug: 'acme-reseller',
+      status: ResellerProfileStatus.ACTIVE,
+      packages: [{ id: 'pkg_enabled', isEnabled: true, creditAmount: 50 }],
+      organisation: { id: 'org_1', name: 'Acme', url: 'acme' },
+    });
+    getOrganisationCreditsMock.mockResolvedValue(80);
+
+    const profile = await getResellerProfileByAffiliateSlug('acme-reseller');
+
+    expect(profile?.availableCredits).toBe(80);
+    expect(profile?.packages).toHaveLength(1);
+    expect(prismaMock.resellerProfile.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { affiliateSlug: 'acme-reseller' },
+        include: expect.objectContaining({
+          packages: expect.objectContaining({
+            where: { isEnabled: true },
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('toggles package availability by catalog package id', async () => {
+    const { updateResellerPackages } = await import('./reseller-profile');
+
+    prismaMock.resellerProfile.findUnique
+      .mockResolvedValueOnce({
+        id: 'profile_1',
+        packages: [
+          { id: 'pkg_1', catalogPackageId: 'payg-20' },
+          { id: 'pkg_2', catalogPackageId: 'payg-50' },
+        ],
+      })
+      .mockResolvedValueOnce({
+        id: 'profile_1',
+        organisationId: 'org_1',
+        packages: [],
+        organisation: { id: 'org_1', name: 'Acme', url: 'acme' },
+      });
+
+    getOrganisationCreditsMock.mockResolvedValue(50);
+    prismaMock.resellerPackage.update.mockResolvedValue({});
+
+    await updateResellerPackages({
+      organisationId: 'org_1',
+      enabledCatalogPackageIds: ['payg-50'],
+    });
+
+    expect(prismaMock.resellerPackage.update).toHaveBeenCalledWith({
+      where: { id: 'pkg_1' },
+      data: { isEnabled: false },
+    });
+    expect(prismaMock.resellerPackage.update).toHaveBeenCalledWith({
+      where: { id: 'pkg_2' },
+      data: { isEnabled: true },
+    });
+  });
+});
+
+describe('reseller transactions flow', () => {
+  it('returns empty results when organisation has no reseller profile', async () => {
+    const { findResellerTransactions } = await import('./reseller-profile');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+
+    const result = await findResellerTransactions({
+      organisationId: 'org_1',
+    });
+
+    expect(result).toEqual({
+      data: [],
+      count: 0,
+      currentPage: 1,
+      perPage: 20,
+      totalPages: 0,
+    });
+  });
+
+  it('exports transactions and flags truncation above the export limit', async () => {
+    const { exportResellerTransactions, RESELLER_TRANSACTION_EXPORT_LIMIT } = await import(
+      './reseller-profile'
+    );
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      id: 'profile_1',
+      vatNumber: '4123456789',
+      organisation: { id: 'org_1', name: 'Acme Corp' },
+    });
+    prismaMock.resellerCreditTransaction.count.mockResolvedValue(
+      RESELLER_TRANSACTION_EXPORT_LIMIT + 1,
+    );
+    prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([
+      {
+        id: 'txn_1',
+        grossAmount: 45000,
+        vatAmount: 5870,
+        createdAt: new Date('2026-07-03T10:00:00.000Z'),
+      },
+    ]);
+
+    const result = await exportResellerTransactions({
+      organisationId: 'org_1',
+      fromDate: new Date('2026-07-01'),
+      toDate: new Date('2026-07-31'),
+    });
+
+    expect(result.resellerOrganisationName).toBe('Acme Corp');
+    expect(result.truncated).toBe(true);
+    expect(result.count).toBe(RESELLER_TRANSACTION_EXPORT_LIMIT + 1);
+    expect(prismaMock.resellerCreditTransaction.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: RESELLER_TRANSACTION_EXPORT_LIMIT,
+      }),
+    );
+  });
+});
+
+describe('reseller formatting helpers', () => {
+  it('formats cents as decimal currency strings', () => {
+    expect(formatCentsAsDecimal(45000)).toBe('450.00');
+    expect(formatCentsAsDecimal(0)).toBe('0.00');
+  });
+});

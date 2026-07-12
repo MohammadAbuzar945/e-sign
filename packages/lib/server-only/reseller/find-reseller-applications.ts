@@ -72,6 +72,13 @@ export const findResellerApplications = async ({
             name: true,
             url: true,
             createdAt: true,
+            resellerProfile: {
+              select: {
+                id: true,
+                status: true,
+                affiliateSlug: true,
+              },
+            },
           },
         },
         applicantUser: {
@@ -94,6 +101,7 @@ export const findResellerApplications = async ({
 
       return {
         ...application,
+        resellerProfile: application.organisation.resellerProfile,
         liveCompletedDocCount: metrics.completedDocumentCount,
         liveUniqueSignerCount: metrics.uniqueSignerCount,
         liveOrgUserCount: metrics.orgUserCount,

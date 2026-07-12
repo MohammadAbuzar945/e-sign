@@ -1,3 +1,5 @@
+import { ResellerProfileStatus } from '@prisma/client';
+
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createTransaction } from '@documenso/lib/server-only/paystack';
@@ -30,6 +32,12 @@ export const initializeResellerPurchase = async ({
   if (!profile) {
     throw new AppError(AppErrorCode.NOT_FOUND, {
       message: 'Reseller not found',
+    });
+  }
+
+  if (profile.status !== ResellerProfileStatus.ACTIVE) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'This reseller is not currently accepting purchases',
     });
   }
 

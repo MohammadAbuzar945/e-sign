@@ -101,6 +101,18 @@ describe('reseller terms completion matching', () => {
       { termsEnvelopeId: 'application_123' },
     ]);
   });
+
+  it('matches applications by envelope secondary id', () => {
+    const where = buildResellerApplicationTermsCompletionWhere({
+      envelopeId: 'envelope_abc',
+      envelopeSecondaryId: 'secondary_123',
+    });
+
+    expect(where.OR).toEqual([
+      { termsEnvelopeId: 'envelope_abc' },
+      { termsEnvelopeId: 'secondary_123' },
+    ]);
+  });
 });
 
 describe('reseller DocGen template variables', () => {

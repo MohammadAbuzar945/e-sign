@@ -1,7 +1,5 @@
 import { findResellerApplications } from '@documenso/lib/server-only/reseller/find-reseller-applications';
-import {
-  rejectResellerApplication,
-} from '@documenso/lib/server-only/reseller/process-reseller-paystack-webhook';
+import { rejectResellerApplication } from '@documenso/lib/server-only/reseller/admin-reseller-actions';
 import { retryResellerApplicationActivation } from '@documenso/lib/server-only/reseller/retry-reseller-application-activation';
 import { sendResellerTerms } from '@documenso/lib/server-only/reseller/send-reseller-terms';
 import { assertResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';

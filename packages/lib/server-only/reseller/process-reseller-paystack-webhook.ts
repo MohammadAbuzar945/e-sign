@@ -1,5 +1,4 @@
 import {
-  ResellerApplicationStatus,
   ResellerCreditTransactionStatus,
   ResellerProfileStatus,
 } from '@prisma/client';
@@ -218,19 +217,3 @@ export const processResellerPaystackWebhook = async ({
   return { handled: true as const, transaction };
 };
 
-export const rejectResellerApplication = async ({
-  applicationId,
-  rejectionReason,
-}: {
-  applicationId: string;
-  rejectionReason?: string;
-}) => {
-  return await prisma.resellerApplication.update({
-    where: { id: applicationId },
-    data: {
-      status: ResellerApplicationStatus.REJECTED,
-      rejectedAt: new Date(),
-      rejectionReason,
-    },
-  });
-};
