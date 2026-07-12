@@ -65,11 +65,12 @@ export const createResellerApplication = async ({
     where: { organisationId },
   });
 
-  const application =
+  const canReapplyExistingApplication =
     existingApplication &&
-    [ResellerApplicationStatus.REJECTED, ResellerApplicationStatus.CANCELLED].includes(
-      existingApplication.status,
-    )
+    (existingApplication.status === ResellerApplicationStatus.REJECTED ||
+      existingApplication.status === ResellerApplicationStatus.CANCELLED);
+
+  const application = canReapplyExistingApplication
       ? await prisma.resellerApplication.update({
           where: { id: existingApplication.id },
           data: applicationData,
