@@ -297,7 +297,35 @@ describe('getResellerEligibility flow', () => {
 
     expect(eligibility.isEligible).toBe(false);
     expect(eligibility.hasActiveResellerProfile).toBe(true);
-    expect(eligibility.reasons).toContain('This organisation is already an active reseller.');
+    expect(eligibility.reasons).toEqual([]);
+  });
+
+  it('does not surface application-in-progress reasons for active resellers', async () => {
+    const { getResellerEligibility } = await import('./get-reseller-eligibility');
+
+    setupOrganisationMetrics();
+    setupSubscription();
+    prismaMock.resellerApplication.findUnique.mockResolvedValue({
+      status: ResellerApplicationStatus.APPROVED,
+      appliedAt: new Date('2026-01-01'),
+      termsSentAt: new Date('2026-01-02'),
+      termsCompletedAt: new Date('2026-01-03'),
+      approvedAt: new Date('2026-01-03'),
+      rejectedAt: null,
+      rejectionReason: null,
+    });
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({ id: 'profile_1' });
+
+    const eligibility = await getResellerEligibility({
+      organisationId: 'org_1',
+      userEmail: ALLOWED_EMAIL,
+    });
+
+    expect(eligibility.hasActiveResellerProfile).toBe(true);
+    expect(eligibility.reasons).toEqual([]);
+    expect(eligibility.reasons).not.toContain(
+      'An application is already in progress for this organisation.',
+    );
   });
 });
 
@@ -551,6 +579,95 @@ describe('activateResellerFromTermsCompletion flow', () => {
       }),
     });
     expect(sendResellerWelcomeEmailMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('rejectResellerApplicationFromTermsRejection flow', () => {
+  const application = {
+    id: 'app_1',
+    organisationId: 'org_1',
+    status: ResellerApplicationStatus.TERMS_SENT,
+    termsEnvelopeId: 'envelope_abc',
+  };
+
+  it('returns null when no matching application exists', async () => {
+    const { rejectResellerApplicationFromTermsRejection } = await import(
+      './reject-reseller-application-from-terms-rejection'
+    );
+
+    prismaMock.resellerApplication.findFirst.mockResolvedValue(null);
+
+    const result = await rejectResellerApplicationFromTermsRejection({
+      envelopeId: 'envelope_abc',
+    });
+
+    expect(result).toBeNull();
+    expect(prismaMock.resellerApplication.update).not.toHaveBeenCalled();
+  });
+
+  it('marks the application as rejected by reseller with the document reason', async () => {
+    const { rejectResellerApplicationFromTermsRejection } = await import(
+      './reject-reseller-application-from-terms-rejection'
+    );
+
+    prismaMock.resellerApplication.findFirst.mockResolvedValue(application);
+    prismaMock.resellerApplication.update.mockResolvedValue({
+      ...application,
+      status: ResellerApplicationStatus.REJECTED,
+      rejectionReason: 'Rejected by reseller: I do not agree with the terms',
+    });
+
+    const result = await rejectResellerApplicationFromTermsRejection({
+      envelopeId: 'envelope_abc',
+      rejectionReason: 'I do not agree with the terms',
+    });
+
+    expect(result?.status).toBe(ResellerApplicationStatus.REJECTED);
+    expect(prismaMock.resellerApplication.update).toHaveBeenCalledWith({
+      where: { id: 'app_1' },
+      data: {
+        status: ResellerApplicationStatus.REJECTED,
+        rejectedAt: expect.any(Date),
+        rejectionReason: 'Rejected by reseller: I do not agree with the terms',
+      },
+    });
+    expect(sendResellerRejectionEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('uses the default rejection label when no document reason is provided', async () => {
+    const {
+      formatResellerTermsRejectionReason,
+      getResellerApplicationStatusLabel,
+      rejectResellerApplicationFromTermsRejection,
+    } = await import('./reject-reseller-application-from-terms-rejection');
+
+    expect(formatResellerTermsRejectionReason()).toBe('Rejected by reseller');
+    expect(
+      getResellerApplicationStatusLabel('REJECTED', 'Rejected by reseller: Declined'),
+    ).toBe('Rejected by reseller');
+    expect(getResellerApplicationStatusLabel('REJECTED', 'Insufficient activity')).toBe(
+      'REJECTED',
+    );
+
+    prismaMock.resellerApplication.findFirst.mockResolvedValue(application);
+    prismaMock.resellerApplication.update.mockResolvedValue({
+      ...application,
+      status: ResellerApplicationStatus.REJECTED,
+      rejectionReason: 'Rejected by reseller',
+    });
+
+    await rejectResellerApplicationFromTermsRejection({
+      envelopeId: 'envelope_abc',
+    });
+
+    expect(prismaMock.resellerApplication.update).toHaveBeenCalledWith({
+      where: { id: 'app_1' },
+      data: {
+        status: ResellerApplicationStatus.REJECTED,
+        rejectedAt: expect.any(Date),
+        rejectionReason: 'Rejected by reseller',
+      },
+    });
   });
 });
 

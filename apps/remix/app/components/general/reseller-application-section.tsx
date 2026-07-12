@@ -239,86 +239,97 @@ export const ResellerApplicationSection = () => {
         </div>
 
         <div className="space-y-4 px-6 py-5">
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              <Trans>Qualification requirements</Trans>
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              <Trans>
-                Complete the steps below before applying so we know you are familiar with the
-                platform.
-              </Trans>
-            </p>
-          </div>
-
-          {isLoading ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              <Skeleton className="h-28 rounded-lg" />
-              <Skeleton className="h-28 rounded-lg" />
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              <EligibilityRequirement
-                isMet={hasMetCredits}
-                title={<Trans>Use platform credits</Trans>}
-                description={
-                  <Trans>
-                    Use at least {eligibility?.requiredCredits ?? 50} e-sign credits before applying.
-                  </Trans>
-                }
-                progressLabel={`${eligibility?.creditsUsed ?? 0} / ${eligibility?.requiredCredits ?? 50} credits`}
-                progressValue={creditsProgress}
-              />
-
-              <EligibilityRequirement
-                isMet={hasMetSubscription}
-                title={<Trans>Subscription tenure</Trans>}
-                description={
-                  <Trans>
-                    Stay subscribed for at least {eligibility?.requiredSubscriptionMonths ?? 2}{' '}
-                    months.
-                  </Trans>
-                }
-                progressLabel={
-                  hasMetSubscription ? (
-                    <Trans>Requirement met</Trans>
-                  ) : (
-                    <Trans>Keep your subscription active</Trans>
-                  )
-                }
-                progressValue={hasMetSubscription ? 100 : 25}
-              />
-            </div>
-          )}
-
-          {!isLoading && eligibility && eligibility.reasons.length > 0 && !canApply ? (
-            <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
-              <p className="text-sm font-medium text-foreground">
-                <Trans>Before you can apply</Trans>
-              </p>
-              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                {eligibility.reasons.map((reason) => (
-                  <li key={reason} className="flex gap-2">
-                    <span className="text-amber-600">•</span>
-                    <span>{reason}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {!isLoading && canApply && !hasActiveApplication && !isActiveReseller ? (
+          {isActiveReseller ? (
             <p className="text-sm text-muted-foreground">
               <Trans>
-                You meet the requirements. Submit your application and our team will send reseller
-                terms for review.
+                Your reseller account is active. Manage your affiliate link, packages, and Paystack
+                settings from reseller settings.
               </Trans>
             </p>
-          ) : null}
+          ) : (
+            <>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  <Trans>Qualification requirements</Trans>
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  <Trans>
+                    Complete the steps below before applying so we know you are familiar with the
+                    platform.
+                  </Trans>
+                </p>
+              </div>
 
-          {!isLoading && eligibility?.application && !isActiveReseller ? (
-            <ResellerApplicationTimeline application={eligibility.application} />
-          ) : null}
+              {isLoading ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Skeleton className="h-28 rounded-lg" />
+                  <Skeleton className="h-28 rounded-lg" />
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <EligibilityRequirement
+                    isMet={hasMetCredits}
+                    title={<Trans>Use platform credits</Trans>}
+                    description={
+                      <Trans>
+                        Use at least {eligibility?.requiredCredits ?? 50} e-sign credits before applying.
+                      </Trans>
+                    }
+                    progressLabel={`${eligibility?.creditsUsed ?? 0} / ${eligibility?.requiredCredits ?? 50} credits`}
+                    progressValue={creditsProgress}
+                  />
+
+                  <EligibilityRequirement
+                    isMet={hasMetSubscription}
+                    title={<Trans>Subscription tenure</Trans>}
+                    description={
+                      <Trans>
+                        Stay subscribed for at least {eligibility?.requiredSubscriptionMonths ?? 2}{' '}
+                        months.
+                      </Trans>
+                    }
+                    progressLabel={
+                      hasMetSubscription ? (
+                        <Trans>Requirement met</Trans>
+                      ) : (
+                        <Trans>Keep your subscription active</Trans>
+                      )
+                    }
+                    progressValue={hasMetSubscription ? 100 : 25}
+                  />
+                </div>
+              )}
+
+              {!isLoading && eligibility && eligibility.reasons.length > 0 && !canApply ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+                  <p className="text-sm font-medium text-foreground">
+                    <Trans>Before you can apply</Trans>
+                  </p>
+                  <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                    {eligibility.reasons.map((reason) => (
+                      <li key={reason} className="flex gap-2">
+                        <span className="text-amber-600">•</span>
+                        <span>{reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {!isLoading && canApply && !hasActiveApplication ? (
+                <p className="text-sm text-muted-foreground">
+                  <Trans>
+                    You meet the requirements. Submit your application and our team will send reseller
+                    terms for review.
+                  </Trans>
+                </p>
+              ) : null}
+
+              {!isLoading && eligibility?.application ? (
+                <ResellerApplicationTimeline application={eligibility.application} />
+              ) : null}
+            </>
+          )}
         </div>
       </section>
 

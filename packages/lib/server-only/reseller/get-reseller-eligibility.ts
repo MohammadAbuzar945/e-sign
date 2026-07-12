@@ -152,12 +152,10 @@ export const getResellerEligibility = async ({
     );
   }
 
-  if (existingApplication && !['REJECTED', 'CANCELLED'].includes(existingApplication.status)) {
-    reasons.push('An application is already in progress for this organisation.');
-  }
-
-  if (existingProfile) {
-    reasons.push('This organisation is already an active reseller.');
+  if (!existingProfile) {
+    if (existingApplication && !['REJECTED', 'CANCELLED'].includes(existingApplication.status)) {
+      reasons.push('An application is already in progress for this organisation.');
+    }
   }
 
   const meetsRequirements =
@@ -176,7 +174,7 @@ export const getResellerEligibility = async ({
     : null;
 
   return {
-    isEligible: meetsRequirements && reasons.length === 0,
+    isEligible: meetsRequirements && reasons.length === 0 && !existingProfile,
     creditsUsed,
     requiredCredits: RESELLER_MIN_CREDITS_USED,
     hasSubscriptionTenure,

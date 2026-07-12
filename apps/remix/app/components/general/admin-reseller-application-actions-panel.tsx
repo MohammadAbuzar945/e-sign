@@ -2,6 +2,10 @@ import { useLingui } from '@lingui/react/macro';
 import { Trans } from '@lingui/react/macro';
 import { InfoIcon, MoreHorizontalIcon } from 'lucide-react';
 
+import {
+  getResellerApplicationStatusLabel,
+  isResellerTermsRejectionReason,
+} from '@documenso/lib/server-only/reseller/reject-reseller-application-from-terms-rejection';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
@@ -24,6 +28,7 @@ type ResellerApplicationRow = {
   snapshotApplicantName: string;
   snapshotApplicantEmail: string;
   appliedAt: Date | string;
+  rejectionReason?: string | null;
   resellerProfile?: {
     status: string;
   } | null;
@@ -124,6 +129,13 @@ export const AdminResellerApplicationActionsPanel = ({
   const hasAnyAction =
     hasPrimaryAction || hasSecondaryAction || hasAdminTools || hasDangerActions;
 
+  const applicationStatusLabel = getResellerApplicationStatusLabel(
+    application.status,
+    application.rejectionReason,
+  );
+
+  const isRejectedByReseller = isResellerTermsRejectionReason(application.rejectionReason);
+
   return (
     <aside className="animate-in fade-in slide-in-from-right-2 w-full shrink-0 duration-200 lg:w-80">
       <div className="sticky top-6 space-y-5 rounded-lg border bg-background p-5 shadow-sm">
@@ -138,11 +150,17 @@ export const AdminResellerApplicationActionsPanel = ({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Badge variant="neutral">{application.status}</Badge>
+            <Badge variant={isRejectedByReseller ? 'destructive' : 'neutral'}>
+              {applicationStatusLabel}
+            </Badge>
             {application.resellerProfile?.status && (
               <Badge variant="neutral">{application.resellerProfile.status}</Badge>
             )}
           </div>
+
+          {application.status === 'REJECTED' && application.rejectionReason ? (
+            <p className="text-xs text-muted-foreground">{application.rejectionReason}</p>
+          ) : null}
 
           <p className="text-xs text-muted-foreground">
             <Trans>

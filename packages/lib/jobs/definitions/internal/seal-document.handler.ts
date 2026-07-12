@@ -410,7 +410,18 @@ export const run = async ({
     teamId: updatedEnvelope.teamId ?? undefined,
   });
 
-  if (!isRejected) {
+  if (isRejected) {
+    const { rejectResellerApplicationFromTermsRejection } = await import(
+      '@documenso/lib/server-only/reseller/reject-reseller-application-from-terms-rejection'
+    );
+
+    await rejectResellerApplicationFromTermsRejection({
+      envelopeId,
+      envelopeExternalId: updatedEnvelope.externalId,
+      envelopeSecondaryId: updatedEnvelope.secondaryId,
+      rejectionReason,
+    });
+  } else {
     const { activateResellerFromTermsCompletion } = await import(
       '@documenso/lib/server-only/reseller/activate-reseller-from-terms-completion'
     );

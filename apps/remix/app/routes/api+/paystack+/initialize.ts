@@ -30,16 +30,52 @@ export async function action({ request }: { request: Request }) {
 
 
     console.log('Transaction data:', transaction.data);
-    //create subscription record in database
-    const subscription = await prisma.subscription.create({
-      data: {
-        planId: validatedData.plan ?? '',
-        priceId: validatedData.plan ?? '',
-        customerId: validatedData.email,
-        organisationId: validatedData.metadata?.organisationId as string,
+
+    const organisationId = validatedData.metadata?.organisationId;
+
+    if (typeof organisationId !== 'string' || organisationId.length === 0) {
+      return new Response(
+        JSON.stringify({
+          error: 'organisationId is required in metadata',
+        }),
+        { status: 400 },
+      );
+    }
+
+    const paystackReference = transaction.data.reference;
+    const planCode = validatedData.plan ?? '';
+
+    // planId must be globally unique (Stripe subscription id / Paystack subscription_code).
+    // Until Paystack returns a subscription_code, use the checkout reference as a temporary id.
+    const existingPendingSubscription = await prisma.subscription.findFirst({
+      where: {
+        organisationId,
+        priceId: planCode,
         status: 'PAST_DUE',
       },
+      orderBy: {
+        updatedAt: 'desc',
+      },
     });
+
+    const subscription = existingPendingSubscription
+      ? await prisma.subscription.update({
+          where: { id: existingPendingSubscription.id },
+          data: {
+            planId: paystackReference,
+            priceId: planCode,
+            customerId: validatedData.email,
+          },
+        })
+      : await prisma.subscription.create({
+          data: {
+            planId: paystackReference,
+            priceId: planCode,
+            customerId: validatedData.email,
+            organisationId,
+            status: 'PAST_DUE',
+          },
+        });
 
     console.log('Subscription created:', subscription);
 

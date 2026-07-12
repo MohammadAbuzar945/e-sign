@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router';
 
 import { AppError } from '@documenso/lib/errors/app-error';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
+import { getResellerApplicationStatusLabel } from '@documenso/lib/server-only/reseller/reject-reseller-application-from-terms-rejection';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { trpc } from '@documenso/trpc/react';
 import { AdminResellerApplicationActionsPanel } from '~/components/general/admin-reseller-application-actions-panel';
@@ -25,6 +26,7 @@ import {
   AlertDialogTitle,
 } from '@documenso/ui/primitives/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
+import { Badge } from '@documenso/ui/primitives/badge';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
@@ -210,7 +212,26 @@ export const AdminResellerApplicationsTable = () => {
       },
       {
         header: t`Application status`,
-        accessorKey: 'status',
+        cell: ({ row }) => {
+          const statusLabel = getResellerApplicationStatusLabel(
+            row.original.status,
+            row.original.rejectionReason,
+          );
+
+          return (
+            <Badge
+              variant={
+                row.original.status === 'REJECTED' || row.original.status === 'CANCELLED'
+                  ? 'destructive'
+                  : row.original.status === 'APPROVED'
+                    ? 'default'
+                    : 'secondary'
+              }
+            >
+              {statusLabel}
+            </Badge>
+          );
+        },
       },
       {
         header: t`Reseller status`,

@@ -4,6 +4,7 @@ import { CheckCircle2Icon, CircleIcon, XCircleIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { ResellerApplicationSummary } from '@documenso/lib/server-only/reseller/get-reseller-eligibility';
+import { isResellerTermsRejectionReason } from '@documenso/lib/server-only/reseller/reject-reseller-application-from-terms-rejection';
 import { cn } from '@documenso/ui/lib/utils';
 
 type TimelineStep = {
@@ -34,6 +35,8 @@ const buildTimelineSteps = (application: ResellerApplicationSummary): TimelineSt
   const { status } = application;
 
   if (status === ResellerApplicationStatus.REJECTED) {
+    const rejectedByReseller = isResellerTermsRejectionReason(application.rejectionReason);
+
     return [
       {
         key: 'applied',
@@ -44,16 +47,22 @@ const buildTimelineSteps = (application: ResellerApplicationSummary): TimelineSt
       },
       {
         key: 'review',
-        title: <Trans>Under review</Trans>,
-        description: <Trans>We reviewed your organisation details and eligibility.</Trans>,
+        title: <Trans>Terms & conditions sent</Trans>,
+        description: <Trans>We sent reseller terms for you to review and sign.</Trans>,
         date: application.termsSentAt ?? application.rejectedAt,
         state: 'complete',
       },
       {
         key: 'rejected',
-        title: <Trans>Application rejected</Trans>,
+        title: rejectedByReseller ? (
+          <Trans>Terms rejected</Trans>
+        ) : (
+          <Trans>Application rejected</Trans>
+        ),
         description: application.rejectionReason ? (
           application.rejectionReason
+        ) : rejectedByReseller ? (
+          <Trans>You declined the reseller terms. You may apply again.</Trans>
         ) : (
           <Trans>Your application was not approved. You may apply again.</Trans>
         ),
