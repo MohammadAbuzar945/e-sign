@@ -144,12 +144,14 @@ export const resolvePaystackBankAccount = async ({
     });
   }
 
-  const supportedResolveCurrencies = ['NGN', 'USD', 'GHS', 'KES'] as const;
-  const currencyParam = supportedResolveCurrencies.includes(
-    resolvedCurrency as (typeof supportedResolveCurrencies)[number],
-  )
-    ? resolvedCurrency
-    : 'NGN';
+  const supportedResolveCurrencies = ['NGN', 'USD', 'GHS', 'KES', 'ZAR'] as const;
+  const currencyParam: (typeof supportedResolveCurrencies)[number] =
+    resolvedCurrency &&
+    supportedResolveCurrencies.includes(
+      resolvedCurrency as (typeof supportedResolveCurrencies)[number],
+    )
+      ? (resolvedCurrency as (typeof supportedResolveCurrencies)[number])
+      : 'ZAR';
 
   const result = await paystackFetch<{
     account_number: string;
