@@ -18,6 +18,7 @@ jobs:
           username: ${{ secrets.STAGING_SERVER_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
           port: ${{ secrets.STAGING_SERVER_PORT || 22 }}
+          command_timeout: 45m
           script_stop: true
           script: |
             set -e
@@ -30,7 +31,6 @@ jobs:
             git fetch origin
             git checkout "${{ github.ref_name }}"
             git pull origin "${{ github.ref_name }}"
-            npm ci
             npm run build
             npm run prisma:migrate-deploy
             pm2 restart 1 --update-env
