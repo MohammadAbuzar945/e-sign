@@ -179,7 +179,7 @@ export const AdminResellerApplicationActionsPanel = ({
             </Trans>
           </p>
 
-          {/* {application.resellerProfile?.status === 'ACTIVE' && ( */}
+          {application.resellerProfile?.status === 'ACTIVE' && (
             <div className="space-y-1 rounded-md border bg-muted/30 p-3 text-xs">
               <p>
                 <Trans>
@@ -198,7 +198,7 @@ export const AdminResellerApplicationActionsPanel = ({
                 </p>
               )}
             </div>
-          // )}
+          )}
         </div>
 
         {showActivationNote && (
