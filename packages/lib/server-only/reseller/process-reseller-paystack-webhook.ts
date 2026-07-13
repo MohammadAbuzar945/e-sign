@@ -1,5 +1,6 @@
 import {
   ResellerCreditTransactionStatus,
+  ResellerPayoutMode,
   ResellerProfileStatus,
 } from '@prisma/client';
 
@@ -32,11 +33,13 @@ export type ProcessResellerPaystackWebhookOptions = {
   paystackReference: string;
   metadata: {
     type?: string;
+    payoutMode?: string;
     resellerProfileId?: string;
     purchaserOrganisationId?: string;
     purchaserUserId?: number | string;
     packageId?: string;
     expectedAmount?: number | string;
+    subaccountCode?: string;
   };
   amountInCents: number;
   purchaserEmail: string;
@@ -52,6 +55,8 @@ const buildTransactionRecordData = ({
   purchaserEmail,
   purchaserName,
   vatAmount,
+  payoutMode,
+  paystackSubaccountCode,
 }: {
   profile: {
     id: string;
@@ -75,6 +80,8 @@ const buildTransactionRecordData = ({
   purchaserEmail: string;
   purchaserName?: string;
   vatAmount: number;
+  payoutMode: ResellerPayoutMode;
+  paystackSubaccountCode?: string | null;
 }) => ({
   resellerProfileId: profile.id,
   resellerOrganisationId: profile.organisationId,
@@ -87,6 +94,8 @@ const buildTransactionRecordData = ({
   vatAmount,
   currency: pkg.currency,
   status: ResellerCreditTransactionStatus.PENDING,
+  payoutMode,
+  paystackSubaccountCode: paystackSubaccountCode ?? null,
   purchaserName: purchaserName ?? purchaserOrganisation.owner.name ?? purchaserEmail,
   purchaserEmail,
   purchaserOrganisationName: purchaserOrganisation.name,
@@ -178,6 +187,16 @@ export const processResellerPaystackWebhook = async ({
   }
 
   const vatAmount = calculateResellerVatAmountInCents(pkg.priceInCents, profile.vatNumber);
+  const payoutMode =
+    metadata.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT
+      ? ResellerPayoutMode.NOMIA_SUBACCOUNT
+      : profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT
+        ? ResellerPayoutMode.NOMIA_SUBACCOUNT
+        : ResellerPayoutMode.OWN_PAYSTACK;
+  const paystackSubaccountCode =
+    typeof metadata.subaccountCode === 'string'
+      ? metadata.subaccountCode
+      : profile.paystackSubaccountCode;
 
   const fulfillmentResult = await prisma.$transaction(async (tx) => {
     const transactionRecord =
@@ -192,6 +211,8 @@ export const processResellerPaystackWebhook = async ({
           purchaserEmail,
           purchaserName: resolvedPurchaserName,
           vatAmount,
+          payoutMode,
+          paystackSubaccountCode,
         }),
       }));
 

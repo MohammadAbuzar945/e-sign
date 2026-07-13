@@ -1263,6 +1263,17 @@ enum ResellerCreditTransactionStatus {
   REFUNDED
 }
 
+enum ResellerPayoutMode {
+  OWN_PAYSTACK
+  NOMIA_SUBACCOUNT
+}
+
+enum ResellerSubaccountStatus {
+  PENDING
+  ACTIVE
+  FAILED
+}
+
 model ResellerApplication {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -1317,6 +1328,18 @@ model ResellerProfile {
   vatNumber             String?
   allowNegativeCredits  Boolean   @default(false)
   instructionsDismissedAt DateTime?
+
+  payoutMode                ResellerPayoutMode @default(OWN_PAYSTACK)
+  paystackSubaccountCode    String?
+  paystackSubaccountId      Int?
+  bankCode                  String?
+  bankName                  String?
+  bankAccountNumber         String?
+  bankAccountName           String?
+  subaccountStatus          ResellerSubaccountStatus?
+  subaccountVerifiedAt      DateTime?
+  subaccountFailureReason   String?
+  platformFeePercent        Decimal? @db.Decimal(5, 2)
 
   brandingEnabled         Boolean @default(false)
   brandingLogo            String?
@@ -1379,6 +1402,9 @@ model ResellerCreditTransaction {
   vatAmount    Int     @default(0)
   currency     String  @default("ZAR")
   status       ResellerCreditTransactionStatus @default(PENDING)
+
+  payoutMode               ResellerPayoutMode @default(OWN_PAYSTACK)
+  paystackSubaccountCode   String?
 
   purchaserName            String
   purchaserEmail           String

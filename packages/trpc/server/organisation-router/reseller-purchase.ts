@@ -24,8 +24,9 @@ export const getAffiliateResellerRoute = procedure
 
     const packages = profile.packages.map((pkg) => {
       const catalog = ESIGN_CREDIT_PACKAGES.find((item) => item.id === pkg.catalogPackageId);
-      const canPurchase =
+      const hasEnoughCredits =
         profile.allowNegativeCredits || profile.availableCredits >= pkg.creditAmount;
+      const canPurchase = profile.canAcceptAffiliatePayments && hasEnoughCredits;
 
       return {
         id: pkg.id,
@@ -45,6 +46,9 @@ export const getAffiliateResellerRoute = procedure
       organisationName: profile.organisation.name,
       availableCredits: profile.availableCredits,
       allowNegativeCredits: profile.allowNegativeCredits,
+      payoutMode: profile.payoutMode,
+      canAcceptPayments: profile.canAcceptAffiliatePayments,
+      payoutBlockingReason: profile.payoutBlockingReason,
       hasPackages: packages.length > 0,
       brandingEnabled: profile.brandingEnabled,
       brandingLogo: profile.brandingLogo,

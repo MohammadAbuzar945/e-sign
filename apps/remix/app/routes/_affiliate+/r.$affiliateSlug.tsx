@@ -246,10 +246,16 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
               </Button>
               {!pkg.canPurchase && (
                 <p className="text-center text-xs text-amber-700">
-                  <Trans>
-                    This package is temporarily unavailable because the reseller does not have enough
-                    credits.
-                  </Trans>
+                  {affiliate.canAcceptPayments ? (
+                    <Trans>
+                      This package is temporarily unavailable because the reseller does not have
+                      enough credits.
+                    </Trans>
+                  ) : (
+                    affiliate.payoutBlockingReason || (
+                      <Trans>This reseller is not ready to accept payments right now.</Trans>
+                    )
+                  )}
                 </p>
               )}
               <p className="text-center text-xs text-muted-foreground">
