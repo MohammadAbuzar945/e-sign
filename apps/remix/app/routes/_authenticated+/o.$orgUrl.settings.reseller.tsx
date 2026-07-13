@@ -838,23 +838,32 @@ export default function OrganisationSettingsResellerPage() {
                   </TableCell>
                   <TableCell>
                     {transaction.status === 'PENDING' ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-amber-700">
-                          <Trans>Pending manual transfer</Trans>
-                        </span>
-                        {transaction.canManualTransfer ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-amber-700">
+                            <Trans>Pending manual transfer</Trans>
+                          </span>
                           <Button
                             size="sm"
                             variant="outline"
                             loading={transferringTransactionId === transaction.id}
                             disabled={
-                              transferringTransactionId !== null &&
-                              transferringTransactionId !== transaction.id
+                              !transaction.canManualTransfer ||
+                              (transferringTransactionId !== null &&
+                                transferringTransactionId !== transaction.id)
                             }
                             onClick={() => handleManualTransfer(transaction.id)}
                           >
                             <Trans>Transfer</Trans>
                           </Button>
+                        </div>
+                        {!transaction.canManualTransfer && profile ? (
+                          <p className="text-xs text-muted-foreground">
+                            <Trans>
+                              Top up at least {transaction.credits - profile.availableCredits} more
+                              credits to transfer (you have {profile.availableCredits} available).
+                            </Trans>
+                          </p>
                         ) : null}
                       </div>
                     ) : (
