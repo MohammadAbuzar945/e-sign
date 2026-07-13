@@ -1,10 +1,15 @@
 import { Trans } from '@lingui/react/macro';
-import { CheckCircle2Icon, CircleIcon } from 'lucide-react';
+import { CheckCircle2Icon, ChevronDownIcon, CircleIcon } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 import { CopyTextButton } from '@documenso/ui/components/common/copy-text-button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@documenso/ui/primitives/collapsible';
 
 type ResellerOnboardingChecklistProps = {
   organisationId: string;
@@ -130,33 +135,48 @@ export const ResellerOnboardingChecklist = ({
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 via-background to-background shadow-sm">
-      <div className="border-b bg-muted/20 px-5 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              <Trans>Getting started checklist</Trans>
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              <Trans>Complete these steps to start selling credits through your affiliate page.</Trans>
-            </p>
-          </div>
-          <p className="text-sm font-medium text-foreground">
-            <Trans>
-              {completedCount} of {steps.length} complete
-            </Trans>
-          </p>
-        </div>
+    <Collapsible defaultOpen={false}>
+      <section className="overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 via-background to-background shadow-sm">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="group w-full border-b bg-muted/20 px-5 py-4 text-left transition-colors hover:bg-muted/30"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      <Trans>Getting started checklist</Trans>
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      <Trans>
+                        Complete these steps to start selling credits through your affiliate page.
+                      </Trans>
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-sm font-medium text-foreground">
+                    <Trans>
+                      {completedCount} of {steps.length} complete
+                    </Trans>
+                  </p>
+                </div>
 
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${progressValue}%` }}
-          />
-        </div>
-      </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${progressValue}%` }}
+                  />
+                </div>
+              </div>
 
-      <div className="space-y-3 p-5">
+              <ChevronDownIcon className="mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </div>
+          </button>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent>
+          <div className="space-y-3 p-5">
         {steps.map((step) => (
           <div
             key={step.key}
@@ -204,7 +224,9 @@ export const ResellerOnboardingChecklist = ({
             </div>
           </div>
         ))}
-      </div>
-    </section>
+          </div>
+        </CollapsibleContent>
+      </section>
+    </Collapsible>
   );
 };
