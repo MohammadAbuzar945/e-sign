@@ -11,9 +11,18 @@ import { getResellerPayoutReadiness } from './reseller-payout-readiness';
 import { encryptResellerSecret, maskBankAccountNumber } from './reseller-secrets';
 import { syncResellerSubaccountStatus } from './update-reseller-payout';
 
-const maybeSyncPendingSubaccountStatus = async (
-  profile: NonNullable<Awaited<ReturnType<typeof prisma.resellerProfile.findUnique>>>,
-) => {
+const maybeSyncPendingSubaccountStatus = async <
+  T extends {
+    organisationId: string;
+    subaccountStatus: ResellerSubaccountStatus | null;
+    paystackSubaccountCode: string | null;
+    subaccountVerifiedAt: Date | null;
+    subaccountFailureReason: string | null;
+    paystackSubaccountId: number | null;
+  },
+>(
+  profile: T,
+): Promise<T> => {
   if (
     profile.subaccountStatus !== ResellerSubaccountStatus.PENDING ||
     !profile.paystackSubaccountCode
