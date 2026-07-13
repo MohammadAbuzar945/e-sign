@@ -13,6 +13,7 @@ import path from 'node:path';
 import { groupBy } from 'remeda';
 
 import { deductOrganisationCredits, getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
+import { organisationAllowsNegativeCredits } from '@documenso/lib/server-only/reseller/organisation-allows-negative-credits';
 import { addRejectionStampToPdf } from '@documenso/lib/server-only/pdf/add-rejection-stamp-to-pdf';
 import { generateAuditLogPdf } from '@documenso/lib/server-only/pdf/generate-audit-log-pdf';
 import { generateCertificatePdf } from '@documenso/lib/server-only/pdf/generate-certificate-pdf';
@@ -183,8 +184,10 @@ export const run = async ({
 
     // Check if organisation has enough credits before proceeding (only for completed documents, not rejected or resealing)
     if (!isRejected && !isResealing) {
+      const allowNegativeCredits = await organisationAllowsNegativeCredits(organisationId);
       const userCredits = await getOrganisationCredits(organisationId);
-      if (userCredits < creditsToConsume) {
+
+      if (!allowNegativeCredits && userCredits < creditsToConsume) {
         throw new AppError(AppErrorCode.INVALID_REQUEST, {
           message: 'Insufficient credits to seal document',
           userMessage: `You do not have enough credits to complete this document. This envelope requires ${creditsToConsume} credit(s). Please purchase more credits.`,
@@ -366,7 +369,11 @@ export const run = async ({
     // Deduct credits when document is completed (not rejected)
     // Use organization's credits pool
     if (!isRejected && !isResealing) {
-      await deductOrganisationCredits(organisationId, creditsToConsume);
+      const allowNegativeCredits = await organisationAllowsNegativeCredits(organisationId);
+
+      await deductOrganisationCredits(organisationId, creditsToConsume, {
+        allowNegative: allowNegativeCredits,
+      });
     }
 
     return {

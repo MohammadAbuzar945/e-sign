@@ -59,7 +59,15 @@ export const ensureOrganisationCredits = async (organisationId: string, userId: 
  * Deducts credits from an organisation's account.
  * Returns the updated credits record.
  */
-export const deductOrganisationCredits = async (organisationId: string, amount: number = 1) => {
+export const deductOrganisationCredits = async (
+  organisationId: string,
+  amount: number = 1,
+  {
+    allowNegative = false,
+  }: {
+    allowNegative?: boolean;
+  } = {},
+) => {
   // Get organisation to find the owner userId
   const organisation = await prisma.organisation.findUnique({
     where: { id: organisationId },
@@ -72,12 +80,17 @@ export const deductOrganisationCredits = async (organisationId: string, amount: 
 
   const userCredits = await ensureOrganisationCredits(organisationId, organisation.ownerUserId);
 
+  const nextCredits = allowNegative
+    ? userCredits.credits - amount
+    : Math.max(userCredits.credits - amount, 0);
+
   const updatedCredits = await prisma.userCredits.update({
     where: {
       id: userCredits.id,
     },
     data: {
-      credits: Math.max(userCredits.credits - amount, 0),
+      credits: nextCredits,
+      lastUpdatedAt: new Date(),
     },
   });
 

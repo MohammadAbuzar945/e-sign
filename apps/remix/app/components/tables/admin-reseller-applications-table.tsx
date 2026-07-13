@@ -261,6 +261,40 @@ export const AdminResellerApplicationsTable = () => {
         cell: ({ row }) => row.original.resellerProfile?.status ?? '—',
       },
       {
+        header: t`Negative credits`,
+        cell: ({ row }) => {
+          const profile = row.original.resellerProfile;
+
+          if (!profile || profile.status !== 'ACTIVE') {
+            return '—';
+          }
+
+          return (
+            <Badge variant={profile.allowNegativeCredits ? 'default' : 'neutral'}>
+              {profile.allowNegativeCredits ? t`Enabled` : t`Disabled`}
+            </Badge>
+          );
+        },
+      },
+      {
+        header: t`Negative used`,
+        cell: ({ row }) => {
+          const negativeCreditsUsed = row.original.resellerProfile?.negativeCreditsUsed ?? 0;
+
+          if (!row.original.resellerProfile) {
+            return '—';
+          }
+
+          if (negativeCreditsUsed === 0) {
+            return '0';
+          }
+
+          return (
+            <span className="font-medium text-amber-700">{negativeCreditsUsed}</span>
+          );
+        },
+      },
+      {
         header: t`Applied`,
         cell: ({ row }) => new Date(row.original.appliedAt).toLocaleDateString(),
       },

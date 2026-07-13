@@ -1,6 +1,8 @@
 import type { Prisma } from '@prisma/client';
 
+import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
+import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
 
 type FindResellerApplicationsOptions = {
@@ -99,10 +101,27 @@ export const findResellerApplications = async ({
   const enrichedData = await Promise.all(
     data.map(async (application) => {
       const metrics = await getLiveApplicationMetrics(application.organisationId);
+      const resellerProfile = application.organisation.resellerProfile;
+
+      if (!resellerProfile) {
+        return {
+          ...application,
+          resellerProfile: null,
+          liveCompletedDocCount: metrics.completedDocumentCount,
+          liveUniqueSignerCount: metrics.uniqueSignerCount,
+          liveOrgUserCount: metrics.orgUserCount,
+        };
+      }
+
+      const availableCredits = await getOrganisationCredits(application.organisationId);
 
       return {
         ...application,
-        resellerProfile: application.organisation.resellerProfile ?? null,
+        resellerProfile: {
+          ...resellerProfile,
+          availableCredits,
+          negativeCreditsUsed: getNegativeCreditsUsed(availableCredits),
+        },
         liveCompletedDocCount: metrics.completedDocumentCount,
         liveUniqueSignerCount: metrics.uniqueSignerCount,
         liveOrgUserCount: metrics.orgUserCount,

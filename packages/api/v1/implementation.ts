@@ -364,9 +364,12 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
         };
       }
 
-      const { remaining } = await getServerLimits({ userId: user.id, teamId: team.id });
+      const { remaining, allowNegativeCredits } = await getServerLimits({
+        userId: user.id,
+        teamId: team.id,
+      });
 
-      if (remaining.documents <= 0) {
+      if (!allowNegativeCredits && remaining.documents <= 0) {
         return {
           status: 400,
           body: {
@@ -738,9 +741,12 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
         },
       });
 
-      const { remaining } = await getServerLimits({ userId: user.id, teamId: team.id });
+      const { remaining, allowNegativeCredits } = await getServerLimits({
+        userId: user.id,
+        teamId: team.id,
+      });
 
-      if (remaining.documents <= 0) {
+      if (!allowNegativeCredits && remaining.documents <= 0) {
         return {
           status: 400,
           body: {
@@ -884,9 +890,12 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
         },
       });
 
-      const { remaining } = await getServerLimits({ userId: user.id, teamId: team.id });
+      const { remaining, allowNegativeCredits } = await getServerLimits({
+        userId: user.id,
+        teamId: team.id,
+      });
 
-      if (remaining.documents <= 0) {
+      if (!allowNegativeCredits && remaining.documents <= 0) {
         return {
           status: 400,
           body: {

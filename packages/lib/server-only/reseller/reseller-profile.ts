@@ -4,6 +4,7 @@ import { ResellerProfileStatus } from '@prisma/client';
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { getPaystackWebhookUrl, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
+import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
 
 export const getResellerProfileByOrganisationId = async (organisationId: string) => {
@@ -34,6 +35,7 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
   return {
     ...profile,
     availableCredits,
+    negativeCreditsUsed: getNegativeCreditsUsed(availableCredits),
     affiliateUrl: `${NEXT_PUBLIC_WEBAPP_URL()}/r/${profile.affiliateSlug}`,
     paystackWebhookUrl: getPaystackWebhookUrl(),
     hasPaystackConfigured: Boolean(profile.paystackPublicKey && profile.paystackSecretKey),

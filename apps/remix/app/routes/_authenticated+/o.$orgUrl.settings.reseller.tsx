@@ -376,6 +376,15 @@ export default function OrganisationSettingsResellerPage() {
           <p className="mt-2 font-medium">
             <Trans>Available credits: {profile.availableCredits}</Trans>
           </p>
+          {(profile.allowNegativeCredits || profile.negativeCreditsUsed > 0) && (
+            <p
+              className={`mt-1 font-medium ${
+                profile.negativeCreditsUsed > 0 ? 'text-amber-700' : 'text-muted-foreground'
+              }`}
+            >
+              <Trans>Negative credits used: {profile.negativeCreditsUsed}</Trans>
+            </p>
+          )}
         </AlertDescription>
       </Alert>
 

@@ -34,6 +34,8 @@ type ResellerApplicationRow = {
   resellerProfile?: {
     status: string;
     allowNegativeCredits?: boolean;
+    availableCredits?: number;
+    negativeCreditsUsed?: number;
   } | null;
 };
 
@@ -176,6 +178,27 @@ export const AdminResellerApplicationActionsPanel = ({
               Applied {new Date(application.appliedAt).toLocaleDateString()}
             </Trans>
           </p>
+
+          {/* {application.resellerProfile?.status === 'ACTIVE' && ( */}
+            <div className="space-y-1 rounded-md border bg-muted/30 p-3 text-xs">
+              <p>
+                <Trans>
+                  Available credits: {application.resellerProfile.availableCredits ?? 0}
+                </Trans>
+              </p>
+              {(application.resellerProfile.negativeCreditsUsed ?? 0) > 0 ? (
+                <p className="font-medium text-amber-700">
+                  <Trans>
+                    Negative credits used: {application.resellerProfile.negativeCreditsUsed}
+                  </Trans>
+                </p>
+              ) : (
+                <p className="text-muted-foreground">
+                  <Trans>Negative credits used: 0</Trans>
+                </p>
+              )}
+            </div>
+          // )}
         </div>
 
         {showActivationNote && (

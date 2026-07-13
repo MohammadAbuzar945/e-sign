@@ -54,7 +54,13 @@ export default function OrganisationSettingsTeamsPage() {
         {canCreateTeam && <TeamCreateDialog />}
       </SettingsHeader>
 
-      <p className="mb-2 text-sm text-muted-foreground">
+      <p
+        className={`mb-2 text-sm ${
+          organisation.credits !== undefined && organisation.credits < 0
+            ? 'font-medium text-amber-700'
+            : 'text-muted-foreground'
+        }`}
+      >
         {t`Total credits remaining for this organisation: ${organisation.credits ?? 0}`}
       </p>
 

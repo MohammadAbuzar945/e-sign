@@ -19,6 +19,21 @@ import {
   resolveResellerVatAmountInCents,
 } from '@documenso/lib/utils/reseller-vat';
 
+describe('reseller credits helpers', () => {
+  it('returns zero when balance is not negative', async () => {
+    const { getNegativeCreditsUsed } = await import('@documenso/lib/utils/reseller-credits');
+
+    expect(getNegativeCreditsUsed(100)).toBe(0);
+    expect(getNegativeCreditsUsed(0)).toBe(0);
+  });
+
+  it('returns absolute deficit when balance is negative', async () => {
+    const { getNegativeCreditsUsed } = await import('@documenso/lib/utils/reseller-credits');
+
+    expect(getNegativeCreditsUsed(-150)).toBe(150);
+  });
+});
+
 describe('reseller constants', () => {
   it('defines qualification thresholds', () => {
     expect(RESELLER_MIN_CREDITS_USED).toBe(50);

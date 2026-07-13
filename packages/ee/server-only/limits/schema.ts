@@ -24,6 +24,7 @@ export const ZLimitsResponseSchema = z.object({
   quota: ZLimitsSchema,
   remaining: ZLimitsSchema,
   maximumEnvelopeItemCount: z.number().optional().default(DEFAULT_MINIMUM_ENVELOPE_ITEM_COUNT),
+  allowNegativeCredits: z.boolean().optional().default(false),
 });
 
 export type TLimitsResponseSchema = z.infer<typeof ZLimitsResponseSchema>;

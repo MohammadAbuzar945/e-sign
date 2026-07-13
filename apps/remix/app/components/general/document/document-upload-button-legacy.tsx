@@ -54,7 +54,7 @@ export const DocumentUploadButtonLegacy = ({
     TIME_ZONES.find((timezone) => timezone === Intl.DateTimeFormat().resolvedOptions().timeZone) ??
     DEFAULT_DOCUMENT_TIME_ZONE;
 
-  const { quota, remaining, refreshLimits } = useLimits();
+  const { remaining, refreshLimits, allowNegativeCredits } = useLimits();
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -78,16 +78,20 @@ export const DocumentUploadButtonLegacy = ({
       return;
     }
 
-    if (organisation.subscription && remaining.documents === 0) {
+    if (organisation.subscription && !allowNegativeCredits && remaining.documents === 0) {
       return msg`Document upload disabled due to unpaid invoices`;
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organisation.subscription, remaining.documents, user.emailVerified, team, type]);
+  }, [organisation.subscription, remaining.documents, allowNegativeCredits, user.emailVerified, team, type]);
 
   const onFileDrop = async (file: File) => {
     // Check if user has no credits remaining
-    if (type === EnvelopeType.DOCUMENT && (remaining.documents === 0 || remaining.documents === null)) {
+    if (
+      type === EnvelopeType.DOCUMENT &&
+      !allowNegativeCredits &&
+      (remaining.documents === 0 || remaining.documents === null)
+    ) {
       toast({
         title: _(msg`Upload failed`),
         description: _(msg`You have reached your document limit. Please upgrade your plan to upload more documents.`),
@@ -189,7 +193,14 @@ export const DocumentUploadButtonLegacy = ({
   const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
 
   const isDisabled = disabledMessage !== undefined || isOwnerNonMember;
-  const hasNoCredits = type === EnvelopeType.DOCUMENT && (remaining.documents === 0 || remaining.documents === null);
+  const hasNoCredits =
+    type === EnvelopeType.DOCUMENT &&
+    !allowNegativeCredits &&
+    (remaining.documents === 0 || remaining.documents === null);
+  const hasNegativeCredits =
+    type === EnvelopeType.DOCUMENT &&
+    typeof remaining.documents === 'number' &&
+    remaining.documents < 0;
   const showCreditsInfo = type === EnvelopeType.DOCUMENT && typeof remaining.documents === 'number';
 
   return (
@@ -211,7 +222,7 @@ export const DocumentUploadButtonLegacy = ({
             </div>
           </TooltipTrigger>
 
-          {showCreditsInfo && remaining.documents > 0 && (
+          {showCreditsInfo && remaining.documents !== 0 && (
             <TooltipContent>
               <p className="text-sm">
                 <Trans>
@@ -225,10 +236,12 @@ export const DocumentUploadButtonLegacy = ({
 
       {/* Always show remaining credits under the button */}
       {showCreditsInfo && (
-        <p className={cn(
-          "text-xs text-center",
-          hasNoCredits ? "text-muted-foreground " : "text-muted-foreground"
-        )}>
+        <p
+          className={cn(
+            'text-center text-xs',
+            hasNegativeCredits ? 'font-medium text-amber-700' : 'text-muted-foreground',
+          )}
+        >
           <Trans>
             {remaining.documents} envelopes remaining
           </Trans>

@@ -1039,6 +1039,30 @@ describe('admin reseller application actions', () => {
     ).rejects.toThrow('Negative credits can only be configured for active reseller profiles.');
   });
 
+  it('detects when an organisation allows negative credits', async () => {
+    const { organisationAllowsNegativeCredits } = await import(
+      './organisation-allows-negative-credits'
+    );
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      status: ResellerProfileStatus.ACTIVE,
+      allowNegativeCredits: true,
+    });
+
+    await expect(organisationAllowsNegativeCredits('org_1')).resolves.toBe(true);
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      status: ResellerProfileStatus.ACTIVE,
+      allowNegativeCredits: false,
+    });
+
+    await expect(organisationAllowsNegativeCredits('org_1')).resolves.toBe(false);
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+
+    await expect(organisationAllowsNegativeCredits('org_1')).resolves.toBe(false);
+  });
+
   it('deletes an approved reseller profile and application record', async () => {
     const { deleteReseller } = await import('./admin-reseller-actions');
 

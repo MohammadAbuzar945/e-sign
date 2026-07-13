@@ -50,7 +50,7 @@ export const EnvelopeEditorUploadPage = () => {
 
   const { t } = useLingui();
   const { envelope, setLocalEnvelope, relativePath, editorFields } = useCurrentEnvelopeEditor();
-  const { maximumEnvelopeItemCount, remaining } = useLimits();
+  const { maximumEnvelopeItemCount, remaining, allowNegativeCredits } = useLimits();
   const { toast } = useToast();
 
   const [localFiles, setLocalFiles] = useState<LocalFile[]>(
@@ -221,7 +221,7 @@ export const EnvelopeEditorUploadPage = () => {
       return msg`Cannot upload items after the document has been sent`;
     }
 
-    if (organisation.subscription && remaining.documents === 0) {
+    if (organisation.subscription && !allowNegativeCredits && remaining.documents === 0) {
       return msg`Document upload disabled due to unpaid invoices`;
     }
 
@@ -236,7 +236,7 @@ export const EnvelopeEditorUploadPage = () => {
 
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localFiles.length, maximumEnvelopeItemCount, remaining.documents]);
+  }, [localFiles.length, maximumEnvelopeItemCount, remaining.documents, allowNegativeCredits]);
 
   const onFileDropRejected = (fileRejections: FileRejection[]) => {
     const maxItemsReached = fileRejections.some((fileRejection) =>

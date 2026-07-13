@@ -52,7 +52,7 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
     (timezone) => timezone === Intl.DateTimeFormat().resolvedOptions().timeZone,
   );
 
-  const { quota, remaining, refreshLimits, maximumEnvelopeItemCount } = useLimits();
+  const { remaining, refreshLimits, maximumEnvelopeItemCount, allowNegativeCredits } = useLimits();
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -66,7 +66,7 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
       return msg`You must be a member of this team to upload documents.`;
     }
 
-    if (organisation.subscription && remaining.documents === 0) {
+    if (organisation.subscription && !allowNegativeCredits && remaining.documents === 0) {
       return msg`Document upload disabled due to unpaid invoices`;
     }
 
@@ -75,11 +75,15 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organisation.subscription, remaining.documents, user.emailVerified, team]);
+  }, [organisation.subscription, remaining.documents, allowNegativeCredits, user.emailVerified, team]);
 
   const onFileDrop = async (files: File[]) => {
     // Check if user has no credits remaining
-    if (type === EnvelopeType.DOCUMENT && (remaining.documents === 0 || remaining.documents === null)) {
+    if (
+      type === EnvelopeType.DOCUMENT &&
+      !allowNegativeCredits &&
+      (remaining.documents === 0 || remaining.documents === null)
+    ) {
       toast({
         title: t`Upload failed`,
         description: t`You have reached your document limit. Please upgrade your plan to upload more documents.`,
@@ -192,7 +196,14 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
   const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
 
   const isDisabled = !user.emailVerified || isOwnerNonMember;
-  const hasNoCredits = type === EnvelopeType.DOCUMENT && (remaining.documents === 0 || remaining.documents === null);
+  const hasNoCredits =
+    type === EnvelopeType.DOCUMENT &&
+    !allowNegativeCredits &&
+    (remaining.documents === 0 || remaining.documents === null);
+  const hasNegativeCredits =
+    type === EnvelopeType.DOCUMENT &&
+    typeof remaining.documents === 'number' &&
+    remaining.documents < 0;
   const showCreditsInfo = type === EnvelopeType.DOCUMENT && typeof remaining.documents === 'number';
 
   return (
@@ -215,7 +226,7 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
             </div>
           </TooltipTrigger>
 
-          {showCreditsInfo && remaining.documents > 0 && (
+          {showCreditsInfo && remaining.documents !== 0 && (
             <TooltipContent>
               <p className="text-sm">
                 <Trans>
@@ -229,10 +240,12 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
 
       {/* Always show remaining credits under the button */}
       {showCreditsInfo && (
-        <p className={cn(
-          "text-xs text-center",
-          hasNoCredits ? "text-muted-foreground" : "text-muted-foreground"
-        )}>
+        <p
+          className={cn(
+            'text-center text-xs',
+            hasNegativeCredits ? 'font-medium text-amber-700' : 'text-muted-foreground',
+          )}
+        >
           <Trans>
             {remaining.documents} envelopes remaining
           </Trans>

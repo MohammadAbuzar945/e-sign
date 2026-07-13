@@ -52,7 +52,7 @@ export const TemplatesTable = ({
   onRowSelectionChange,
 }: TemplatesTableProps) => {
   const { _, i18n } = useLingui();
-  const { remaining } = useLimits();
+  const { remaining, allowNegativeCredits } = useLimits();
 
   const team = useCurrentTeam();
   const organisation = useCurrentOrganisation();
@@ -235,7 +235,7 @@ export const TemplatesTable = ({
 
   return (
     <div className="relative">
-      {remaining.documents === 0 && (
+      {!allowNegativeCredits && remaining.documents === 0 && (
         <Alert variant="warning" className="mb-4">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>
