@@ -36,6 +36,13 @@ import {
   getAffiliateResellerRoute,
   initializeResellerPurchaseRoute,
 } from './reseller-purchase';
+import {
+  listPaystackBanksRoute,
+  refreshResellerSubaccountStatusRoute,
+  resolvePaystackBankAccountRoute,
+  updateResellerBankDetailsRoute,
+  updateResellerPayoutModeRoute,
+} from './reseller-payout';
 import { updateOrganisationRoute } from './update-organisation';
 import { updateOrganisationGroupRoute } from './update-organisation-group';
 import { updateOrganisationMemberRoute } from './update-organisation-members';
@@ -83,6 +90,11 @@ export const organisationRouter = router({
     findTransactions: findResellerTransactionsRoute,
     exportTransactions: exportResellerTransactionsRoute,
     completePendingTransaction: completePendingResellerTransactionRoute,
+    updatePayoutMode: updateResellerPayoutModeRoute,
+    updateBankDetails: updateResellerBankDetailsRoute,
+    listBanks: listPaystackBanksRoute,
+    resolveBankAccount: resolvePaystackBankAccountRoute,
+    refreshSubaccountStatus: refreshResellerSubaccountStatusRoute,
     getAffiliate: getAffiliateResellerRoute,
     initializePurchase: initializeResellerPurchaseRoute,
   },

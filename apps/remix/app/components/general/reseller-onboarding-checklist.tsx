@@ -15,7 +15,9 @@ type ResellerOnboardingChecklistProps = {
   organisationId: string;
   affiliateUrl: string;
   affiliateSlug: string;
+  payoutMode: 'OWN_PAYSTACK' | 'NOMIA_SUBACCOUNT';
   hasPaystackConfigured: boolean;
+  hasNomiaSubaccountConfigured: boolean;
   hasEnabledPackage: boolean;
   hasCustomizedBranding: boolean;
   onCopySuccess?: () => void;
@@ -37,7 +39,9 @@ export const ResellerOnboardingChecklist = ({
   organisationId,
   affiliateUrl,
   affiliateSlug,
+  payoutMode,
   hasPaystackConfigured,
+  hasNomiaSubaccountConfigured,
   hasEnabledPackage,
   hasCustomizedBranding,
   onCopySuccess,
@@ -56,15 +60,29 @@ export const ResellerOnboardingChecklist = ({
 
   const steps = useMemo<ChecklistStep[]>(
     () => [
-      {
-        key: 'paystack',
-        title: <Trans>Configure Paystack keys</Trans>,
-        description: (
-          <Trans>Add your Paystack public and secret keys so affiliate purchases go to your account.</Trans>
-        ),
-        isComplete: hasPaystackConfigured,
-        sectionId: 'reseller-setup-paystack',
-      },
+      payoutMode === 'NOMIA_SUBACCOUNT'
+        ? {
+            key: 'paystack',
+            title: <Trans>Add bank details for payouts</Trans>,
+            description: (
+              <Trans>
+                Enter your bank account so Nomia can settle affiliate purchases to you via Paystack.
+              </Trans>
+            ),
+            isComplete: hasNomiaSubaccountConfigured,
+            sectionId: 'reseller-setup-paystack',
+          }
+        : {
+            key: 'paystack',
+            title: <Trans>Configure Paystack keys</Trans>,
+            description: (
+              <Trans>
+                Add your Paystack public and secret keys so affiliate purchases go to your account.
+              </Trans>
+            ),
+            isComplete: hasPaystackConfigured,
+            sectionId: 'reseller-setup-paystack',
+          },
       {
         key: 'packages',
         title: <Trans>Enable credit packages</Trans>,
@@ -113,9 +131,11 @@ export const ResellerOnboardingChecklist = ({
       hasCopiedAffiliateLink,
       hasCustomizedBranding,
       hasEnabledPackage,
+      hasNomiaSubaccountConfigured,
       hasPaystackConfigured,
       onCopySuccess,
       organisationId,
+      payoutMode,
     ],
   );
 

@@ -1,22 +1,16 @@
 import { Paystack } from 'paystack-sdk';
-import { any } from 'zod';
 
 import { env } from '../../utils/env';
 
-
-
-// if WEBAPP_URL is localhost, use the test key
-// else use the live key
-
 const webAppUrl = env('NEXT_PUBLIC_WEBAPP_URL');
-const isProduction   = webAppUrl?.includes('e-sign.nomiadocs.com');
+const isProduction = webAppUrl?.includes('e-sign.nomiadocs.com');
 const paystackKey = isProduction ? env('NEXT_PAYSTACK_LIVE_KEY') : env('NEXT_PAYSTACK_TEST_KEY');
+
 if (!paystackKey) {
   throw new Error('Paystack key is not set');
 }
 
 const paystack = new Paystack(paystackKey);
-
 
 export { paystack };
 
@@ -45,6 +39,7 @@ export async function initializeTransaction(options: {
 export async function verifyTransaction(reference: string) {
   return paystack.transaction.verify(reference);
 }
+
 export async function disableSubscription(subscriptionCode: string) {
   return paystack.subscription.disable({
     code: subscriptionCode,
@@ -62,9 +57,32 @@ export async function createTransaction(options: {
   plan?: string;
   callback_url?: string;
   metadata?: Record<string, unknown>;
+  secretKey?: string;
+  subaccount?: string;
+  transaction_charge?: number;
+  bearer?: 'account' | 'subaccount';
 }) {
-  return paystack.transaction.initialize({
-    ...options,
-    amount: options.amount.toString(),
+  const { secretKey, subaccount, transaction_charge, bearer, ...rest } = options;
+  const client = secretKey ? new Paystack(secretKey) : paystack;
+
+  return client.transaction.initialize({
+    ...rest,
+    amount: rest.amount.toString(),
+    ...(subaccount
+      ? {
+          subaccount,
+          ...(transaction_charge !== undefined ? { transaction_charge } : {}),
+          ...(bearer ? { bearer } : {}),
+        }
+      : {}),
   });
 }
+
+export {
+  createPaystackSubaccount,
+  getNomiaPaystackSecretKey,
+  getPaystackSubaccount,
+  listPaystackBanks,
+  resolvePaystackBankAccount,
+  updatePaystackSubaccount,
+} from './reseller-paystack';

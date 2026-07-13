@@ -1157,6 +1157,12 @@ describe('initializeResellerPurchase flow', () => {
     affiliateSlug: 'acme-reseller',
     status: ResellerProfileStatus.ACTIVE,
     allowNegativeCredits: false,
+    payoutMode: 'OWN_PAYSTACK',
+    paystackPublicKey: 'pk_test',
+    paystackSecretKey: 'sk_test',
+    paystackSubaccountCode: null,
+    subaccountStatus: null,
+    platformFeePercent: null,
     vatNumber: null,
     packages: [
       {
@@ -1200,11 +1206,13 @@ describe('initializeResellerPurchase flow', () => {
       expect.objectContaining({
         email: 'buyer@example.com',
         amount: 45000,
+        secretKey: 'sk_test',
         metadata: expect.objectContaining({
           type: 'reseller-credit-purchase',
           resellerProfileId: 'profile_1',
           purchaserOrganisationId: 'buyer_org',
           packageId: 'pkg_1',
+          payoutMode: 'OWN_PAYSTACK',
         }),
       }),
     );
@@ -1225,6 +1233,68 @@ describe('initializeResellerPurchase flow', () => {
         purchaserEmail: 'buyer@example.com',
       }),
     ).rejects.toThrow('You cannot purchase credits from your own reseller account');
+  });
+
+  it('blocks checkout when reseller payout is not configured', async () => {
+    const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      ...profile,
+      paystackPublicKey: null,
+      paystackSecretKey: null,
+    });
+
+    await expect(
+      initializeResellerPurchase({
+        affiliateSlug: 'acme-reseller',
+        packageId: 'pkg_1',
+        purchaserOrganisationId: 'buyer_org',
+        purchaserUserId: 99,
+        purchaserEmail: 'buyer@example.com',
+      }),
+    ).rejects.toThrow('Paystack public and secret keys are required');
+
+    expect(createTransactionMock).not.toHaveBeenCalled();
+  });
+
+  it('initializes Nomia subaccount checkout when Mode B is ready', async () => {
+    const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      ...profile,
+      payoutMode: 'NOMIA_SUBACCOUNT',
+      paystackSubaccountCode: 'ACCT_test',
+      subaccountStatus: 'ACTIVE',
+      platformFeePercent: 0,
+    });
+    getOrganisationCreditsMock.mockResolvedValue(100);
+    createTransactionMock.mockResolvedValue({
+      status: true,
+      data: {
+        authorization_url: 'https://paystack.test/pay',
+        reference: 'ref_subaccount',
+      },
+    });
+
+    const result = await initializeResellerPurchase({
+      affiliateSlug: 'acme-reseller',
+      packageId: 'pkg_1',
+      purchaserOrganisationId: 'buyer_org',
+      purchaserUserId: 99,
+      purchaserEmail: 'buyer@example.com',
+    });
+
+    expect(result.reference).toBe('ref_subaccount');
+    expect(createTransactionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subaccount: 'ACCT_test',
+        bearer: 'subaccount',
+        metadata: expect.objectContaining({
+          payoutMode: 'NOMIA_SUBACCOUNT',
+          subaccountCode: 'ACCT_test',
+        }),
+      }),
+    );
   });
 
   it('blocks checkout when reseller has insufficient credits and negative credits are disabled', async () => {

@@ -65,6 +65,7 @@ import {
 } from '~/components/forms/reseller-affiliate-page-form';
 import { ResellerAffiliateSlugForm } from '~/components/forms/reseller-affiliate-slug-form';
 import { ResellerOnboardingChecklist } from '~/components/general/reseller-onboarding-checklist';
+import { ResellerPayoutSettings } from '~/components/general/reseller-payout-settings';
 import { appMetaTags } from '~/utils/meta';
 
 import type { Route } from './+types/o.$orgUrl.settings.reseller';
@@ -372,7 +373,9 @@ export default function OrganisationSettingsResellerPage() {
         organisationId={organisation.id}
         affiliateUrl={profile.affiliateUrl}
         affiliateSlug={profile.affiliateSlug}
+        payoutMode={profile.payoutMode}
         hasPaystackConfigured={profile.hasPaystackConfigured}
+        hasNomiaSubaccountConfigured={profile.subaccountStatus === 'ACTIVE'}
         hasEnabledPackage={hasEnabledPackage}
         hasCustomizedBranding={hasCustomizedBranding}
         onCopySuccess={() => toast({ title: _(msg`Affiliate link copied`) })}
@@ -427,6 +430,22 @@ export default function OrganisationSettingsResellerPage() {
         </AlertDescription>
       </Alert>
 
+      <ResellerPayoutSettings
+        organisationId={organisation.id}
+        payoutMode={profile.payoutMode}
+        bankCode={profile.bankCode}
+        bankName={profile.bankName}
+        bankAccountNumber={profile.bankAccountNumber}
+        bankAccountName={profile.bankAccountName}
+        subaccountStatus={profile.subaccountStatus}
+        subaccountFailureReason={profile.subaccountFailureReason}
+        canAcceptAffiliatePayments={profile.canAcceptAffiliatePayments}
+        payoutBlockingReason={profile.payoutBlockingReason}
+        onUpdated={async () => {
+          await utils.organisation.reseller.getProfile.invalidate({ organisationId: organisation.id });
+        }}
+      />
+
       <Form {...form}>
         <form
           id="reseller-setup-paystack"
@@ -440,101 +459,117 @@ export default function OrganisationSettingsResellerPage() {
           })}
         >
           <fieldset disabled={isUpdatingProfile} className="space-y-4">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold">
-                <Trans>Paystack settings</Trans>
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                <Trans>
-                  Affiliate purchases are charged to your Paystack account. Register the Nomia
-                  webhook URL in your Paystack dashboard so completed payments can transfer credits
-                  to your clients.
-                </Trans>
-              </p>
-            </div>
-
-            <Alert variant="neutral">
-              <AlertTitle>
-                <Trans>Register this webhook in Paystack</Trans>
-              </AlertTitle>
-              <AlertDescription className="mt-2 space-y-2">
-                <p className="text-sm">
-                  <Trans>
-                    Paystack Dashboard → Settings → API Keys & Webhooks → Webhook URL
-                  </Trans>
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 break-all text-xs">{profile.paystackWebhookUrl}</code>
-                  <CopyTextButton
-                    value={profile.paystackWebhookUrl}
-                    onCopySuccess={() => toast({ title: _(msg`Webhook URL copied`) })}
-                  />
-                </div>
-              </AlertDescription>
-            </Alert>
-
-            <FormField
-              control={form.control}
-              name="paystackPublicKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    <Trans>Paystack public key</Trans>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      data-1p-ignore
-                      data-lpignore="true"
-                      data-form-type="other"
-                      inputMode="text"
-                      placeholder="pk_live_..."
-                      className="font-mono"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="paystackSecretKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    <Trans>Paystack secret key</Trans>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="text"
-                      autoComplete="off"
-                      autoCorrect="off"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      data-1p-ignore
-                      data-lpignore="true"
-                      data-form-type="other"
-                      inputMode="text"
-                      placeholder="sk_live_..."
-                      className="font-mono"
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
+            {profile.payoutMode === 'OWN_PAYSTACK' ? (
+              <>
+                <div className="space-y-2">
+                  <h2 className="text-lg font-semibold">
+                    <Trans>Paystack settings</Trans>
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
                     <Trans>
-                      Leave blank to keep your existing secret key. Paste a new key only when you
-                      want to replace it.
+                      Affiliate purchases are charged to your Paystack account. Register the Nomia
+                      webhook URL in your Paystack dashboard so completed payments can transfer
+                      credits to your clients.
                     </Trans>
                   </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                </div>
+
+                <Alert variant="neutral">
+                  <AlertTitle>
+                    <Trans>Register this webhook in Paystack</Trans>
+                  </AlertTitle>
+                  <AlertDescription className="mt-2 space-y-2">
+                    <p className="text-sm">
+                      <Trans>
+                        Paystack Dashboard → Settings → API Keys & Webhooks → Webhook URL
+                      </Trans>
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 break-all text-xs">{profile.paystackWebhookUrl}</code>
+                      <CopyTextButton
+                        value={profile.paystackWebhookUrl}
+                        onCopySuccess={() => toast({ title: _(msg`Webhook URL copied`) })}
+                      />
+                    </div>
+                  </AlertDescription>
+                </Alert>
+
+                <FormField
+                  control={form.control}
+                  name="paystackPublicKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Trans>Paystack public key</Trans>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="none"
+                          spellCheck={false}
+                          data-1p-ignore
+                          data-lpignore="true"
+                          data-form-type="other"
+                          inputMode="text"
+                          placeholder="pk_live_..."
+                          className="font-mono"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="paystackSecretKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Trans>Paystack secret key</Trans>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="text"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="none"
+                          spellCheck={false}
+                          data-1p-ignore
+                          data-lpignore="true"
+                          data-form-type="other"
+                          inputMode="text"
+                          placeholder="sk_live_..."
+                          className="font-mono"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        <Trans>
+                          Leave blank to keep your existing secret key. Paste a new key only when
+                          you want to replace it.
+                        </Trans>
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            ) : (
+              <div className="space-y-2">
+                <h2 className="text-lg font-semibold">
+                  <Trans>Tax settings</Trans>
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  <Trans>
+                    Affiliate purchases settle to your bank via Nomia. Add a VAT number if you need
+                    VAT on sales invoices.
+                  </Trans>
+                </p>
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -558,7 +593,11 @@ export default function OrganisationSettingsResellerPage() {
             />
 
             <Button type="submit" loading={isUpdatingProfile}>
-              <Trans>Save Paystack settings</Trans>
+              {profile.payoutMode === 'OWN_PAYSTACK' ? (
+                <Trans>Save Paystack settings</Trans>
+              ) : (
+                <Trans>Save tax settings</Trans>
+              )}
             </Button>
           </fieldset>
         </form>

@@ -8,6 +8,10 @@ export const NEXT_PUBLIC_WEBAPP_URL = () =>
 
 export const getPaystackWebhookUrl = () => `${NEXT_PUBLIC_WEBAPP_URL()}/api/paystack/webhook`;
 
+export const getResellerPaystackWebhookUrl = () =>
+  `${NEXT_PUBLIC_WEBAPP_URL()}/api/paystack/reseller-webhook`;
+
+
 export const NEXT_PUBLIC_SIGNING_CONTACT_INFO = () =>
   env('NEXT_PUBLIC_SIGNING_CONTACT_INFO') ?? NEXT_PUBLIC_WEBAPP_URL();
 

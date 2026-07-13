@@ -1,10 +1,13 @@
-import { ResellerProfileStatus } from '@prisma/client';
+import { ResellerPayoutMode, ResellerProfileStatus } from '@prisma/client';
 
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createTransaction } from '@documenso/lib/server-only/paystack';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { prisma } from '@documenso/prisma';
+
+import { getResellerPayoutReadiness } from './reseller-payout-readiness';
+import { decryptResellerSecret } from './reseller-secrets';
 
 export type InitializeResellerPurchaseOptions = {
   affiliateSlug: string;
@@ -55,6 +58,16 @@ export const initializeResellerPurchase = async ({
     });
   }
 
+  const payoutReadiness = getResellerPayoutReadiness(profile);
+
+  if (!payoutReadiness.canAcceptPayments) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message:
+        payoutReadiness.blockingReason ??
+        'This reseller is not ready to accept payments right now',
+    });
+  }
+
   const availableCredits = await getOrganisationCredits(profile.organisationId);
 
   if (!profile.allowNegativeCredits && availableCredits < pkg.creditAmount) {
@@ -65,20 +78,59 @@ export const initializeResellerPurchase = async ({
 
   const callbackUrl = `${NEXT_PUBLIC_WEBAPP_URL()}/r/${affiliateSlug}?purchase=success`;
 
-  const transaction = await createTransaction({
-    email: purchaserEmail,
-    amount: pkg.priceInCents,
-    callback_url: callbackUrl,
-    metadata: {
-      type: 'reseller-credit-purchase',
-      resellerProfileId: profile.id,
-      purchaserOrganisationId,
-      purchaserUserId,
-      packageId: pkg.id,
-      expectedAmount: pkg.priceInCents,
-      creditAmount: pkg.creditAmount,
-    },
-  });
+  const metadata = {
+    type: 'reseller-credit-purchase',
+    payoutMode: profile.payoutMode,
+    resellerProfileId: profile.id,
+    purchaserOrganisationId,
+    purchaserUserId,
+    packageId: pkg.id,
+    expectedAmount: pkg.priceInCents,
+    creditAmount: pkg.creditAmount,
+    ...(profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT && profile.paystackSubaccountCode
+      ? { subaccountCode: profile.paystackSubaccountCode }
+      : {}),
+  };
+
+  let transaction;
+
+  if (profile.payoutMode === ResellerPayoutMode.OWN_PAYSTACK) {
+    if (!profile.paystackSecretKey) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: 'Reseller Paystack secret key is not configured',
+      });
+    }
+
+    transaction = await createTransaction({
+      email: purchaserEmail,
+      amount: pkg.priceInCents,
+      callback_url: callbackUrl,
+      metadata,
+      secretKey: decryptResellerSecret(profile.paystackSecretKey),
+    });
+  } else {
+    if (!profile.paystackSubaccountCode) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: 'Reseller payout subaccount is not configured',
+      });
+    }
+
+    const platformFeePercent = Number(profile.platformFeePercent ?? 0);
+    const transactionCharge =
+      platformFeePercent > 0
+        ? Math.round((pkg.priceInCents * platformFeePercent) / 100)
+        : 0;
+
+    transaction = await createTransaction({
+      email: purchaserEmail,
+      amount: pkg.priceInCents,
+      callback_url: callbackUrl,
+      metadata,
+      subaccount: profile.paystackSubaccountCode,
+      bearer: 'subaccount',
+      ...(transactionCharge > 0 ? { transaction_charge: transactionCharge } : {}),
+    });
+  }
 
   if (!transaction.status || !transaction.data) {
     throw new AppError(AppErrorCode.UNKNOWN_ERROR, {
@@ -90,5 +142,6 @@ export const initializeResellerPurchase = async ({
     authorizationUrl: transaction.data.authorization_url,
     reference: transaction.data.reference,
     package: pkg,
+    payoutMode: profile.payoutMode,
   };
 };

@@ -1,11 +1,41 @@
 import type { Prisma } from '@prisma/client';
-import { ResellerCreditTransactionStatus, ResellerProfileStatus } from '@prisma/client';
+import { ResellerCreditTransactionStatus, ResellerProfileStatus, ResellerSubaccountStatus } from '@prisma/client';
 
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
-import { getPaystackWebhookUrl, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { getPaystackWebhookUrl, getResellerPaystackWebhookUrl, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
 import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
+
+import { getResellerPayoutReadiness } from './reseller-payout-readiness';
+import { encryptResellerSecret, maskBankAccountNumber } from './reseller-secrets';
+import { syncResellerSubaccountStatus } from './update-reseller-payout';
+
+const maybeSyncPendingSubaccountStatus = async (
+  profile: NonNullable<Awaited<ReturnType<typeof prisma.resellerProfile.findUnique>>>,
+) => {
+  if (
+    profile.subaccountStatus !== ResellerSubaccountStatus.PENDING ||
+    !profile.paystackSubaccountCode
+  ) {
+    return profile;
+  }
+
+  const syncedProfile = await syncResellerSubaccountStatus(profile.organisationId);
+
+  if (!syncedProfile) {
+    return profile;
+  }
+
+  return {
+    ...profile,
+    subaccountStatus: syncedProfile.subaccountStatus,
+    subaccountVerifiedAt: syncedProfile.subaccountVerifiedAt,
+    subaccountFailureReason: syncedProfile.subaccountFailureReason,
+    paystackSubaccountCode: syncedProfile.paystackSubaccountCode,
+    paystackSubaccountId: syncedProfile.paystackSubaccountId,
+  };
+};
 
 export const getResellerProfileByOrganisationId = async (organisationId: string) => {
   const profile = await prisma.resellerProfile.findUnique({
@@ -30,15 +60,25 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
     return null;
   }
 
+  const resolvedProfile = await maybeSyncPendingSubaccountStatus(profile);
+
   const availableCredits = await getOrganisationCredits(organisationId);
+  const payoutReadiness = getResellerPayoutReadiness(resolvedProfile);
 
   return {
-    ...profile,
+    ...resolvedProfile,
+    paystackSecretKey: undefined,
+    bankAccountNumber: maskBankAccountNumber(profile.bankAccountNumber),
     availableCredits,
     negativeCreditsUsed: getNegativeCreditsUsed(availableCredits),
     affiliateUrl: `${NEXT_PUBLIC_WEBAPP_URL()}/r/${profile.affiliateSlug}`,
-    paystackWebhookUrl: getPaystackWebhookUrl(),
-    hasPaystackConfigured: Boolean(profile.paystackPublicKey && profile.paystackSecretKey),
+    paystackWebhookUrl:
+      profile.payoutMode === 'OWN_PAYSTACK'
+        ? getResellerPaystackWebhookUrl()
+        : getPaystackWebhookUrl(),
+    hasPaystackConfigured: payoutReadiness.hasOwnPaystackConfigured,
+    canAcceptAffiliatePayments: payoutReadiness.canAcceptPayments,
+    payoutBlockingReason: payoutReadiness.blockingReason ?? null,
     catalogPackages: ESIGN_CREDIT_PACKAGES,
   };
 };
@@ -67,11 +107,16 @@ export const getResellerProfileByAffiliateSlug = async (affiliateSlug: string) =
     return null;
   }
 
+  const resolvedProfile = await maybeSyncPendingSubaccountStatus(profile);
+
   const availableCredits = await getOrganisationCredits(profile.organisationId);
+  const payoutReadiness = getResellerPayoutReadiness(resolvedProfile);
 
   return {
-    ...profile,
+    ...resolvedProfile,
     availableCredits,
+    canAcceptAffiliatePayments: payoutReadiness.canAcceptPayments,
+    payoutBlockingReason: payoutReadiness.blockingReason ?? null,
   };
 };
 
@@ -118,7 +163,9 @@ export const updateResellerProfile = async ({
     where: { organisationId },
     data: {
       paystackPublicKey,
-      ...(trimmedSecretKey ? { paystackSecretKey: trimmedSecretKey } : {}),
+      ...(trimmedSecretKey
+        ? { paystackSecretKey: encryptResellerSecret(trimmedSecretKey) }
+        : {}),
       paystackCallbackUrl,
       vatNumber,
       instructionsDismissedAt: instructionsDismissed ? new Date() : undefined,
