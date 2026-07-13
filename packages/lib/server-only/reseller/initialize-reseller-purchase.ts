@@ -1,5 +1,6 @@
 import { ResellerProfileStatus } from '@prisma/client';
 
+import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createTransaction } from '@documenso/lib/server-only/paystack';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
@@ -51,6 +52,14 @@ export const initializeResellerPurchase = async ({
   if (profile.organisationId === purchaserOrganisationId) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'You cannot purchase credits from your own reseller account',
+    });
+  }
+
+  const availableCredits = await getOrganisationCredits(profile.organisationId);
+
+  if (!profile.allowNegativeCredits && availableCredits < pkg.creditAmount) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'This reseller does not have enough credits to fulfill this purchase right now',
     });
   }
 

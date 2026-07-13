@@ -24,6 +24,7 @@ import { checkResellerAffiliateSlugRoute } from './check-reseller-affiliate-slug
 import {
   exportResellerTransactionsRoute,
 } from './export-reseller-transactions';
+import { completePendingResellerTransactionRoute } from './complete-pending-reseller-transaction';
 import {
   findResellerTransactionsRoute,
   getResellerProfileRoute,
@@ -81,6 +82,7 @@ export const organisationRouter = router({
     updatePackages: updateResellerPackagesRoute,
     findTransactions: findResellerTransactionsRoute,
     exportTransactions: exportResellerTransactionsRoute,
+    completePendingTransaction: completePendingResellerTransactionRoute,
     getAffiliate: getAffiliateResellerRoute,
     initializePurchase: initializeResellerPurchaseRoute,
   },

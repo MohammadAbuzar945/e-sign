@@ -20,6 +20,7 @@ export const ZGetAffiliateResellerResponseSchema = z
     affiliateSlug: z.string(),
     organisationName: z.string(),
     availableCredits: z.number(),
+    allowNegativeCredits: z.boolean(),
     hasPackages: z.boolean(),
     brandingEnabled: z.boolean(),
     brandingLogo: z.string().nullable(),
@@ -42,6 +43,7 @@ export const ZGetAffiliateResellerResponseSchema = z
         displayPrice: z.string(),
         name: z.string(),
         isHighlighted: z.boolean(),
+        canPurchase: z.boolean(),
       }),
     ),
   })

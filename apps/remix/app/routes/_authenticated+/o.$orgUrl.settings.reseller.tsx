@@ -99,6 +99,7 @@ export default function OrganisationSettingsResellerPage() {
   const [transactionToDate, setTransactionToDate] = useState('');
   const [transactionPage, setTransactionPage] = useState(1);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [transferringTransactionId, setTransferringTransactionId] = useState<string | null>(null);
   const [enabledPackages, setEnabledPackages] = useState<string[]>([]);
 
   const debouncedTransactionQuery = useDebouncedValue(transactionQuery, 400);
@@ -171,6 +172,36 @@ export default function OrganisationSettingsResellerPage() {
         toast({ title: _(msg`Packages updated`) });
       },
     });
+
+  const { mutateAsync: completePendingTransaction } =
+    trpc.organisation.reseller.completePendingTransaction.useMutation({
+      onSuccess: async () => {
+        await Promise.all([
+          utils.organisation.reseller.findTransactions.invalidate({ organisationId: organisation.id }),
+          utils.organisation.reseller.getProfile.invalidate({ organisationId: organisation.id }),
+        ]);
+        toast({ title: _(msg`Credits transferred`) });
+      },
+      onError: (error) => {
+        toast({
+          title: _(msg`Transfer failed`),
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+      onSettled: () => {
+        setTransferringTransactionId(null);
+      },
+    });
+
+  const handleManualTransfer = async (transactionId: string) => {
+    setTransferringTransactionId(transactionId);
+
+    await completePendingTransaction({
+      organisationId: organisation.id,
+      transactionId,
+    });
+  };
 
   if (!isResellerFeatureAllowed) {
     return (
@@ -369,20 +400,28 @@ export default function OrganisationSettingsResellerPage() {
           ) : (
             <Trans>
               Ensure there are always credits in your account. If a client pays while your balance
-              is too low, the purchase will appear as pending and you will need to recharge and
-              manually transfer the required credits.
+              is too low due to a simultaneous purchase, the sale will appear as pending and you can
+              transfer credits once your balance is sufficient.
             </Trans>
           )}
-          <p className="mt-2 font-medium">
+          <p
+            className={`mt-2 font-medium ${
+              profile.availableCredits < 0 ? 'text-amber-700' : ''
+            }`}
+          >
             <Trans>Available credits: {profile.availableCredits}</Trans>
           </p>
-          {(profile.allowNegativeCredits || profile.negativeCreditsUsed > 0) && (
-            <p
-              className={`mt-1 font-medium ${
-                profile.negativeCreditsUsed > 0 ? 'text-amber-700' : 'text-muted-foreground'
-              }`}
-            >
+          {profile.negativeCreditsUsed > 0 && (
+            <p className="mt-1 font-medium text-amber-700">
               <Trans>Negative credits used: {profile.negativeCreditsUsed}</Trans>
+            </p>
+          )}
+          {!profile.allowNegativeCredits && profile.availableCredits < 0 && (
+            <p className="mt-2 text-amber-700">
+              <Trans>
+                Your balance is negative and new affiliate purchases are blocked until you top up
+                enough credits.
+              </Trans>
             </p>
           )}
         </AlertDescription>
@@ -799,9 +838,25 @@ export default function OrganisationSettingsResellerPage() {
                   </TableCell>
                   <TableCell>
                     {transaction.status === 'PENDING' ? (
-                      <span className="text-amber-700">
-                        <Trans>Pending manual transfer</Trans>
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-amber-700">
+                          <Trans>Pending manual transfer</Trans>
+                        </span>
+                        {transaction.canManualTransfer ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            loading={transferringTransactionId === transaction.id}
+                            disabled={
+                              transferringTransactionId !== null &&
+                              transferringTransactionId !== transaction.id
+                            }
+                            onClick={() => handleManualTransfer(transaction.id)}
+                          >
+                            <Trans>Transfer</Trans>
+                          </Button>
+                        ) : null}
+                      </div>
                     ) : (
                       transaction.status
                     )}

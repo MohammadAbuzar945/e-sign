@@ -24,6 +24,8 @@ export const getAffiliateResellerRoute = procedure
 
     const packages = profile.packages.map((pkg) => {
       const catalog = ESIGN_CREDIT_PACKAGES.find((item) => item.id === pkg.catalogPackageId);
+      const canPurchase =
+        profile.allowNegativeCredits || profile.availableCredits >= pkg.creditAmount;
 
       return {
         id: pkg.id,
@@ -34,6 +36,7 @@ export const getAffiliateResellerRoute = procedure
         displayPrice: catalog?.displayPrice ?? `${pkg.currency} ${(pkg.priceInCents / 100).toFixed(2)}`,
         name: catalog?.name ?? `${pkg.creditAmount} envelopes`,
         isHighlighted: profile.highlightedCatalogPackageId === pkg.catalogPackageId,
+        canPurchase,
       };
     });
 
@@ -41,6 +44,7 @@ export const getAffiliateResellerRoute = procedure
       affiliateSlug: profile.affiliateSlug,
       organisationName: profile.organisation.name,
       availableCredits: profile.availableCredits,
+      allowNegativeCredits: profile.allowNegativeCredits,
       hasPackages: packages.length > 0,
       brandingEnabled: profile.brandingEnabled,
       brandingLogo: profile.brandingLogo,

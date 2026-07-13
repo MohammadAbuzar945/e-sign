@@ -114,6 +114,7 @@ export const ZFindResellerTransactionsResponseSchema = z.object({
       purchaserEmail: z.string(),
       purchaserOrganisationName: z.string(),
       paystackReference: z.string().nullable(),
+      canManualTransfer: z.boolean(),
     }),
   ),
   count: z.number(),

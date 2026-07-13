@@ -1177,6 +1177,7 @@ describe('initializeResellerPurchase flow', () => {
     const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
 
     prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
+    getOrganisationCreditsMock.mockResolvedValue(100);
     createTransactionMock.mockResolvedValue({
       status: true,
       data: {
@@ -1226,10 +1227,35 @@ describe('initializeResellerPurchase flow', () => {
     ).rejects.toThrow('You cannot purchase credits from your own reseller account');
   });
 
-  it('allows checkout even when reseller has insufficient credits', async () => {
+  it('blocks checkout when reseller has insufficient credits and negative credits are disabled', async () => {
     const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
 
     prismaMock.resellerProfile.findUnique.mockResolvedValue(profile);
+    getOrganisationCreditsMock.mockResolvedValue(5);
+
+    await expect(
+      initializeResellerPurchase({
+        affiliateSlug: 'acme-reseller',
+        packageId: 'pkg_1',
+        purchaserOrganisationId: 'buyer_org',
+        purchaserUserId: 99,
+        purchaserEmail: 'buyer@example.com',
+      }),
+    ).rejects.toThrow(
+      'This reseller does not have enough credits to fulfill this purchase right now',
+    );
+
+    expect(createTransactionMock).not.toHaveBeenCalled();
+  });
+
+  it('allows checkout when negative credits are enabled even if balance is low', async () => {
+    const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      ...profile,
+      allowNegativeCredits: true,
+    });
+    getOrganisationCreditsMock.mockResolvedValue(-10);
     createTransactionMock.mockResolvedValue({
       status: true,
       data: {
@@ -1626,6 +1652,95 @@ describe('reseller profile and packages flow', () => {
       where: { id: 'pkg_2' },
       data: { isEnabled: true },
     });
+  });
+});
+
+describe('completePendingResellerTransaction flow', () => {
+  it('transfers credits and completes a pending transaction', async () => {
+    const { completePendingResellerTransaction } = await import(
+      './complete-pending-reseller-transaction'
+    );
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      id: 'profile_1',
+      organisationId: 'reseller_org',
+      status: ResellerProfileStatus.ACTIVE,
+      allowNegativeCredits: false,
+      organisation: {
+        ownerUserId: 1,
+      },
+    });
+
+    prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
+    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue({
+      id: 'txn_pending_manual',
+      resellerProfileId: 'profile_1',
+      purchaserOrganisationId: 'buyer_org',
+      credits: 50,
+      status: ResellerCreditTransactionStatus.PENDING,
+    });
+    prismaMock.organisation.findUniqueOrThrow.mockResolvedValue({ ownerUserId: 99 });
+    prismaMock.userCredits.findFirst
+      .mockResolvedValueOnce({ id: 'credits_reseller', credits: 100 })
+      .mockResolvedValueOnce({ id: 'credits_buyer', credits: 20 });
+    prismaMock.userCredits.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.userCredits.update.mockResolvedValue({ id: 'credits_buyer', credits: 70 });
+    prismaMock.resellerCreditTransaction.update.mockResolvedValue({
+      id: 'txn_pending_manual',
+      status: ResellerCreditTransactionStatus.COMPLETED,
+      completedAt: new Date('2026-07-13T10:00:00.000Z'),
+    });
+
+    const result = await completePendingResellerTransaction({
+      organisationId: 'reseller_org',
+      transactionId: 'txn_pending_manual',
+    });
+
+    expect(result.status).toBe(ResellerCreditTransactionStatus.COMPLETED);
+    expect(prismaMock.userCredits.updateMany).toHaveBeenCalled();
+    expect(prismaMock.userCredits.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'credits_buyer' },
+        data: expect.objectContaining({
+          credits: { increment: 50 },
+        }),
+      }),
+    );
+  });
+
+  it('rejects manual transfer when credits are still insufficient', async () => {
+    const { completePendingResellerTransaction } = await import(
+      './complete-pending-reseller-transaction'
+    );
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      id: 'profile_1',
+      organisationId: 'reseller_org',
+      status: ResellerProfileStatus.ACTIVE,
+      allowNegativeCredits: false,
+      organisation: {
+        ownerUserId: 1,
+      },
+    });
+
+    prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
+    prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue({
+      id: 'txn_pending_manual',
+      resellerProfileId: 'profile_1',
+      purchaserOrganisationId: 'buyer_org',
+      credits: 50,
+      status: ResellerCreditTransactionStatus.PENDING,
+    });
+    prismaMock.organisation.findUniqueOrThrow.mockResolvedValue({ ownerUserId: 99 });
+    prismaMock.userCredits.findFirst.mockResolvedValue({ id: 'credits_reseller', credits: 5 });
+    prismaMock.userCredits.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      completePendingResellerTransaction({
+        organisationId: 'reseller_org',
+        transactionId: 'txn_pending_manual',
+      }),
+    ).rejects.toThrow('Insufficient credits to complete this transfer');
   });
 });
 

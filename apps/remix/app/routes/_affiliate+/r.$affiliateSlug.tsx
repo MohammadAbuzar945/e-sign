@@ -235,12 +235,23 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
               <Button
                 className="w-full"
                 loading={purchasingPackageId === pkg.id}
-                disabled={purchasingPackageId !== null && purchasingPackageId !== pkg.id}
+                disabled={
+                  !pkg.canPurchase ||
+                  (purchasingPackageId !== null && purchasingPackageId !== pkg.id)
+                }
                 style={primaryColor ? { backgroundColor: primaryColor } : undefined}
                 onClick={() => handleBuyNow(pkg.id)}
               >
                 <Trans>Buy now</Trans>
               </Button>
+              {!pkg.canPurchase && (
+                <p className="text-center text-xs text-amber-700">
+                  <Trans>
+                    This package is temporarily unavailable because the reseller does not have enough
+                    credits.
+                  </Trans>
+                </p>
+              )}
               <p className="text-center text-xs text-muted-foreground">
                 <Trans>Secure payment via Paystack</Trans>
               </p>
