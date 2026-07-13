@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { ResellerProfileStatus } from '@prisma/client';
+import { ResellerCreditTransactionStatus, ResellerProfileStatus } from '@prisma/client';
 
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { getPaystackWebhookUrl, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
@@ -297,17 +297,32 @@ export const findResellerTransactions = async ({
       orderBy: {
         createdAt: 'desc',
       },
-      include: {
-        package: true,
-      },
     }),
     prisma.resellerCreditTransaction.count({
       where: whereClause,
     }),
   ]);
 
+  const availableCredits = await getOrganisationCredits(organisationId);
+
   return {
-    data,
+    data: data.map((transaction) => ({
+      id: transaction.id,
+      createdAt: transaction.createdAt,
+      completedAt: transaction.completedAt,
+      credits: transaction.credits,
+      grossAmount: transaction.grossAmount,
+      vatAmount: transaction.vatAmount,
+      currency: transaction.currency,
+      status: transaction.status,
+      purchaserName: transaction.purchaserName,
+      purchaserEmail: transaction.purchaserEmail,
+      purchaserOrganisationName: transaction.purchaserOrganisationName,
+      paystackReference: transaction.paystackReference,
+      canManualTransfer:
+        transaction.status === ResellerCreditTransactionStatus.PENDING &&
+        (profile.allowNegativeCredits || availableCredits >= transaction.credits),
+    })),
     count,
     currentPage: Math.max(page, 1),
     perPage,
