@@ -48,6 +48,9 @@ export const ZFindResellerApplicationsResponseSchema = z.object({
           id: z.string(),
           status: z.string(),
           affiliateSlug: z.string(),
+          allowNegativeCredits: z.boolean(),
+          availableCredits: z.number(),
+          negativeCreditsUsed: z.number(),
         })
         .nullish(),
       applicantUser: z.object({
