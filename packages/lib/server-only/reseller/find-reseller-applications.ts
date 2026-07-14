@@ -5,6 +5,10 @@ import {
   RESELLER_ADMIN_VIEW_STATUSES,
   type ResellerAdminView,
 } from '@documenso/lib/constants/reseller-application-status';
+import {
+  parseResellerBankAccountType,
+  parseResellerBankDocumentType,
+} from '@documenso/lib/constants/reseller-bank-verification';
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
@@ -156,8 +160,8 @@ export const findResellerApplications = async ({
           bankName: resellerProfile.bankName,
           bankAccountNumber: maskBankAccountNumber(resellerProfile.bankAccountNumber),
           bankAccountName: resellerProfile.bankAccountName,
-          bankAccountType: resellerProfile.bankAccountType,
-          bankDocumentType: resellerProfile.bankDocumentType,
+          bankAccountType: parseResellerBankAccountType(resellerProfile.bankAccountType),
+          bankDocumentType: parseResellerBankDocumentType(resellerProfile.bankDocumentType),
           paystackSubaccountCode: resellerProfile.paystackSubaccountCode,
           subaccountStatus: resellerProfile.subaccountStatus,
           subaccountVerifiedAt: resellerProfile.subaccountVerifiedAt,

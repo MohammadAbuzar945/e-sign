@@ -80,3 +80,27 @@ export const getDefaultResellerBankDocumentType = (
 ): ResellerBankDocumentType => {
   return getResellerBankDocumentTypesForAccountType(accountType)[0];
 };
+
+export const parseResellerBankAccountType = (
+  value: string | null | undefined,
+): ResellerBankAccountType | null => {
+  const result = ZResellerBankAccountTypeSchema.safeParse(value);
+
+  if (!result.success) {
+    return null;
+  }
+
+  return result.data;
+};
+
+export const parseResellerBankDocumentType = (
+  value: string | null | undefined,
+): ResellerBankDocumentType | null => {
+  const result = ZResellerBankDocumentTypeSchema.safeParse(value);
+
+  if (!result.success) {
+    return null;
+  }
+
+  return result.data;
+};

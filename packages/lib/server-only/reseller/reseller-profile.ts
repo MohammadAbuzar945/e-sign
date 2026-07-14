@@ -4,6 +4,10 @@ import { ResellerCreditTransactionStatus, ResellerProfileStatus, ResellerSubacco
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { getPaystackWebhookUrl, getResellerPaystackWebhookUrl, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
+import {
+  parseResellerBankAccountType,
+  parseResellerBankDocumentType,
+} from '@documenso/lib/constants/reseller-bank-verification';
 import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
 
@@ -76,6 +80,8 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
 
   return {
     ...resolvedProfile,
+    bankAccountType: parseResellerBankAccountType(resolvedProfile.bankAccountType),
+    bankDocumentType: parseResellerBankDocumentType(resolvedProfile.bankDocumentType),
     paystackSecretKey: undefined,
     bankAccountNumber: maskBankAccountNumber(profile.bankAccountNumber),
     bankDocumentNumber: maskDocumentNumber(profile.bankDocumentNumber),
