@@ -6,13 +6,10 @@ import {
 } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import {
-  createPaystackSubaccount,
-  getPaystackSubaccount,
-  updatePaystackSubaccount,
-} from '@documenso/lib/server-only/paystack';
+import { getPaystackSubaccount } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 
+import { ZResellerBankVerificationFieldsSchema } from '@documenso/lib/constants/reseller-bank-verification';
 import { encryptResellerSecret } from './reseller-secrets';
 
 const getSubaccountStatusFromPaystack = (subaccount: {
@@ -112,6 +109,9 @@ export type UpdateResellerBankDetailsOptions = {
   bankName: string;
   bankAccountNumber: string;
   bankAccountName: string;
+  accountType: 'personal' | 'business';
+  documentType: 'identityNumber' | 'passportNumber' | 'businessRegistrationNumber';
+  documentNumber: string;
 };
 
 export const updateResellerBankDetails = async ({
@@ -120,16 +120,12 @@ export const updateResellerBankDetails = async ({
   bankName,
   bankAccountNumber,
   bankAccountName,
+  accountType,
+  documentType,
+  documentNumber,
 }: UpdateResellerBankDetailsOptions) => {
   const profile = await prisma.resellerProfile.findUnique({
     where: { organisationId },
-    include: {
-      organisation: {
-        select: {
-          name: true,
-        },
-      },
-    },
   });
 
   if (!profile) {
@@ -146,6 +142,13 @@ export const updateResellerBankDetails = async ({
 
   const trimmedAccountNumber = bankAccountNumber.trim();
   const trimmedAccountName = bankAccountName.trim();
+  const trimmedDocumentNumber = documentNumber.trim();
+
+  ZResellerBankVerificationFieldsSchema.parse({
+    accountType,
+    documentType,
+    documentNumber: trimmedDocumentNumber,
+  });
 
   if (!bankCode.trim() || !trimmedAccountNumber || !trimmedAccountName) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -154,62 +157,23 @@ export const updateResellerBankDetails = async ({
   }
 
   const encryptedAccountNumber = encryptResellerSecret(trimmedAccountNumber);
-  const description = `Nomia reseller: ${profile.affiliateSlug}`;
-  const percentageCharge = Number(profile.platformFeePercent ?? 0);
+  const encryptedDocumentNumber = encryptResellerSecret(trimmedDocumentNumber);
 
-  try {
-    const subaccount = profile.paystackSubaccountCode
-      ? await updatePaystackSubaccount({
-          subaccountCode: profile.paystackSubaccountCode,
-          businessName: profile.organisation.name,
-          settlementBank: bankCode.trim(),
-          accountNumber: trimmedAccountNumber,
-          percentageCharge,
-          description,
-        })
-      : await createPaystackSubaccount({
-          businessName: profile.organisation.name,
-          settlementBank: bankCode.trim(),
-          accountNumber: trimmedAccountNumber,
-          percentageCharge,
-          description,
-        });
-
-    const subaccountStatus = getSubaccountStatusFromPaystack(subaccount);
-    const isVerified = subaccountStatus === ResellerSubaccountStatus.ACTIVE;
-
-    return await prisma.resellerProfile.update({
-      where: { organisationId },
-      data: {
-        bankCode: bankCode.trim(),
-        bankName: bankName.trim(),
-        bankAccountNumber: encryptedAccountNumber,
-        bankAccountName: trimmedAccountName,
-        paystackSubaccountCode: subaccount.subaccount_code,
-        paystackSubaccountId: subaccount.id,
-        subaccountStatus,
-        subaccountVerifiedAt: isVerified ? new Date() : null,
-        subaccountFailureReason: null,
-      },
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to register bank account';
-
-    await prisma.resellerProfile.update({
-      where: { organisationId },
-      data: {
-        bankCode: bankCode.trim(),
-        bankName: bankName.trim(),
-        bankAccountNumber: encryptedAccountNumber,
-        bankAccountName: trimmedAccountName,
-        subaccountStatus: ResellerSubaccountStatus.FAILED,
-        subaccountFailureReason: message,
-        subaccountVerifiedAt: null,
-      },
-    });
-
-    throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message,
-    });
-  }
+  return await prisma.resellerProfile.update({
+    where: { organisationId },
+    data: {
+      bankCode: bankCode.trim(),
+      bankName: bankName.trim(),
+      bankAccountNumber: encryptedAccountNumber,
+      bankAccountName: trimmedAccountName,
+      bankAccountType: accountType,
+      bankDocumentType: documentType,
+      bankDocumentNumber: encryptedDocumentNumber,
+      paystackSubaccountCode: null,
+      paystackSubaccountId: null,
+      subaccountStatus: ResellerSubaccountStatus.PENDING,
+      subaccountVerifiedAt: null,
+      subaccountFailureReason: null,
+    },
+  });
 };

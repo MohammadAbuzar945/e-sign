@@ -57,7 +57,9 @@ export const getResellerPayoutReadiness = (
         profile.subaccountStatus === 'FAILED'
           ? 'Bank account verification failed'
           : profile.subaccountStatus === 'PENDING'
-            ? 'Bank account verification is still pending'
+            ? profile.paystackSubaccountCode
+              ? 'Bank account verification is still pending'
+              : 'Awaiting Nomia bank verification'
             : 'Bank details are required for Nomia payouts',
     };
   }

@@ -11,24 +11,29 @@ import {
   CollapsibleTrigger,
 } from '@documenso/ui/primitives/collapsible';
 
+export type ResellerSetupSection =
+  | 'payouts'
+  | 'packages'
+  | 'branding'
+  | 'share';
+
 type ResellerOnboardingChecklistProps = {
   organisationId: string;
   affiliateUrl: string;
-  affiliateSlug: string;
   payoutMode: 'OWN_PAYSTACK' | 'NOMIA_SUBACCOUNT';
   hasPaystackConfigured: boolean;
   hasNomiaSubaccountConfigured: boolean;
   hasEnabledPackage: boolean;
   hasCustomizedBranding: boolean;
   onCopySuccess?: () => void;
+  onGoToStep?: (section: ResellerSetupSection) => void;
 };
 
 type ChecklistStep = {
-  key: string;
+  key: ResellerSetupSection;
   title: ReactNode;
   description: ReactNode;
   isComplete: boolean;
-  sectionId: string;
   action?: ReactNode;
 };
 
@@ -38,13 +43,13 @@ const getAffiliateLinkCopiedKey = (organisationId: string) =>
 export const ResellerOnboardingChecklist = ({
   organisationId,
   affiliateUrl,
-  affiliateSlug,
   payoutMode,
   hasPaystackConfigured,
   hasNomiaSubaccountConfigured,
   hasEnabledPackage,
   hasCustomizedBranding,
   onCopySuccess,
+  onGoToStep,
 }: ResellerOnboardingChecklistProps) => {
   const [hasCopiedAffiliateLink, setHasCopiedAffiliateLink] = useState(false);
 
@@ -62,7 +67,7 @@ export const ResellerOnboardingChecklist = ({
     () => [
       payoutMode === 'NOMIA_SUBACCOUNT'
         ? {
-            key: 'paystack',
+            key: 'payouts',
             title: <Trans>Add bank details for payouts</Trans>,
             description: (
               <Trans>
@@ -70,10 +75,9 @@ export const ResellerOnboardingChecklist = ({
               </Trans>
             ),
             isComplete: hasNomiaSubaccountConfigured,
-            sectionId: 'reseller-setup-paystack',
           }
         : {
-            key: 'paystack',
+            key: 'payouts',
             title: <Trans>Configure Paystack keys</Trans>,
             description: (
               <Trans>
@@ -81,7 +85,6 @@ export const ResellerOnboardingChecklist = ({
               </Trans>
             ),
             isComplete: hasPaystackConfigured,
-            sectionId: 'reseller-setup-paystack',
           },
       {
         key: 'packages',
@@ -90,7 +93,6 @@ export const ResellerOnboardingChecklist = ({
           <Trans>Turn on at least one package size that you want to sell through your affiliate page.</Trans>
         ),
         isComplete: hasEnabledPackage,
-        sectionId: 'reseller-setup-packages',
       },
       {
         key: 'branding',
@@ -101,7 +103,6 @@ export const ResellerOnboardingChecklist = ({
           </Trans>
         ),
         isComplete: hasCustomizedBranding,
-        sectionId: 'reseller-setup-branding',
       },
       {
         key: 'share',
@@ -110,7 +111,6 @@ export const ResellerOnboardingChecklist = ({
           <Trans>Copy your link and share it with clients who should buy credits from you.</Trans>
         ),
         isComplete: hasCopiedAffiliateLink,
-        sectionId: 'reseller-setup-share',
         action: (
           <CopyTextButton
             value={affiliateUrl}
@@ -142,13 +142,6 @@ export const ResellerOnboardingChecklist = ({
   const completedCount = steps.filter((step) => step.isComplete).length;
   const progressValue = Math.round((completedCount / steps.length) * 100);
   const isFullyComplete = completedCount === steps.length;
-
-  const scrollToSection = (sectionId: string) => {
-    document.getElementById(sectionId)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
-  };
 
   if (isFullyComplete) {
     return null;
@@ -220,24 +213,23 @@ export const ResellerOnboardingChecklist = ({
 
                 <div className="flex flex-wrap items-center gap-2">
                   {!step.isComplete && step.key !== 'share' && (
-                    <Button type="button" variant="outline" size="sm" onClick={() => scrollToSection(step.sectionId)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onGoToStep?.(step.key)}
+                    >
                       <Trans>Go to step</Trans>
                     </Button>
                   )}
 
                   {step.key === 'share' && (
-                    <div id={step.sectionId} className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+                    <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
                       <code className="flex-1 truncate rounded-md border bg-muted/40 px-3 py-2 text-xs">
                         {affiliateUrl}
                       </code>
                       {step.action}
                     </div>
-                  )}
-
-                  {step.key === 'share' && affiliateSlug && (
-                    <p className="w-full text-xs text-muted-foreground">
-                      <Trans>Slug: {affiliateSlug}</Trans>
-                    </p>
                   )}
                 </div>
               </div>

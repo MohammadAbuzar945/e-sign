@@ -212,6 +212,25 @@ export const AdminResellerApplicationsTable = () => {
       },
     });
 
+  const { mutateAsync: verifyBankAccount, isPending: isVerifyingBankAccount } =
+    trpc.admin.resellerApplications.verifyBankAccount.useMutation({
+      onSuccess: async (result) => {
+        toast({
+          title: t`Bank account verified`,
+          description: result.verificationMessage,
+        });
+
+        await refetch();
+      },
+      onError: (error) => {
+        toast({
+          title: t`Verification failed`,
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
   const { mutateAsync: refreshBankAccountStatus, isPending: isRefreshingBankStatus } =
     trpc.admin.resellerApplications.refreshBankAccountStatus.useMutation({
       onSuccess: async (result) => {
@@ -503,6 +522,7 @@ export const AdminResellerApplicationsTable = () => {
             isUpdatingAllowNegativeCredits={isUpdatingAllowNegativeCredits}
             isRefreshingBankStatus={isRefreshingBankStatus}
             isRetryingSubaccount={isRetryingSubaccount}
+            isVerifyingBankAccount={isVerifyingBankAccount}
             onSendTerms={() => setIsSendDialogOpen(true)}
             onActivate={async () => {
               await retryActivation({
@@ -527,6 +547,11 @@ export const AdminResellerApplicationsTable = () => {
             }}
             onRetrySubaccount={async () => {
               await retrySubaccount({
+                applicationId: selectedApplication.id,
+              });
+            }}
+            onVerifyBankAccount={async () => {
+              await verifyBankAccount({
                 applicationId: selectedApplication.id,
               });
             }}

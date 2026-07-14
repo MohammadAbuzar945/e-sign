@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export const PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR = 3;
+export const PAYSTACK_SA_BANK_VALIDATION_FEE_CENTS = PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR * 100;
+
 export const RESELLER_BANK_ACCOUNT_TYPES = ['personal', 'business'] as const;
 
 export const RESELLER_BANK_DOCUMENT_TYPES = [

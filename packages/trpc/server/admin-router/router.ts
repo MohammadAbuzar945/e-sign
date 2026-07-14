@@ -30,6 +30,7 @@ import { updateResellerAllowNegativeCreditsRoute } from './update-reseller-allow
 import {
   refreshResellerBankAccountStatusRoute,
   retryResellerSubaccountRoute,
+  verifyResellerBankAccountRoute,
 } from './verify-reseller-bank-account';
 import { resealDocumentRoute } from './reseal-document';
 import { resetTwoFactorRoute } from './reset-two-factor-authentication';
@@ -70,6 +71,7 @@ export const adminRouter = router({
     deactivate: deactivateResellerProfileRoute,
     reactivate: reactivateResellerProfileRoute,
     updateAllowNegativeCredits: updateResellerAllowNegativeCreditsRoute,
+    verifyBankAccount: verifyResellerBankAccountRoute,
     refreshBankAccountStatus: refreshResellerBankAccountStatusRoute,
     retrySubaccount: retryResellerSubaccountRoute,
     delete: deleteResellerRoute,

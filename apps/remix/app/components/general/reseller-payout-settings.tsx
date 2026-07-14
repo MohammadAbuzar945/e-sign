@@ -7,6 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { AppError } from '@documenso/lib/errors/app-error';
+import {
+  getDefaultResellerBankDocumentType,
+  getResellerBankAccountTypeLabel,
+  getResellerBankDocumentTypeLabel,
+  getResellerBankDocumentTypesForAccountType,
+  PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR,
+  RESELLER_BANK_ACCOUNT_TYPES,
+} from '@documenso/lib/constants/reseller-bank-verification';
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Badge } from '@documenso/ui/primitives/badge';
@@ -21,14 +29,45 @@ import {
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { SearchableSelect } from '@documenso/ui/primitives/searchable-select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
-const ZBankDetailsFormSchema = z.object({
-  bankCode: z.string().min(1),
-  bankName: z.string().min(1),
-  bankAccountNumber: z.string().min(5),
-  bankAccountName: z.string().min(1),
-});
+const ZBankDetailsFormSchema = z
+  .object({
+    bankCode: z.string().min(1),
+    bankName: z.string().min(1),
+    bankAccountNumber: z.string().min(5),
+    bankAccountName: z.string().min(1),
+    accountType: z.enum(['personal', 'business']),
+    documentType: z.enum(['identityNumber', 'passportNumber', 'businessRegistrationNumber']),
+    documentNumber: z.string().trim().min(5).max(64),
+  })
+  .superRefine((values, context) => {
+    if (values.accountType === 'business' && values.documentType !== 'businessRegistrationNumber') {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Business accounts require a business registration number',
+        path: ['documentType'],
+      });
+    }
+
+    if (
+      values.accountType === 'personal' &&
+      values.documentType === 'businessRegistrationNumber'
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Personal accounts require an ID card, CNIC, or passport number',
+        path: ['documentType'],
+      });
+    }
+  });
 
 type ResellerPayoutSettingsProps = {
   organisationId: string;
@@ -37,13 +76,15 @@ type ResellerPayoutSettingsProps = {
   bankName: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;
+  bankAccountType: 'personal' | 'business' | null;
+  bankDocumentType: 'identityNumber' | 'passportNumber' | 'businessRegistrationNumber' | null;
+  bankDocumentNumber: string | null;
   subaccountStatus: 'PENDING' | 'ACTIVE' | 'FAILED' | null;
   subaccountFailureReason: string | null;
   canAcceptAffiliatePayments: boolean;
   payoutBlockingReason: string | null;
   onUpdated: () => Promise<unknown> | unknown;
 };
-
 export const ResellerPayoutSettings = ({
   organisationId,
   payoutMode,
@@ -51,6 +92,9 @@ export const ResellerPayoutSettings = ({
   bankName,
   bankAccountNumber,
   bankAccountName,
+  bankAccountType,
+  bankDocumentType,
+  bankDocumentNumber,
   subaccountStatus,
   subaccountFailureReason,
   canAcceptAffiliatePayments,
@@ -60,6 +104,7 @@ export const ResellerPayoutSettings = ({
   const { _ } = useLingui();
   const { toast } = useToast();
   const [selectedMode, setSelectedMode] = useState(payoutMode);
+  const defaultAccountType = bankAccountType ?? 'personal';
 
   useEffect(() => {
     setSelectedMode(payoutMode);
@@ -80,6 +125,9 @@ export const ResellerPayoutSettings = ({
       bankName: bankName ?? '',
       bankAccountNumber: '',
       bankAccountName: bankAccountName ?? '',
+      accountType: defaultAccountType,
+      documentType: bankDocumentType ?? getDefaultResellerBankDocumentType(defaultAccountType),
+      documentNumber: '',
     },
   });
 
@@ -103,7 +151,13 @@ export const ResellerPayoutSettings = ({
       onSuccess: async () => {
         await onUpdated();
         bankForm.resetField('bankAccountNumber');
-        toast({ title: _(msg`Bank details saved and subaccount registered`) });
+        bankForm.resetField('documentNumber');
+        toast({
+          title: _(msg`Bank details submitted`),
+          description: _(
+            msg`Nomia will verify your account with Paystack before payouts begin.`,
+          ),
+        });
       },
       onError: (error) => {
         toast({
@@ -149,7 +203,11 @@ export const ResellerPayoutSettings = ({
     [banks],
   );
   const selectedBankCode = bankForm.watch('bankCode');
-  const selectedBank = banks.find((bank) => bank.code === selectedBankCode);
+  const selectedAccountType = bankForm.watch('accountType');
+  const documentTypeOptions = useMemo(
+    () => getResellerBankDocumentTypesForAccountType(selectedAccountType),
+    [selectedAccountType],
+  );
 
   const statusBadge = (() => {
     if (subaccountStatus === 'ACTIVE') {
@@ -191,8 +249,7 @@ export const ResellerPayoutSettings = ({
         </h2>
         <p className="text-sm text-muted-foreground">
           <Trans>
-            Choose your own Paystack account, or enter bank details and let Nomia settle payouts via
-            Paystack subaccounts. You can keep either option configured.
+            Choose your own Paystack account, or enter bank details and let Nomia settle payouts.
           </Trans>
         </p>
       </div>
@@ -266,9 +323,9 @@ export const ResellerPayoutSettings = ({
               </p>
               <p className="text-xs text-muted-foreground">
                 <Trans>
-                  Select your South African bank and account details. Nomia registers a Paystack
-                  subaccount at no extra validation cost. Nomia verifies the subaccount in Paystack
-                  before payouts begin.
+                  Enter your South African bank account and identity details. Nomia verifies the
+                  account with Paystack (ZAR {PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR} validation fee
+                  per attempt, paid by Nomia) before affiliate sales can begin.
                 </Trans>
               </p>
             </div>
@@ -293,8 +350,8 @@ export const ResellerPayoutSettings = ({
           {subaccountStatus === 'PENDING' ? (
             <p className="text-xs text-muted-foreground">
               <Trans>
-                Nomia is verifying your subaccount with Paystack. Once approved, click Refresh
-                status or reload this page to update verification here.
+                Your bank details are awaiting Nomia verification with Paystack. Affiliate sales
+                stay blocked until verification completes.
               </Trans>
             </p>
           ) : null}
@@ -311,6 +368,12 @@ export const ResellerPayoutSettings = ({
           {bankAccountNumber ? (
             <p className="text-xs text-muted-foreground">
               <Trans>Saved account: {bankAccountNumber}</Trans>
+            </p>
+          ) : null}
+
+          {bankDocumentNumber ? (
+            <p className="text-xs text-muted-foreground">
+              <Trans>Saved document: {bankDocumentNumber}</Trans>
             </p>
           ) : null}
 
@@ -401,8 +464,103 @@ export const ResellerPayoutSettings = ({
                   )}
                 />
 
+                <FormField
+                  control={bankForm.control}
+                  name="accountType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Trans>Account type</Trans>
+                      </FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          bankForm.setValue(
+                            'documentType',
+                            getDefaultResellerBankDocumentType(
+                              value as 'personal' | 'business',
+                            ),
+                            { shouldValidate: true },
+                          );
+                        }}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {RESELLER_BANK_ACCOUNT_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {getResellerBankAccountTypeLabel(type)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={bankForm.control}
+                  name="documentType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Trans>Document type</Trans>
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {documentTypeOptions.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {getResellerBankDocumentTypeLabel(type)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={bankForm.control}
+                  name="documentNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Trans>Document number</Trans>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder={
+                            bankDocumentNumber
+                              ? _(msg`Enter document number to update ${bankDocumentNumber}`)
+                              : _(msg`ID, passport, or company registration number`)
+                          }
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        <Trans>
+                          Required for Paystack bank validation. Nomia uses this only for
+                          verification.
+                        </Trans>
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <Button type="submit" loading={isUpdatingBank}>
-                  <Trans>Save bank details</Trans>
+                  <Trans>Submit for verification</Trans>
                 </Button>
               </fieldset>
             </form>

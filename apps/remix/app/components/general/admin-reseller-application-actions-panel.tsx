@@ -3,6 +3,11 @@ import { Trans } from '@lingui/react/macro';
 import { InfoIcon } from 'lucide-react';
 
 import {
+  getResellerBankAccountTypeLabel,
+  getResellerBankDocumentTypeLabel,
+  PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR,
+} from '@documenso/lib/constants/reseller-bank-verification';
+import {
   getResellerApplicationStatusLabel,
   getResellerProfileStatusLabel,
   isResellerTermsRejectionReason,
@@ -38,6 +43,12 @@ type ResellerApplicationRow = {
     bankName?: string | null;
     bankAccountNumber?: string | null;
     bankAccountName?: string | null;
+    bankAccountType?: 'personal' | 'business' | null;
+    bankDocumentType?:
+      | 'identityNumber'
+      | 'passportNumber'
+      | 'businessRegistrationNumber'
+      | null;
     paystackSubaccountCode?: string | null;
     subaccountStatus?: 'PENDING' | 'ACTIVE' | 'FAILED' | null;
     subaccountVerifiedAt?: Date | string | null;
@@ -58,6 +69,7 @@ type AdminResellerApplicationActionsPanelProps = {
   isUpdatingAllowNegativeCredits: boolean;
   isRefreshingBankStatus: boolean;
   isRetryingSubaccount: boolean;
+  isVerifyingBankAccount: boolean;
   onSendTerms: () => void;
   onActivate: () => void;
   onReject: () => void;
@@ -68,6 +80,7 @@ type AdminResellerApplicationActionsPanelProps = {
   onAllowNegativeCreditsChange: (allowNegativeCredits: boolean) => void;
   onRefreshBankStatus: () => void;
   onRetrySubaccount: () => void;
+  onVerifyBankAccount: () => void;
 };
 
 export const AdminResellerApplicationActionsPanel = ({
@@ -77,6 +90,7 @@ export const AdminResellerApplicationActionsPanel = ({
   isUpdatingAllowNegativeCredits,
   isRefreshingBankStatus,
   isRetryingSubaccount,
+  isVerifyingBankAccount,
   onSendTerms,
   onActivate,
   onReject,
@@ -87,6 +101,7 @@ export const AdminResellerApplicationActionsPanel = ({
   onAllowNegativeCreditsChange,
   onRefreshBankStatus,
   onRetrySubaccount,
+  onVerifyBankAccount,
 }: AdminResellerApplicationActionsPanelProps) => {
   const { t } = useLingui();
 
@@ -117,6 +132,12 @@ export const AdminResellerApplicationActionsPanel = ({
     isAccounts &&
     profile?.status === 'ACTIVE' &&
     (profile.payoutMode === 'NOMIA_SUBACCOUNT' || hasBankDetails);
+  const hasVerificationDetails = Boolean(profile?.bankAccountType && profile?.bankDocumentType);
+  const canVerifyBankAccount =
+    canManageBankVerification &&
+    hasBankDetails &&
+    hasVerificationDetails &&
+    profile?.subaccountStatus !== 'ACTIVE';
 
   const applicationStatusLabel = getResellerApplicationStatusLabel(
     application.status,
@@ -320,6 +341,20 @@ export const AdminResellerApplicationActionsPanel = ({
                     <p>
                       <Trans>Account: {profile.bankAccountNumber ?? '—'}</Trans>
                     </p>
+                    {profile.bankAccountType ? (
+                      <p>
+                        <Trans>
+                          Account type: {getResellerBankAccountTypeLabel(profile.bankAccountType)}
+                        </Trans>
+                      </p>
+                    ) : null}
+                    {profile.bankDocumentType ? (
+                      <p>
+                        <Trans>
+                          Document: {getResellerBankDocumentTypeLabel(profile.bankDocumentType)}
+                        </Trans>
+                      </p>
+                    ) : null}
                     {profile.paystackSubaccountCode ? (
                       <p className="truncate">
                         <Trans>Subaccount: {profile.paystackSubaccountCode}</Trans>
@@ -335,17 +370,14 @@ export const AdminResellerApplicationActionsPanel = ({
                 ) : null}
               </div>
 
-              {canManageBankVerification &&
-              hasBankDetails &&
-              profile.payoutMode === 'NOMIA_SUBACCOUNT' &&
-              profile.subaccountStatus !== 'ACTIVE' ? (
+              {canVerifyBankAccount ? (
                 <Alert variant="secondary" padding="tight">
                   <InfoIcon className="h-4 w-4" />
                   <AlertDescription className="text-xs leading-relaxed">
                     <Trans>
-                      After registering the subaccount, verify it once in the Paystack dashboard
-                      (Subaccounts → Verify Subaccounts), then click Refresh status here to sync
-                      verification in Nomia.
+                      Verify with Paystack costs ZAR {PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR} per
+                      successful API call (charged to Nomia), whether or not the account details
+                      match.
                     </Trans>
                   </AlertDescription>
                 </Alert>
@@ -353,13 +385,23 @@ export const AdminResellerApplicationActionsPanel = ({
 
               {canManageBankVerification && hasBankDetails ? (
                 <div className="space-y-2">
-                  {!profile.paystackSubaccountCode || profile.subaccountStatus === 'FAILED' ? (
+                  {canVerifyBankAccount ? (
                     <Button
                       className="w-full"
+                      loading={isVerifyingBankAccount}
+                      onClick={onVerifyBankAccount}
+                    >
+                      <Trans>Verify with Paystack (ZAR {PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR})</Trans>
+                    </Button>
+                  ) : null}
+                  {profile.subaccountStatus === 'FAILED' ? (
+                    <Button
+                      className="w-full"
+                      variant="outline"
                       loading={isRetryingSubaccount}
                       onClick={onRetrySubaccount}
                     >
-                      <Trans>Register subaccount</Trans>
+                      <Trans>Retry subaccount registration</Trans>
                     </Button>
                   ) : null}
                   {profile.paystackSubaccountCode ? (
