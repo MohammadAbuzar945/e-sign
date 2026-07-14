@@ -3,17 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
 
-import { adminVerifyResellerBankAccount } from './admin-verify-reseller-bank';
+import { adminRetryResellerSubaccount } from './admin-verify-reseller-bank';
 
-const validatePaystackBankAccountMock = vi.fn();
 const createPaystackSubaccountMock = vi.fn();
 const updatePaystackSubaccountMock = vi.fn();
+const getPaystackSubaccountMock = vi.fn();
 
 vi.mock('@documenso/lib/server-only/paystack', () => ({
-  validatePaystackBankAccount: (...args: unknown[]) => validatePaystackBankAccountMock(...args),
   createPaystackSubaccount: (...args: unknown[]) => createPaystackSubaccountMock(...args),
   updatePaystackSubaccount: (...args: unknown[]) => updatePaystackSubaccountMock(...args),
-  getPaystackSubaccount: vi.fn(),
+  getPaystackSubaccount: (...args: unknown[]) => getPaystackSubaccountMock(...args),
 }));
 
 vi.mock('./reseller-secrets', () => ({
@@ -39,12 +38,12 @@ vi.mock('./update-reseller-payout', () => ({
 
 const prismaMock = vi.mocked(prisma);
 
-describe('adminVerifyResellerBankAccount', () => {
+describe('adminRetryResellerSubaccount', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('validates with Paystack and activates the subaccount', async () => {
+  it('creates a Paystack subaccount without paid bank validation', async () => {
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
       id: 'app_1',
       organisation: {
@@ -63,12 +62,6 @@ describe('adminVerifyResellerBankAccount', () => {
         },
       },
     } as never);
-
-    validatePaystackBankAccountMock.mockResolvedValue({
-      verified: true,
-      accountHolderMatch: true,
-      verificationMessage: 'Account is verified successfully',
-    });
 
     createPaystackSubaccountMock.mockResolvedValue({
       subaccount_code: 'ACCT_new',
@@ -76,37 +69,32 @@ describe('adminVerifyResellerBankAccount', () => {
       is_verified: false,
     });
 
-    prismaMock.resellerProfile.update.mockResolvedValue({
+    prismaMock.resellerProfile.update.mockResolvedValue({} as never);
+    prismaMock.resellerProfile.findUniqueOrThrow.mockResolvedValue({
       id: 'profile_1',
       bankCode: '632005',
       bankName: 'ABSA',
       bankAccountNumber: '0123456047',
       bankAccountName: 'Test Account',
       paystackSubaccountCode: 'ACCT_new',
-      subaccountStatus: 'ACTIVE',
+      subaccountStatus: 'PENDING',
     } as never);
 
-    const result = await adminVerifyResellerBankAccount({
+    const result = await adminRetryResellerSubaccount({
       applicationId: 'app_1',
-      accountType: 'personal',
-      documentType: 'identityNumber',
-      documentNumber: '9001015800088',
     });
 
-    expect(validatePaystackBankAccountMock).toHaveBeenCalledWith(
+    expect(createPaystackSubaccountMock).toHaveBeenCalledWith(
       expect.objectContaining({
         accountNumber: '0123456047',
-        bankCode: '632005',
-        countryCode: 'ZA',
-        documentNumber: '9001015800088',
+        settlementBank: '632005',
       }),
     );
-    expect(createPaystackSubaccountMock).toHaveBeenCalled();
-    expect(result.verified).toBe(true);
-    expect(result.subaccountStatus).toBe('ACTIVE');
+    expect(result.subaccountStatus).toBe('PENDING');
+    expect(result.paystackSubaccountCode).toBe('ACCT_new');
   });
 
-  it('marks the profile failed when Paystack validation rejects the account', async () => {
+  it('marks the profile failed when subaccount registration fails', async () => {
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
       id: 'app_1',
       organisation: {
@@ -126,19 +114,13 @@ describe('adminVerifyResellerBankAccount', () => {
       },
     } as never);
 
-    validatePaystackBankAccountMock.mockResolvedValue({
-      verified: false,
-      verificationMessage: 'Account holder mismatch',
-    });
+    createPaystackSubaccountMock.mockRejectedValue(new Error('Invalid settlement bank'));
 
     prismaMock.resellerProfile.update.mockResolvedValue({} as never);
 
     await expect(
-      adminVerifyResellerBankAccount({
+      adminRetryResellerSubaccount({
         applicationId: 'app_1',
-        accountType: 'personal',
-        documentType: 'identityNumber',
-        documentNumber: '9001015800088',
       }),
     ).rejects.toThrow(AppError);
 
@@ -146,7 +128,7 @@ describe('adminVerifyResellerBankAccount', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           subaccountStatus: 'FAILED',
-          subaccountFailureReason: 'Account holder mismatch',
+          subaccountFailureReason: 'Invalid settlement bank',
         }),
       }),
     );

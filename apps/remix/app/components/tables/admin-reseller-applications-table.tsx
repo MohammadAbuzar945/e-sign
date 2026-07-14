@@ -16,7 +16,6 @@ import { AppError } from '@documenso/lib/errors/app-error';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { trpc } from '@documenso/trpc/react';
 import { AdminResellerApplicationActionDialog } from '~/components/dialogs/admin-reseller-application-action-dialog';
-import { AdminVerifyResellerBankDialog } from '~/components/dialogs/admin-verify-reseller-bank-dialog';
 import { SendResellerTermsDialog } from '~/components/dialogs/send-reseller-terms-dialog';
 import { AdminResellerApplicationActionsPanel } from '~/components/general/admin-reseller-application-actions-panel';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
@@ -52,7 +51,6 @@ export const AdminResellerApplicationsTable = () => {
   const { toast } = useToast();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
-  const [isVerifyBankDialogOpen, setIsVerifyBankDialogOpen] = useState(false);
   const [applicationAction, setApplicationAction] = useState<'reject' | 'cancel' | null>(null);
   const [profileAction, setProfileAction] = useState<'deactivate' | 'reactivate' | 'delete' | null>(
     null,
@@ -522,7 +520,6 @@ export const AdminResellerApplicationsTable = () => {
                 allowNegativeCredits,
               });
             }}
-            onVerifyBankAccount={() => setIsVerifyBankDialogOpen(true)}
             onRefreshBankStatus={async () => {
               await refreshBankAccountStatus({
                 applicationId: selectedApplication.id,
@@ -544,18 +541,6 @@ export const AdminResellerApplicationsTable = () => {
         onSuccess={handleMutationSuccess}
       />
 
-      <AdminVerifyResellerBankDialog
-        applicationId={isVerifyBankDialogOpen ? selectedApplication?.id ?? null : null}
-        organisationName={selectedApplication?.snapshotOrgName ?? null}
-        bankName={selectedApplication?.resellerProfile?.bankName ?? null}
-        bankAccountName={selectedApplication?.resellerProfile?.bankAccountName ?? null}
-        bankAccountNumber={selectedApplication?.resellerProfile?.bankAccountNumber ?? null}
-        bankAccountType={selectedApplication?.resellerProfile?.bankAccountType ?? null}
-        bankDocumentType={selectedApplication?.resellerProfile?.bankDocumentType ?? null}
-        open={isVerifyBankDialogOpen}
-        onOpenChange={setIsVerifyBankDialogOpen}
-        onSuccess={handleMutationSuccess}
-      />
       <AdminResellerApplicationActionDialog
         action={applicationAction ?? 'reject'}
         applicationId={applicationAction ? selectedApplication?.id ?? null : null}

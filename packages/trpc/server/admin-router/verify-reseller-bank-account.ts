@@ -1,7 +1,6 @@
 import {
   adminRefreshResellerBankAccountStatus,
   adminRetryResellerSubaccount,
-  adminVerifyResellerBankAccount,
 } from '@documenso/lib/server-only/reseller/admin-verify-reseller-bank';
 import { assertResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 
@@ -11,31 +10,7 @@ import {
   ZAdminRefreshResellerBankAccountStatusResponseSchema,
   ZAdminRetryResellerSubaccountRequestSchema,
   ZAdminRetryResellerSubaccountResponseSchema,
-  ZAdminVerifyResellerBankAccountRequestSchema,
-  ZAdminVerifyResellerBankAccountResponseSchema,
 } from './verify-reseller-bank-account.types';
-
-export const verifyResellerBankAccountRoute = adminProcedure
-  .input(ZAdminVerifyResellerBankAccountRequestSchema)
-  .output(ZAdminVerifyResellerBankAccountResponseSchema)
-  .mutation(async ({ input, ctx }) => {
-    assertResellerFeatureAccess(ctx.user.email);
-
-    const { applicationId, accountType, documentType, documentNumber, countryCode } = input;
-
-    const result = await adminVerifyResellerBankAccount({
-      applicationId,
-      accountType,
-      documentType,
-      documentNumber,
-      countryCode,
-    });
-
-    return {
-      success: true as const,
-      ...result,
-    };
-  });
 
 export const refreshResellerBankAccountStatusRoute = adminProcedure
   .input(ZAdminRefreshResellerBankAccountStatusRequestSchema)

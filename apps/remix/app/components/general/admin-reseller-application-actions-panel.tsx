@@ -9,12 +9,6 @@ import {
   RESELLER_ADMIN_VIEW,
   type ResellerAdminView,
 } from '@documenso/lib/constants/reseller-application-status';
-import {
-  getResellerBankAccountTypeLabel,
-  getResellerBankDocumentTypeLabel,
-  type ResellerBankAccountType,
-  type ResellerBankDocumentType,
-} from '@documenso/lib/constants/reseller-bank-verification';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
@@ -44,8 +38,6 @@ type ResellerApplicationRow = {
     bankName?: string | null;
     bankAccountNumber?: string | null;
     bankAccountName?: string | null;
-    bankAccountType?: ResellerBankAccountType | null;
-    bankDocumentType?: ResellerBankDocumentType | null;
     paystackSubaccountCode?: string | null;
     subaccountStatus?: 'PENDING' | 'ACTIVE' | 'FAILED' | null;
     subaccountVerifiedAt?: Date | string | null;
@@ -74,7 +66,6 @@ type AdminResellerApplicationActionsPanelProps = {
   onReactivate: () => void;
   onDelete: () => void;
   onAllowNegativeCreditsChange: (allowNegativeCredits: boolean) => void;
-  onVerifyBankAccount: () => void;
   onRefreshBankStatus: () => void;
   onRetrySubaccount: () => void;
 };
@@ -94,7 +85,6 @@ export const AdminResellerApplicationActionsPanel = ({
   onReactivate,
   onDelete,
   onAllowNegativeCreditsChange,
-  onVerifyBankAccount,
   onRefreshBankStatus,
   onRetrySubaccount,
 }: AdminResellerApplicationActionsPanelProps) => {
@@ -330,20 +320,6 @@ export const AdminResellerApplicationActionsPanel = ({
                     <p>
                       <Trans>Account: {profile.bankAccountNumber ?? '—'}</Trans>
                     </p>
-                    {profile.bankAccountType ? (
-                      <p>
-                        <Trans>
-                          Account type: {getResellerBankAccountTypeLabel(profile.bankAccountType)}
-                        </Trans>
-                      </p>
-                    ) : null}
-                    {profile.bankDocumentType ? (
-                      <p>
-                        <Trans>
-                          Document: {getResellerBankDocumentTypeLabel(profile.bankDocumentType)}
-                        </Trans>
-                      </p>
-                    ) : null}
                     {profile.paystackSubaccountCode ? (
                       <p className="truncate">
                         <Trans>Subaccount: {profile.paystackSubaccountCode}</Trans>
@@ -359,11 +335,33 @@ export const AdminResellerApplicationActionsPanel = ({
                 ) : null}
               </div>
 
+              {canManageBankVerification &&
+              hasBankDetails &&
+              profile.payoutMode === 'NOMIA_SUBACCOUNT' &&
+              profile.subaccountStatus !== 'ACTIVE' ? (
+                <Alert variant="secondary" padding="tight">
+                  <InfoIcon className="h-4 w-4" />
+                  <AlertDescription className="text-xs leading-relaxed">
+                    <Trans>
+                      After registering the subaccount, verify it once in the Paystack dashboard
+                      (Subaccounts → Verify Subaccounts), then click Refresh status here to sync
+                      verification in Nomia.
+                    </Trans>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+
               {canManageBankVerification && hasBankDetails ? (
                 <div className="space-y-2">
-                  <Button className="w-full" onClick={onVerifyBankAccount}>
-                    <Trans>Verify with Paystack</Trans>
-                  </Button>
+                  {!profile.paystackSubaccountCode || profile.subaccountStatus === 'FAILED' ? (
+                    <Button
+                      className="w-full"
+                      loading={isRetryingSubaccount}
+                      onClick={onRetrySubaccount}
+                    >
+                      <Trans>Register subaccount</Trans>
+                    </Button>
+                  ) : null}
                   {profile.paystackSubaccountCode ? (
                     <Button
                       className="w-full"
@@ -372,17 +370,6 @@ export const AdminResellerApplicationActionsPanel = ({
                       onClick={onRefreshBankStatus}
                     >
                       <Trans>Refresh status</Trans>
-                    </Button>
-                  ) : null}
-                  {profile.subaccountStatus === 'FAILED' || !profile.paystackSubaccountCode ? (
-                    <Button
-                      className="w-full"
-                      variant="ghost"
-                      size="sm"
-                      loading={isRetryingSubaccount}
-                      onClick={onRetrySubaccount}
-                    >
-                      <Trans>Retry subaccount</Trans>
                     </Button>
                   ) : null}
                 </div>

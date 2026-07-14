@@ -108,12 +108,33 @@ export type PaystackBank = {
   type: string;
 };
 
-export const listPaystackBanks = async (country = 'south africa') => {
+export type PaystackBankListItem = {
+  name: string;
+  code: string;
+  currency: string;
+};
+
+export type ListPaystackBanksOptions = {
+  country?: string;
+};
+
+const mapPaystackBank = (bank: PaystackBank): PaystackBankListItem => ({
+  name: bank.name,
+  code: bank.code,
+  currency: bank.currency,
+});
+
+export const listPaystackBanks = async (
+  options: ListPaystackBanksOptions | string = {},
+): Promise<PaystackBankListItem[]> => {
+  const normalizedOptions = typeof options === 'string' ? { country: options } : options;
+  const { country = 'south africa' } = normalizedOptions;
+
   const result = await paystackFetch<PaystackBank[]>(
     `/bank?country=${encodeURIComponent(country)}&perPage=100`,
   );
 
-  return result.data.filter((bank) => bank.active);
+  return result.data.filter((bank) => bank.active).map(mapPaystackBank);
 };
 
 export type ResolvePaystackBankAccountOptions = {
@@ -133,7 +154,7 @@ export const resolvePaystackBankAccount = async ({
   let resolvedCurrency = currency?.toUpperCase();
 
   if (!resolvedCurrency) {
-    const banks = await listPaystackBanks('south africa');
+    const banks = await listPaystackBanks({ country: 'south africa' });
     const bank = banks.find((item) => item.code === bankCode);
     resolvedCurrency = bank?.currency?.toUpperCase();
   }
@@ -245,54 +266,6 @@ export const getPaystackSubaccount = async (subaccountCode: string) => {
   );
 
   return result.data;
-};
-
-export type ValidatePaystackBankAccountOptions = {
-  accountNumber: string;
-  accountName: string;
-  bankCode: string;
-  countryCode?: string;
-  accountType: 'personal' | 'business';
-  documentType: 'identityNumber' | 'passportNumber' | 'businessRegistrationNumber';
-  documentNumber: string;
-};
-
-export type ValidatePaystackBankAccountResult = {
-  verified: boolean;
-  accountHolderMatch?: boolean;
-  accountAcceptsCredits?: boolean;
-  accountAcceptsDebits?: boolean;
-  accountOpen?: boolean;
-  verificationMessage?: string;
-};
-
-export const validatePaystackBankAccount = async ({
-  accountNumber,
-  accountName,
-  bankCode,
-  countryCode = 'ZA',
-  accountType,
-  documentType,
-  documentNumber,
-}: ValidatePaystackBankAccountOptions) => {
-  const result = await paystackFetch<ValidatePaystackBankAccountResult>('/bank/validate', {
-    method: 'POST',
-    body: {
-      account_number: accountNumber,
-      account_name: accountName,
-      bank_code: bankCode,
-      country_code: countryCode,
-      account_type: accountType,
-      document_type: documentType,
-      document_number: documentNumber,
-    },
-  });
-
-  return {
-    ...result.data,
-    verified: result.data.verified === true,
-    verificationMessage: result.data.verificationMessage || result.message,
-  };
 };
 
 export { getNomiaPaystackSecretKey };

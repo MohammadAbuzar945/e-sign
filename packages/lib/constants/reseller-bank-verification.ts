@@ -81,6 +81,23 @@ export const getDefaultResellerBankDocumentType = (
   return getResellerBankDocumentTypesForAccountType(accountType)[0];
 };
 
+export const getSupportedAccountTypesForBank = (
+  supportedTypes?: ResellerBankAccountType[],
+): ResellerBankAccountType[] => {
+  if (!supportedTypes || supportedTypes.length === 0) {
+    return [...RESELLER_BANK_ACCOUNT_TYPES];
+  }
+
+  return supportedTypes;
+};
+
+export const isAccountTypeSupportedByBank = (
+  accountType: ResellerBankAccountType,
+  supportedTypes?: ResellerBankAccountType[],
+) => {
+  return getSupportedAccountTypesForBank(supportedTypes).includes(accountType);
+};
+
 export const parseResellerBankAccountType = (
   value: string | null | undefined,
 ): ResellerBankAccountType | null => {

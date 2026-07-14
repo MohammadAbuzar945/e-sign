@@ -6,17 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-import {
-  getDefaultResellerBankDocumentType,
-  getResellerBankAccountTypeLabel,
-  getResellerBankDocumentTypeLabel,
-  getResellerBankDocumentTypesForAccountType,
-  ZResellerBankAccountTypeSchema,
-  ZResellerBankDocumentTypeSchema,
-  ZResellerBankVerificationFieldsSchema,
-  type ResellerBankAccountType,
-  type ResellerBankDocumentType,
-} from '@documenso/lib/constants/reseller-bank-verification';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
@@ -32,38 +21,14 @@ import {
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { SearchableSelect } from '@documenso/ui/primitives/searchable-select';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@documenso/ui/primitives/select';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
-const ZBankDetailsFormSchema = z
-  .object({
-    bankCode: z.string().min(1),
-    bankName: z.string().min(1),
-    bankAccountNumber: z.string().min(5),
-    bankAccountName: z.string().min(1),
-    accountType: ZResellerBankAccountTypeSchema,
-    documentType: ZResellerBankDocumentTypeSchema,
-    documentNumber: z.string().trim().min(5).max(64),
-  })
-  .superRefine((values, context) => {
-    const verificationResult = ZResellerBankVerificationFieldsSchema.safeParse({
-      accountType: values.accountType,
-      documentType: values.documentType,
-      documentNumber: values.documentNumber,
-    });
-
-    if (!verificationResult.success) {
-      for (const issue of verificationResult.error.issues) {
-        context.addIssue(issue);
-      }
-    }
-  });
+const ZBankDetailsFormSchema = z.object({
+  bankCode: z.string().min(1),
+  bankName: z.string().min(1),
+  bankAccountNumber: z.string().min(5),
+  bankAccountName: z.string().min(1),
+});
 
 type ResellerPayoutSettingsProps = {
   organisationId: string;
@@ -72,9 +37,6 @@ type ResellerPayoutSettingsProps = {
   bankName: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;
-  bankAccountType: ResellerBankAccountType | null;
-  bankDocumentType: ResellerBankDocumentType | null;
-  bankDocumentNumber: string | null;
   subaccountStatus: 'PENDING' | 'ACTIVE' | 'FAILED' | null;
   subaccountFailureReason: string | null;
   canAcceptAffiliatePayments: boolean;
@@ -89,9 +51,6 @@ export const ResellerPayoutSettings = ({
   bankName,
   bankAccountNumber,
   bankAccountName,
-  bankAccountType,
-  bankDocumentType,
-  bankDocumentNumber,
   subaccountStatus,
   subaccountFailureReason,
   canAcceptAffiliatePayments,
@@ -114,10 +73,6 @@ export const ResellerPayoutSettings = ({
       },
     );
 
-  const defaultAccountType = bankAccountType ?? 'personal';
-  const defaultDocumentType =
-    bankDocumentType ?? getDefaultResellerBankDocumentType(defaultAccountType);
-
   const bankForm = useForm<z.infer<typeof ZBankDetailsFormSchema>>({
     resolver: zodResolver(ZBankDetailsFormSchema),
     values: {
@@ -125,9 +80,6 @@ export const ResellerPayoutSettings = ({
       bankName: bankName ?? '',
       bankAccountNumber: '',
       bankAccountName: bankAccountName ?? '',
-      accountType: defaultAccountType,
-      documentType: defaultDocumentType,
-      documentNumber: '',
     },
   });
 
@@ -151,27 +103,11 @@ export const ResellerPayoutSettings = ({
       onSuccess: async () => {
         await onUpdated();
         bankForm.resetField('bankAccountNumber');
-        bankForm.resetField('documentNumber');
-        toast({ title: _(msg`Bank details saved and submitted for verification`) });
+        toast({ title: _(msg`Bank details saved and subaccount registered`) });
       },
       onError: (error) => {
         toast({
           title: _(msg`Bank update failed`),
-          description: AppError.parseError(error).message,
-          variant: 'destructive',
-        });
-      },
-    });
-
-  const { mutateAsync: resolveBankAccount, isPending: isResolvingAccount } =
-    trpc.organisation.reseller.resolveBankAccount.useMutation({
-      onSuccess: (result) => {
-        bankForm.setValue('bankAccountName', result.accountName, { shouldValidate: true });
-        toast({ title: _(msg`Account name resolved`) });
-      },
-      onError: (error) => {
-        toast({
-          title: _(msg`Could not resolve account`),
           description: AppError.parseError(error).message,
           variant: 'destructive',
         });
@@ -190,7 +126,7 @@ export const ResellerPayoutSettings = ({
         toast({
           title: _(msg`Verification still pending`),
           description: _(
-            msg`Paystack has not marked this subaccount as verified yet. Try again after completing verification in Paystack.`,
+            msg`Paystack has not marked this subaccount as verified yet. Try again after Paystack completes their review.`,
           ),
         });
       },
@@ -213,20 +149,7 @@ export const ResellerPayoutSettings = ({
     [banks],
   );
   const selectedBankCode = bankForm.watch('bankCode');
-  const selectedAccountType = bankForm.watch('accountType');
   const selectedBank = banks.find((bank) => bank.code === selectedBankCode);
-  const documentTypeOptions = getResellerBankDocumentTypesForAccountType(selectedAccountType);
-  const supportsAccountNameLookup = selectedBank ? selectedBank.currency !== 'ZAR' : false;
-
-  useEffect(() => {
-    const currentDocumentType = bankForm.getValues('documentType');
-
-    if (!documentTypeOptions.includes(currentDocumentType)) {
-      bankForm.setValue('documentType', getDefaultResellerBankDocumentType(selectedAccountType), {
-        shouldValidate: true,
-      });
-    }
-  }, [bankForm, documentTypeOptions, selectedAccountType]);
 
   const statusBadge = (() => {
     if (subaccountStatus === 'ACTIVE') {
@@ -343,8 +266,9 @@ export const ResellerPayoutSettings = ({
               </p>
               <p className="text-xs text-muted-foreground">
                 <Trans>
-                  Nomia registers your bank as a Paystack subaccount and splits affiliate sales to
-                  you. Verification requires your account type and identity document details.
+                  Select your South African bank and account details. Nomia registers a Paystack
+                  subaccount at no extra validation cost. Nomia verifies the subaccount in Paystack
+                  before payouts begin.
                 </Trans>
               </p>
             </div>
@@ -369,8 +293,8 @@ export const ResellerPayoutSettings = ({
           {subaccountStatus === 'PENDING' ? (
             <p className="text-xs text-muted-foreground">
               <Trans>
-                After verifying your bank account in Paystack, refresh this page or click Refresh
-                status to update verification here.
+                Nomia is verifying your subaccount with Paystack. Once approved, click Refresh
+                status or reload this page to update verification here.
               </Trans>
             </p>
           ) : null}
@@ -378,7 +302,7 @@ export const ResellerPayoutSettings = ({
           {subaccountStatus === 'FAILED' && subaccountFailureReason ? (
             <Alert variant="destructive">
               <AlertTitle>
-                <Trans>Verification failed</Trans>
+                <Trans>Registration failed</Trans>
               </AlertTitle>
               <AlertDescription>{subaccountFailureReason}</AlertDescription>
             </Alert>
@@ -419,8 +343,8 @@ export const ResellerPayoutSettings = ({
                           value={field.value}
                           onChange={(value) => {
                             field.onChange(value);
-                            const selectedBank = banks.find((bank) => bank.code === value);
-                            bankForm.setValue('bankName', selectedBank?.name ?? '', {
+                            const nextBank = banks.find((bank) => bank.code === value);
+                            bankForm.setValue('bankName', nextBank?.name ?? '', {
                               shouldValidate: true,
                             });
                           }}
@@ -462,46 +386,13 @@ export const ResellerPayoutSettings = ({
                       <FormLabel>
                         <Trans>Account name</Trans>
                       </FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input {...field} placeholder={_(msg`Account holder name`)} />
-                        </FormControl>
-                        {supportsAccountNameLookup ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            loading={isResolvingAccount}
-                            onClick={async () => {
-                              const accountNumber = bankForm.getValues('bankAccountNumber');
-                              const code = bankForm.getValues('bankCode');
-
-                              if (!accountNumber || !code) {
-                                toast({
-                                  title: _(msg`Missing details`),
-                                  description: _(
-                                    msg`Select a bank and enter the account number first.`,
-                                  ),
-                                  variant: 'destructive',
-                                });
-                                return;
-                              }
-
-                              await resolveBankAccount({
-                                accountNumber,
-                                bankCode: code,
-                                currency: selectedBank?.currency,
-                              });
-                            }}
-                          >
-                            <Trans>Resolve</Trans>
-                          </Button>
-                        ) : null}
-                      </div>
-                      {!supportsAccountNameLookup && selectedBankCode ? (
+                      <FormControl>
+                        <Input {...field} placeholder={_(msg`Account holder name`)} />
+                      </FormControl>
+                      {selectedBankCode ? (
                         <p className="text-xs text-muted-foreground">
                           <Trans>
-                            South African banks do not support automatic name lookup. Enter the
-                            account holder name exactly as it appears on the bank account.
+                            Enter the account holder name exactly as it appears on the bank account.
                           </Trans>
                         </p>
                       ) : null}
@@ -510,112 +401,8 @@ export const ResellerPayoutSettings = ({
                   )}
                 />
 
-                <div className="space-y-4 rounded-md border bg-muted/20 p-4">
-                  <div>
-                    <p className="text-sm font-medium">
-                      <Trans>Verification details</Trans>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      <Trans>
-                        Paystack requires these details to verify the bank account before payouts
-                        can begin.
-                      </Trans>
-                    </p>
-                  </div>
-
-                  <FormField
-                    control={bankForm.control}
-                    name="accountType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          <Trans>Account type</Trans>
-                        </FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            bankForm.setValue(
-                              'documentType',
-                              getDefaultResellerBankDocumentType(
-                                value as ResellerBankAccountType,
-                              ),
-                              { shouldValidate: true },
-                            );
-                          }}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="personal">
-                              {getResellerBankAccountTypeLabel('personal')}
-                            </SelectItem>
-                            <SelectItem value="business">
-                              {getResellerBankAccountTypeLabel('business')}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={bankForm.control}
-                    name="documentType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          <Trans>Document type</Trans>
-                        </FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {documentTypeOptions.map((documentType) => (
-                              <SelectItem key={documentType} value={documentType}>
-                                {getResellerBankDocumentTypeLabel(documentType)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={bankForm.control}
-                    name="documentNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          <Trans>Document number</Trans>
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder={
-                              bankDocumentNumber
-                                ? _(msg`Enter a new document number to replace ${bankDocumentNumber}`)
-                                : _(msg`Enter ID / CNIC / passport / registration number`)
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
                 <Button type="submit" loading={isUpdatingBank}>
-                  <Trans>Save and verify bank details</Trans>
+                  <Trans>Save bank details</Trans>
                 </Button>
               </fieldset>
             </form>

@@ -74,10 +74,6 @@ export const updateResellerBankDetailsRoute = authenticatedProcedure
       bankName: data.bankName,
       bankAccountNumber: data.bankAccountNumber,
       bankAccountName: data.bankAccountName,
-      accountType: data.accountType,
-      documentType: data.documentType,
-      documentNumber: data.documentNumber,
-      countryCode: data.countryCode,
     });
 
     return {
@@ -93,7 +89,9 @@ export const listPaystackBanksRoute = authenticatedProcedure
   .query(async ({ input, ctx }) => {
     assertResellerFeatureAccess(ctx.user.email);
 
-    const banks = await listPaystackBanks(input.country ?? 'south africa');
+    const banks = await listPaystackBanks({
+      country: input.country ?? 'south africa',
+    });
 
     return {
       banks: banks.map((bank) => ({
