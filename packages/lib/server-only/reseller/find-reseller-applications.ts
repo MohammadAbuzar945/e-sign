@@ -156,6 +156,8 @@ export const findResellerApplications = async ({
           bankName: resellerProfile.bankName,
           bankAccountNumber: maskBankAccountNumber(resellerProfile.bankAccountNumber),
           bankAccountName: resellerProfile.bankAccountName,
+          bankAccountType: resellerProfile.bankAccountType,
+          bankDocumentType: resellerProfile.bankDocumentType,
           paystackSubaccountCode: resellerProfile.paystackSubaccountCode,
           subaccountStatus: resellerProfile.subaccountStatus,
           subaccountVerifiedAt: resellerProfile.subaccountVerifiedAt,

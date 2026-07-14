@@ -7,6 +7,16 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
+import {
+  getDefaultResellerBankDocumentType,
+  getResellerBankAccountTypeLabel,
+  getResellerBankDocumentTypeLabel,
+  getResellerBankDocumentTypesForAccountType,
+  ZResellerBankAccountTypeSchema,
+  ZResellerBankDocumentTypeSchema,
+  ZResellerBankVerificationFieldsSchema,
+  type ResellerBankAccountType,
+} from '@documenso/lib/constants/reseller-bank-verification';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
@@ -36,11 +46,21 @@ import {
 } from '@documenso/ui/primitives/select';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
-const ZVerifyBankFormSchema = z.object({
-  accountType: z.enum(['personal', 'business']),
-  documentType: z.enum(['identityNumber', 'passportNumber', 'businessRegistrationNumber']),
-  documentNumber: z.string().min(5).max(64),
-});
+const ZVerifyBankFormSchema = z
+  .object({
+    accountType: ZResellerBankAccountTypeSchema,
+    documentType: ZResellerBankDocumentTypeSchema,
+    documentNumber: z.string().trim().min(5).max(64),
+  })
+  .superRefine((values, context) => {
+    const verificationResult = ZResellerBankVerificationFieldsSchema.safeParse(values);
+
+    if (!verificationResult.success) {
+      for (const issue of verificationResult.error.issues) {
+        context.addIssue(issue);
+      }
+    }
+  });
 
 type AdminVerifyResellerBankDialogProps = {
   applicationId: string | null;
@@ -48,6 +68,8 @@ type AdminVerifyResellerBankDialogProps = {
   bankName: string | null;
   bankAccountName: string | null;
   bankAccountNumber: string | null;
+  bankAccountType?: ResellerBankAccountType | null;
+  bankDocumentType?: z.infer<typeof ZResellerBankDocumentTypeSchema> | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => Promise<void> | void;
@@ -59,6 +81,8 @@ export const AdminVerifyResellerBankDialog = ({
   bankName,
   bankAccountName,
   bankAccountNumber,
+  bankAccountType,
+  bankDocumentType,
   open,
   onOpenChange,
   onSuccess,
@@ -66,14 +90,19 @@ export const AdminVerifyResellerBankDialog = ({
   const { _ } = useLingui();
   const { toast } = useToast();
 
+  const defaultAccountType = bankAccountType ?? 'personal';
+
   const form = useForm<z.infer<typeof ZVerifyBankFormSchema>>({
     resolver: zodResolver(ZVerifyBankFormSchema),
     defaultValues: {
-      accountType: 'personal',
-      documentType: 'identityNumber',
+      accountType: defaultAccountType,
+      documentType: bankDocumentType ?? getDefaultResellerBankDocumentType(defaultAccountType),
       documentNumber: '',
     },
   });
+
+  const selectedAccountType = form.watch('accountType');
+  const documentTypeOptions = getResellerBankDocumentTypesForAccountType(selectedAccountType);
 
   const { mutateAsync: verifyBankAccount, isPending } =
     trpc.admin.resellerApplications.verifyBankAccount.useMutation();
@@ -81,12 +110,22 @@ export const AdminVerifyResellerBankDialog = ({
   useEffect(() => {
     if (!open) {
       form.reset({
-        accountType: 'personal',
-        documentType: 'identityNumber',
+        accountType: defaultAccountType,
+        documentType: bankDocumentType ?? getDefaultResellerBankDocumentType(defaultAccountType),
         documentNumber: '',
       });
     }
-  }, [open, form]);
+  }, [open, form, defaultAccountType, bankDocumentType]);
+
+  useEffect(() => {
+    const currentDocumentType = form.getValues('documentType');
+
+    if (!documentTypeOptions.includes(currentDocumentType)) {
+      form.setValue('documentType', getDefaultResellerBankDocumentType(selectedAccountType), {
+        shouldValidate: true,
+      });
+    }
+  }, [form, documentTypeOptions, selectedAccountType]);
 
   const handleSubmit = async (values: z.infer<typeof ZVerifyBankFormSchema>) => {
     if (!applicationId) {
@@ -156,7 +195,17 @@ export const AdminVerifyResellerBankDialog = ({
                     <FormLabel>
                       <Trans>Account type</Trans>
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        form.setValue(
+                          'documentType',
+                          getDefaultResellerBankDocumentType(value as ResellerBankAccountType),
+                          { shouldValidate: true },
+                        );
+                      }}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -164,10 +213,10 @@ export const AdminVerifyResellerBankDialog = ({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="personal">
-                          <Trans>Personal</Trans>
+                          {getResellerBankAccountTypeLabel('personal')}
                         </SelectItem>
                         <SelectItem value="business">
-                          <Trans>Business</Trans>
+                          {getResellerBankAccountTypeLabel('business')}
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -184,22 +233,18 @@ export const AdminVerifyResellerBankDialog = ({
                     <FormLabel>
                       <Trans>Document type</Trans>
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="identityNumber">
-                          <Trans>Identity number</Trans>
-                        </SelectItem>
-                        <SelectItem value="passportNumber">
-                          <Trans>Passport number</Trans>
-                        </SelectItem>
-                        <SelectItem value="businessRegistrationNumber">
-                          <Trans>Business registration number</Trans>
-                        </SelectItem>
+                        {documentTypeOptions.map((documentType) => (
+                          <SelectItem key={documentType} value={documentType}>
+                            {getResellerBankDocumentTypeLabel(documentType)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -216,7 +261,10 @@ export const AdminVerifyResellerBankDialog = ({
                       <Trans>Document number</Trans>
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder={_(msg`Enter ID / passport / reg number`)} />
+                      <Input
+                        {...field}
+                        placeholder={_(msg`Enter ID / CNIC / passport / registration number`)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

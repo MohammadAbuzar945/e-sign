@@ -60,6 +60,10 @@ export const ZFindResellerApplicationsResponseSchema = z.object({
           bankName: z.string().nullable(),
           bankAccountNumber: z.string().nullable(),
           bankAccountName: z.string().nullable(),
+          bankAccountType: z.enum(['personal', 'business']).nullable(),
+          bankDocumentType: z
+            .enum(['identityNumber', 'passportNumber', 'businessRegistrationNumber'])
+            .nullable(),
           paystackSubaccountCode: z.string().nullable(),
           subaccountStatus: z.enum(['PENDING', 'ACTIVE', 'FAILED']).nullable(),
           subaccountVerifiedAt: z.date().nullable(),

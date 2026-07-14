@@ -10,9 +10,14 @@ import {
   createPaystackSubaccount,
   getPaystackSubaccount,
   updatePaystackSubaccount,
+  validatePaystackBankAccount,
 } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 
+import type {
+  ResellerBankAccountType,
+  ResellerBankDocumentType,
+} from '@documenso/lib/constants/reseller-bank-verification';
 import { encryptResellerSecret } from './reseller-secrets';
 
 const getSubaccountStatusFromPaystack = (subaccount: {
@@ -112,6 +117,10 @@ export type UpdateResellerBankDetailsOptions = {
   bankName: string;
   bankAccountNumber: string;
   bankAccountName: string;
+  accountType: ResellerBankAccountType;
+  documentType: ResellerBankDocumentType;
+  documentNumber: string;
+  countryCode?: string;
 };
 
 export const updateResellerBankDetails = async ({
@@ -120,6 +129,10 @@ export const updateResellerBankDetails = async ({
   bankName,
   bankAccountNumber,
   bankAccountName,
+  accountType,
+  documentType,
+  documentNumber,
+  countryCode = 'ZA',
 }: UpdateResellerBankDetailsOptions) => {
   const profile = await prisma.resellerProfile.findUnique({
     where: { organisationId },
@@ -146,16 +159,72 @@ export const updateResellerBankDetails = async ({
 
   const trimmedAccountNumber = bankAccountNumber.trim();
   const trimmedAccountName = bankAccountName.trim();
+  const trimmedDocumentNumber = documentNumber.trim();
 
-  if (!bankCode.trim() || !trimmedAccountNumber || !trimmedAccountName) {
+  if (
+    !bankCode.trim() ||
+    !trimmedAccountNumber ||
+    !trimmedAccountName ||
+    !trimmedDocumentNumber
+  ) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'Bank code, account number, and account name are required',
+      message:
+        'Bank code, account number, account name, and verification document number are required',
     });
   }
 
   const encryptedAccountNumber = encryptResellerSecret(trimmedAccountNumber);
+  const encryptedDocumentNumber = encryptResellerSecret(trimmedDocumentNumber);
   const description = `Nomia reseller: ${profile.affiliateSlug}`;
   const percentageCharge = Number(profile.platformFeePercent ?? 0);
+
+  const persistFailedVerification = async (message: string) => {
+    await prisma.resellerProfile.update({
+      where: { organisationId },
+      data: {
+        bankCode: bankCode.trim(),
+        bankName: bankName.trim(),
+        bankAccountNumber: encryptedAccountNumber,
+        bankAccountName: trimmedAccountName,
+        bankAccountType: accountType,
+        bankDocumentType: documentType,
+        bankDocumentNumber: encryptedDocumentNumber,
+        subaccountStatus: ResellerSubaccountStatus.FAILED,
+        subaccountFailureReason: message,
+        subaccountVerifiedAt: null,
+      },
+    });
+  };
+
+  let validation;
+
+  try {
+    validation = await validatePaystackBankAccount({
+      accountNumber: trimmedAccountNumber,
+      accountName: trimmedAccountName,
+      bankCode: bankCode.trim(),
+      countryCode,
+      accountType,
+      documentType,
+      documentNumber: trimmedDocumentNumber,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Bank account validation failed';
+    await persistFailedVerification(message);
+
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message,
+    });
+  }
+
+  if (!validation.verified) {
+    const message = validation.verificationMessage || 'Bank account could not be verified';
+    await persistFailedVerification(message);
+
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message,
+    });
+  }
 
   try {
     const subaccount = profile.paystackSubaccountCode
@@ -185,6 +254,9 @@ export const updateResellerBankDetails = async ({
         bankName: bankName.trim(),
         bankAccountNumber: encryptedAccountNumber,
         bankAccountName: trimmedAccountName,
+        bankAccountType: accountType,
+        bankDocumentType: documentType,
+        bankDocumentNumber: encryptedDocumentNumber,
         paystackSubaccountCode: subaccount.subaccount_code,
         paystackSubaccountId: subaccount.id,
         subaccountStatus,
@@ -202,6 +274,9 @@ export const updateResellerBankDetails = async ({
         bankName: bankName.trim(),
         bankAccountNumber: encryptedAccountNumber,
         bankAccountName: trimmedAccountName,
+        bankAccountType: accountType,
+        bankDocumentType: documentType,
+        bankDocumentNumber: encryptedDocumentNumber,
         subaccountStatus: ResellerSubaccountStatus.FAILED,
         subaccountFailureReason: message,
         subaccountVerifiedAt: null,

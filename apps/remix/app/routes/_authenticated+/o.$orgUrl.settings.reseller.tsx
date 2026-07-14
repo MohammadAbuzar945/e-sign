@@ -437,6 +437,9 @@ export default function OrganisationSettingsResellerPage() {
         bankName={profile.bankName}
         bankAccountNumber={profile.bankAccountNumber}
         bankAccountName={profile.bankAccountName}
+        bankAccountType={profile.bankAccountType}
+        bankDocumentType={profile.bankDocumentType}
+        bankDocumentNumber={profile.bankDocumentNumber}
         subaccountStatus={profile.subaccountStatus}
         subaccountFailureReason={profile.subaccountFailureReason}
         canAcceptAffiliatePayments={profile.canAcceptAffiliatePayments}

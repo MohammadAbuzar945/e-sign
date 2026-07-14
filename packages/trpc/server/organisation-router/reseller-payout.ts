@@ -74,6 +74,10 @@ export const updateResellerBankDetailsRoute = authenticatedProcedure
       bankName: data.bankName,
       bankAccountNumber: data.bankAccountNumber,
       bankAccountName: data.bankAccountName,
+      accountType: data.accountType,
+      documentType: data.documentType,
+      documentNumber: data.documentNumber,
+      countryCode: data.countryCode,
     });
 
     return {

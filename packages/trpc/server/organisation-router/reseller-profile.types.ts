@@ -40,6 +40,11 @@ export const ZGetResellerProfileResponseSchema = z
     bankName: z.string().nullable(),
     bankAccountNumber: z.string().nullable(),
     bankAccountName: z.string().nullable(),
+    bankAccountType: z.enum(['personal', 'business']).nullable(),
+    bankDocumentType: z
+      .enum(['identityNumber', 'passportNumber', 'businessRegistrationNumber'])
+      .nullable(),
+    bankDocumentNumber: z.string().nullable(),
     subaccountStatus: z.enum(['PENDING', 'ACTIVE', 'FAILED']).nullable(),
     subaccountVerifiedAt: z.date().nullable(),
     subaccountFailureReason: z.string().nullable(),

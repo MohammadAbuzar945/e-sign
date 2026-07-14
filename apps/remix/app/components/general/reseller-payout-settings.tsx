@@ -6,6 +6,17 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
+import {
+  getDefaultResellerBankDocumentType,
+  getResellerBankAccountTypeLabel,
+  getResellerBankDocumentTypeLabel,
+  getResellerBankDocumentTypesForAccountType,
+  ZResellerBankAccountTypeSchema,
+  ZResellerBankDocumentTypeSchema,
+  ZResellerBankVerificationFieldsSchema,
+  type ResellerBankAccountType,
+  type ResellerBankDocumentType,
+} from '@documenso/lib/constants/reseller-bank-verification';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
@@ -20,6 +31,7 @@ import {
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
+import { SearchableSelect } from '@documenso/ui/primitives/searchable-select';
 import {
   Select,
   SelectContent,
@@ -29,12 +41,29 @@ import {
 } from '@documenso/ui/primitives/select';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
-const ZBankDetailsFormSchema = z.object({
-  bankCode: z.string().min(1),
-  bankName: z.string().min(1),
-  bankAccountNumber: z.string().min(5),
-  bankAccountName: z.string().min(1),
-});
+const ZBankDetailsFormSchema = z
+  .object({
+    bankCode: z.string().min(1),
+    bankName: z.string().min(1),
+    bankAccountNumber: z.string().min(5),
+    bankAccountName: z.string().min(1),
+    accountType: ZResellerBankAccountTypeSchema,
+    documentType: ZResellerBankDocumentTypeSchema,
+    documentNumber: z.string().trim().min(5).max(64),
+  })
+  .superRefine((values, context) => {
+    const verificationResult = ZResellerBankVerificationFieldsSchema.safeParse({
+      accountType: values.accountType,
+      documentType: values.documentType,
+      documentNumber: values.documentNumber,
+    });
+
+    if (!verificationResult.success) {
+      for (const issue of verificationResult.error.issues) {
+        context.addIssue(issue);
+      }
+    }
+  });
 
 type ResellerPayoutSettingsProps = {
   organisationId: string;
@@ -43,6 +72,9 @@ type ResellerPayoutSettingsProps = {
   bankName: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;
+  bankAccountType: ResellerBankAccountType | null;
+  bankDocumentType: ResellerBankDocumentType | null;
+  bankDocumentNumber: string | null;
   subaccountStatus: 'PENDING' | 'ACTIVE' | 'FAILED' | null;
   subaccountFailureReason: string | null;
   canAcceptAffiliatePayments: boolean;
@@ -57,6 +89,9 @@ export const ResellerPayoutSettings = ({
   bankName,
   bankAccountNumber,
   bankAccountName,
+  bankAccountType,
+  bankDocumentType,
+  bankDocumentNumber,
   subaccountStatus,
   subaccountFailureReason,
   canAcceptAffiliatePayments,
@@ -79,6 +114,10 @@ export const ResellerPayoutSettings = ({
       },
     );
 
+  const defaultAccountType = bankAccountType ?? 'personal';
+  const defaultDocumentType =
+    bankDocumentType ?? getDefaultResellerBankDocumentType(defaultAccountType);
+
   const bankForm = useForm<z.infer<typeof ZBankDetailsFormSchema>>({
     resolver: zodResolver(ZBankDetailsFormSchema),
     values: {
@@ -86,6 +125,9 @@ export const ResellerPayoutSettings = ({
       bankName: bankName ?? '',
       bankAccountNumber: '',
       bankAccountName: bankAccountName ?? '',
+      accountType: defaultAccountType,
+      documentType: defaultDocumentType,
+      documentNumber: '',
     },
   });
 
@@ -109,7 +151,8 @@ export const ResellerPayoutSettings = ({
       onSuccess: async () => {
         await onUpdated();
         bankForm.resetField('bankAccountNumber');
-        toast({ title: _(msg`Bank details saved`) });
+        bankForm.resetField('documentNumber');
+        toast({ title: _(msg`Bank details saved and submitted for verification`) });
       },
       onError: (error) => {
         toast({
@@ -161,26 +204,60 @@ export const ResellerPayoutSettings = ({
     });
 
   const banks = useMemo(() => banksData?.banks ?? [], [banksData?.banks]);
+  const bankOptions = useMemo(
+    () =>
+      banks.map((bank) => ({
+        label: bank.name,
+        value: bank.code,
+      })),
+    [banks],
+  );
   const selectedBankCode = bankForm.watch('bankCode');
+  const selectedAccountType = bankForm.watch('accountType');
   const selectedBank = banks.find((bank) => bank.code === selectedBankCode);
-  const supportsAccountNameLookup = selectedBank
-    ? selectedBank.currency !== 'ZAR'
-    : false;
+  const documentTypeOptions = getResellerBankDocumentTypesForAccountType(selectedAccountType);
+  const supportsAccountNameLookup = selectedBank ? selectedBank.currency !== 'ZAR' : false;
+
+  useEffect(() => {
+    const currentDocumentType = bankForm.getValues('documentType');
+
+    if (!documentTypeOptions.includes(currentDocumentType)) {
+      bankForm.setValue('documentType', getDefaultResellerBankDocumentType(selectedAccountType), {
+        shouldValidate: true,
+      });
+    }
+  }, [bankForm, documentTypeOptions, selectedAccountType]);
 
   const statusBadge = (() => {
     if (subaccountStatus === 'ACTIVE') {
-      return <Badge variant="default"><Trans>Verified</Trans></Badge>;
+      return (
+        <Badge variant="default">
+          <Trans>Verified</Trans>
+        </Badge>
+      );
     }
 
     if (subaccountStatus === 'PENDING') {
-      return <Badge variant="neutral"><Trans>Pending verification</Trans></Badge>;
+      return (
+        <Badge variant="neutral">
+          <Trans>Pending verification</Trans>
+        </Badge>
+      );
     }
 
     if (subaccountStatus === 'FAILED') {
-      return <Badge variant="destructive"><Trans>Failed</Trans></Badge>;
+      return (
+        <Badge variant="destructive">
+          <Trans>Failed</Trans>
+        </Badge>
+      );
     }
 
-    return <Badge variant="neutral"><Trans>Not configured</Trans></Badge>;
+    return (
+      <Badge variant="neutral">
+        <Trans>Not configured</Trans>
+      </Badge>
+    );
   })();
 
   return (
@@ -267,7 +344,7 @@ export const ResellerPayoutSettings = ({
               <p className="text-xs text-muted-foreground">
                 <Trans>
                   Nomia registers your bank as a Paystack subaccount and splits affiliate sales to
-                  you.
+                  you. Verification requires your account type and identity document details.
                 </Trans>
               </p>
             </div>
@@ -332,30 +409,23 @@ export const ResellerPayoutSettings = ({
                       <FormLabel>
                         <Trans>Bank</Trans>
                       </FormLabel>
-                      <Select
-                        disabled={isLoadingBanks}
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          const selectedBank = banks.find((bank) => bank.code === value);
-                          bankForm.setValue('bankName', selectedBank?.name ?? '', {
-                            shouldValidate: true,
-                          });
-                        }}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={_(msg`Select bank`)} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {banks.map((bank) => (
-                            <SelectItem key={bank.code} value={bank.code}>
-                              {bank.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          disabled={isLoadingBanks}
+                          loading={isLoadingBanks}
+                          options={bankOptions}
+                          placeholder={_(msg`Select bank`)}
+                          searchPlaceholder={msg`Search banks...`}
+                          value={field.value}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            const selectedBank = banks.find((bank) => bank.code === value);
+                            bankForm.setValue('bankName', selectedBank?.name ?? '', {
+                              shouldValidate: true,
+                            });
+                          }}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -370,7 +440,14 @@ export const ResellerPayoutSettings = ({
                         <Trans>Account number</Trans>
                       </FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder={_(msg`Enter account number`)} />
+                        <Input
+                          {...field}
+                          placeholder={
+                            bankAccountNumber
+                              ? _(msg`Enter a new account number to replace ${bankAccountNumber}`)
+                              : _(msg`Enter account number`)
+                          }
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -433,8 +510,112 @@ export const ResellerPayoutSettings = ({
                   )}
                 />
 
+                <div className="space-y-4 rounded-md border bg-muted/20 p-4">
+                  <div>
+                    <p className="text-sm font-medium">
+                      <Trans>Verification details</Trans>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      <Trans>
+                        Paystack requires these details to verify the bank account before payouts
+                        can begin.
+                      </Trans>
+                    </p>
+                  </div>
+
+                  <FormField
+                    control={bankForm.control}
+                    name="accountType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>Account type</Trans>
+                        </FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            bankForm.setValue(
+                              'documentType',
+                              getDefaultResellerBankDocumentType(
+                                value as ResellerBankAccountType,
+                              ),
+                              { shouldValidate: true },
+                            );
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="personal">
+                              {getResellerBankAccountTypeLabel('personal')}
+                            </SelectItem>
+                            <SelectItem value="business">
+                              {getResellerBankAccountTypeLabel('business')}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={bankForm.control}
+                    name="documentType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>Document type</Trans>
+                        </FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {documentTypeOptions.map((documentType) => (
+                              <SelectItem key={documentType} value={documentType}>
+                                {getResellerBankDocumentTypeLabel(documentType)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={bankForm.control}
+                    name="documentNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>Document number</Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder={
+                              bankDocumentNumber
+                                ? _(msg`Enter a new document number to replace ${bankDocumentNumber}`)
+                                : _(msg`Enter ID / CNIC / passport / registration number`)
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <Button type="submit" loading={isUpdatingBank}>
-                  <Trans>Save bank details</Trans>
+                  <Trans>Save and verify bank details</Trans>
                 </Button>
               </fieldset>
             </form>

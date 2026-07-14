@@ -8,7 +8,7 @@ import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
 
 import { getResellerPayoutReadiness } from './reseller-payout-readiness';
-import { encryptResellerSecret, maskBankAccountNumber } from './reseller-secrets';
+import { encryptResellerSecret, maskBankAccountNumber, maskDocumentNumber } from './reseller-secrets';
 import { syncResellerSubaccountStatus } from './update-reseller-payout';
 
 const maybeSyncPendingSubaccountStatus = async <
@@ -78,6 +78,7 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
     ...resolvedProfile,
     paystackSecretKey: undefined,
     bankAccountNumber: maskBankAccountNumber(profile.bankAccountNumber),
+    bankDocumentNumber: maskDocumentNumber(profile.bankDocumentNumber),
     availableCredits,
     negativeCreditsUsed: getNegativeCreditsUsed(availableCredits),
     affiliateUrl: `${NEXT_PUBLIC_WEBAPP_URL()}/r/${profile.affiliateSlug}`,

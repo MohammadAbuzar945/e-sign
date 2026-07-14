@@ -1336,6 +1336,9 @@ model ResellerProfile {
   bankName                  String?
   bankAccountNumber         String?
   bankAccountName           String?
+  bankAccountType           String?
+  bankDocumentType          String?
+  bankDocumentNumber        String?
   subaccountStatus          ResellerSubaccountStatus?
   subaccountVerifiedAt      DateTime?
   subaccountFailureReason   String?

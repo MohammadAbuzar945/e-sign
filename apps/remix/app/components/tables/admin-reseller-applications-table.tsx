@@ -550,6 +550,8 @@ export const AdminResellerApplicationsTable = () => {
         bankName={selectedApplication?.resellerProfile?.bankName ?? null}
         bankAccountName={selectedApplication?.resellerProfile?.bankAccountName ?? null}
         bankAccountNumber={selectedApplication?.resellerProfile?.bankAccountNumber ?? null}
+        bankAccountType={selectedApplication?.resellerProfile?.bankAccountType ?? null}
+        bankDocumentType={selectedApplication?.resellerProfile?.bankDocumentType ?? null}
         open={isVerifyBankDialogOpen}
         onOpenChange={setIsVerifyBankDialogOpen}
         onSuccess={handleMutationSuccess}

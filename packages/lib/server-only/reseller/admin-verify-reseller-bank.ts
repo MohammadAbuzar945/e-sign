@@ -9,7 +9,7 @@ import {
 } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 
-import { decryptResellerSecret, maskBankAccountNumber } from './reseller-secrets';
+import { encryptResellerSecret, decryptResellerSecret, maskBankAccountNumber } from './reseller-secrets';
 import { syncResellerSubaccountStatus } from './update-reseller-payout';
 
 const getResellerProfileForBankVerification = async (applicationId: string) => {
@@ -94,6 +94,9 @@ export const adminVerifyResellerBankAccount = async ({
     await prisma.resellerProfile.update({
       where: { id: profile.id },
       data: {
+        bankAccountType: accountType,
+        bankDocumentType: documentType,
+        bankDocumentNumber: encryptResellerSecret(documentNumber.trim()),
         subaccountStatus: ResellerSubaccountStatus.FAILED,
         subaccountFailureReason: message,
         subaccountVerifiedAt: null,
@@ -111,6 +114,9 @@ export const adminVerifyResellerBankAccount = async ({
     await prisma.resellerProfile.update({
       where: { id: profile.id },
       data: {
+        bankAccountType: accountType,
+        bankDocumentType: documentType,
+        bankDocumentNumber: encryptResellerSecret(documentNumber.trim()),
         subaccountStatus: ResellerSubaccountStatus.FAILED,
         subaccountFailureReason: message,
         subaccountVerifiedAt: null,
@@ -146,6 +152,9 @@ export const adminVerifyResellerBankAccount = async ({
     const updatedProfile = await prisma.resellerProfile.update({
       where: { id: profile.id },
       data: {
+        bankAccountType: accountType,
+        bankDocumentType: documentType,
+        bankDocumentNumber: encryptResellerSecret(documentNumber.trim()),
         paystackSubaccountCode: subaccount.subaccount_code,
         paystackSubaccountId: subaccount.id,
         subaccountStatus: ResellerSubaccountStatus.ACTIVE,
@@ -171,6 +180,9 @@ export const adminVerifyResellerBankAccount = async ({
     await prisma.resellerProfile.update({
       where: { id: profile.id },
       data: {
+        bankAccountType: accountType,
+        bankDocumentType: documentType,
+        bankDocumentNumber: encryptResellerSecret(documentNumber.trim()),
         subaccountStatus: ResellerSubaccountStatus.FAILED,
         subaccountFailureReason: message,
         subaccountVerifiedAt: null,

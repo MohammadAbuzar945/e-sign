@@ -47,3 +47,17 @@ export const maskBankAccountNumber = (accountNumber: string | null | undefined) 
 
   return `****${decrypted.slice(-4)}`;
 };
+
+export const maskDocumentNumber = (documentNumber: string | null | undefined) => {
+  if (!documentNumber) {
+    return null;
+  }
+
+  const decrypted = decryptValue(documentNumber);
+
+  if (decrypted.length <= 4) {
+    return `****${decrypted}`;
+  }
+
+  return `****${decrypted.slice(-4)}`;
+};
