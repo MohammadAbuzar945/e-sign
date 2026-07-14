@@ -9,7 +9,8 @@ import {
 } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 
-import { encryptResellerSecret, decryptResellerSecret, maskBankAccountNumber } from './reseller-secrets';
+import { decryptResellerSecret, maskBankAccountNumber } from './reseller-secrets';
+import { buildResellerBankVerificationUpdateData } from './reseller-bank-verification-data';
 import { syncResellerSubaccountStatus } from './update-reseller-payout';
 
 const getResellerProfileForBankVerification = async (applicationId: string) => {
@@ -76,6 +77,12 @@ export const adminVerifyResellerBankAccount = async ({
   const { profile, organisationName, accountNumber } =
     await getResellerProfileForBankVerification(applicationId);
 
+  const verificationUpdateData = buildResellerBankVerificationUpdateData({
+    accountType,
+    documentType,
+    documentNumber,
+  });
+
   let validation;
 
   try {
@@ -94,9 +101,7 @@ export const adminVerifyResellerBankAccount = async ({
     await prisma.resellerProfile.update({
       where: { id: profile.id },
       data: {
-        bankAccountType: accountType,
-        bankDocumentType: documentType,
-        bankDocumentNumber: encryptResellerSecret(documentNumber.trim()),
+        ...verificationUpdateData,
         subaccountStatus: ResellerSubaccountStatus.FAILED,
         subaccountFailureReason: message,
         subaccountVerifiedAt: null,
@@ -114,9 +119,7 @@ export const adminVerifyResellerBankAccount = async ({
     await prisma.resellerProfile.update({
       where: { id: profile.id },
       data: {
-        bankAccountType: accountType,
-        bankDocumentType: documentType,
-        bankDocumentNumber: encryptResellerSecret(documentNumber.trim()),
+        ...verificationUpdateData,
         subaccountStatus: ResellerSubaccountStatus.FAILED,
         subaccountFailureReason: message,
         subaccountVerifiedAt: null,
@@ -152,9 +155,7 @@ export const adminVerifyResellerBankAccount = async ({
     const updatedProfile = await prisma.resellerProfile.update({
       where: { id: profile.id },
       data: {
-        bankAccountType: accountType,
-        bankDocumentType: documentType,
-        bankDocumentNumber: encryptResellerSecret(documentNumber.trim()),
+        ...verificationUpdateData,
         paystackSubaccountCode: subaccount.subaccount_code,
         paystackSubaccountId: subaccount.id,
         subaccountStatus: ResellerSubaccountStatus.ACTIVE,
@@ -180,9 +181,7 @@ export const adminVerifyResellerBankAccount = async ({
     await prisma.resellerProfile.update({
       where: { id: profile.id },
       data: {
-        bankAccountType: accountType,
-        bankDocumentType: documentType,
-        bankDocumentNumber: encryptResellerSecret(documentNumber.trim()),
+        ...verificationUpdateData,
         subaccountStatus: ResellerSubaccountStatus.FAILED,
         subaccountFailureReason: message,
         subaccountVerifiedAt: null,

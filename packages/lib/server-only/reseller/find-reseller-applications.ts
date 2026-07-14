@@ -22,6 +22,9 @@ type ResellerProfileWithPayoutFields = ResellerProfile & {
   bankName: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;
+  bankAccountType: string | null;
+  bankDocumentType: string | null;
+  bankDocumentNumber: string | null;
   paystackSubaccountCode: string | null;
   subaccountStatus: 'PENDING' | 'ACTIVE' | 'FAILED' | null;
   subaccountVerifiedAt: Date | null;

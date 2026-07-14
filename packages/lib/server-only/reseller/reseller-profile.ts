@@ -15,6 +15,12 @@ import { getResellerPayoutReadiness } from './reseller-payout-readiness';
 import { encryptResellerSecret, maskBankAccountNumber, maskDocumentNumber } from './reseller-secrets';
 import { syncResellerSubaccountStatus } from './update-reseller-payout';
 
+type ResellerProfileWithBankVerificationFields = {
+  bankAccountType?: string | null;
+  bankDocumentType?: string | null;
+  bankDocumentNumber?: string | null;
+};
+
 const maybeSyncPendingSubaccountStatus = async <
   T extends {
     organisationId: string;
@@ -74,17 +80,19 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
   }
 
   const resolvedProfile = await maybeSyncPendingSubaccountStatus(profile);
+  const profileWithVerification = resolvedProfile as typeof resolvedProfile &
+    ResellerProfileWithBankVerificationFields;
 
   const availableCredits = await getOrganisationCredits(organisationId);
   const payoutReadiness = getResellerPayoutReadiness(resolvedProfile);
 
   return {
     ...resolvedProfile,
-    bankAccountType: parseResellerBankAccountType(resolvedProfile.bankAccountType),
-    bankDocumentType: parseResellerBankDocumentType(resolvedProfile.bankDocumentType),
+    bankAccountType: parseResellerBankAccountType(profileWithVerification.bankAccountType),
+    bankDocumentType: parseResellerBankDocumentType(profileWithVerification.bankDocumentType),
     paystackSecretKey: undefined,
     bankAccountNumber: maskBankAccountNumber(profile.bankAccountNumber),
-    bankDocumentNumber: maskDocumentNumber(profile.bankDocumentNumber),
+    bankDocumentNumber: maskDocumentNumber(profileWithVerification.bankDocumentNumber),
     availableCredits,
     negativeCreditsUsed: getNegativeCreditsUsed(availableCredits),
     affiliateUrl: `${NEXT_PUBLIC_WEBAPP_URL()}/r/${profile.affiliateSlug}`,

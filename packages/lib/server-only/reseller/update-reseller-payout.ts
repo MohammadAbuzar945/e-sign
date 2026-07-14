@@ -19,6 +19,7 @@ import type {
   ResellerBankDocumentType,
 } from '@documenso/lib/constants/reseller-bank-verification';
 import { encryptResellerSecret } from './reseller-secrets';
+import { buildResellerBankVerificationUpdateData } from './reseller-bank-verification-data';
 
 const getSubaccountStatusFromPaystack = (subaccount: {
   is_verified?: boolean;
@@ -174,7 +175,11 @@ export const updateResellerBankDetails = async ({
   }
 
   const encryptedAccountNumber = encryptResellerSecret(trimmedAccountNumber);
-  const encryptedDocumentNumber = encryptResellerSecret(trimmedDocumentNumber);
+  const verificationUpdateData = buildResellerBankVerificationUpdateData({
+    accountType,
+    documentType,
+    documentNumber: trimmedDocumentNumber,
+  });
   const description = `Nomia reseller: ${profile.affiliateSlug}`;
   const percentageCharge = Number(profile.platformFeePercent ?? 0);
 
@@ -186,9 +191,7 @@ export const updateResellerBankDetails = async ({
         bankName: bankName.trim(),
         bankAccountNumber: encryptedAccountNumber,
         bankAccountName: trimmedAccountName,
-        bankAccountType: accountType,
-        bankDocumentType: documentType,
-        bankDocumentNumber: encryptedDocumentNumber,
+        ...verificationUpdateData,
         subaccountStatus: ResellerSubaccountStatus.FAILED,
         subaccountFailureReason: message,
         subaccountVerifiedAt: null,
@@ -254,9 +257,7 @@ export const updateResellerBankDetails = async ({
         bankName: bankName.trim(),
         bankAccountNumber: encryptedAccountNumber,
         bankAccountName: trimmedAccountName,
-        bankAccountType: accountType,
-        bankDocumentType: documentType,
-        bankDocumentNumber: encryptedDocumentNumber,
+        ...verificationUpdateData,
         paystackSubaccountCode: subaccount.subaccount_code,
         paystackSubaccountId: subaccount.id,
         subaccountStatus,
@@ -274,9 +275,7 @@ export const updateResellerBankDetails = async ({
         bankName: bankName.trim(),
         bankAccountNumber: encryptedAccountNumber,
         bankAccountName: trimmedAccountName,
-        bankAccountType: accountType,
-        bankDocumentType: documentType,
-        bankDocumentNumber: encryptedDocumentNumber,
+        ...verificationUpdateData,
         subaccountStatus: ResellerSubaccountStatus.FAILED,
         subaccountFailureReason: message,
         subaccountVerifiedAt: null,
