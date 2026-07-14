@@ -22,13 +22,14 @@ export const findResellerApplicationsRoute = adminProcedure
   .query(async ({ input, ctx }) => {
     assertResellerFeatureAccess(ctx.user.email);
 
-    const { query, page, perPage, status } = input;
+    const { query, page, perPage, status, view } = input;
 
     return await findResellerApplications({
       query,
       page,
       perPage,
       status,
+      view,
     });
   });
 

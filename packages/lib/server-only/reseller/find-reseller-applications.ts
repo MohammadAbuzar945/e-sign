@@ -1,15 +1,35 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma, ResellerApplicationStatus, ResellerProfile } from '@prisma/client';
 
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
+import {
+  RESELLER_ADMIN_VIEW_STATUSES,
+  type ResellerAdminView,
+} from '@documenso/lib/constants/reseller-application-status';
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
+
+import { getResellerPayoutReadiness } from './reseller-payout-readiness';
+import { maskBankAccountNumber } from './reseller-secrets';
+
+type ResellerProfileWithPayoutFields = ResellerProfile & {
+  payoutMode: 'OWN_PAYSTACK' | 'NOMIA_SUBACCOUNT';
+  bankCode: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
+  paystackSubaccountCode: string | null;
+  subaccountStatus: 'PENDING' | 'ACTIVE' | 'FAILED' | null;
+  subaccountVerifiedAt: Date | null;
+  subaccountFailureReason: string | null;
+};
 
 type FindResellerApplicationsOptions = {
   query?: string;
   page?: number;
   perPage?: number;
   status?: string;
+  view?: ResellerAdminView;
 };
 
 export const findResellerApplications = async ({
@@ -17,13 +37,21 @@ export const findResellerApplications = async ({
   page = 1,
   perPage = 10,
   status,
+  view,
 }: FindResellerApplicationsOptions) => {
   let whereClause: Prisma.ResellerApplicationWhereInput = {};
 
-  if (status) {
+  if (view && RESELLER_ADMIN_VIEW_STATUSES[view]) {
     whereClause = {
       ...whereClause,
-      status: status as Prisma.EnumResellerApplicationStatusFilter['equals'],
+      status: {
+        in: RESELLER_ADMIN_VIEW_STATUSES[view] as ResellerApplicationStatus[],
+      },
+    };
+  } else if (status) {
+    whereClause = {
+      ...whereClause,
+      status: status as ResellerApplicationStatus,
     };
   }
 
@@ -74,14 +102,7 @@ export const findResellerApplications = async ({
             name: true,
             url: true,
             createdAt: true,
-            resellerProfile: {
-              select: {
-                id: true,
-                status: true,
-                affiliateSlug: true,
-                allowNegativeCredits: true,
-              },
-            },
+            resellerProfile: true,
           },
         },
         applicantUser: {
@@ -101,7 +122,8 @@ export const findResellerApplications = async ({
   const enrichedData = await Promise.all(
     data.map(async (application) => {
       const metrics = await getLiveApplicationMetrics(application.organisationId);
-      const resellerProfile = application.organisation.resellerProfile;
+      const resellerProfile = application.organisation
+        .resellerProfile as ResellerProfileWithPayoutFields | null;
 
       if (!resellerProfile) {
         return {
@@ -114,13 +136,38 @@ export const findResellerApplications = async ({
       }
 
       const availableCredits = await getOrganisationCredits(application.organisationId);
+      const payoutReadiness = getResellerPayoutReadiness({
+        payoutMode: resellerProfile.payoutMode,
+        paystackPublicKey: resellerProfile.paystackPublicKey,
+        paystackSecretKey: resellerProfile.paystackSecretKey,
+        paystackSubaccountCode: resellerProfile.paystackSubaccountCode,
+        subaccountStatus: resellerProfile.subaccountStatus,
+      });
 
       return {
         ...application,
         resellerProfile: {
-          ...resellerProfile,
+          id: resellerProfile.id,
+          status: resellerProfile.status,
+          affiliateSlug: resellerProfile.affiliateSlug,
+          allowNegativeCredits: resellerProfile.allowNegativeCredits,
+          payoutMode: resellerProfile.payoutMode,
+          bankCode: resellerProfile.bankCode,
+          bankName: resellerProfile.bankName,
+          bankAccountNumber: maskBankAccountNumber(resellerProfile.bankAccountNumber),
+          bankAccountName: resellerProfile.bankAccountName,
+          paystackSubaccountCode: resellerProfile.paystackSubaccountCode,
+          subaccountStatus: resellerProfile.subaccountStatus,
+          subaccountVerifiedAt: resellerProfile.subaccountVerifiedAt,
+          subaccountFailureReason: resellerProfile.subaccountFailureReason,
           availableCredits,
           negativeCreditsUsed: getNegativeCreditsUsed(availableCredits),
+          payoutReadiness: {
+            canAcceptPayments: payoutReadiness.canAcceptPayments,
+            hasOwnPaystackConfigured: payoutReadiness.hasOwnPaystackConfigured,
+            hasNomiaSubaccountConfigured: payoutReadiness.hasNomiaSubaccountConfigured,
+            blockingReason: payoutReadiness.blockingReason ?? null,
+          },
         },
         liveCompletedDocCount: metrics.completedDocumentCount,
         liveUniqueSignerCount: metrics.uniqueSignerCount,

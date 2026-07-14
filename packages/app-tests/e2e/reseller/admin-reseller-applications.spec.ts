@@ -36,7 +36,8 @@ test('[RESELLER ADMIN]: can view and reject a pending application', async ({ pag
     redirectPath: '/admin/reseller-applications',
   });
 
-  await expect(page.getByText('Reseller Applications')).toBeVisible();
+  await expect(page.getByText('Resellers')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Applications' })).toBeVisible();
 
   await page.getByPlaceholder('Search by organisation, applicant, or email').fill(organisation.name);
   await page.waitForTimeout(600);
@@ -58,6 +59,7 @@ test('[RESELLER ADMIN]: can view and reject a pending application', async ({ pag
   await expectToastTextToBeVisible(page, 'Application rejected');
 
   await page.reload();
+  await page.getByRole('link', { name: 'Closed' }).click();
   await page.getByPlaceholder('Search by organisation, applicant, or email').fill(organisation.name);
   await page.waitForTimeout(600);
 

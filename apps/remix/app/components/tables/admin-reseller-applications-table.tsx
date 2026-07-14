@@ -1,20 +1,25 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useLingui } from '@lingui/react/macro';
 import { Trans } from '@lingui/react/macro';
 import { useSearchParams } from 'react-router';
 
-import { AppError } from '@documenso/lib/errors/app-error';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
-import { getResellerApplicationStatusLabel } from '@documenso/lib/constants/reseller-application-status';
+import {
+  getResellerApplicationStatusLabel,
+  getResellerProfileStatusLabel,
+  isResellerAdminView,
+  RESELLER_ADMIN_VIEW,
+  type ResellerAdminView,
+} from '@documenso/lib/constants/reseller-application-status';
+import { AppError } from '@documenso/lib/errors/app-error';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { trpc } from '@documenso/trpc/react';
-import { AdminResellerApplicationActionsPanel } from '~/components/general/admin-reseller-application-actions-panel';
 import { AdminResellerApplicationActionDialog } from '~/components/dialogs/admin-reseller-application-action-dialog';
+import { AdminVerifyResellerBankDialog } from '~/components/dialogs/admin-verify-reseller-bank-dialog';
 import { SendResellerTermsDialog } from '~/components/dialogs/send-reseller-terms-dialog';
-import type { DataTableColumnDef } from '@documenso/ui/primitives/data-table';
-import { DataTable } from '@documenso/ui/primitives/data-table';
-import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
+import { AdminResellerApplicationActionsPanel } from '~/components/general/admin-reseller-application-actions-panel';
+import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,18 +30,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@documenso/ui/primitives/alert-dialog';
-import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
+import type { DataTableColumnDef } from '@documenso/ui/primitives/data-table';
+import { DataTable } from '@documenso/ui/primitives/data-table';
+import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
+const getAdminView = (value: string | null): ResellerAdminView => {
+  if (isResellerAdminView(value)) {
+    return value;
+  }
+
+  return RESELLER_ADMIN_VIEW.QUEUE;
+};
+
 export const AdminResellerApplicationsTable = () => {
   const { t } = useLingui();
   const { toast } = useToast();
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [isVerifyBankDialogOpen, setIsVerifyBankDialogOpen] = useState(false);
   const [applicationAction, setApplicationAction] = useState<'reject' | 'cancel' | null>(null);
   const [profileAction, setProfileAction] = useState<'deactivate' | 'reactivate' | 'delete' | null>(
     null,
@@ -46,14 +62,20 @@ export const AdminResellerApplicationsTable = () => {
   const updateSearchParams = useUpdateSearchParams();
 
   const parsedSearchParams = ZUrlSearchParamsSchema.parse(Object.fromEntries(searchParams ?? []));
+  const view = getAdminView(searchParams.get('view'));
 
   const { data, isLoading, isLoadingError, refetch } = trpc.admin.resellerApplications.find.useQuery(
     {
       query: parsedSearchParams.query,
       page: parsedSearchParams.page,
       perPage: parsedSearchParams.perPage,
+      view,
     },
   );
+
+  useEffect(() => {
+    setSelectedId(null);
+  }, [view, parsedSearchParams.query, parsedSearchParams.page]);
 
   const onPaginationChange = (page: number, perPage: number) => {
     updateSearchParams({
@@ -69,18 +91,24 @@ export const AdminResellerApplicationsTable = () => {
     totalPages: 1,
   };
 
-  const selectedApplicationIds = Object.keys(rowSelection).filter((key) => rowSelection[key]);
+  const rowSelection = useMemo(() => {
+    if (!selectedId) {
+      return {};
+    }
+
+    return { [selectedId]: true };
+  }, [selectedId]);
 
   const selectedApplication = useMemo(() => {
-    if (selectedApplicationIds.length !== 1) {
+    if (!selectedId) {
       return null;
     }
 
-    return results.data.find((application) => application.id === selectedApplicationIds[0]) ?? null;
-  }, [results.data, selectedApplicationIds]);
+    return results.data.find((application) => application.id === selectedId) ?? null;
+  }, [results.data, selectedId]);
 
   const handleMutationSuccess = async () => {
-    setRowSelection({});
+    setSelectedId(null);
     await refetch();
   };
 
@@ -186,55 +214,191 @@ export const AdminResellerApplicationsTable = () => {
       },
     });
 
+  const { mutateAsync: refreshBankAccountStatus, isPending: isRefreshingBankStatus } =
+    trpc.admin.resellerApplications.refreshBankAccountStatus.useMutation({
+      onSuccess: async (result) => {
+        toast({
+          title:
+            result.subaccountStatus === 'ACTIVE'
+              ? t`Bank account verified`
+              : t`Verification still pending`,
+          description:
+            result.subaccountStatus === 'ACTIVE'
+              ? t`Paystack confirmed this subaccount is verified.`
+              : t`Paystack still reports this subaccount as unverified.`,
+        });
+
+        await refetch();
+      },
+      onError: (error) => {
+        toast({
+          title: t`Refresh failed`,
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
+  const { mutateAsync: retrySubaccount, isPending: isRetryingSubaccount } =
+    trpc.admin.resellerApplications.retrySubaccount.useMutation({
+      onSuccess: async (result) => {
+        toast({
+          title: t`Subaccount updated`,
+          description:
+            result.subaccountStatus === 'ACTIVE'
+              ? t`The Paystack subaccount is verified and ready.`
+              : t`The Paystack subaccount was created or updated. Verification may still be pending.`,
+        });
+
+        await refetch();
+      },
+      onError: (error) => {
+        toast({
+          title: t`Retry failed`,
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
   const columns = useMemo(() => {
+    type Row = (typeof results)['data'][number];
+
+    const selectColumn: DataTableColumnDef<Row> = {
+      id: 'select',
+      header: () => null,
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onClick={(event) => event.stopPropagation()}
+          onCheckedChange={(value) => {
+            setSelectedId(value ? row.id : null);
+          }}
+          aria-label={t`Select row`}
+        />
+      ),
+      maxSize: 40,
+    };
+
+    const organisationColumn: DataTableColumnDef<Row> = {
+      header: t`Organisation`,
+      accessorKey: 'snapshotOrgName',
+    };
+
+    const applicantColumn: DataTableColumnDef<Row> = {
+      header: t`Applicant`,
+      cell: ({ row }) => (
+        <div>
+          <p>{row.original.snapshotApplicantName}</p>
+          <p className="text-xs text-muted-foreground">{row.original.snapshotApplicantEmail}</p>
+        </div>
+      ),
+    };
+
+    if (view === RESELLER_ADMIN_VIEW.ACCOUNTS) {
+      return [
+        selectColumn,
+        organisationColumn,
+        applicantColumn,
+        {
+          header: t`Account`,
+          cell: ({ row }) => {
+            const status = row.original.resellerProfile?.status;
+
+            if (!status) {
+              return '—';
+            }
+
+            return (
+              <Badge variant={status === 'ACTIVE' ? 'default' : 'neutral'}>
+                {getResellerProfileStatusLabel(status)}
+              </Badge>
+            );
+          },
+        },
+        {
+          header: t`Payouts`,
+          cell: ({ row }) => {
+            const profile = row.original.resellerProfile;
+
+            if (!profile) {
+              return '—';
+            }
+
+            if (profile.payoutReadiness?.canAcceptPayments) {
+              return (
+                <Badge variant="default">
+                  <Trans>Ready</Trans>
+                </Badge>
+              );
+            }
+
+            return (
+              <Badge variant="neutral">
+                <Trans>Not ready</Trans>
+              </Badge>
+            );
+          },
+        },
+        {
+          header: t`Credits`,
+          cell: ({ row }) => {
+            const profile = row.original.resellerProfile;
+
+            if (!profile) {
+              return '—';
+            }
+
+            const negativeUsed = profile.negativeCreditsUsed ?? 0;
+
+            return (
+              <div className="text-sm">
+                <p>{profile.availableCredits ?? 0}</p>
+                {negativeUsed > 0 ? (
+                  <p className="text-xs font-medium text-amber-700">
+                    <Trans>{negativeUsed} negative</Trans>
+                  </p>
+                ) : null}
+              </div>
+            );
+          },
+        },
+        {
+          header: t`Applied`,
+          cell: ({ row }) => new Date(row.original.appliedAt).toLocaleDateString(),
+        },
+      ] satisfies DataTableColumnDef<Row>[];
+    }
+
+    if (view === RESELLER_ADMIN_VIEW.CLOSED) {
+      return [
+        selectColumn,
+        organisationColumn,
+        applicantColumn,
+        {
+          header: t`Status`,
+          cell: ({ row }) => {
+            const statusLabel = getResellerApplicationStatusLabel(
+              row.original.status,
+              row.original.rejectionReason,
+            );
+
+            return <Badge variant="destructive">{statusLabel}</Badge>;
+          },
+        },
+        {
+          header: t`Applied`,
+          cell: ({ row }) => new Date(row.original.appliedAt).toLocaleDateString(),
+        },
+      ] satisfies DataTableColumnDef<Row>[];
+    }
+
     return [
+      selectColumn,
+      organisationColumn,
+      applicantColumn,
       {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-          />
-        ),
-        maxSize: 40,
-      },
-      {
-        header: t`Organisation`,
-        accessorKey: 'snapshotOrgName',
-      },
-      {
-        header: t`Applicant`,
-        cell: ({ row }) => (
-          <div>
-            <p>{row.original.snapshotApplicantName}</p>
-            <p className="text-xs text-muted-foreground">{row.original.snapshotApplicantEmail}</p>
-          </div>
-        ),
-      },
-      {
-        header: t`Completed docs`,
-        cell: ({ row }) => row.original.liveCompletedDocCount,
-      },
-      {
-        header: t`Signup date`,
-        cell: ({ row }) => new Date(row.original.snapshotOrgSignupDate).toLocaleDateString(),
-      },
-      {
-        header: t`Unique signers`,
-        cell: ({ row }) => row.original.liveUniqueSignerCount,
-      },
-      {
-        header: t`Users`,
-        cell: ({ row }) => row.original.liveOrgUserCount,
-      },
-      {
-        header: t`Application status`,
+        header: t`Status`,
         cell: ({ row }) => {
           const statusLabel = getResellerApplicationStatusLabel(
             row.original.status,
@@ -244,11 +408,11 @@ export const AdminResellerApplicationsTable = () => {
           return (
             <Badge
               variant={
-                row.original.status === 'REJECTED' || row.original.status === 'CANCELLED'
-                  ? 'destructive'
-                  : row.original.status === 'APPROVED'
-                    ? 'default'
-                    : 'secondary'
+                row.original.status === 'TERMS_COMPLETED'
+                  ? 'default'
+                  : row.original.status === 'TERMS_SENT'
+                    ? 'secondary'
+                    : 'neutral'
               }
             >
               {statusLabel}
@@ -257,49 +421,14 @@ export const AdminResellerApplicationsTable = () => {
         },
       },
       {
-        header: t`Reseller status`,
-        cell: ({ row }) => row.original.resellerProfile?.status ?? '—',
-      },
-      {
-        header: t`Negative credits`,
-        cell: ({ row }) => {
-          const profile = row.original.resellerProfile;
-
-          if (!profile || profile.status !== 'ACTIVE') {
-            return '—';
-          }
-
-          return (
-            <Badge variant={profile.allowNegativeCredits ? 'default' : 'neutral'}>
-              {profile.allowNegativeCredits ? t`Enabled` : t`Disabled`}
-            </Badge>
-          );
-        },
-      },
-      {
-        header: t`Negative used`,
-        cell: ({ row }) => {
-          const negativeCreditsUsed = row.original.resellerProfile?.negativeCreditsUsed ?? 0;
-
-          if (!row.original.resellerProfile) {
-            return '—';
-          }
-
-          if (negativeCreditsUsed === 0) {
-            return '0';
-          }
-
-          return (
-            <span className="font-medium text-amber-700">{negativeCreditsUsed}</span>
-          );
-        },
-      },
-      {
         header: t`Applied`,
         cell: ({ row }) => new Date(row.original.appliedAt).toLocaleDateString(),
       },
-    ] satisfies DataTableColumnDef<(typeof results)['data'][number]>[];
-  }, [t]);
+    ] satisfies DataTableColumnDef<Row>[];
+  }, [t, view]);
+
+  const skeletonColumnCount =
+    view === RESELLER_ADMIN_VIEW.ACCOUNTS ? 7 : view === RESELLER_ADMIN_VIEW.CLOSED ? 5 : 5;
 
   return (
     <div className="space-y-4">
@@ -319,15 +448,13 @@ export const AdminResellerApplicationsTable = () => {
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1 space-y-4">
-          {!selectedApplication && selectedApplicationIds.length === 0 && (
+          {!selectedApplication && (
             <p className="text-sm text-muted-foreground">
-              <Trans>Select an application in the table to view details and available actions.</Trans>
-            </p>
-          )}
-
-          {selectedApplicationIds.length > 1 && (
-            <p className="text-sm text-muted-foreground">
-              <Trans>Select exactly one application to manage individual actions.</Trans>
+              {view === RESELLER_ADMIN_VIEW.ACCOUNTS ? (
+                <Trans>Select an account in the table to manage credits, payouts, and status.</Trans>
+              ) : (
+                <Trans>Select an application in the table to view details and available actions.</Trans>
+              )}
             </p>
           )}
 
@@ -338,8 +465,16 @@ export const AdminResellerApplicationsTable = () => {
             currentPage={results.currentPage}
             totalPages={results.totalPages}
             onPaginationChange={onPaginationChange}
+            enableRowSelection
             rowSelection={rowSelection}
-            onRowSelectionChange={setRowSelection}
+            onRowSelectionChange={(selection) => {
+              const selectedIds = Object.keys(selection).filter((key) => selection[key]);
+              const newlySelectedId = selectedIds.find((id) => id !== selectedId);
+              setSelectedId(newlySelectedId ?? selectedIds[0] ?? null);
+            }}
+            onRowClick={(row) => {
+              setSelectedId((current) => (current === row.id ? null : row.id));
+            }}
             getRowId={(row) => row.id}
             error={{
               enable: isLoadingError,
@@ -349,36 +484,11 @@ export const AdminResellerApplicationsTable = () => {
               rows: 3,
               component: (
                 <>
-                  <TableCell>
-                    <Skeleton className="h-4 w-4 rounded" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24 rounded-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32 rounded-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-12 rounded-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20 rounded-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-12 rounded-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-12 rounded-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16 rounded-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16 rounded-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16 rounded-full" />
-                  </TableCell>
+                  {Array.from({ length: skeletonColumnCount }).map((_, index) => (
+                    <TableCell key={index}>
+                      <Skeleton className="h-4 w-20 rounded-full" />
+                    </TableCell>
+                  ))}
                 </>
               ),
             }}
@@ -390,8 +500,11 @@ export const AdminResellerApplicationsTable = () => {
         {selectedApplication && (
           <AdminResellerApplicationActionsPanel
             application={selectedApplication}
+            view={view}
             isRetryingActivation={isRetryingActivation}
             isUpdatingAllowNegativeCredits={isUpdatingAllowNegativeCredits}
+            isRefreshingBankStatus={isRefreshingBankStatus}
+            isRetryingSubaccount={isRetryingSubaccount}
             onSendTerms={() => setIsSendDialogOpen(true)}
             onActivate={async () => {
               await retryActivation({
@@ -409,6 +522,17 @@ export const AdminResellerApplicationsTable = () => {
                 allowNegativeCredits,
               });
             }}
+            onVerifyBankAccount={() => setIsVerifyBankDialogOpen(true)}
+            onRefreshBankStatus={async () => {
+              await refreshBankAccountStatus({
+                applicationId: selectedApplication.id,
+              });
+            }}
+            onRetrySubaccount={async () => {
+              await retrySubaccount({
+                applicationId: selectedApplication.id,
+              });
+            }}
           />
         )}
       </div>
@@ -420,6 +544,16 @@ export const AdminResellerApplicationsTable = () => {
         onSuccess={handleMutationSuccess}
       />
 
+      <AdminVerifyResellerBankDialog
+        applicationId={isVerifyBankDialogOpen ? selectedApplication?.id ?? null : null}
+        organisationName={selectedApplication?.snapshotOrgName ?? null}
+        bankName={selectedApplication?.resellerProfile?.bankName ?? null}
+        bankAccountName={selectedApplication?.resellerProfile?.bankAccountName ?? null}
+        bankAccountNumber={selectedApplication?.resellerProfile?.bankAccountNumber ?? null}
+        open={isVerifyBankDialogOpen}
+        onOpenChange={setIsVerifyBankDialogOpen}
+        onSuccess={handleMutationSuccess}
+      />
       <AdminResellerApplicationActionDialog
         action={applicationAction ?? 'reject'}
         applicationId={applicationAction ? selectedApplication?.id ?? null : null}
@@ -478,9 +612,7 @@ export const AdminResellerApplicationsTable = () => {
             </AlertDialogCancel>
             <AlertDialogAction
               className={profileAction === 'reactivate' ? undefined : 'bg-destructive hover:bg-destructive/90'}
-              disabled={
-                !selectedApplication || isDeactivating || isReactivating || isDeleting
-              }
+              disabled={!selectedApplication || isDeactivating || isReactivating || isDeleting}
               onClick={async (event) => {
                 event.preventDefault();
 

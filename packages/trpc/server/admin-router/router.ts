@@ -27,6 +27,11 @@ import {
 import { getResellerTermsTemplateVariablesRoute } from './get-reseller-terms-template-variables';
 import { reactivateResellerProfileRoute } from './reactivate-reseller-profile';
 import { updateResellerAllowNegativeCreditsRoute } from './update-reseller-allow-negative-credits';
+import {
+  refreshResellerBankAccountStatusRoute,
+  retryResellerSubaccountRoute,
+  verifyResellerBankAccountRoute,
+} from './verify-reseller-bank-account';
 import { resealDocumentRoute } from './reseal-document';
 import { resetTwoFactorRoute } from './reset-two-factor-authentication';
 import { resyncLicenseRoute } from './resync-license';
@@ -66,6 +71,9 @@ export const adminRouter = router({
     deactivate: deactivateResellerProfileRoute,
     reactivate: reactivateResellerProfileRoute,
     updateAllowNegativeCredits: updateResellerAllowNegativeCreditsRoute,
+    verifyBankAccount: verifyResellerBankAccountRoute,
+    refreshBankAccountStatus: refreshResellerBankAccountStatusRoute,
+    retrySubaccount: retryResellerSubaccountRoute,
     delete: deleteResellerRoute,
   },
   stripe: {

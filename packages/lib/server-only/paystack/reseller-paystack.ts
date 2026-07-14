@@ -247,4 +247,52 @@ export const getPaystackSubaccount = async (subaccountCode: string) => {
   return result.data;
 };
 
+export type ValidatePaystackBankAccountOptions = {
+  accountNumber: string;
+  accountName: string;
+  bankCode: string;
+  countryCode?: string;
+  accountType: 'personal' | 'business';
+  documentType: 'identityNumber' | 'passportNumber' | 'businessRegistrationNumber';
+  documentNumber: string;
+};
+
+export type ValidatePaystackBankAccountResult = {
+  verified: boolean;
+  accountHolderMatch?: boolean;
+  accountAcceptsCredits?: boolean;
+  accountAcceptsDebits?: boolean;
+  accountOpen?: boolean;
+  verificationMessage?: string;
+};
+
+export const validatePaystackBankAccount = async ({
+  accountNumber,
+  accountName,
+  bankCode,
+  countryCode = 'ZA',
+  accountType,
+  documentType,
+  documentNumber,
+}: ValidatePaystackBankAccountOptions) => {
+  const result = await paystackFetch<ValidatePaystackBankAccountResult>('/bank/validate', {
+    method: 'POST',
+    body: {
+      account_number: accountNumber,
+      account_name: accountName,
+      bank_code: bankCode,
+      country_code: countryCode,
+      account_type: accountType,
+      document_type: documentType,
+      document_number: documentNumber,
+    },
+  });
+
+  return {
+    ...result.data,
+    verified: result.data.verified === true,
+    verificationMessage: result.data.verificationMessage || result.message,
+  };
+};
+
 export { getNomiaPaystackSecretKey };
