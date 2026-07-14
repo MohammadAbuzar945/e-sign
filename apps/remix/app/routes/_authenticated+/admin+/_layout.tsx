@@ -142,7 +142,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             >
               <Link to="/admin/reseller-applications">
                 <StoreIcon className="mr-2 h-5 w-5" />
-                <Trans>Reseller Applications</Trans>
+                <Trans>Resellers</Trans>
               </Link>
             </Button>
           )}

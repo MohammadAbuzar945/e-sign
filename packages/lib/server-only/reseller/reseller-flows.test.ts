@@ -729,7 +729,7 @@ describe('rejectResellerApplicationFromTermsRejection flow', () => {
       getResellerApplicationStatusLabel('REJECTED', 'Rejected by reseller: Declined'),
     ).toBe('Rejected by reseller');
     expect(getResellerApplicationStatusLabel('REJECTED', 'Insufficient activity')).toBe(
-      'REJECTED',
+      'Rejected',
     );
 
     prismaMock.resellerApplication.findFirst.mockResolvedValue(application);

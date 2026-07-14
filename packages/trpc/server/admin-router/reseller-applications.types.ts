@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { RESELLER_ADMIN_VIEW } from '@documenso/lib/constants/reseller-application-status';
 import { ZFindSearchParamsSchema } from '@documenso/lib/types/search-params';
 
 export const ZResellerTermsVariableValuesSchema = z.record(z.string(), z.string());
@@ -17,6 +18,9 @@ export const ZSendResellerTermsApplicationSchema = z.object({
 
 export const ZFindResellerApplicationsRequestSchema = ZFindSearchParamsSchema.extend({
   status: z.string().optional(),
+  view: z
+    .enum([RESELLER_ADMIN_VIEW.QUEUE, RESELLER_ADMIN_VIEW.ACCOUNTS, RESELLER_ADMIN_VIEW.CLOSED])
+    .optional(),
 });
 
 export const ZFindResellerApplicationsResponseSchema = z.object({
@@ -51,6 +55,23 @@ export const ZFindResellerApplicationsResponseSchema = z.object({
           allowNegativeCredits: z.boolean(),
           availableCredits: z.number(),
           negativeCreditsUsed: z.number(),
+          payoutMode: z.enum(['OWN_PAYSTACK', 'NOMIA_SUBACCOUNT']),
+          bankCode: z.string().nullable(),
+          bankName: z.string().nullable(),
+          bankAccountNumber: z.string().nullable(),
+          bankAccountName: z.string().nullable(),
+          paystackSubaccountCode: z.string().nullable(),
+          subaccountStatus: z.enum(['PENDING', 'ACTIVE', 'FAILED']).nullable(),
+          subaccountVerifiedAt: z.date().nullable(),
+          subaccountFailureReason: z.string().nullable(),
+          payoutReadiness: z
+            .object({
+              canAcceptPayments: z.boolean(),
+              hasOwnPaystackConfigured: z.boolean(),
+              hasNomiaSubaccountConfigured: z.boolean(),
+              blockingReason: z.string().nullable(),
+            })
+            .optional(),
         })
         .nullish(),
       applicantUser: z.object({
