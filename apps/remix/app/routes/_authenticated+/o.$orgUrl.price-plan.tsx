@@ -651,9 +651,13 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
             if (result.source === 'HYBRID' && result.split) {
               toast({
                 title: _(msg`Split purchase`),
-                description: _(
-                  msg`Paying the reseller for ${result.split.resellerCredits} credits first, then Nomia for the remainder.`,
-                ),
+                description: result.nextNomiaStep
+                  ? _(
+                      msg`Paying the reseller for ${result.split.resellerCredits} credits first, then Nomia for the remainder.`,
+                    )
+                  : _(
+                      msg`One payment for ${result.split.resellerCredits} reseller credits and ${result.split.nomiaCredits} Nomia credits.`,
+                    ),
               });
             }
 
@@ -666,8 +670,25 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
             window.location.href = result.authorizationUrl;
             return;
           }
+
+          if (billingAttribution?.stickyBillingActive) {
+            toast({
+              title: _(msg`Could not start reseller billing`),
+              description: _(msg`Please try again. Your purchase was not sent to Nomia as a fallback.`),
+              variant: 'destructive',
+            });
+            return;
+          }
         } catch {
-          // Fall back to Nomia direct purchase below.
+          if (billingAttribution?.stickyBillingActive) {
+            toast({
+              title: _(msg`Could not start reseller billing`),
+              description: _(msg`Please try again. Your purchase was not sent to Nomia as a fallback.`),
+              variant: 'destructive',
+            });
+            return;
+          }
+          // Fall back to Nomia direct purchase only when sticky reseller billing is not active.
         }
       }
 
