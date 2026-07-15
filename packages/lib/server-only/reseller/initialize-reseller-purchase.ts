@@ -195,15 +195,31 @@ export const initializeResellerPurchase = async ({
         ? Math.round((amountInCents * platformFeePercent) / 100)
         : 0;
 
-    transaction = await createTransaction({
-      email: purchaserEmail,
-      amount: amountInCents,
-      callback_url: callbackUrl,
-      metadata,
-      subaccount: profile.paystackSubaccountCode,
-      bearer: 'subaccount',
-      ...(transactionCharge > 0 ? { transaction_charge: transactionCharge } : {}),
-    });
+    if (transactionCharge >= amountInCents) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: 'Payment split is invalid for this package amount',
+      });
+    }
+
+    try {
+      transaction = await createTransaction({
+        email: purchaserEmail,
+        amount: amountInCents,
+        callback_url: callbackUrl,
+        metadata,
+        subaccount: profile.paystackSubaccountCode,
+        // Hybrid splits leave a small reseller share; Nomia must bear Paystack fees.
+        bearer: isHybridSingleCheckout ? 'account' : 'subaccount',
+        ...(transactionCharge > 0 ? { transaction_charge: transactionCharge } : {}),
+      });
+    } catch (error) {
+      const paystackMessage =
+        error instanceof Error ? error.message : 'Failed to initialize Paystack transaction';
+
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: paystackMessage,
+      });
+    }
   }
 
   if (!transaction.status || !transaction.data) {

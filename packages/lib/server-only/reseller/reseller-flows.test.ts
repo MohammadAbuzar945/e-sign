@@ -1300,6 +1300,66 @@ describe('initializeResellerPurchase flow', () => {
     );
   });
 
+  it('uses account bearer for hybrid single-checkout splits with small reseller shares', async () => {
+    const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
+
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      ...profile,
+      payoutMode: 'NOMIA_SUBACCOUNT',
+      paystackSubaccountCode: 'ACCT_test',
+      subaccountStatus: 'ACTIVE',
+      platformFeePercent: 0,
+      packages: [
+        {
+          id: 'pkg_1000',
+          isEnabled: true,
+          creditAmount: 1000,
+          priceInCents: 700000,
+          currency: 'ZAR',
+        },
+      ],
+    });
+    getOrganisationCreditsMock.mockResolvedValue(20);
+    createTransactionMock.mockResolvedValue({
+      status: true,
+      data: {
+        authorization_url: 'https://paystack.test/pay',
+        reference: 'ref_hybrid',
+      },
+    });
+
+    await initializeResellerPurchase({
+      affiliateSlug: 'acme-reseller',
+      packageId: 'pkg_1000',
+      purchaserOrganisationId: 'buyer_org',
+      purchaserUserId: 99,
+      purchaserEmail: 'buyer@example.com',
+      hybridSingleCheckoutSplit: {
+        resellerCredits: 20,
+        nomiaCredits: 980,
+        resellerAmountInCents: 14000,
+        nomiaAmountInCents: 686000,
+        totalAmountInCents: 700000,
+        totalCredits: 1000,
+        catalogPackageId: 'payg-1000',
+      },
+    });
+
+    expect(createTransactionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 700000,
+        subaccount: 'ACCT_test',
+        bearer: 'account',
+        transaction_charge: 686000,
+        metadata: expect.objectContaining({
+          hybridSingleCheckout: true,
+          resellerCredits: 20,
+          nomiaCredits: 980,
+        }),
+      }),
+    );
+  });
+
   it('blocks checkout when reseller has insufficient credits and negative credits are disabled', async () => {
     const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
 
