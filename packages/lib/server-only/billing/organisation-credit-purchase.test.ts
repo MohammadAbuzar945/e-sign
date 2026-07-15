@@ -122,11 +122,18 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
 
     expect(history).toHaveLength(1);
     expect(history[0]).toMatchObject({
-      source: 'nomia',
       kind: 'pay_as_you_go',
-      credits: 50,
-      grossAmount: 45000,
-      reference: 'ref_123',
+      totalCredits: 50,
+      totalGrossAmount: 45000,
+      invoiceId: 'nomia_purchase_1',
+      lineItems: [
+        expect.objectContaining({
+          provider: 'nomia',
+          credits: 50,
+          grossAmount: 45000,
+          reference: 'ref_123',
+        }),
+      ],
     });
   });
 });

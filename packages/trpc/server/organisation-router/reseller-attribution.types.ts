@@ -93,6 +93,7 @@ export const ZInitializeAttributedPaygRequestSchema = z.object({
   /** Required for hybrid Nomia remainder after reseller partial payment. */
   nomiaCreditsOverride: z.number().int().positive().optional(),
   nomiaAmountInCentsOverride: z.number().int().positive().optional(),
+  purchaseGroupId: z.string().optional(),
 });
 
 export const ZInitializeAttributedPaygResponseSchema = z.object({

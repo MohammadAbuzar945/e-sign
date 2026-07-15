@@ -43,6 +43,7 @@ export type ProcessResellerPaystackWebhookOptions = {
     expectedAmount?: number | string;
     creditAmount?: number | string;
     subaccountCode?: string;
+    purchaseGroupId?: string;
   };
   amountInCents: number;
   purchaserEmail: string;
@@ -87,6 +88,7 @@ const buildTransactionRecordData = ({
   vatAmount: number;
   payoutMode: ResellerPayoutMode;
   paystackSubaccountCode?: string | null;
+  purchaseGroupId?: string | null;
 }) => ({
   resellerProfileId: profile.id,
   resellerOrganisationId: profile.organisationId,
@@ -104,6 +106,7 @@ const buildTransactionRecordData = ({
   purchaserName: purchaserName ?? purchaserOrganisation.owner.name ?? purchaserEmail,
   purchaserEmail,
   purchaserOrganisationName: purchaserOrganisation.name,
+  purchaseGroupId: purchaseGroupId ?? null,
 });
 
 export const processResellerPaystackWebhook = async ({
@@ -210,6 +213,8 @@ export const processResellerPaystackWebhook = async ({
     typeof metadata.subaccountCode === 'string'
       ? metadata.subaccountCode
       : profile.paystackSubaccountCode;
+  const purchaseGroupId =
+    typeof metadata.purchaseGroupId === 'string' ? metadata.purchaseGroupId : null;
 
   const fulfillmentResult = await prisma.$transaction(async (tx) => {
     const transactionRecord =
@@ -228,6 +233,7 @@ export const processResellerPaystackWebhook = async ({
           vatAmount,
           payoutMode,
           paystackSubaccountCode,
+          purchaseGroupId,
         }),
       }));
 

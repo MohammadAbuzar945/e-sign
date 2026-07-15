@@ -11,6 +11,7 @@ import {
   resolveOrganisationPaygBilling,
 } from '@documenso/lib/server-only/reseller/resolve-organisation-payg-billing';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
+import { prefixedId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
 
 import { authenticatedProcedure } from '../trpc';
@@ -104,7 +105,7 @@ export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure
   .input(ZInitializeAttributedPaygRequestSchema)
   .output(ZInitializeAttributedPaygResponseSchema)
   .mutation(async ({ input, ctx }) => {
-    const { organisationId, catalogPackageId, hybridStep, nomiaCreditsOverride, nomiaAmountInCentsOverride } =
+    const { organisationId, catalogPackageId, hybridStep, nomiaCreditsOverride, nomiaAmountInCentsOverride, purchaseGroupId: purchaseGroupIdInput } =
       input;
 
     await prisma.organisation.findFirstOrThrow({
@@ -129,6 +130,7 @@ export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure
     });
 
     const pricePlanCallback = `/o/${orgUrl.url}/price-plan?purchase=success`;
+    const purchaseGroupId = purchaseGroupIdInput ?? prefixedId('pur');
 
     // Full Nomia (no association, zero stock, delinquent, etc.) or hybrid Nomia remainder.
     if (resolution.source === 'NOMIA' || hybridStep === 'NOMIA') {
@@ -165,6 +167,7 @@ export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure
           value: nomiaCredits,
           organisationId,
           type: 'organisation-credit-purchase',
+          purchaseGroupId,
           ...(hybridStep === 'NOMIA'
             ? { hybridRemainder: true, catalogPackageId }
             : {}),
@@ -191,6 +194,7 @@ export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure
         credits: nomiaCredits,
         grossAmount: nomiaAmount,
         currency: 'ZAR',
+        purchaseGroupId,
       }).catch(() => {
         // Pending row is best-effort; webhook still grants credits from metadata.
       });
@@ -236,6 +240,7 @@ export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure
         purchaserUserId: ctx.user.id,
         purchaserEmail: user.email,
         callbackPath: `${pricePlanCallback}&source=reseller`,
+        purchaseGroupId,
       });
 
       return {
@@ -272,7 +277,8 @@ export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure
       purchaserEmail: user.email,
       creditAmountOverride: resolution.split.resellerCredits,
       amountInCentsOverride: resolution.split.resellerAmountInCents,
-      callbackPath: `${pricePlanCallback}&hybrid=nomia&catalogPackageId=${catalogPackageId}&nomiaCredits=${resolution.split.nomiaCredits}&nomiaAmount=${resolution.split.nomiaAmountInCents}`,
+      purchaseGroupId,
+      callbackPath: `${pricePlanCallback}&hybrid=nomia&catalogPackageId=${catalogPackageId}&nomiaCredits=${resolution.split.nomiaCredits}&nomiaAmount=${resolution.split.nomiaAmountInCents}&purchaseGroupId=${purchaseGroupId}`,
     });
 
     return {
