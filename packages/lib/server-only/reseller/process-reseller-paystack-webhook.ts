@@ -63,6 +63,7 @@ const buildTransactionRecordData = ({
   vatAmount,
   payoutMode,
   paystackSubaccountCode,
+  purchaseGroupId,
 }: {
   profile: {
     id: string;

@@ -259,6 +259,7 @@ export async function action({ request }: { request: Request }) {
           purchaserUserId?: number;
           packageId?: string;
           expectedAmount?: number;
+          purchaseGroupId?: string;
         };
         plan?: { plan_code?: string };
         reference?: string;
