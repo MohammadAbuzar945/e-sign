@@ -9,6 +9,7 @@ export type CreatePendingOrganisationCreditPurchaseOptions = {
   credits: number;
   grossAmount: number;
   currency?: string;
+  purchaseGroupId?: string;
 };
 
 export type CompleteOrganisationCreditPurchaseOptions = {
@@ -18,6 +19,7 @@ export type CompleteOrganisationCreditPurchaseOptions = {
   credits: number;
   grossAmount: number;
   currency?: string;
+  purchaseGroupId?: string;
 };
 
 export const createPendingOrganisationCreditPurchase = async ({
@@ -27,6 +29,7 @@ export const createPendingOrganisationCreditPurchase = async ({
   credits,
   grossAmount,
   currency = 'ZAR',
+  purchaseGroupId,
 }: CreatePendingOrganisationCreditPurchaseOptions) => {
   return await prisma.organisationCreditPurchase.upsert({
     where: {
@@ -39,6 +42,7 @@ export const createPendingOrganisationCreditPurchase = async ({
       credits,
       grossAmount,
       currency,
+      purchaseGroupId,
       status: OrganisationCreditPurchaseStatus.PENDING,
     },
     update: {
@@ -47,6 +51,7 @@ export const createPendingOrganisationCreditPurchase = async ({
       credits,
       grossAmount,
       currency,
+      purchaseGroupId,
       status: OrganisationCreditPurchaseStatus.PENDING,
       completedAt: null,
     },
@@ -60,6 +65,7 @@ export const completeOrganisationCreditPurchase = async ({
   credits,
   grossAmount,
   currency = 'ZAR',
+  purchaseGroupId,
 }: CompleteOrganisationCreditPurchaseOptions) => {
   const existingPurchase = await prisma.organisationCreditPurchase.findUnique({
     where: {
@@ -84,6 +90,7 @@ export const completeOrganisationCreditPurchase = async ({
         credits,
         grossAmount,
         currency,
+        purchaseGroupId: purchaseGroupId ?? existingPurchase.purchaseGroupId,
         status: OrganisationCreditPurchaseStatus.COMPLETED,
         completedAt,
       },
@@ -98,6 +105,7 @@ export const completeOrganisationCreditPurchase = async ({
       credits,
       grossAmount,
       currency,
+      purchaseGroupId,
       status: OrganisationCreditPurchaseStatus.COMPLETED,
       completedAt,
     },

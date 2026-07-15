@@ -20,19 +20,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { OrganisationPurchaseHistoryDialog } from '~/components/general/organisation-purchase-history-dialog';
 import { appMetaTags } from '~/utils/meta';
 import { superLoaderJson, useSuperLoaderData } from '~/utils/super-json-loader';
 
@@ -428,6 +420,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
   const hybridCatalogPackageId = searchParams.get('catalogPackageId');
   const hybridNomiaCredits = searchParams.get('nomiaCredits');
   const hybridNomiaAmount = searchParams.get('nomiaAmount');
+  const hybridPurchaseGroupId = searchParams.get('purchaseGroupId');
 
   const { data: billingAttribution, refetch: refetchAttribution } =
     trpc.organisation.reseller.getBillingAttribution.useQuery({
@@ -464,6 +457,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
           hybridStep: 'NOMIA',
           nomiaCreditsOverride: hybridNomiaCredits ? Number(hybridNomiaCredits) : undefined,
           nomiaAmountInCentsOverride: hybridNomiaAmount ? Number(hybridNomiaAmount) : undefined,
+          purchaseGroupId: hybridPurchaseGroupId ?? undefined,
         });
 
         if (cancelled) {
@@ -494,6 +488,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
         newUrl.searchParams.delete('catalogPackageId');
         newUrl.searchParams.delete('nomiaCredits');
         newUrl.searchParams.delete('nomiaAmount');
+        newUrl.searchParams.delete('purchaseGroupId');
         newUrl.searchParams.delete('purchase');
         window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
       }
@@ -504,7 +499,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
     return () => {
       cancelled = true;
     };
-  }, [hybridStep, hybridCatalogPackageId, hybridNomiaCredits, hybridNomiaAmount, organisation.id]);
+  }, [hybridStep, hybridCatalogPackageId, hybridNomiaCredits, hybridNomiaAmount, hybridPurchaseGroupId, organisation.id]);
 
   // State for polling
   const [isPolling, setIsPolling] = useState(false);
@@ -930,142 +925,11 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
           </div>
         )}
 
-        <Dialog>
-          <DialogTrigger asChild className="flex w-full items-end justify-end">
-            <button className="text-md cursor-pointer pb-6 text-blue-500 underline">
-              <Trans>View History</Trans>
-            </button>
-          </DialogTrigger>
-          <DialogContent className="w-full max-w-5xl p-6">
-            <DialogHeader>
-              <DialogTitle className="text-primary text-2xl font-bold">
-                <Trans>Purchase History</Trans>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="mt-6 overflow-x-auto">
-              <Table className="border-primary/30 w-full rounded-lg border shadow-md">
-                <TableHeader className="bg-primary/10">
-                  <TableRow>
-                    <TableHead className="text-primary font-semibold">
-                      <Trans>Date</Trans>
-                    </TableHead>
-                    <TableHead className="text-primary font-semibold">
-                      <Trans>Source</Trans>
-                    </TableHead>
-                    <TableHead className="text-primary font-semibold">
-                      <Trans>Description</Trans>
-                    </TableHead>
-                    <TableHead className="text-primary font-semibold">
-                      <Trans>Amount</Trans>
-                    </TableHead>
-                    <TableHead className="text-primary font-semibold">
-                      <Trans>Credits</Trans>
-                    </TableHead>
-                    <TableHead className="text-primary font-semibold">
-                      <Trans>Status</Trans>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {purchaseHistory.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                        <Trans>No purchases found yet.</Trans>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    purchaseHistory.map((item) => {
-                      if (item.source === 'nomia' && item.kind === 'pay_as_you_go') {
-                        return (
-                          <TableRow key={item.id} className="hover:bg-muted/50 transition">
-                            <TableCell>
-                              {new Date(item.date).toLocaleDateString(undefined, {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                              })}
-                            </TableCell>
-                            <TableCell>
-                              <Trans>Nomia</Trans>
-                            </TableCell>
-                            <TableCell>
-                              <Trans>Pay as you go top-up</Trans>
-                            </TableCell>
-                            <TableCell>
-                              {item.currency} {(item.grossAmount / 100).toFixed(2)}
-                            </TableCell>
-                            <TableCell>{item.credits}</TableCell>
-                            <TableCell>{item.status}</TableCell>
-                          </TableRow>
-                        );
-                      }
-
-                      if (item.source === 'nomia') {
-                        const planDetails = getActiveSubscriptionDetails(item.planCode);
-
-                        return (
-                          <TableRow key={item.id} className="hover:bg-muted/50 transition">
-                            <TableCell>
-                              {new Date(item.date).toLocaleDateString(undefined, {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                              })}
-                            </TableCell>
-                            <TableCell>
-                              <Trans>Nomia</Trans>
-                            </TableCell>
-                            <TableCell>
-                              {planDetails?.label ?? (
-                                <span className="italic text-gray-400">
-                                  <Trans>Unknown plan</Trans>
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {planDetails?.amount ?? (
-                                <span className="italic text-gray-400">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {planDetails?.credits ?? (
-                                <span className="italic text-gray-400">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>{item.status}</TableCell>
-                          </TableRow>
-                        );
-                      }
-
-                      return (
-                        <TableRow key={item.id} className="hover:bg-muted/50 transition">
-                          <TableCell>
-                            {new Date(item.date).toLocaleDateString(undefined, {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            <Trans>Reseller</Trans>
-                          </TableCell>
-                          <TableCell>
-                            <Trans>From {item.resellerOrganisationName}</Trans>
-                          </TableCell>
-                          <TableCell>
-                            {item.currency} {(item.grossAmount / 100).toFixed(2)}
-                          </TableCell>
-                          <TableCell>{item.credits}</TableCell>
-                          <TableCell>{item.status}</TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <OrganisationPurchaseHistoryDialog
+          orgUrl={orgUrl}
+          purchaseHistory={purchaseHistory}
+          getSubscriptionPlanDetails={getActiveSubscriptionDetails}
+        />
 
         {currentSubscriptionData && (
           <div>

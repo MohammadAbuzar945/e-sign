@@ -343,6 +343,8 @@ export async function action({ request }: { request: Request }) {
             userId: user.id,
             credits: creditsToAdd,
             grossAmount,
+            purchaseGroupId:
+              typeof metadata?.purchaseGroupId === 'string' ? metadata.purchaseGroupId : undefined,
           });
         }
 

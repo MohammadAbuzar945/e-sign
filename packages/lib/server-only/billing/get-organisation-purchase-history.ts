@@ -7,21 +7,9 @@ import { prisma } from '@documenso/prisma';
 
 import { getSubscriptionsByUserId } from '../subscription/get-subscriptions-by-user-id';
 
-export type NomiaSubscriptionPurchaseHistoryItem = {
-  id: string;
-  source: 'nomia';
-  kind: 'subscription';
-  date: Date;
-  planCode: string;
-  status: string;
-  reference: string | null;
-};
-
-export type NomiaPayAsYouGoPurchaseHistoryItem = {
-  id: string;
-  source: 'nomia';
-  kind: 'pay_as_you_go';
-  date: Date;
+export type PurchaseHistoryLineItem = {
+  provider: 'nomia' | 'reseller';
+  description: string;
   credits: number;
   grossAmount: number;
   currency: string;
@@ -29,25 +17,83 @@ export type NomiaPayAsYouGoPurchaseHistoryItem = {
   reference: string | null;
 };
 
-export type NomiaPurchaseHistoryItem =
-  | NomiaSubscriptionPurchaseHistoryItem
-  | NomiaPayAsYouGoPurchaseHistoryItem;
-
-export type ResellerPurchaseHistoryItem = {
-  id: string;
-  source: 'reseller';
+export type OrganisationPurchaseHistoryItem = {
+  invoiceId: string;
+  purchaseGroupId: string | null;
   date: Date;
+  kind: 'subscription' | 'pay_as_you_go' | 'reseller' | 'hybrid';
+  title: string;
+  totalCredits: number;
+  totalGrossAmount: number;
+  currency: string;
+  status: string;
+  lineItems: PurchaseHistoryLineItem[];
+};
+
+const HYBRID_MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+const formatAmount = (currency: string, amountInCents: number) =>
+  `${currency} ${(amountInCents / 100).toFixed(2)}`;
+
+const resolveCombinedStatus = (statuses: string[]) => {
+  if (statuses.some((status) => status === 'PENDING')) {
+    return 'PENDING';
+  }
+
+  if (statuses.every((status) => status === 'COMPLETED' || status === 'ACTIVE')) {
+    return 'COMPLETED';
+  }
+
+  return statuses[0] ?? 'PENDING';
+};
+
+const buildNomiaLineItem = ({
+  credits,
+  grossAmount,
+  currency,
+  status,
+  reference,
+  description,
+}: {
+  credits: number;
+  grossAmount: number;
+  currency: string;
+  status: string;
+  reference: string | null;
+  description: string;
+}): PurchaseHistoryLineItem => ({
+  provider: 'nomia',
+  description,
+  credits,
+  grossAmount,
+  currency,
+  status,
+  reference,
+});
+
+const buildResellerLineItem = ({
+  resellerOrganisationName,
+  credits,
+  grossAmount,
+  currency,
+  status,
+  reference,
+}: {
   resellerOrganisationName: string;
   credits: number;
   grossAmount: number;
   currency: string;
   status: string;
   reference: string | null;
-};
-
-export type OrganisationPurchaseHistoryItem =
-  | NomiaPurchaseHistoryItem
-  | ResellerPurchaseHistoryItem;
+}): PurchaseHistoryLineItem => ({
+  provider: 'reseller',
+  description: `Credits from ${resellerOrganisationName}`,
+  credits,
+  grossAmount,
+  currency,
+  status,
+  reference,
+});
 
 export const getOrganisationPurchaseHistory = async ({
   organisationId,
@@ -84,6 +130,12 @@ export const getOrganisationPurchaseHistory = async ({
         createdAt: 'desc',
       },
       include: {
+        package: {
+          select: {
+            creditAmount: true,
+            catalogPackageId: true,
+          },
+        },
         resellerProfile: {
           include: {
             organisation: {
@@ -97,45 +149,254 @@ export const getOrganisationPurchaseHistory = async ({
     }),
   ]);
 
-  const subscriptionItems: NomiaSubscriptionPurchaseHistoryItem[] = subscriptions.map(
-    (subscription) => ({
-      id: `subscription-${subscription.id}`,
-      source: 'nomia',
-      kind: 'subscription',
-      date: subscription.updatedAt,
-      planCode: subscription.priceId || subscription.planId,
-      status: subscription.status === 'PAST_DUE' ? 'INCOMPLETE' : subscription.status,
-      reference: subscription.planId,
-    }),
-  );
+  const grouped = new Map<string, OrganisationPurchaseHistoryItem>();
+  const consumedNomiaIds = new Set<string>();
+  const consumedResellerIds = new Set<string>();
 
-  const payAsYouGoItems: NomiaPayAsYouGoPurchaseHistoryItem[] = payAsYouGoPurchases.map(
-    (purchase) => ({
-      id: purchase.id,
-      source: 'nomia',
-      kind: 'pay_as_you_go',
-      date: purchase.completedAt ?? purchase.createdAt,
+  const addGroupedItem = (item: OrganisationPurchaseHistoryItem) => {
+    grouped.set(item.invoiceId, item);
+  };
+
+  for (const purchase of payAsYouGoPurchases) {
+    if (!purchase.purchaseGroupId) {
+      continue;
+    }
+
+    const existing = grouped.get(purchase.purchaseGroupId);
+
+    const nomiaLine = buildNomiaLineItem({
       credits: purchase.credits,
       grossAmount: purchase.grossAmount,
       currency: purchase.currency,
       status: purchase.status,
       reference: purchase.paystackReference,
-    }),
-  );
+      description: 'Nomia credit top-up',
+    });
 
-  const resellerItems: ResellerPurchaseHistoryItem[] = resellerPurchases.map((transaction) => ({
-    id: transaction.id,
-    source: 'reseller',
-    date: transaction.completedAt ?? transaction.createdAt,
-    resellerOrganisationName: transaction.resellerProfile.organisation.name,
-    credits: transaction.credits,
-    grossAmount: transaction.grossAmount,
-    currency: transaction.currency,
-    status: transaction.status,
-    reference: transaction.paystackReference,
+    if (existing) {
+      existing.lineItems.push(nomiaLine);
+      existing.totalCredits += purchase.credits;
+      existing.totalGrossAmount += purchase.grossAmount;
+      existing.date = new Date(
+        Math.max(existing.date.getTime(), (purchase.completedAt ?? purchase.createdAt).getTime()),
+      );
+      existing.status = resolveCombinedStatus(existing.lineItems.map((line) => line.status));
+      consumedNomiaIds.add(purchase.id);
+      continue;
+    }
+
+    grouped.set(purchase.purchaseGroupId, {
+      invoiceId: purchase.purchaseGroupId,
+      purchaseGroupId: purchase.purchaseGroupId,
+      date: purchase.completedAt ?? purchase.createdAt,
+      kind: 'hybrid',
+      title: 'Split purchase (Reseller + Nomia)',
+      totalCredits: purchase.credits,
+      totalGrossAmount: purchase.grossAmount,
+      currency: purchase.currency,
+      status: purchase.status,
+      lineItems: [nomiaLine],
+    });
+    consumedNomiaIds.add(purchase.id);
+  }
+
+  for (const transaction of resellerPurchases) {
+    if (!transaction.purchaseGroupId) {
+      continue;
+    }
+
+    const existing = grouped.get(transaction.purchaseGroupId);
+    const resellerLine = buildResellerLineItem({
+      resellerOrganisationName: transaction.resellerProfile.organisation.name,
+      credits: transaction.credits,
+      grossAmount: transaction.grossAmount,
+      currency: transaction.currency,
+      status: transaction.status,
+      reference: transaction.paystackReference,
+    });
+
+    if (existing) {
+      existing.lineItems.unshift(resellerLine);
+      existing.totalCredits += transaction.credits;
+      existing.totalGrossAmount += transaction.grossAmount;
+      existing.date = new Date(
+        Math.max(
+          existing.date.getTime(),
+          (transaction.completedAt ?? transaction.createdAt).getTime(),
+        ),
+      );
+      existing.status = resolveCombinedStatus(existing.lineItems.map((line) => line.status));
+      consumedResellerIds.add(transaction.id);
+      continue;
+    }
+
+    grouped.set(transaction.purchaseGroupId, {
+      invoiceId: transaction.purchaseGroupId,
+      purchaseGroupId: transaction.purchaseGroupId,
+      date: transaction.completedAt ?? transaction.createdAt,
+      kind: 'hybrid',
+      title: 'Split purchase (Reseller + Nomia)',
+      totalCredits: transaction.credits,
+      totalGrossAmount: transaction.grossAmount,
+      currency: transaction.currency,
+      status: transaction.status,
+      lineItems: [resellerLine],
+    });
+    consumedResellerIds.add(transaction.id);
+  }
+
+  for (const transaction of resellerPurchases) {
+    if (consumedResellerIds.has(transaction.id) || !transaction.package) {
+      continue;
+    }
+
+    const isPartial =
+      transaction.credits > 0 && transaction.credits < transaction.package.creditAmount;
+
+    if (!isPartial) {
+      continue;
+    }
+
+    const resellerDate = transaction.completedAt ?? transaction.createdAt;
+    const expectedNomiaCredits = transaction.package.creditAmount - transaction.credits;
+
+    const matchingNomia = payAsYouGoPurchases.find((purchase) => {
+      if (consumedNomiaIds.has(purchase.id) || purchase.purchaseGroupId) {
+        return false;
+      }
+
+      const purchaseDate = purchase.completedAt ?? purchase.createdAt;
+      const withinWindow =
+        purchaseDate.getTime() >= resellerDate.getTime() &&
+        purchaseDate.getTime() - resellerDate.getTime() <= HYBRID_MATCH_WINDOW_MS;
+
+      return withinWindow && purchase.credits === expectedNomiaCredits;
+    });
+
+    if (!matchingNomia) {
+      continue;
+    }
+
+    const legacyInvoiceId = `hybrid_${transaction.id}_${matchingNomia.id}`;
+
+    addGroupedItem({
+      invoiceId: legacyInvoiceId,
+      purchaseGroupId: null,
+      date: matchingNomia.completedAt ?? matchingNomia.createdAt,
+      kind: 'hybrid',
+      title: 'Split purchase (Reseller + Nomia)',
+      totalCredits: transaction.credits + matchingNomia.credits,
+      totalGrossAmount: transaction.grossAmount + matchingNomia.grossAmount,
+      currency: transaction.currency,
+      status: resolveCombinedStatus([transaction.status, matchingNomia.status]),
+      lineItems: [
+        buildResellerLineItem({
+          resellerOrganisationName: transaction.resellerProfile.organisation.name,
+          credits: transaction.credits,
+          grossAmount: transaction.grossAmount,
+          currency: transaction.currency,
+          status: transaction.status,
+          reference: transaction.paystackReference,
+        }),
+        buildNomiaLineItem({
+          credits: matchingNomia.credits,
+          grossAmount: matchingNomia.grossAmount,
+          currency: matchingNomia.currency,
+          status: matchingNomia.status,
+          reference: matchingNomia.paystackReference,
+          description: 'Nomia credit top-up (remainder)',
+        }),
+      ],
+    });
+
+    consumedResellerIds.add(transaction.id);
+    consumedNomiaIds.add(matchingNomia.id);
+  }
+
+  const standaloneItems: OrganisationPurchaseHistoryItem[] = [];
+
+  for (const purchase of payAsYouGoPurchases) {
+    if (consumedNomiaIds.has(purchase.id)) {
+      continue;
+    }
+
+    standaloneItems.push({
+      invoiceId: `nomia_${purchase.id}`,
+      purchaseGroupId: purchase.purchaseGroupId,
+      date: purchase.completedAt ?? purchase.createdAt,
+      kind: 'pay_as_you_go',
+      title: 'Pay as you go top-up',
+      totalCredits: purchase.credits,
+      totalGrossAmount: purchase.grossAmount,
+      currency: purchase.currency,
+      status: purchase.status,
+      lineItems: [
+        buildNomiaLineItem({
+          credits: purchase.credits,
+          grossAmount: purchase.grossAmount,
+          currency: purchase.currency,
+          status: purchase.status,
+          reference: purchase.paystackReference,
+          description: 'Pay as you go top-up',
+        }),
+      ],
+    });
+  }
+
+  for (const transaction of resellerPurchases) {
+    if (consumedResellerIds.has(transaction.id)) {
+      continue;
+    }
+
+    standaloneItems.push({
+      invoiceId: `reseller_${transaction.id}`,
+      purchaseGroupId: transaction.purchaseGroupId,
+      date: transaction.completedAt ?? transaction.createdAt,
+      kind: 'reseller',
+      title: `Credits from ${transaction.resellerProfile.organisation.name}`,
+      totalCredits: transaction.credits,
+      totalGrossAmount: transaction.grossAmount,
+      currency: transaction.currency,
+      status: transaction.status,
+      lineItems: [
+        buildResellerLineItem({
+          resellerOrganisationName: transaction.resellerProfile.organisation.name,
+          credits: transaction.credits,
+          grossAmount: transaction.grossAmount,
+          currency: transaction.currency,
+          status: transaction.status,
+          reference: transaction.paystackReference,
+        }),
+      ],
+    });
+  }
+
+  const subscriptionItems: OrganisationPurchaseHistoryItem[] = subscriptions.map((subscription) => ({
+    invoiceId: `subscription_${subscription.id}`,
+    purchaseGroupId: null,
+    date: subscription.updatedAt,
+    kind: 'subscription' as const,
+    title: subscription.priceId || subscription.planId,
+    totalCredits: 0,
+    totalGrossAmount: 0,
+    currency: 'ZAR',
+    status: subscription.status === 'PAST_DUE' ? 'INCOMPLETE' : subscription.status,
+    lineItems: [
+      {
+        provider: 'nomia' as const,
+        description: subscription.priceId || subscription.planId,
+        credits: 0,
+        grossAmount: 0,
+        currency: 'ZAR',
+        status: subscription.status === 'PAST_DUE' ? 'INCOMPLETE' : subscription.status,
+        reference: subscription.planId,
+      },
+    ],
   }));
 
-  return [...subscriptionItems, ...payAsYouGoItems, ...resellerItems].sort(
+  return [...subscriptionItems, ...standaloneItems, ...grouped.values()].sort(
     (left, right) => right.date.getTime() - left.date.getTime(),
   );
 };
+
+export { formatAmount };

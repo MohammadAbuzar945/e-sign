@@ -4,6 +4,7 @@ import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createPendingOrganisationCreditPurchase } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
 import { createTransaction } from '@documenso/lib/server-only/paystack';
+import { prefixedId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
 
 import { associateOrganisationWithReseller } from './reseller-association';
@@ -60,6 +61,7 @@ export const initializeAffiliatePackagePurchase = async ({
     select: { url: true },
   });
 
+  const purchaseGroupId = prefixedId('pur');
   const availableCredits = await getOrganisationCredits(profile.organisationId);
   const payoutReadiness = getResellerPayoutReadiness(profile);
   const canAcceptPayments = payoutReadiness.canAcceptPayments;
@@ -80,6 +82,7 @@ export const initializeAffiliatePackagePurchase = async ({
       purchaserUserId,
       purchaserEmail,
       callbackPath: `/r/${affiliateSlug}?purchase=success`,
+      purchaseGroupId,
     });
 
     return {
@@ -102,7 +105,8 @@ export const initializeAffiliatePackagePurchase = async ({
       purchaserEmail,
       creditAmountOverride: resellerCredits,
       amountInCentsOverride: resellerAmountInCents,
-      callbackPath: `/o/${purchaserOrganisation.url}/price-plan?hybrid=nomia&catalogPackageId=${pkg.catalogPackageId}&nomiaCredits=${nomiaCredits}&nomiaAmount=${nomiaAmountInCents}&purchase=reseller-partial`,
+      purchaseGroupId,
+      callbackPath: `/o/${purchaserOrganisation.url}/price-plan?hybrid=nomia&catalogPackageId=${pkg.catalogPackageId}&nomiaCredits=${nomiaCredits}&nomiaAmount=${nomiaAmountInCents}&purchaseGroupId=${purchaseGroupId}&purchase=reseller-partial`,
     });
 
     return {
@@ -129,6 +133,7 @@ export const initializeAffiliatePackagePurchase = async ({
       type: 'organisation-credit-purchase',
       catalogPackageId: pkg.catalogPackageId,
       affiliateSlug,
+      purchaseGroupId,
     },
   });
 
@@ -145,6 +150,7 @@ export const initializeAffiliatePackagePurchase = async ({
     credits: catalog.credits,
     grossAmount: catalog.priceInCents,
     currency: catalog.currency,
+    purchaseGroupId,
   }).catch(() => {
     // Pending row is best-effort; webhook still grants credits from metadata.
   });

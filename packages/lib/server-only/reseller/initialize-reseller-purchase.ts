@@ -4,6 +4,7 @@ import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-cr
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createTransaction } from '@documenso/lib/server-only/paystack';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { prefixedId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
 
 import { getResellerPayoutReadiness } from './reseller-payout-readiness';
@@ -21,6 +22,7 @@ export type InitializeResellerPurchaseOptions = {
   creditAmountOverride?: number;
   amountInCentsOverride?: number;
   callbackPath?: string;
+  purchaseGroupId?: string;
 };
 
 export const initializeResellerPurchase = async ({
@@ -32,6 +34,7 @@ export const initializeResellerPurchase = async ({
   creditAmountOverride,
   amountInCentsOverride,
   callbackPath,
+  purchaseGroupId: purchaseGroupIdInput,
 }: InitializeResellerPurchaseOptions) => {
   const profile = await prisma.resellerProfile.findUnique({
     where: { affiliateSlug },
@@ -100,6 +103,7 @@ export const initializeResellerPurchase = async ({
   const callbackUrl = `${NEXT_PUBLIC_WEBAPP_URL()}${
     callbackPath ?? `/r/${affiliateSlug}?purchase=success`
   }`;
+  const purchaseGroupId = purchaseGroupIdInput ?? prefixedId('pur');
 
   const metadata = {
     type: 'reseller-credit-purchase',
@@ -110,6 +114,7 @@ export const initializeResellerPurchase = async ({
     packageId: pkg.id,
     expectedAmount: amountInCents,
     creditAmount,
+    purchaseGroupId,
     ...(profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT && profile.paystackSubaccountCode
       ? { subaccountCode: profile.paystackSubaccountCode }
       : {}),
@@ -164,5 +169,6 @@ export const initializeResellerPurchase = async ({
     reference: transaction.data.reference,
     package: pkg,
     payoutMode: profile.payoutMode,
+    purchaseGroupId,
   };
 };
