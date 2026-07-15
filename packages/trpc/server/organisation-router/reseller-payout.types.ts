@@ -65,6 +65,8 @@ export const ZListPaystackBanksResponseSchema = z.object({
       name: z.string(),
       code: z.string(),
       currency: z.string(),
+      supportsVerification: z.boolean(),
+      supportedTypes: z.array(z.enum(['personal', 'business'])),
     }),
   ),
 });
