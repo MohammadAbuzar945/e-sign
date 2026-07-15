@@ -7,6 +7,7 @@ import { Button } from '@documenso/ui/primitives/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -95,35 +96,39 @@ export const OrganisationPurchaseHistoryDialog = ({
           <Trans>View History</Trans>
         </button>
       </DialogTrigger>
-      <DialogContent className="w-full max-w-6xl p-6">
-        <DialogHeader>
-          <DialogTitle className="text-primary text-2xl font-bold">
+      <DialogContent className="max-h-[90vh] w-[95vw] gap-0 overflow-hidden p-0 sm:max-w-6xl">
+        <DialogHeader className="border-b px-6 py-5 text-left sm:px-8">
+          <DialogTitle className="text-primary text-2xl font-bold sm:text-3xl">
             <Trans>Purchase History</Trans>
           </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            <Trans>Review your purchases and download invoices for your records.</Trans>
+          </DialogDescription>
         </DialogHeader>
-        <div className="mt-6 overflow-x-auto">
-          <Table className="border-primary/30 w-full rounded-lg border shadow-md">
-            <TableHeader className="bg-primary/10">
+        <div className="max-h-[70vh] overflow-auto p-6 sm:p-8">
+          <div className="min-w-[900px] overflow-hidden rounded-xl border shadow-sm">
+          <Table className="w-full">
+            <TableHeader className="bg-primary/10 sticky top-0 z-10 backdrop-blur">
               <TableRow>
-                <TableHead className="text-primary font-semibold">
+                <TableHead className="text-primary w-36 whitespace-nowrap font-semibold">
                   <Trans>Date</Trans>
                 </TableHead>
-                <TableHead className="text-primary font-semibold">
+                <TableHead className="text-primary w-40 font-semibold">
                   <Trans>Source</Trans>
                 </TableHead>
-                <TableHead className="text-primary font-semibold">
+                <TableHead className="text-primary min-w-64 font-semibold">
                   <Trans>Description</Trans>
                 </TableHead>
-                <TableHead className="text-primary font-semibold">
+                <TableHead className="text-primary w-36 whitespace-nowrap font-semibold">
                   <Trans>Amount</Trans>
                 </TableHead>
-                <TableHead className="text-primary font-semibold">
+                <TableHead className="text-primary w-28 font-semibold">
                   <Trans>Credits</Trans>
                 </TableHead>
-                <TableHead className="text-primary font-semibold">
+                <TableHead className="text-primary w-32 font-semibold">
                   <Trans>Status</Trans>
                 </TableHead>
-                <TableHead className="text-primary font-semibold">
+                <TableHead className="text-primary w-36 text-right font-semibold">
                   <Trans>Invoice</Trans>
                 </TableHead>
               </TableRow>
@@ -137,22 +142,34 @@ export const OrganisationPurchaseHistoryDialog = ({
                 </TableRow>
               ) : (
                 purchaseHistory.map((item) => (
-                  <TableRow key={item.invoiceId} className="hover:bg-muted/50 transition">
-                    <TableCell>
+                  <TableRow key={item.invoiceId} className="hover:bg-muted/50 transition-colors">
+                    <TableCell className="whitespace-nowrap font-medium">
                       {new Date(item.date).toLocaleDateString(undefined, {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
                       })}
                     </TableCell>
-                    <TableCell>{formatHistorySource(item)}</TableCell>
-                    <TableCell className="max-w-xs">
+                    <TableCell>
+                      <span className="bg-primary/10 text-primary inline-flex rounded-full px-2.5 py-1 text-xs font-semibold">
+                        {formatHistorySource(item)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="min-w-64">
                       {formatHistoryDescription(item, getSubscriptionPlanDetails)}
                     </TableCell>
-                    <TableCell>{formatHistoryAmount(item, getSubscriptionPlanDetails)}</TableCell>
-                    <TableCell>{formatHistoryCredits(item, getSubscriptionPlanDetails)}</TableCell>
-                    <TableCell>{item.status}</TableCell>
+                    <TableCell className="whitespace-nowrap font-medium">
+                      {formatHistoryAmount(item, getSubscriptionPlanDetails)}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatHistoryCredits(item, getSubscriptionPlanDetails)}
+                    </TableCell>
                     <TableCell>
+                      <span className="bg-muted inline-flex rounded-full px-2.5 py-1 text-xs font-medium">
+                        {item.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
                       <Button variant="outline" size="sm" asChild>
                         <Link
                           to={`/o/${orgUrl}/purchase-invoice/${encodeURIComponent(item.invoiceId)}`}
@@ -169,6 +186,7 @@ export const OrganisationPurchaseHistoryDialog = ({
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
