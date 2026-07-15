@@ -47,6 +47,35 @@ const resolveCombinedStatus = (statuses: string[]) => {
   return statuses[0] ?? 'PENDING';
 };
 
+const resolveGroupedPurchaseType = (
+  item: OrganisationPurchaseHistoryItem,
+): OrganisationPurchaseHistoryItem => {
+  const hasNomia = item.lineItems.some((line) => line.provider === 'nomia');
+  const hasReseller = item.lineItems.some((line) => line.provider === 'reseller');
+
+  if (hasNomia && hasReseller) {
+    return {
+      ...item,
+      kind: 'hybrid',
+      title: 'Split purchase (Reseller + Nomia)',
+    };
+  }
+
+  if (hasReseller) {
+    return {
+      ...item,
+      kind: 'reseller',
+      title: item.lineItems[0]?.description ?? 'Reseller credit purchase',
+    };
+  }
+
+  return {
+    ...item,
+    kind: 'pay_as_you_go',
+    title: 'Pay as you go top-up (Nomia)',
+  };
+};
+
 const buildNomiaLineItem = ({
   credits,
   grossAmount,
@@ -394,7 +423,9 @@ export const getOrganisationPurchaseHistory = async ({
     ],
   }));
 
-  return [...subscriptionItems, ...standaloneItems, ...grouped.values()].sort(
+  const groupedItems = [...grouped.values()].map(resolveGroupedPurchaseType);
+
+  return [...subscriptionItems, ...standaloneItems, ...groupedItems].sort(
     (left, right) => right.date.getTime() - left.date.getTime(),
   );
 };

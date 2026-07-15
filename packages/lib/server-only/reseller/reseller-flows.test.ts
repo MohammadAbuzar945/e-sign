@@ -72,6 +72,9 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
     updateMany: vi.fn(),
   },
+  organisationCreditPurchase: {
+    upsert: vi.fn(),
+  },
   $transaction: vi.fn(),
 }));
 
@@ -1577,6 +1580,61 @@ describe('processResellerPaystackWebhook flow', () => {
     expect(prismaMock.userCredits.update).not.toHaveBeenCalled();
   });
 
+  it('fulfills hybrid single-checkout purchases with reseller and Nomia credits', async () => {
+    const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
+
+    setupSuccessfulWebhookMocks();
+    prismaMock.organisationCreditPurchase.upsert.mockResolvedValue({
+      id: 'nomia_purchase_1',
+      status: 'COMPLETED',
+    });
+    prismaMock.userCredits.update.mockResolvedValue({ id: 'credits_buyer', credits: 120 });
+
+    const result = await processResellerPaystackWebhook({
+      paystackReference: 'ref_hybrid',
+      metadata: {
+        ...baseMetadata,
+        creditAmount: 50,
+        expectedAmount: 45000,
+        hybridSingleCheckout: true,
+        resellerCredits: 10,
+        nomiaCredits: 40,
+        resellerAmountInCents: 9000,
+        nomiaAmountInCents: 36000,
+        purchaseGroupId: 'pur_hybrid',
+      },
+      amountInCents: 45000,
+      purchaserEmail: 'buyer@example.com',
+      purchaserName: 'Buyer Name',
+    });
+
+    expect(result.fulfilled).toBe(true);
+    expect(prismaMock.userCredits.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          credits: { gte: 10 },
+        }),
+      }),
+    );
+    expect(prismaMock.userCredits.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          credits: { increment: 50 },
+        }),
+      }),
+    );
+    expect(prismaMock.organisationCreditPurchase.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { paystackReference: 'ref_hybrid#nomia' },
+        create: expect.objectContaining({
+          credits: 40,
+          grossAmount: 36000,
+          purchaseGroupId: 'pur_hybrid',
+        }),
+      }),
+    );
+  });
+
   it('returns duplicate for already completed transactions', async () => {
     const { processResellerPaystackWebhook } = await import('./process-reseller-paystack-webhook');
 
@@ -1610,7 +1668,7 @@ describe('processResellerPaystackWebhook flow', () => {
         amountInCents: 100,
         purchaserEmail: 'buyer@example.com',
       }),
-    ).rejects.toThrow('Payment amount does not match package price');
+    ).rejects.toThrow('Payment amount does not match expected reseller purchase amount');
   });
 
   it('retries fulfillment for pending transactions when credits become available', async () => {

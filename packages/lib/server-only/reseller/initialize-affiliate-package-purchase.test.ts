@@ -103,7 +103,7 @@ describe('initializeAffiliatePackagePurchase', () => {
     expect(result.authorizationUrl).toBe('https://paystack.test/full');
   });
 
-  it('uses partial reseller purchase when only some credits are available', async () => {
+  it('uses single hybrid checkout when only some credits are available (NOMIA_SUBACCOUNT)', async () => {
     prismaMock.resellerProfile.findUnique.mockResolvedValue(baseProfile as never);
     getOrganisationCreditsMock.mockResolvedValue(10);
     initializeResellerPurchaseMock.mockResolvedValue({
@@ -121,12 +121,47 @@ describe('initializeAffiliatePackagePurchase', () => {
 
     expect(initializeResellerPurchaseMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        hybridSingleCheckoutSplit: expect.objectContaining({
+          resellerCredits: 10,
+          nomiaCredits: 90,
+          resellerAmountInCents: 1000,
+          nomiaAmountInCents: 9000,
+          totalAmountInCents: 10000,
+          totalCredits: 100,
+          catalogPackageId: 'payg-100',
+        }),
+        callbackPath: '/r/acme?purchase=success',
+      }),
+    );
+    expect(result.authorizationUrl).toBe('https://paystack.test/partial');
+  });
+
+  it('uses two-checkout hybrid when only some credits are available (OWN_PAYSTACK)', async () => {
+    prismaMock.resellerProfile.findUnique.mockResolvedValue({
+      ...baseProfile,
+      payoutMode: 'OWN_PAYSTACK',
+    } as never);
+    getOrganisationCreditsMock.mockResolvedValue(10);
+    initializeResellerPurchaseMock.mockResolvedValue({
+      authorizationUrl: 'https://paystack.test/partial',
+      reference: 'ref_partial',
+    });
+
+    await initializeAffiliatePackagePurchase({
+      affiliateSlug: 'acme',
+      packageId: 'pkg_1',
+      purchaserOrganisationId: 'buyer_org',
+      purchaserUserId: 1,
+      purchaserEmail: 'buyer@test.com',
+    });
+
+    expect(initializeResellerPurchaseMock).toHaveBeenCalledWith(
+      expect.objectContaining({
         creditAmountOverride: 10,
         amountInCentsOverride: 1000,
         callbackPath: expect.stringContaining('hybrid=nomia'),
       }),
     );
-    expect(result.authorizationUrl).toBe('https://paystack.test/partial');
   });
 
   it('falls back to Nomia when reseller cannot fulfill the purchase', async () => {

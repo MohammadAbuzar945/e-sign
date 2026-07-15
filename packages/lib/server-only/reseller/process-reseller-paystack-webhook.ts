@@ -1,4 +1,5 @@
 import {
+  OrganisationCreditPurchaseStatus,
   ResellerCreditTransactionStatus,
   ResellerPayoutMode,
   ResellerProfileStatus,
@@ -11,6 +12,7 @@ import { calculateResellerVatAmountInCents } from '@documenso/lib/utils/reseller
 
 import { associateOrganisationWithReseller } from './reseller-association';
 import { markResellerCreditsBalanceChanged } from './reseller-delinquency';
+import { buildNomiaHybridPurchaseReference } from './hybrid-single-checkout';
 import { sendResellerInsufficientCreditsEmail } from './send-reseller-insufficient-credits-email';
 import {
   atomicIncrementOrganisationCredits,
@@ -44,6 +46,12 @@ export type ProcessResellerPaystackWebhookOptions = {
     creditAmount?: number | string;
     subaccountCode?: string;
     purchaseGroupId?: string;
+    hybridSingleCheckout?: boolean | string;
+    resellerCredits?: number | string;
+    nomiaCredits?: number | string;
+    resellerAmountInCents?: number | string;
+    nomiaAmountInCents?: number | string;
+    catalogPackageId?: string;
   };
   amountInCents: number;
   purchaserEmail: string;
@@ -179,23 +187,58 @@ export const processResellerPaystackWebhook = async ({
 
   const expectedAmount = coercePaystackMetadataNumber(metadata.expectedAmount);
   const metadataCreditAmount = coercePaystackMetadataNumber(metadata.creditAmount);
+  const isHybridSingleCheckout =
+    metadata.hybridSingleCheckout === true || metadata.hybridSingleCheckout === 'true';
+  const hybridResellerCredits = coercePaystackMetadataNumber(metadata.resellerCredits);
+  const hybridNomiaCredits = coercePaystackMetadataNumber(metadata.nomiaCredits);
+  const hybridResellerAmountInCents = coercePaystackMetadataNumber(metadata.resellerAmountInCents);
+  const hybridNomiaAmountInCents = coercePaystackMetadataNumber(metadata.nomiaAmountInCents);
   const creditAmount = metadataCreditAmount ?? pkg.creditAmount;
   const purchaserUserId =
     coercePaystackMetadataNumber(metadata.purchaserUserId) ?? purchaserOrganisation.ownerUserId;
   const resolvedPurchaserName =
     purchaserName ?? purchaserOrganisation.owner.name ?? purchaserEmail;
 
-  if (creditAmount <= 0 || creditAmount > pkg.creditAmount) {
-    throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'Invalid credit amount for reseller purchase',
-    });
-  }
+  let expectedGross: number;
 
-  const expectedGross =
-    expectedAmount ??
-    (creditAmount === pkg.creditAmount
-      ? pkg.priceInCents
-      : Math.round((pkg.priceInCents * creditAmount) / pkg.creditAmount));
+  if (isHybridSingleCheckout) {
+    if (
+      !hybridResellerCredits ||
+      !hybridNomiaCredits ||
+      hybridResellerAmountInCents === undefined ||
+      hybridNomiaAmountInCents === undefined
+    ) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: 'Missing hybrid purchase metadata',
+      });
+    }
+
+    if (hybridResellerCredits + hybridNomiaCredits !== pkg.creditAmount) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: 'Hybrid credit split does not match package size',
+      });
+    }
+
+    if (creditAmount !== pkg.creditAmount) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: 'Invalid credit amount for hybrid reseller purchase',
+      });
+    }
+
+    expectedGross = hybridResellerAmountInCents + hybridNomiaAmountInCents;
+  } else {
+    if (creditAmount <= 0 || creditAmount > pkg.creditAmount) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: 'Invalid credit amount for reseller purchase',
+      });
+    }
+
+    expectedGross =
+      expectedAmount ??
+      (creditAmount === pkg.creditAmount
+        ? pkg.priceInCents
+        : Math.round((pkg.priceInCents * creditAmount) / pkg.creditAmount));
+  }
 
   if (expectedGross !== amountInCents) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -203,7 +246,12 @@ export const processResellerPaystackWebhook = async ({
     });
   }
 
-  const vatAmount = calculateResellerVatAmountInCents(amountInCents, profile.vatNumber);
+  const resellerCreditsToTransfer = isHybridSingleCheckout ? hybridResellerCredits! : creditAmount;
+  const creditsToGrant = isHybridSingleCheckout
+    ? hybridResellerCredits! + hybridNomiaCredits!
+    : creditAmount;
+  const resellerGrossAmount = isHybridSingleCheckout ? hybridResellerAmountInCents! : amountInCents;
+  const vatAmount = calculateResellerVatAmountInCents(resellerGrossAmount, profile.vatNumber);
   const payoutMode =
     metadata.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT
       ? ResellerPayoutMode.NOMIA_SUBACCOUNT
@@ -216,6 +264,9 @@ export const processResellerPaystackWebhook = async ({
       : profile.paystackSubaccountCode;
   const purchaseGroupId =
     typeof metadata.purchaseGroupId === 'string' ? metadata.purchaseGroupId : null;
+  const nomiaPurchaseReference = isHybridSingleCheckout
+    ? buildNomiaHybridPurchaseReference(paystackReference)
+    : null;
 
   const fulfillmentResult = await prisma.$transaction(async (tx) => {
     const transactionRecord =
@@ -224,8 +275,8 @@ export const processResellerPaystackWebhook = async ({
         data: buildTransactionRecordData({
           profile,
           pkg,
-          credits: creditAmount,
-          grossAmount: amountInCents,
+          credits: resellerCreditsToTransfer,
+          grossAmount: resellerGrossAmount,
           purchaserOrganisation,
           purchaserUserId,
           paystackReference,
@@ -252,7 +303,7 @@ export const processResellerPaystackWebhook = async ({
     const hasTransferredCredits = await tryAtomicDecrementOrganisationCredits(tx, {
       organisationId: profile.organisationId,
       ownerUserId: fromOrganisation.ownerUserId,
-      amount: creditAmount,
+      amount: resellerCreditsToTransfer,
       allowNegative: profile.allowNegativeCredits,
     });
 
@@ -267,8 +318,37 @@ export const processResellerPaystackWebhook = async ({
     await atomicIncrementOrganisationCredits(tx, {
       organisationId: purchaserOrganisation.id,
       ownerUserId: toOrganisation.ownerUserId,
-      amount: creditAmount,
+      amount: creditsToGrant,
     });
+
+    if (isHybridSingleCheckout && nomiaPurchaseReference && hybridNomiaCredits) {
+      await tx.organisationCreditPurchase.upsert({
+        where: {
+          paystackReference: nomiaPurchaseReference,
+        },
+        create: {
+          paystackReference: nomiaPurchaseReference,
+          organisationId: purchaserOrganisation.id,
+          userId: purchaserUserId,
+          credits: hybridNomiaCredits,
+          grossAmount: hybridNomiaAmountInCents!,
+          currency: pkg.currency,
+          purchaseGroupId,
+          status: OrganisationCreditPurchaseStatus.COMPLETED,
+          completedAt: new Date(),
+        },
+        update: {
+          organisationId: purchaserOrganisation.id,
+          userId: purchaserUserId,
+          credits: hybridNomiaCredits,
+          grossAmount: hybridNomiaAmountInCents!,
+          currency: pkg.currency,
+          purchaseGroupId,
+          status: OrganisationCreditPurchaseStatus.COMPLETED,
+          completedAt: new Date(),
+        },
+      });
+    }
 
     const completedTransaction = await tx.resellerCreditTransaction.update({
       where: { id: transactionRecord.id },
@@ -276,8 +356,8 @@ export const processResellerPaystackWebhook = async ({
         status: ResellerCreditTransactionStatus.COMPLETED,
         completedAt: new Date(),
         vatAmount,
-        credits: creditAmount,
-        grossAmount: amountInCents,
+        credits: resellerCreditsToTransfer,
+        grossAmount: resellerGrossAmount,
         purchaserName: resolvedPurchaserName,
         purchaserEmail,
       },
@@ -299,7 +379,7 @@ export const processResellerPaystackWebhook = async ({
       purchaserName: resolvedPurchaserName,
       purchaserEmail,
       purchaserOrganisationName: purchaserOrganisation.name,
-      creditsRequired: creditAmount,
+      creditsRequired: resellerCreditsToTransfer,
     }).catch((error) => {
       console.error('[RESELLER]: Failed to send insufficient credits email', error);
     });

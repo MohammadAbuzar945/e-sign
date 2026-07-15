@@ -49,6 +49,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     organisationName: organisationDetails.name,
     customerName: organisationDetails.owner.name,
     customerEmail: organisationDetails.owner.email,
+    logoUrl: `${new URL(request.url).origin}/android-chrome-512x512.png`,
   });
 
   return new Response(html, {

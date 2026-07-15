@@ -1,3 +1,5 @@
+import { ResellerPayoutMode } from '@prisma/client';
+
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
@@ -8,6 +10,7 @@ import { prefixedId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
 
 import { associateOrganisationWithReseller } from './reseller-association';
+import { calculateHybridCheckoutAmounts } from './hybrid-single-checkout';
 import { initializeResellerPurchase } from './initialize-reseller-purchase';
 import { getResellerPayoutReadiness } from './reseller-payout-readiness';
 
@@ -92,10 +95,12 @@ export const initializeAffiliatePackagePurchase = async ({
   }
 
   if (hasPartialStock) {
-    const resellerCredits = availableCredits;
-    const resellerAmountInCents = Math.round((pkg.priceInCents * resellerCredits) / pkg.creditAmount);
-    const nomiaCredits = pkg.creditAmount - resellerCredits;
-    const nomiaAmountInCents = pkg.priceInCents - resellerAmountInCents;
+    const hybridAmounts = calculateHybridCheckoutAmounts({
+      packageCreditAmount: pkg.creditAmount,
+      packagePriceInCents: pkg.priceInCents,
+      resellerCredits: availableCredits,
+    });
+    const isNomiaSubaccount = profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT;
 
     const result = await initializeResellerPurchase({
       affiliateSlug,
@@ -103,10 +108,20 @@ export const initializeAffiliatePackagePurchase = async ({
       purchaserOrganisationId,
       purchaserUserId,
       purchaserEmail,
-      creditAmountOverride: resellerCredits,
-      amountInCentsOverride: resellerAmountInCents,
       purchaseGroupId,
-      callbackPath: `/o/${purchaserOrganisation.url}/price-plan?hybrid=nomia&catalogPackageId=${pkg.catalogPackageId}&nomiaCredits=${nomiaCredits}&nomiaAmount=${nomiaAmountInCents}&purchaseGroupId=${purchaseGroupId}&purchase=reseller-partial`,
+      ...(isNomiaSubaccount
+        ? {
+            hybridSingleCheckoutSplit: {
+              ...hybridAmounts,
+              catalogPackageId: pkg.catalogPackageId,
+            },
+            callbackPath: `/r/${affiliateSlug}?purchase=success`,
+          }
+        : {
+            creditAmountOverride: hybridAmounts.resellerCredits,
+            amountInCentsOverride: hybridAmounts.resellerAmountInCents,
+            callbackPath: `/o/${purchaserOrganisation.url}/price-plan?hybrid=nomia&catalogPackageId=${pkg.catalogPackageId}&nomiaCredits=${hybridAmounts.nomiaCredits}&nomiaAmount=${hybridAmounts.nomiaAmountInCents}&purchaseGroupId=${purchaseGroupId}&purchase=reseller-partial`,
+          }),
     });
 
     return {
