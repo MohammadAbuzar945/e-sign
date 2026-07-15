@@ -55,11 +55,13 @@ export const buildPurchaseInvoiceHtml = ({
   organisationName,
   customerName,
   customerEmail,
+  logoUrl = '/android-chrome-512x512.png',
 }: {
   invoice: OrganisationPurchaseHistoryItem;
   organisationName: string;
   customerName: string | null;
   customerEmail: string;
+  logoUrl?: string;
 }) => {
   const issuedAt = invoice.date.toLocaleString(undefined, {
     year: 'numeric',
@@ -91,6 +93,7 @@ export const buildPurchaseInvoiceHtml = ({
     <title>Invoice ${escapeHtml(invoice.invoiceId)}</title>
     <style>
       body { font-family: Arial, sans-serif; color: #111827; margin: 40px; }
+      .brand-logo { display: block; width: auto; height: 48px; margin-bottom: 28px; }
       h1 { margin-bottom: 4px; }
       .muted { color: #6b7280; }
       table { width: 100%; border-collapse: collapse; margin-top: 24px; }
@@ -103,6 +106,7 @@ export const buildPurchaseInvoiceHtml = ({
     </style>
   </head>
   <body>
+    <img class="brand-logo" src="${escapeHtml(logoUrl)}" alt="Nomia" />
     <h1>Tax Invoice</h1>
     <p class="muted">Issued by Nomia</p>
 

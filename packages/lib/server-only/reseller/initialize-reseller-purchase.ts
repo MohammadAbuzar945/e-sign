@@ -7,8 +7,16 @@ import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { prefixedId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
 
+import {
+  buildHybridTransactionCharge,
+  type HybridCheckoutAmounts,
+} from './hybrid-single-checkout';
 import { getResellerPayoutReadiness } from './reseller-payout-readiness';
 import { decryptResellerSecret } from './reseller-secrets';
+
+export type HybridSingleCheckoutSplit = HybridCheckoutAmounts & {
+  catalogPackageId?: string;
+};
 
 export type InitializeResellerPurchaseOptions = {
   affiliateSlug: string;
@@ -21,6 +29,10 @@ export type InitializeResellerPurchaseOptions = {
    */
   creditAmountOverride?: number;
   amountInCentsOverride?: number;
+  /**
+   * Single Paystack checkout for hybrid partial-stock (NOMIA_SUBACCOUNT only).
+   */
+  hybridSingleCheckoutSplit?: HybridSingleCheckoutSplit;
   callbackPath?: string;
   purchaseGroupId?: string;
 };
@@ -33,6 +45,7 @@ export const initializeResellerPurchase = async ({
   purchaserEmail,
   creditAmountOverride,
   amountInCentsOverride,
+  hybridSingleCheckoutSplit,
   callbackPath,
   purchaseGroupId: purchaseGroupIdInput,
 }: InitializeResellerPurchaseOptions) => {
@@ -81,12 +94,22 @@ export const initializeResellerPurchase = async ({
   }
 
   const availableCredits = await getOrganisationCredits(profile.organisationId);
-  const creditAmount = creditAmountOverride ?? pkg.creditAmount;
-  const amountInCents =
-    amountInCentsOverride ??
-    (creditAmount === pkg.creditAmount
-      ? pkg.priceInCents
-      : Math.round((pkg.priceInCents * creditAmount) / pkg.creditAmount));
+  const isHybridSingleCheckout =
+    Boolean(hybridSingleCheckoutSplit) &&
+    profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT;
+
+  const creditAmount = isHybridSingleCheckout
+    ? hybridSingleCheckoutSplit!.totalCredits
+    : (creditAmountOverride ?? pkg.creditAmount);
+  const amountInCents = isHybridSingleCheckout
+    ? hybridSingleCheckoutSplit!.totalAmountInCents
+    : (amountInCentsOverride ??
+      (creditAmount === pkg.creditAmount
+        ? pkg.priceInCents
+        : Math.round((pkg.priceInCents * creditAmount) / pkg.creditAmount)));
+  const resellerCreditsToTransfer = isHybridSingleCheckout
+    ? hybridSingleCheckoutSplit!.resellerCredits
+    : creditAmount;
 
   if (creditAmount <= 0 || creditAmount > pkg.creditAmount) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -94,7 +117,13 @@ export const initializeResellerPurchase = async ({
     });
   }
 
-  if (!profile.allowNegativeCredits && availableCredits < creditAmount) {
+  if (isHybridSingleCheckout && hybridSingleCheckoutSplit!.totalCredits !== pkg.creditAmount) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Hybrid checkout must cover the full package credit amount',
+    });
+  }
+
+  if (!profile.allowNegativeCredits && availableCredits < resellerCreditsToTransfer) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'This reseller does not have enough credits to fulfill this purchase right now',
     });
@@ -115,6 +144,18 @@ export const initializeResellerPurchase = async ({
     expectedAmount: amountInCents,
     creditAmount,
     purchaseGroupId,
+    ...(isHybridSingleCheckout
+      ? {
+          hybridSingleCheckout: true,
+          resellerCredits: hybridSingleCheckoutSplit!.resellerCredits,
+          nomiaCredits: hybridSingleCheckoutSplit!.nomiaCredits,
+          resellerAmountInCents: hybridSingleCheckoutSplit!.resellerAmountInCents,
+          nomiaAmountInCents: hybridSingleCheckoutSplit!.nomiaAmountInCents,
+          ...(hybridSingleCheckoutSplit!.catalogPackageId
+            ? { catalogPackageId: hybridSingleCheckoutSplit!.catalogPackageId }
+            : {}),
+        }
+      : {}),
     ...(profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT && profile.paystackSubaccountCode
       ? { subaccountCode: profile.paystackSubaccountCode }
       : {}),
@@ -144,8 +185,15 @@ export const initializeResellerPurchase = async ({
     }
 
     const platformFeePercent = Number(profile.platformFeePercent ?? 0);
-    const transactionCharge =
-      platformFeePercent > 0 ? Math.round((amountInCents * platformFeePercent) / 100) : 0;
+    const transactionCharge = isHybridSingleCheckout
+      ? buildHybridTransactionCharge({
+          nomiaAmountInCents: hybridSingleCheckoutSplit!.nomiaAmountInCents,
+          resellerAmountInCents: hybridSingleCheckoutSplit!.resellerAmountInCents,
+          platformFeePercent,
+        })
+      : platformFeePercent > 0
+        ? Math.round((amountInCents * platformFeePercent) / 100)
+        : 0;
 
     transaction = await createTransaction({
       email: purchaserEmail,

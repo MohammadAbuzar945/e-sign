@@ -5,6 +5,7 @@ import { createPendingOrganisationCreditPurchase } from '@documenso/lib/server-o
 import {
   associateOrganisationWithReseller,
 } from '@documenso/lib/server-only/reseller/reseller-association';
+import { calculateHybridCheckoutAmounts } from '@documenso/lib/server-only/reseller/hybrid-single-checkout';
 import { initializeResellerPurchase } from '@documenso/lib/server-only/reseller/initialize-reseller-purchase';
 import {
   getOrganisationBillingAttributionSummary,
@@ -13,6 +14,8 @@ import {
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prefixedId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
+
+import { ResellerPayoutMode } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
 import {
@@ -269,16 +272,42 @@ export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure
       };
     }
 
+    const hybridPayoutMode = resolution.resellerProfileId
+      ? (
+          await prisma.resellerProfile.findUnique({
+            where: { id: resolution.resellerProfileId },
+            select: { payoutMode: true },
+          })
+        )?.payoutMode
+      : null;
+    const isHybridSingleCheckout =
+      hybridPayoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT && Boolean(resolution.resellerPackage);
+
     const result = await initializeResellerPurchase({
       affiliateSlug: resolution.affiliateSlug,
       packageId: resolution.split.resellerPackageId,
       purchaserOrganisationId: organisationId,
       purchaserUserId: ctx.user.id,
       purchaserEmail: user.email,
-      creditAmountOverride: resolution.split.resellerCredits,
-      amountInCentsOverride: resolution.split.resellerAmountInCents,
       purchaseGroupId,
-      callbackPath: `${pricePlanCallback}&hybrid=nomia&catalogPackageId=${catalogPackageId}&nomiaCredits=${resolution.split.nomiaCredits}&nomiaAmount=${resolution.split.nomiaAmountInCents}&purchaseGroupId=${purchaseGroupId}`,
+      ...(isHybridSingleCheckout
+        ? {
+            hybridSingleCheckoutSplit: {
+              ...calculateHybridCheckoutAmounts({
+                packageCreditAmount: resolution.resellerPackage!.creditAmount,
+                packagePriceInCents: resolution.resellerPackage!.priceInCents,
+                resellerCredits: resolution.split.resellerCredits,
+                nomiaAmountInCents: resolution.split.nomiaAmountInCents,
+              }),
+              catalogPackageId: resolution.split.catalogPackageId,
+            },
+            callbackPath: `${pricePlanCallback}&source=hybrid-single`,
+          }
+        : {
+            creditAmountOverride: resolution.split.resellerCredits,
+            amountInCentsOverride: resolution.split.resellerAmountInCents,
+            callbackPath: `${pricePlanCallback}&hybrid=nomia&catalogPackageId=${catalogPackageId}&nomiaCredits=${resolution.split.nomiaCredits}&nomiaAmount=${resolution.split.nomiaAmountInCents}&purchaseGroupId=${purchaseGroupId}`,
+          }),
     });
 
     return {
@@ -287,11 +316,13 @@ export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure
       resellerDisplayName: resolution.resellerDisplayName,
       authorizationUrl: result.authorizationUrl,
       reference: result.reference,
-      nextNomiaStep: {
-        credits: resolution.split.nomiaCredits,
-        amountInCents: resolution.split.nomiaAmountInCents,
-        catalogPackageId,
-      },
+      nextNomiaStep: isHybridSingleCheckout
+        ? null
+        : {
+            credits: resolution.split.nomiaCredits,
+            amountInCents: resolution.split.nomiaAmountInCents,
+            catalogPackageId,
+          },
       split: {
         resellerCredits: resolution.split.resellerCredits,
         resellerAmountInCents: resolution.split.resellerAmountInCents,

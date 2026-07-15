@@ -136,4 +136,62 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
       ],
     });
   });
+
+  it('keeps a grouped Nomia-only purchase labeled as Nomia', async () => {
+    const { getOrganisationPurchaseHistory } = await import('./get-organisation-purchase-history');
+
+    prismaMock.organisationCreditPurchase.findMany.mockResolvedValue([
+      {
+        id: 'purchase_grouped',
+        purchaseGroupId: 'pur_nomia_only',
+        completedAt: new Date('2026-07-15T10:00:00.000Z'),
+        createdAt: new Date('2026-07-15T09:55:00.000Z'),
+        credits: 1000,
+        grossAmount: 100000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        paystackReference: 'ref_nomia_only',
+      },
+    ]);
+    prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([]);
+
+    const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
+
+    expect(history).toHaveLength(1);
+    expect(history[0]).toMatchObject({
+      invoiceId: 'pur_nomia_only',
+      kind: 'pay_as_you_go',
+      title: 'Pay as you go top-up (Nomia)',
+      totalCredits: 1000,
+    });
+  });
+});
+
+describe('build-purchase-invoice', () => {
+  it('includes the Nomia title-bar logo', async () => {
+    const { buildPurchaseInvoiceHtml } = await import('./build-purchase-invoice');
+
+    const html = buildPurchaseInvoiceHtml({
+      invoice: {
+        invoiceId: 'invoice_1',
+        purchaseGroupId: null,
+        date: new Date('2026-07-15T10:00:00.000Z'),
+        kind: 'pay_as_you_go',
+        title: 'Pay as you go top-up',
+        totalCredits: 100,
+        totalGrossAmount: 10000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        lineItems: [],
+      },
+      organisationName: 'Buyer Org',
+      customerName: 'Buyer',
+      customerEmail: 'buyer@example.com',
+      logoUrl: 'https://sign.nomiadocs.com/static/logo.png',
+    });
+
+    expect(html).toContain(
+      '<img class="brand-logo" src="https://sign.nomiadocs.com/static/logo.png" alt="Nomia" />',
+    );
+  });
 });
