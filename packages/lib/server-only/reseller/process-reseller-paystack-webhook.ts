@@ -9,6 +9,8 @@ import { prisma } from '@documenso/prisma';
 
 import { calculateResellerVatAmountInCents } from '@documenso/lib/utils/reseller-vat';
 
+import { associateOrganisationWithReseller } from './reseller-association';
+import { markResellerCreditsBalanceChanged } from './reseller-delinquency';
 import { sendResellerInsufficientCreditsEmail } from './send-reseller-insufficient-credits-email';
 import {
   atomicIncrementOrganisationCredits,
@@ -39,6 +41,7 @@ export type ProcessResellerPaystackWebhookOptions = {
     purchaserUserId?: number | string;
     packageId?: string;
     expectedAmount?: number | string;
+    creditAmount?: number | string;
     subaccountCode?: string;
   };
   amountInCents: number;
@@ -49,6 +52,8 @@ export type ProcessResellerPaystackWebhookOptions = {
 const buildTransactionRecordData = ({
   profile,
   pkg,
+  credits,
+  grossAmount,
   purchaserOrganisation,
   purchaserUserId,
   paystackReference,
@@ -64,10 +69,10 @@ const buildTransactionRecordData = ({
   };
   pkg: {
     id: string;
-    creditAmount: number;
-    priceInCents: number;
     currency: string;
   };
+  credits: number;
+  grossAmount: number;
   purchaserOrganisation: {
     id: string;
     name: string;
@@ -89,8 +94,8 @@ const buildTransactionRecordData = ({
   purchaserUserId,
   packageId: pkg.id,
   paystackReference,
-  credits: pkg.creditAmount,
-  grossAmount: pkg.priceInCents,
+  credits,
+  grossAmount,
   vatAmount,
   currency: pkg.currency,
   status: ResellerCreditTransactionStatus.PENDING,
@@ -169,24 +174,32 @@ export const processResellerPaystackWebhook = async ({
   }
 
   const expectedAmount = coercePaystackMetadataNumber(metadata.expectedAmount);
+  const metadataCreditAmount = coercePaystackMetadataNumber(metadata.creditAmount);
+  const creditAmount = metadataCreditAmount ?? pkg.creditAmount;
   const purchaserUserId =
     coercePaystackMetadataNumber(metadata.purchaserUserId) ?? purchaserOrganisation.ownerUserId;
   const resolvedPurchaserName =
     purchaserName ?? purchaserOrganisation.owner.name ?? purchaserEmail;
 
-  if (pkg.priceInCents !== amountInCents) {
+  if (creditAmount <= 0 || creditAmount > pkg.creditAmount) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'Payment amount does not match package price',
+      message: 'Invalid credit amount for reseller purchase',
     });
   }
 
-  if (expectedAmount !== undefined && expectedAmount !== amountInCents) {
+  const expectedGross =
+    expectedAmount ??
+    (creditAmount === pkg.creditAmount
+      ? pkg.priceInCents
+      : Math.round((pkg.priceInCents * creditAmount) / pkg.creditAmount));
+
+  if (expectedGross !== amountInCents) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'Payment amount mismatch',
+      message: 'Payment amount does not match expected reseller purchase amount',
     });
   }
 
-  const vatAmount = calculateResellerVatAmountInCents(pkg.priceInCents, profile.vatNumber);
+  const vatAmount = calculateResellerVatAmountInCents(amountInCents, profile.vatNumber);
   const payoutMode =
     metadata.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT
       ? ResellerPayoutMode.NOMIA_SUBACCOUNT
@@ -205,6 +218,8 @@ export const processResellerPaystackWebhook = async ({
         data: buildTransactionRecordData({
           profile,
           pkg,
+          credits: creditAmount,
+          grossAmount: amountInCents,
           purchaserOrganisation,
           purchaserUserId,
           paystackReference,
@@ -230,7 +245,7 @@ export const processResellerPaystackWebhook = async ({
     const hasTransferredCredits = await tryAtomicDecrementOrganisationCredits(tx, {
       organisationId: profile.organisationId,
       ownerUserId: fromOrganisation.ownerUserId,
-      amount: pkg.creditAmount,
+      amount: creditAmount,
       allowNegative: profile.allowNegativeCredits,
     });
 
@@ -245,7 +260,7 @@ export const processResellerPaystackWebhook = async ({
     await atomicIncrementOrganisationCredits(tx, {
       organisationId: purchaserOrganisation.id,
       ownerUserId: toOrganisation.ownerUserId,
-      amount: pkg.creditAmount,
+      amount: creditAmount,
     });
 
     const completedTransaction = await tx.resellerCreditTransaction.update({
@@ -254,6 +269,8 @@ export const processResellerPaystackWebhook = async ({
         status: ResellerCreditTransactionStatus.COMPLETED,
         completedAt: new Date(),
         vatAmount,
+        credits: creditAmount,
+        grossAmount: amountInCents,
         purchaserName: resolvedPurchaserName,
         purchaserEmail,
       },
@@ -275,11 +292,24 @@ export const processResellerPaystackWebhook = async ({
       purchaserName: resolvedPurchaserName,
       purchaserEmail,
       purchaserOrganisationName: purchaserOrganisation.name,
-      creditsRequired: pkg.creditAmount,
+      creditsRequired: creditAmount,
     }).catch((error) => {
       console.error('[RESELLER]: Failed to send insufficient credits email', error);
     });
   }
+
+  // Sticky attribution on purchase (§8.2) + delinquency balance sync (§12).
+  await associateOrganisationWithReseller({
+    organisationId: purchaserOrganisation.id,
+    resellerProfileId: profile.id,
+    source: 'AFFILIATE_PURCHASE',
+  }).catch((error) => {
+    console.error('[RESELLER]: Failed to associate purchaser organisation', error);
+  });
+
+  await markResellerCreditsBalanceChanged(profile.organisationId).catch((error) => {
+    console.error('[RESELLER]: Failed to sync delinquency state', error);
+  });
 
   return {
     handled: true as const,

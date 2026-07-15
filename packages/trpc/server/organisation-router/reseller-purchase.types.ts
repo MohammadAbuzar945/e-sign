@@ -4,6 +4,8 @@ export const ZInitializeResellerPurchaseRequestSchema = z.object({
   affiliateSlug: z.string(),
   packageId: z.string(),
   organisationId: z.string(),
+  creditAmountOverride: z.number().int().positive().optional(),
+  amountInCentsOverride: z.number().int().positive().optional(),
 });
 
 export const ZInitializeResellerPurchaseResponseSchema = z.object({
@@ -19,6 +21,8 @@ export const ZGetAffiliateResellerResponseSchema = z
   .object({
     affiliateSlug: z.string(),
     organisationName: z.string(),
+    resellerDisplayName: z.string(),
+    disclosure: z.string(),
     availableCredits: z.number(),
     allowNegativeCredits: z.boolean(),
     payoutMode: z.enum(['OWN_PAYSTACK', 'NOMIA_SUBACCOUNT']),
@@ -36,6 +40,7 @@ export const ZGetAffiliateResellerResponseSchema = z
     affiliateSupportEmail: z.string().nullable(),
     highlightedCatalogPackageId: z.string().nullable(),
     vatNumber: z.string().nullable(),
+    isDelinquent: z.boolean(),
     packages: z.array(
       z.object({
         id: z.string(),
@@ -47,6 +52,8 @@ export const ZGetAffiliateResellerResponseSchema = z
         name: z.string(),
         isHighlighted: z.boolean(),
         canPurchase: z.boolean(),
+        canPartialFulfill: z.boolean(),
+        availableResellerCredits: z.number(),
       }),
     ),
   })

@@ -15,6 +15,12 @@ export type InitializeResellerPurchaseOptions = {
   purchaserOrganisationId: string;
   purchaserUserId: number;
   purchaserEmail: string;
+  /**
+   * Partial fulfillment (agreement §10.3). Must be <= package credits and available stock.
+   */
+  creditAmountOverride?: number;
+  amountInCentsOverride?: number;
+  callbackPath?: string;
 };
 
 export const initializeResellerPurchase = async ({
@@ -23,6 +29,9 @@ export const initializeResellerPurchase = async ({
   purchaserOrganisationId,
   purchaserUserId,
   purchaserEmail,
+  creditAmountOverride,
+  amountInCentsOverride,
+  callbackPath,
 }: InitializeResellerPurchaseOptions) => {
   const profile = await prisma.resellerProfile.findUnique({
     where: { affiliateSlug },
@@ -69,14 +78,28 @@ export const initializeResellerPurchase = async ({
   }
 
   const availableCredits = await getOrganisationCredits(profile.organisationId);
+  const creditAmount = creditAmountOverride ?? pkg.creditAmount;
+  const amountInCents =
+    amountInCentsOverride ??
+    (creditAmount === pkg.creditAmount
+      ? pkg.priceInCents
+      : Math.round((pkg.priceInCents * creditAmount) / pkg.creditAmount));
 
-  if (!profile.allowNegativeCredits && availableCredits < pkg.creditAmount) {
+  if (creditAmount <= 0 || creditAmount > pkg.creditAmount) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Invalid credit amount for this package',
+    });
+  }
+
+  if (!profile.allowNegativeCredits && availableCredits < creditAmount) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'This reseller does not have enough credits to fulfill this purchase right now',
     });
   }
 
-  const callbackUrl = `${NEXT_PUBLIC_WEBAPP_URL()}/r/${affiliateSlug}?purchase=success`;
+  const callbackUrl = `${NEXT_PUBLIC_WEBAPP_URL()}${
+    callbackPath ?? `/r/${affiliateSlug}?purchase=success`
+  }`;
 
   const metadata = {
     type: 'reseller-credit-purchase',
@@ -85,8 +108,8 @@ export const initializeResellerPurchase = async ({
     purchaserOrganisationId,
     purchaserUserId,
     packageId: pkg.id,
-    expectedAmount: pkg.priceInCents,
-    creditAmount: pkg.creditAmount,
+    expectedAmount: amountInCents,
+    creditAmount,
     ...(profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT && profile.paystackSubaccountCode
       ? { subaccountCode: profile.paystackSubaccountCode }
       : {}),
@@ -103,7 +126,7 @@ export const initializeResellerPurchase = async ({
 
     transaction = await createTransaction({
       email: purchaserEmail,
-      amount: pkg.priceInCents,
+      amount: amountInCents,
       callback_url: callbackUrl,
       metadata,
       secretKey: decryptResellerSecret(profile.paystackSecretKey),
@@ -117,13 +140,11 @@ export const initializeResellerPurchase = async ({
 
     const platformFeePercent = Number(profile.platformFeePercent ?? 0);
     const transactionCharge =
-      platformFeePercent > 0
-        ? Math.round((pkg.priceInCents * platformFeePercent) / 100)
-        : 0;
+      platformFeePercent > 0 ? Math.round((amountInCents * platformFeePercent) / 100) : 0;
 
     transaction = await createTransaction({
       email: purchaserEmail,
-      amount: pkg.priceInCents,
+      amount: amountInCents,
       callback_url: callbackUrl,
       metadata,
       subaccount: profile.paystackSubaccountCode,

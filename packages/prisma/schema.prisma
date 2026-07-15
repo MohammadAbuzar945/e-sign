@@ -808,8 +808,16 @@ model Organisation {
   resellerApplication ResellerApplication?
   resellerProfile     ResellerProfile?
 
+  // Sticky reseller attribution (agreement §8 / §12)
+  associatedResellerProfileId String?
+  associatedResellerProfile   ResellerProfile? @relation("AssociatedBuyerOrganisations", fields: [associatedResellerProfileId], references: [id], onDelete: SetNull)
+  resellerAssociatedAt         DateTime?
+  resellerAssociationSource    ResellerAssociationSource?
+  resellerRequiresReconsent    Boolean   @default(false)
+
   @@index([name])
   @@index([ownerUserId])
+  @@index([associatedResellerProfileId])
 }
 
 model OrganisationMember {
@@ -1256,6 +1264,13 @@ enum ResellerProfileStatus {
   SUSPENDED
 }
 
+enum ResellerAssociationSource {
+  AFFILIATE_VISIT
+  AFFILIATE_SIGNUP
+  AFFILIATE_PURCHASE
+  CUSTOMER_CONSENT
+}
+
 enum ResellerCreditTransactionStatus {
   PENDING
   COMPLETED
@@ -1355,11 +1370,18 @@ model ResellerProfile {
   affiliateSupportEmail   String?
   highlightedCatalogPackageId String?
 
+  // Delinquency (agreement §12): continuous zero balance ≥ 3 months
+  zeroBalanceSince DateTime?
+  isDelinquent     Boolean   @default(false)
+  delinquentAt     DateTime?
+
   packages     ResellerPackage[]
   transactions ResellerCreditTransaction[] @relation("ResellerTransactions")
+  associatedBuyerOrganisations Organisation[] @relation("AssociatedBuyerOrganisations")
 
   @@index([affiliateSlug])
   @@index([status])
+  @@index([isDelinquent])
 }
 
 model ResellerPackage {

@@ -37,6 +37,12 @@ import {
   initializeResellerPurchaseRoute,
 } from './reseller-purchase';
 import {
+  associateOrganisationWithResellerRoute,
+  getOrganisationBillingAttributionRoute,
+  initializeAttributedPaygPurchaseRoute,
+  resolveOrganisationPaygBillingRoute,
+} from './reseller-attribution';
+import {
   listPaystackBanksRoute,
   refreshResellerSubaccountStatusRoute,
   resolvePaystackBankAccountRoute,
@@ -97,6 +103,10 @@ export const organisationRouter = router({
     refreshSubaccountStatus: refreshResellerSubaccountStatusRoute,
     getAffiliate: getAffiliateResellerRoute,
     initializePurchase: initializeResellerPurchaseRoute,
+    getBillingAttribution: getOrganisationBillingAttributionRoute,
+    resolvePaygBilling: resolveOrganisationPaygBillingRoute,
+    associateReseller: associateOrganisationWithResellerRoute,
+    initializeAttributedPayg: initializeAttributedPaygPurchaseRoute,
   },
   internal: {
     getOrganisationSession: getOrganisationSessionRoute,

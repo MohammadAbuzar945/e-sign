@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { ChevronLeftIcon } from 'lucide-react';
 import { Link, type LoaderFunctionArgs, useLocation, useRevalidator } from 'react-router';
@@ -10,6 +12,8 @@ import { prisma } from '@documenso/prisma';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { getOrganisationPurchaseHistory } from '@documenso/lib/server-only/billing/get-organisation-purchase-history';
 import { getSubscriptionsByUserId } from '@documenso/lib/server-only/subscription/get-subscriptions-by-user-id';
+import { trpc } from '@documenso/trpc/react';
+import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
 import {
   Dialog,
@@ -408,6 +412,7 @@ export function meta() {
 
 export default function PricePlansPage({ params, loaderData }: Route.ComponentProps) {
   const { toast } = useToast();
+  const { _ } = useLingui();
   const { user } = useSession();
   const location = useLocation();
   const revalidator = useRevalidator();
@@ -417,7 +422,89 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
   const currentSubscriptionData: any = subscriptions?.find((data: any) => data.status === 'ACTIVE');
   const activeSubscriptionPlanId = currentSubscriptionData?.priceId;
   const activeSubscriptionCode = currentSubscriptionData?.planId;
-  const trxref: any = new URLSearchParams(location.search).get('trxref');
+  const searchParams = new URLSearchParams(location.search);
+  const trxref: any = searchParams.get('trxref');
+  const hybridStep = searchParams.get('hybrid');
+  const hybridCatalogPackageId = searchParams.get('catalogPackageId');
+  const hybridNomiaCredits = searchParams.get('nomiaCredits');
+  const hybridNomiaAmount = searchParams.get('nomiaAmount');
+
+  const { data: billingAttribution, refetch: refetchAttribution } =
+    trpc.organisation.reseller.getBillingAttribution.useQuery({
+      organisationId: organisation.id,
+    });
+
+  const { mutateAsync: associateReseller, isPending: isReconsentPending } =
+    trpc.organisation.reseller.associateReseller.useMutation({
+      onSuccess: async () => {
+        await refetchAttribution();
+        toast({
+          title: _(msg`Reseller billing restored`),
+          description: _(msg`Future pay-as-you-go purchases will use your reseller when stock allows.`),
+        });
+      },
+    });
+
+  const { mutateAsync: initializeAttributedPayg } =
+    trpc.organisation.reseller.initializeAttributedPayg.useMutation();
+
+  // Continue hybrid split: Nomia remainder after reseller partial payment (§10.3).
+  useEffect(() => {
+    if (hybridStep !== 'nomia' || !hybridCatalogPackageId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const continueHybrid = async () => {
+      try {
+        const result = await initializeAttributedPayg({
+          organisationId: organisation.id,
+          catalogPackageId: hybridCatalogPackageId,
+          hybridStep: 'NOMIA',
+          nomiaCreditsOverride: hybridNomiaCredits ? Number(hybridNomiaCredits) : undefined,
+          nomiaAmountInCentsOverride: hybridNomiaAmount ? Number(hybridNomiaAmount) : undefined,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        if (result.authorizationUrl) {
+          window.location.href = result.authorizationUrl;
+          return;
+        }
+
+        toast({
+          title: _(msg`Could not continue Nomia payment`),
+          description: _(msg`Please select a package again.`),
+          variant: 'destructive',
+        });
+      } catch (error) {
+        if (!cancelled) {
+          toast({
+            title: _(msg`Could not continue Nomia payment`),
+            description: AppError.parseError(error).message,
+            variant: 'destructive',
+          });
+        }
+      } finally {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('hybrid');
+        newUrl.searchParams.delete('catalogPackageId');
+        newUrl.searchParams.delete('nomiaCredits');
+        newUrl.searchParams.delete('nomiaAmount');
+        newUrl.searchParams.delete('purchase');
+        window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+      }
+    };
+
+    void continueHybrid();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hybridStep, hybridCatalogPackageId, hybridNomiaCredits, hybridNomiaAmount, organisation.id]);
 
   // State for polling
   const [isPolling, setIsPolling] = useState(false);
@@ -548,7 +635,47 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
     callback_url: null | string = `${NEXT_PUBLIC_WEBAPP_URL()}/o/${orgUrl}/price-plan`,
   ) {
     if (isOneTime) {
-      // console.log('Metadata', metadata);
+      // Sticky reseller billing for PAYG when associated (§8.3 / §10 / §12).
+      if (typeof metadata === 'number' && metadata > 0) {
+        const catalogPackageId = `payg-${metadata}`;
+
+        try {
+          const result = await initializeAttributedPayg({
+            organisationId: organisation.id,
+            catalogPackageId,
+          });
+
+          if (result.source !== 'NOMIA' && result.authorizationUrl) {
+            if (result.disclosure) {
+              toast({
+                title: _(msg`Reseller billing`),
+                description: result.disclosure,
+              });
+            }
+
+            if (result.source === 'HYBRID' && result.split) {
+              toast({
+                title: _(msg`Split purchase`),
+                description: _(
+                  msg`Paying the reseller for ${result.split.resellerCredits} credits first, then Nomia for the remainder.`,
+                ),
+              });
+            }
+
+            window.location.href = result.authorizationUrl;
+            return;
+          }
+
+          // NOMIA path (no association, zero stock, etc.) — fall through to direct Paystack.
+          if (result.authorizationUrl) {
+            window.location.href = result.authorizationUrl;
+            return;
+          }
+        } catch {
+          // Fall back to Nomia direct purchase below.
+        }
+      }
+
       handleApiPaystackOneTimeTransaction(email, amount, metadata);
       return;
     }
@@ -994,6 +1121,53 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
         <h1 className="py-6 text-xl font-semibold text-gray-500">
           <Trans>Please select subscription</Trans>
         </h1>
+
+        {billingAttribution?.disclosure && billingAttribution.stickyBillingActive && (
+          <Alert className="mb-4">
+            <AlertTitle>
+              <Trans>Reseller billing</Trans>
+            </AlertTitle>
+            <AlertDescription>
+              {billingAttribution.disclosure}
+              <span className="mt-1 block text-muted-foreground">
+                <Trans>
+                  Pay-as-you-go packages will use this reseller while they have enough credits. If
+                  stock is insufficient, remaining credits are purchased from Nomia.
+                </Trans>
+              </span>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {billingAttribution?.requiresReconsent && billingAttribution.affiliateSlug && (
+          <Alert className="mb-4" variant="neutral">
+            <AlertTitle>
+              <Trans>Re-confirm reseller relationship</Trans>
+            </AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                <Trans>
+                  Your previous reseller billing was reset after a long period without reseller
+                  stock. Confirm if you want to buy from this reseller again.
+                </Trans>
+              </span>
+              <Button
+                size="sm"
+                loading={isReconsentPending}
+                onClick={() =>
+                  associateReseller({
+                    organisationId: organisation.id,
+                    affiliateSlug: billingAttribution.affiliateSlug!,
+                    source: 'CUSTOMER_CONSENT',
+                    customerConsent: true,
+                  })
+                }
+              >
+                <Trans>Confirm reseller billing</Trans>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="flex flex-col gap-4 md:flex-row">
           {Object.entries(plansData).map(([interval, plans]) => (
