@@ -92,16 +92,27 @@ export const listPaystackBanksRoute = authenticatedProcedure
   .query(async ({ input, ctx }) => {
     assertResellerFeatureAccess(ctx.user.email);
 
-    const banks = await listPaystackBanks({
-      country: input.country ?? 'south africa',
-    });
+    const country = input.country ?? 'south africa';
+
+    const [allBanks, verificationBanks] = await Promise.all([
+      listPaystackBanks({ country, enabledForVerification: false }),
+      listPaystackBanks({ country, enabledForVerification: true }),
+    ]);
+
+    const verificationByCode = new Map(verificationBanks.map((bank) => [bank.code, bank]));
 
     return {
-      banks: banks.map((bank) => ({
-        name: bank.name,
-        code: bank.code,
-        currency: bank.currency,
-      })),
+      banks: allBanks.map((bank) => {
+        const verificationBank = verificationByCode.get(bank.code);
+
+        return {
+          name: bank.name,
+          code: bank.code,
+          currency: bank.currency,
+          supportsVerification: Boolean(verificationBank),
+          supportedTypes: verificationBank?.supportedTypes ?? [],
+        };
+      }),
     };
   });
 

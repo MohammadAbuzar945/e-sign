@@ -9,13 +9,13 @@ import {
 } from '@documenso/lib/constants/reseller-bank-verification';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import {
-  createPaystackSubaccount,
   getPaystackSubaccount,
-  updatePaystackSubaccount,
   validatePaystackBankAccount,
 } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 
+import { bankSupportsPaystackAccountValidation } from './paystack-bank-verification-support';
+import { registerResellerPaystackSubaccount } from './register-reseller-paystack-subaccount';
 import { decryptResellerSecret, maskBankAccountNumber } from './reseller-secrets';
 import { syncResellerSubaccountStatus } from './update-reseller-payout';
 
@@ -77,6 +77,23 @@ const getResellerProfileForBankVerification = async (applicationId: string) => {
   };
 };
 
+const markResellerBankVerificationFailed = async ({
+  profileId,
+  message,
+}: {
+  profileId: string;
+  message: string;
+}) => {
+  await prisma.resellerProfile.update({
+    where: { id: profileId },
+    data: {
+      subaccountStatus: ResellerSubaccountStatus.FAILED,
+      subaccountFailureReason: message,
+      subaccountVerifiedAt: null,
+    },
+  });
+};
+
 export type AdminVerifyResellerBankAccountOptions = {
   applicationId: string;
 };
@@ -93,6 +110,75 @@ export const adminVerifyResellerBankAccount = async ({
     documentNumber,
   } = await getResellerProfileForBankVerification(applicationId);
 
+  let registeredProfile = profile;
+
+  try {
+    const registration = await registerResellerPaystackSubaccount({
+      organisationName,
+      affiliateSlug: profile.affiliateSlug,
+      bankCode: profile.bankCode!,
+      accountNumber,
+      platformFeePercent: profile.platformFeePercent,
+      existingSubaccountCode: profile.paystackSubaccountCode,
+    });
+
+    registeredProfile = await prisma.resellerProfile.update({
+      where: { id: profile.id },
+      data: {
+        paystackSubaccountCode: registration.subaccount.subaccount_code,
+        paystackSubaccountId: registration.subaccount.id,
+        subaccountStatus: registration.subaccountStatus,
+        subaccountVerifiedAt: registration.subaccountVerifiedAt,
+        subaccountFailureReason: null,
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to register Paystack subaccount';
+
+    await markResellerBankVerificationFailed({
+      profileId: profile.id,
+      message,
+    });
+
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message,
+    });
+  }
+
+  const supportsValidation = await bankSupportsPaystackAccountValidation(
+    profile.bankCode!,
+    accountType,
+  );
+
+  if (!supportsValidation) {
+    const updatedProfile = await prisma.resellerProfile.update({
+      where: { id: profile.id },
+      data: {
+        subaccountStatus: ResellerSubaccountStatus.ACTIVE,
+        subaccountVerifiedAt: registeredProfile.subaccountVerifiedAt ?? new Date(),
+        subaccountFailureReason: null,
+      },
+    });
+
+    return {
+      verified: true as const,
+      validationSkipped: true as const,
+      validationFeeZar: 0,
+      verificationMessage:
+        'This bank does not support Paystack account validation. Subaccount registered without validation.',
+      accountHolderMatch: null,
+      subaccountStatus: updatedProfile.subaccountStatus,
+      paystackSubaccountCode: updatedProfile.paystackSubaccountCode,
+      bankAccountNumber: maskBankAccountNumber(updatedProfile.bankAccountNumber),
+      bankAccountName: updatedProfile.bankAccountName,
+      bankName: updatedProfile.bankName,
+      bankCode: updatedProfile.bankCode,
+      bankAccountType: accountType,
+      bankDocumentType: documentType,
+    };
+  }
+
   let validation;
 
   try {
@@ -108,13 +194,9 @@ export const adminVerifyResellerBankAccount = async ({
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Bank account validation failed';
 
-    await prisma.resellerProfile.update({
-      where: { id: profile.id },
-      data: {
-        subaccountStatus: ResellerSubaccountStatus.FAILED,
-        subaccountFailureReason: message,
-        subaccountVerifiedAt: null,
-      },
+    await markResellerBankVerificationFailed({
+      profileId: profile.id,
+      message,
     });
 
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -125,13 +207,9 @@ export const adminVerifyResellerBankAccount = async ({
   if (!validation.verified) {
     const message = validation.verificationMessage || 'Bank account could not be verified';
 
-    await prisma.resellerProfile.update({
-      where: { id: profile.id },
-      data: {
-        subaccountStatus: ResellerSubaccountStatus.FAILED,
-        subaccountFailureReason: message,
-        subaccountVerifiedAt: null,
-      },
+    await markResellerBankVerificationFailed({
+      profileId: profile.id,
+      message,
     });
 
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -139,68 +217,30 @@ export const adminVerifyResellerBankAccount = async ({
     });
   }
 
-  const description = `Nomia reseller: ${profile.affiliateSlug}`;
-  const percentageCharge = Number(profile.platformFeePercent ?? 0);
+  const updatedProfile = await prisma.resellerProfile.update({
+    where: { id: profile.id },
+    data: {
+      subaccountStatus: ResellerSubaccountStatus.ACTIVE,
+      subaccountVerifiedAt: new Date(),
+      subaccountFailureReason: null,
+    },
+  });
 
-  try {
-    const subaccount = profile.paystackSubaccountCode
-      ? await updatePaystackSubaccount({
-          subaccountCode: profile.paystackSubaccountCode,
-          businessName: organisationName,
-          settlementBank: profile.bankCode!,
-          accountNumber,
-          percentageCharge,
-          description,
-        })
-      : await createPaystackSubaccount({
-          businessName: organisationName,
-          settlementBank: profile.bankCode!,
-          accountNumber,
-          percentageCharge,
-          description,
-        });
-
-    const updatedProfile = await prisma.resellerProfile.update({
-      where: { id: profile.id },
-      data: {
-        paystackSubaccountCode: subaccount.subaccount_code,
-        paystackSubaccountId: subaccount.id,
-        subaccountStatus: ResellerSubaccountStatus.ACTIVE,
-        subaccountVerifiedAt: new Date(),
-        subaccountFailureReason: null,
-      },
-    });
-
-    return {
-      verified: true as const,
-      validationFeeZar: PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR,
-      verificationMessage: validation.verificationMessage || 'Account is verified successfully',
-      accountHolderMatch: validation.accountHolderMatch ?? null,
-      subaccountStatus: updatedProfile.subaccountStatus,
-      paystackSubaccountCode: updatedProfile.paystackSubaccountCode,
-      bankAccountNumber: maskBankAccountNumber(updatedProfile.bankAccountNumber),
-      bankAccountName: updatedProfile.bankAccountName,
-      bankName: updatedProfile.bankName,
-      bankCode: updatedProfile.bankCode,
-      bankAccountType: accountType,
-      bankDocumentType: documentType,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to register Paystack subaccount';
-
-    await prisma.resellerProfile.update({
-      where: { id: profile.id },
-      data: {
-        subaccountStatus: ResellerSubaccountStatus.FAILED,
-        subaccountFailureReason: `Bank validated, but subaccount registration failed: ${message}`,
-        subaccountVerifiedAt: null,
-      },
-    });
-
-    throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: `Bank validated, but subaccount registration failed: ${message}`,
-    });
-  }
+  return {
+    verified: true as const,
+    validationSkipped: false as const,
+    validationFeeZar: PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR,
+    verificationMessage: validation.verificationMessage || 'Account is verified successfully',
+    accountHolderMatch: validation.accountHolderMatch ?? null,
+    subaccountStatus: updatedProfile.subaccountStatus,
+    paystackSubaccountCode: updatedProfile.paystackSubaccountCode,
+    bankAccountNumber: maskBankAccountNumber(updatedProfile.bankAccountNumber),
+    bankAccountName: updatedProfile.bankAccountName,
+    bankName: updatedProfile.bankName,
+    bankCode: updatedProfile.bankCode,
+    bankAccountType: accountType,
+    bankDocumentType: documentType,
+  };
 };
 
 export type AdminRefreshResellerBankAccountStatusOptions = {
@@ -214,7 +254,8 @@ export const adminRefreshResellerBankAccountStatus = async ({
 
   if (!profile.paystackSubaccountCode) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'No Paystack subaccount exists for this reseller yet. Verify the bank account first.',
+      message:
+        'No Paystack subaccount exists for this reseller yet. Ask the reseller to submit bank details first.',
     });
   }
 
@@ -264,38 +305,23 @@ export const adminRetryResellerSubaccount = async ({
   const { profile, organisationName, accountNumber } =
     await getResellerProfileForBankVerification(applicationId);
 
-  const description = `Nomia reseller: ${profile.affiliateSlug}`;
-  const percentageCharge = Number(profile.platformFeePercent ?? 0);
-
   try {
-    const subaccount = profile.paystackSubaccountCode
-      ? await updatePaystackSubaccount({
-          subaccountCode: profile.paystackSubaccountCode,
-          businessName: organisationName,
-          settlementBank: profile.bankCode!,
-          accountNumber,
-          percentageCharge,
-          description,
-        })
-      : await createPaystackSubaccount({
-          businessName: organisationName,
-          settlementBank: profile.bankCode!,
-          accountNumber,
-          percentageCharge,
-          description,
-        });
-
-    const isVerified = subaccount.is_verified === true;
+    const registration = await registerResellerPaystackSubaccount({
+      organisationName,
+      affiliateSlug: profile.affiliateSlug,
+      bankCode: profile.bankCode!,
+      accountNumber,
+      platformFeePercent: profile.platformFeePercent,
+      existingSubaccountCode: profile.paystackSubaccountCode,
+    });
 
     await prisma.resellerProfile.update({
       where: { id: profile.id },
       data: {
-        paystackSubaccountCode: subaccount.subaccount_code,
-        paystackSubaccountId: subaccount.id,
-        subaccountStatus: isVerified
-          ? ResellerSubaccountStatus.ACTIVE
-          : ResellerSubaccountStatus.PENDING,
-        subaccountVerifiedAt: isVerified ? new Date() : null,
+        paystackSubaccountCode: registration.subaccount.subaccount_code,
+        paystackSubaccountId: registration.subaccount.id,
+        subaccountStatus: registration.subaccountStatus,
+        subaccountVerifiedAt: registration.subaccountVerifiedAt,
         subaccountFailureReason: null,
       },
     });
