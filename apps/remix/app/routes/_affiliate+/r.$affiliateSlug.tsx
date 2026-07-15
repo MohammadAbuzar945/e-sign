@@ -66,27 +66,6 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       },
     });
 
-  const { mutateAsync: initializeAttributedPayg } =
-    trpc.organisation.reseller.initializeAttributedPayg.useMutation({
-      onSuccess: (result) => {
-        if (result.authorizationUrl) {
-          window.location.href = result.authorizationUrl;
-          return;
-        }
-
-        setPurchasingPackageId(null);
-      },
-      onError: (error) => {
-        setPurchasingPackageId(null);
-
-        toast({
-          title: _(msg`Purchase failed`),
-          description: AppError.parseError(error).message,
-          variant: 'destructive',
-        });
-      },
-    });
-
   // Sticky association when an authenticated customer visits the affiliate link (§8.2).
   useEffect(() => {
     if (!isAuthenticated || !purchaserOrganisation || !affiliate) {
@@ -125,54 +104,6 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       affiliateSlug,
       packageId,
       organisationId: purchaserOrganisation.id,
-    });
-  };
-
-  const handlePartialSplit = async (pkg: {
-    id: string;
-    catalogPackageId: string;
-    creditAmount: number;
-    priceInCents: number;
-    availableResellerCredits: number;
-  }) => {
-    if (!isAuthenticated) {
-      navigate(`/signin?returnTo=${encodeURIComponent(returnTo)}`);
-      return;
-    }
-
-    if (!purchaserOrganisation) {
-      return;
-    }
-
-    const resellerCredits = pkg.availableResellerCredits;
-    const amountInCents = Math.round((pkg.priceInCents * resellerCredits) / pkg.creditAmount);
-
-    setPurchasingPackageId(pkg.id);
-
-    // First payment: available credits from reseller; callback continues Nomia remainder via price-plan.
-    await initializePurchase({
-      affiliateSlug,
-      packageId: pkg.id,
-      organisationId: purchaserOrganisation.id,
-      creditAmountOverride: resellerCredits,
-      amountInCentsOverride: amountInCents,
-    });
-  };
-
-  const handleBuyFromNomia = async (catalogPackageId: string) => {
-    if (!isAuthenticated || !purchaserOrganisation) {
-      navigate(
-        `/signin?returnTo=${encodeURIComponent(`/o/${purchaserOrganisation?.url ?? ''}/price-plan`)}`,
-      );
-      return;
-    }
-
-    setPurchasingPackageId(catalogPackageId);
-
-    await initializeAttributedPayg({
-      organisationId: purchaserOrganisation.id,
-      catalogPackageId,
-      hybridStep: 'NOMIA',
     });
   };
 
@@ -321,65 +252,15 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
               </p>
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
-              {pkg.canPurchase ? (
-                <Button
-                  className="w-full"
-                  loading={purchasingPackageId === pkg.id}
-                  disabled={purchasingPackageId !== null && purchasingPackageId !== pkg.id}
-                  style={primaryColor ? { backgroundColor: primaryColor } : undefined}
-                  onClick={() => handleBuyNow(pkg.id)}
-                >
-                  <Trans>Buy now</Trans>
-                </Button>
-              ) : pkg.canPartialFulfill ? (
-                <>
-                  <Button
-                    className="w-full"
-                    loading={purchasingPackageId === pkg.id}
-                    disabled={purchasingPackageId !== null && purchasingPackageId !== pkg.id}
-                    onClick={() => handlePartialSplit(pkg)}
-                  >
-                    <Trans>
-                      Buy {pkg.availableResellerCredits} from reseller, rest from Nomia
-                    </Trans>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    loading={purchasingPackageId === pkg.catalogPackageId}
-                    disabled={purchasingPackageId !== null}
-                    onClick={() => handleBuyFromNomia(pkg.catalogPackageId)}
-                  >
-                    <Trans>Buy all from Nomia</Trans>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    className="w-full"
-                    loading={purchasingPackageId === pkg.catalogPackageId}
-                    disabled={
-                      !affiliate.canAcceptPayments
-                        ? false
-                        : purchasingPackageId !== null
-                    }
-                    onClick={() => handleBuyFromNomia(pkg.catalogPackageId)}
-                  >
-                    <Trans>Buy from Nomia instead</Trans>
-                  </Button>
-                  <p className="text-center text-xs text-amber-700">
-                    {affiliate.canAcceptPayments ? (
-                      <Trans>
-                        This reseller does not have enough credits. You can buy directly from Nomia.
-                      </Trans>
-                    ) : (
-                      affiliate.payoutBlockingReason || (
-                        <Trans>This reseller is not ready to accept payments right now.</Trans>
-                      )
-                    )}
-                  </p>
-                </>
-              )}
+              <Button
+                className="w-full"
+                loading={purchasingPackageId === pkg.id}
+                disabled={purchasingPackageId !== null && purchasingPackageId !== pkg.id}
+                style={primaryColor ? { backgroundColor: primaryColor } : undefined}
+                onClick={() => handleBuyNow(pkg.id)}
+              >
+                <Trans>Buy now</Trans>
+              </Button>
               <p className="text-center text-xs text-muted-foreground">
                 <Trans>Secure payment via Paystack</Trans>
               </p>

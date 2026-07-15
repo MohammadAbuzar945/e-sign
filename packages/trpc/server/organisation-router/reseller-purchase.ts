@@ -1,7 +1,7 @@
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
 import { RESELLER_BILLING_DISCLOSURE_PREFIX } from '@documenso/lib/constants/reseller-attribution';
-import { initializeResellerPurchase } from '@documenso/lib/server-only/reseller/initialize-reseller-purchase';
-import { associateOrganisationWithReseller, resolveResellerDisplayName } from '@documenso/lib/server-only/reseller/reseller-association';
+import { initializeAffiliatePackagePurchase } from '@documenso/lib/server-only/reseller/initialize-affiliate-package-purchase';
+import { resolveResellerDisplayName } from '@documenso/lib/server-only/reseller/reseller-association';
 import { getResellerProfileByAffiliateSlug } from '@documenso/lib/server-only/reseller/reseller-profile';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
@@ -87,8 +87,7 @@ export const initializeResellerPurchaseRoute = authenticatedProcedure
   .input(ZInitializeResellerPurchaseRequestSchema)
   .output(ZInitializeResellerPurchaseResponseSchema)
   .mutation(async ({ input, ctx }) => {
-    const { affiliateSlug, packageId, organisationId, creditAmountOverride, amountInCentsOverride } =
-      input;
+    const { affiliateSlug, packageId, organisationId } = input;
 
     await prisma.organisation.findFirstOrThrow({
       where: buildOrganisationWhereQuery({
@@ -101,57 +100,11 @@ export const initializeResellerPurchaseRoute = authenticatedProcedure
       where: { id: ctx.user.id },
     });
 
-    const profile = await prisma.resellerProfile.findUnique({
-      where: { affiliateSlug },
-      select: { id: true },
-    });
-
-    if (profile) {
-      await associateOrganisationWithReseller({
-        organisationId,
-        resellerProfileId: profile.id,
-        source: 'AFFILIATE_PURCHASE',
-      }).catch(() => {
-        // Association is best-effort; purchase can still proceed.
-      });
-    }
-
-    const organisation = await prisma.organisation.findUniqueOrThrow({
-      where: { id: organisationId },
-      select: { url: true },
-    });
-
-    const isPartial = Boolean(creditAmountOverride);
-    const pkg = await prisma.resellerPackage.findUnique({
-      where: { id: packageId },
-      select: { catalogPackageId: true, creditAmount: true, priceInCents: true },
-    });
-
-    let callbackPath: string | undefined;
-
-    if (isPartial && pkg && creditAmountOverride) {
-      const nomiaCredits = Math.max(0, pkg.creditAmount - creditAmountOverride);
-      const nomiaAmountInCents = Math.max(
-        0,
-        pkg.priceInCents - (amountInCentsOverride ?? 0),
-      );
-
-      callbackPath = `/o/${organisation.url}/price-plan?hybrid=nomia&catalogPackageId=${pkg.catalogPackageId}&nomiaCredits=${nomiaCredits}&nomiaAmount=${nomiaAmountInCents}&purchase=reseller-partial`;
-    }
-
-    const result = await initializeResellerPurchase({
+    return initializeAffiliatePackagePurchase({
       affiliateSlug,
       packageId,
       purchaserOrganisationId: organisationId,
       purchaserUserId: ctx.user.id,
       purchaserEmail: user.email,
-      creditAmountOverride,
-      amountInCentsOverride,
-      callbackPath,
     });
-
-    return {
-      authorizationUrl: result.authorizationUrl,
-      reference: result.reference,
-    };
   });
