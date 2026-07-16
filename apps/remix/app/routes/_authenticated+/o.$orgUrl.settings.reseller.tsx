@@ -309,6 +309,24 @@ export default function OrganisationSettingsResellerPage() {
   };
 
   const hasEnabledPackage = profile.packages.some((pkg) => pkg.isEnabled);
+  const smallestEnabledPackageCredits = profile.packages
+    .filter((pkg) => pkg.isEnabled)
+    .reduce<number | null>((min, pkg) => {
+      if (min === null || pkg.creditAmount < min) {
+        return pkg.creditAmount;
+      }
+
+      return min;
+    }, null);
+
+  const isCreditsDepleted = !profile.allowNegativeCredits && profile.availableCredits <= 0;
+  const isCreditsLow =
+    !profile.allowNegativeCredits &&
+    profile.availableCredits > 0 &&
+    smallestEnabledPackageCredits !== null &&
+    profile.availableCredits < smallestEnabledPackageCredits;
+  const isCreditsNegative = profile.availableCredits < 0;
+
   const hasCustomizedBranding =
     profile.affiliateSlug !== profile.organisation.url ||
     profile.brandingEnabled ||
@@ -319,7 +337,6 @@ export default function OrganisationSettingsResellerPage() {
     Boolean(profile.affiliatePageTitle) ||
     Boolean(profile.affiliateAboutText);
 
-  const isCreditsLow = profile.availableCredits < 0;
   const payoutStatusLabel =
     profile.payoutMode === 'OWN_PAYSTACK'
       ? profile.hasPaystackConfigured
@@ -406,7 +423,9 @@ export default function OrganisationSettingsResellerPage() {
           </p>
           <p
             className={`mt-1 text-2xl font-semibold tabular-nums ${
-              isCreditsLow ? 'text-amber-700' : 'text-foreground'
+              isCreditsDepleted || isCreditsLow || isCreditsNegative
+                ? 'text-amber-700'
+                : 'text-foreground'
             }`}
           >
             {profile.availableCredits}
@@ -415,9 +434,13 @@ export default function OrganisationSettingsResellerPage() {
             <p className="mt-1 text-xs text-muted-foreground">
               <Trans>Negative balance allowed</Trans>
             </p>
+          ) : isCreditsDepleted ? (
+            <p className="mt-1 text-xs text-amber-700">
+              <Trans>Stock depleted — top up to fulfill sales</Trans>
+            </p>
           ) : isCreditsLow ? (
             <p className="mt-1 text-xs text-amber-700">
-              <Trans>Top up to accept new sales</Trans>
+              <Trans>Stock low — top up before larger packs sell out</Trans>
             </p>
           ) : (
             <p className="mt-1 text-xs text-muted-foreground">
@@ -475,7 +498,7 @@ export default function OrganisationSettingsResellerPage() {
         </Alert>
       ) : null}
 
-      {!profile.allowNegativeCredits && isCreditsLow ? (
+      {!profile.allowNegativeCredits && isCreditsNegative ? (
         <Alert variant="warning">
           <AlertTitle>
             <Trans>Credits needed</Trans>
@@ -484,6 +507,34 @@ export default function OrganisationSettingsResellerPage() {
             <Trans>
               Your balance is negative and new affiliate purchases are blocked until you top up
               enough credits. Pending sales can be transferred once your balance is sufficient.
+            </Trans>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {!profile.allowNegativeCredits && isCreditsDepleted ? (
+        <Alert variant="warning">
+          <AlertTitle>
+            <Trans>Stock depleted</Trans>
+          </AlertTitle>
+          <AlertDescription>
+            <Trans>
+              You have 0 credits in stock. Client purchases will be fulfilled by Nomia until you
+              top up.
+            </Trans>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {!profile.allowNegativeCredits && isCreditsLow ? (
+        <Alert variant="warning">
+          <AlertTitle>
+            <Trans>Stock running low</Trans>
+          </AlertTitle>
+          <AlertDescription>
+            <Trans>
+              You have {profile.availableCredits} credits left. Larger client packs will be split
+              with Nomia until you top up.
             </Trans>
           </AlertDescription>
         </Alert>
