@@ -61,8 +61,9 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
   const url = new URL(request.url);
   const isHybridNomiaRemainder = url.searchParams.get('hybrid') === 'nomia';
+  const isResellerUnavailableFallback = url.searchParams.get('resellerUnavailable') === '1';
 
-  if (!isHybridNomiaRemainder) {
+  if (!isHybridNomiaRemainder && !isResellerUnavailableFallback) {
     const billingAttribution = await getOrganisationBillingAttributionSummary(organisation.id);
 
     if (billingAttribution?.stickyBillingActive && billingAttribution.affiliateSlug) {
