@@ -228,6 +228,27 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
         <AlertDescription>{affiliate.disclosure}</AlertDescription>
       </Alert>
 
+      {!affiliate.allowNegativeCredits && (
+        <Alert variant={affiliate.availableCredits <= 0 ? 'warning' : 'neutral'}>
+          <AlertTitle>
+            <Trans>Reseller stock</Trans>
+          </AlertTitle>
+          <AlertDescription>
+            {affiliate.availableCredits <= 0 ? (
+              <Trans>
+                This reseller currently has no credits in stock. Purchases will be fulfilled by
+                Nomia.
+              </Trans>
+            ) : (
+              <Trans>
+                This reseller has {affiliate.availableCredits} credits in stock. Larger packs may
+                be split with Nomia if stock runs out.
+              </Trans>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {canViewPurchaseHistory && purchaserOrganisation && (
         <div className="flex justify-end">
           <OrganisationPurchaseHistoryDialog
@@ -257,23 +278,55 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
             <CardHeader className="flex-1">
               <div className="flex items-start justify-between gap-2">
                 <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                {pkg.isHighlighted && (
-                  <Badge
-                    style={primaryColor ? { backgroundColor: primaryColor } : undefined}
-                    className="shrink-0"
-                  >
-                    <Trans>Popular</Trans>
-                  </Badge>
-                )}
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  {pkg.isHighlighted && (
+                    <Badge
+                      style={primaryColor ? { backgroundColor: primaryColor } : undefined}
+                    >
+                      <Trans>Popular</Trans>
+                    </Badge>
+                  )}
+                  {!affiliate.allowNegativeCredits && pkg.canPurchase && (
+                    <Badge variant="neutral">
+                      <Trans>In stock</Trans>
+                    </Badge>
+                  )}
+                  {!affiliate.allowNegativeCredits && pkg.canPartialFulfill && (
+                    <Badge variant="warning">
+                      <Trans>Partial stock</Trans>
+                    </Badge>
+                  )}
+                  {!affiliate.allowNegativeCredits &&
+                    !pkg.canPurchase &&
+                    !pkg.canPartialFulfill && (
+                      <Badge variant="neutral">
+                        <Trans>Via Nomia</Trans>
+                      </Badge>
+                    )}
+                </div>
               </div>
               <CardDescription className="text-base font-medium text-foreground">
                 {pkg.displayPrice}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               <p className="text-sm text-muted-foreground">
                 <Trans>{pkg.creditAmount} e-sign credits</Trans>
               </p>
+              {!affiliate.allowNegativeCredits && pkg.canPartialFulfill && (
+                <p className="text-xs text-amber-700">
+                  <Trans>
+                    {pkg.availableResellerCredits} from reseller, remainder from Nomia
+                  </Trans>
+                </p>
+              )}
+              {!affiliate.allowNegativeCredits &&
+                !pkg.canPurchase &&
+                !pkg.canPartialFulfill && (
+                  <p className="text-xs text-muted-foreground">
+                    <Trans>Fulfilled by Nomia while reseller stock is empty</Trans>
+                  </p>
+                )}
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
               <Button
