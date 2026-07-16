@@ -19,12 +19,21 @@ import {
   CardHeader,
   CardTitle,
 } from '@documenso/ui/primitives/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { appMetaTags } from '~/utils/meta';
 import { OrganisationPurchaseHistoryDialog } from '~/components/general/organisation-purchase-history-dialog';
 
 import type { Route } from './+types/r.$affiliateSlug';
+
+const NOMIA_REDIRECT_DELAY_MS = 1800;
 
 export function meta({ params }: Route.MetaArgs) {
   return appMetaTags(`Buy credits from ${params.affiliateSlug}`);
@@ -81,6 +90,13 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       },
     });
 
+  const isResellerUnavailable = !isLoading && (!affiliate || !affiliate.hasPackages);
+  const shouldRedirectToNomia =
+    isResellerUnavailable && isAuthenticated && Boolean(purchaserOrganisation?.url);
+  const nomiaPricePlanPath = purchaserOrganisation
+    ? `/o/${purchaserOrganisation.url}/price-plan?resellerUnavailable=1`
+    : null;
+
   // Sticky association when an authenticated customer visits the affiliate link (§8.2).
   useEffect(() => {
     if (!isAuthenticated || !purchaserOrganisation || !affiliate) {
@@ -95,6 +111,20 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       // Non-blocking.
     });
   }, [affiliate, affiliateSlug, associateReseller, isAuthenticated, purchaserOrganisation]);
+
+  useEffect(() => {
+    if (!shouldRedirectToNomia || !nomiaPricePlanPath) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      navigate(nomiaPricePlanPath);
+    }, NOMIA_REDIRECT_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [navigate, nomiaPricePlanPath, shouldRedirectToNomia]);
 
   const returnTo = `/r/${affiliateSlug}`;
 
@@ -132,34 +162,65 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     );
   }
 
-  if (!affiliate) {
+  if (shouldRedirectToNomia && nomiaPricePlanPath) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-12">
-        <Alert variant="destructive">
+      <Dialog open>
+        <DialogContent hideClose className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              <Trans>Redirecting to Nomia</Trans>
+            </DialogTitle>
+            <DialogDescription>
+              <Trans>
+                This reseller billing page is not available right now. Redirecting you to the Nomia
+                price plan…
+              </Trans>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button asChild>
+              <Link to={nomiaPricePlanPath}>
+                <Trans>Continue now</Trans>
+              </Link>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (isResellerUnavailable) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-4 px-4 py-12">
+        <Alert>
           <AlertTitle>
-            <Trans>Reseller not found</Trans>
+            <Trans>Reseller billing unavailable</Trans>
           </AlertTitle>
           <AlertDescription>
-            <Trans>This affiliate link is invalid or no longer active.</Trans>
+            <Trans>
+              This affiliate link is not available right now. Sign in to continue on the Nomia price
+              plan, or try again later.
+            </Trans>
           </AlertDescription>
         </Alert>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link to={`/signin?returnTo=${encodeURIComponent('/price-plans')}`}>
+              <Trans>Sign in to Nomia billing</Trans>
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/">
+              <Trans>Go home</Trans>
+            </Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
-  if (!affiliate.hasPackages) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-12">
-        <Alert>
-          <AlertTitle>
-            <Trans>No packages available</Trans>
-          </AlertTitle>
-          <AlertDescription>
-            <Trans>No packages are currently available for sale.</Trans>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
+  if (!affiliate) {
+    return null;
   }
 
   const hasBrandingLogo = affiliate.brandingEnabled && affiliate.brandingLogo;
