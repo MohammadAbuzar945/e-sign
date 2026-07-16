@@ -22,6 +22,7 @@ import {
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { appMetaTags } from '~/utils/meta';
+import { OrganisationPurchaseHistoryDialog } from '~/components/general/organisation-purchase-history-dialog';
 
 import type { Route } from './+types/r.$affiliateSlug';
 
@@ -39,13 +40,27 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
 
   const isAuthenticated = Boolean(sessionData);
   const organisations = sessionData?.organisations ?? [];
+  const currentUserId = sessionData?.user?.id;
 
   const purchaserOrganisation =
     organisations.find((org) => org.type === 'ORGANISATION') ?? organisations[0];
+  const canViewPurchaseHistory =
+    Boolean(purchaserOrganisation) &&
+    Boolean(currentUserId) &&
+    purchaserOrganisation?.ownerUserId === currentUserId;
 
   const { data: affiliate, isLoading } = trpc.organisation.reseller.getAffiliate.useQuery({
     affiliateSlug,
   });
+
+  const { data: purchaseHistory = [] } = trpc.organisation.getPurchaseHistory.useQuery(
+    {
+      organisationId: purchaserOrganisation?.id ?? '',
+    },
+    {
+      enabled: Boolean(canViewPurchaseHistory && purchaserOrganisation?.id),
+    },
+  );
 
   const { mutateAsync: associateReseller } =
     trpc.organisation.reseller.associateReseller.useMutation();
@@ -212,6 +227,15 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
         </AlertTitle>
         <AlertDescription>{affiliate.disclosure}</AlertDescription>
       </Alert>
+
+      {canViewPurchaseHistory && purchaserOrganisation && (
+        <div className="flex justify-end">
+          <OrganisationPurchaseHistoryDialog
+            orgUrl={purchaserOrganisation.url}
+            purchaseHistory={purchaseHistory}
+          />
+        </div>
+      )}
 
       {affiliate.affiliateAboutText && (
         <div className="rounded-lg border bg-muted/20 p-5">

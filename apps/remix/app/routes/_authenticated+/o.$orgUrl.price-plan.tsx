@@ -4,13 +4,14 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { ChevronLeftIcon } from 'lucide-react';
-import { Link, type LoaderFunctionArgs, useLocation, useRevalidator } from 'react-router';
+import { Link, redirect, useLocation, useRevalidator } from 'react-router';
 
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { getOrganisationPurchaseHistory } from '@documenso/lib/server-only/billing/get-organisation-purchase-history';
+import { getOrganisationBillingAttributionSummary } from '@documenso/lib/server-only/reseller/resolve-organisation-payg-billing';
 import { getSubscriptionsByUserId } from '@documenso/lib/server-only/subscription/get-subscriptions-by-user-id';
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
@@ -56,6 +57,17 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {
       message: 'Only organisation owners can access pricing plans',
     });
+  }
+
+  const url = new URL(request.url);
+  const isHybridNomiaRemainder = url.searchParams.get('hybrid') === 'nomia';
+
+  if (!isHybridNomiaRemainder) {
+    const billingAttribution = await getOrganisationBillingAttributionSummary(organisation.id);
+
+    if (billingAttribution?.stickyBillingActive && billingAttribution.affiliateSlug) {
+      throw redirect(`/r/${billingAttribution.affiliateSlug}`);
+    }
   }
 
   const [subscriptions, purchaseHistory] = await Promise.all([

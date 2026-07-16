@@ -50,6 +50,20 @@ export default function SettingsLayout() {
     },
   );
 
+  const { data: billingAttribution } = trpc.organisation.reseller.getBillingAttribution.useQuery(
+    {
+      organisationId: organisation.id,
+    },
+    {
+      enabled: isOrganisationOwner && isBillingEnabled,
+    },
+  );
+
+  const billingPath =
+    billingAttribution?.stickyBillingActive && billingAttribution.affiliateSlug
+      ? `/r/${billingAttribution.affiliateSlug}`
+      : `/o/${organisation.url}/price-plan`;
+
   const organisationSettingRoutes = [
     {
       path: `/o/${organisation.url}/settings/general`,
@@ -112,7 +126,7 @@ export default function SettingsLayout() {
         ]
       : []),
     {
-      path: `/o/${organisation.url}/price-plan`,
+      path: billingPath,
       label: t`Billing`,
       icon: CreditCardIcon,
       requiresOwner: true as const,
