@@ -1,12 +1,27 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import {
   buildPurchaseInvoiceHtml,
+  buildPurchaseInvoicePdf,
   getOrganisationPurchaseInvoice,
 } from '@documenso/lib/server-only/billing/build-purchase-invoice';
 import { prisma } from '@documenso/prisma';
 
 import type { Route } from './+types/o.$orgUrl.purchase-invoice.$invoiceId';
+
+const getInvoiceLogoDataUrl = async () => {
+  try {
+    const logoPath = path.join(process.cwd(), 'public', 'android-chrome-512x512.png');
+    const logoBytes = await readFile(logoPath);
+
+    return `data:image/png;base64,${logoBytes.toString('base64')}`;
+  } catch {
+    return undefined;
+  }
+};
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
   const { user } = await getSession(request);
@@ -44,18 +59,25 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     invoiceId: decodeURIComponent(invoiceId),
   });
 
+  const logoUrl =
+    (await getInvoiceLogoDataUrl()) ??
+    `${new URL(request.url).origin}/android-chrome-512x512.png`;
+
   const html = buildPurchaseInvoiceHtml({
     invoice,
     organisationName: organisationDetails.name,
     customerName: organisationDetails.owner.name,
     customerEmail: organisationDetails.owner.email,
-    logoUrl: `${new URL(request.url).origin}/android-chrome-512x512.png`,
+    logoUrl,
   });
 
-  return new Response(html, {
+  const pdf = await buildPurchaseInvoicePdf({ html });
+
+  return new Response(Buffer.from(pdf), {
     headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Content-Disposition': `attachment; filename="nomia-invoice-${invoice.invoiceId}.html"`,
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="nomia-invoice-${invoice.invoiceId}.pdf"`,
+      'Cache-Control': 'no-store',
     },
   });
 };

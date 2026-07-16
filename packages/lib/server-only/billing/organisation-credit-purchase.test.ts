@@ -168,7 +168,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
 });
 
 describe('build-purchase-invoice', () => {
-  it('includes the Nomia title-bar logo', async () => {
+  it('includes the Nomia logo and A4 page styles', async () => {
     const { buildPurchaseInvoiceHtml } = await import('./build-purchase-invoice');
 
     const html = buildPurchaseInvoiceHtml({
@@ -187,11 +187,13 @@ describe('build-purchase-invoice', () => {
       organisationName: 'Buyer Org',
       customerName: 'Buyer',
       customerEmail: 'buyer@example.com',
-      logoUrl: 'https://sign.nomiadocs.com/static/logo.png',
+      logoUrl: 'https://sign.nomiadocs.com/android-chrome-512x512.png',
     });
 
     expect(html).toContain(
-      '<img class="brand-logo" src="https://sign.nomiadocs.com/static/logo.png" alt="Nomia" />',
+      '<img class="brand-logo" src="https://sign.nomiadocs.com/android-chrome-512x512.png" alt="Nomia" />',
     );
+    expect(html).toContain('@page');
+    expect(html).toContain('size: A4');
   });
 });
