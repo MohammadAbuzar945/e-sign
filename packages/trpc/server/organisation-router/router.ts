@@ -15,6 +15,7 @@ import { findOrganisationMemberInvitesRoute } from './find-organisation-member-i
 import { findOrganisationMembersRoute } from './find-organisation-members';
 import { getOrganisationRoute } from './get-organisation';
 import { getOrganisationMemberInvitesRoute } from './get-organisation-member-invites';
+import { getOrganisationPurchaseHistoryRoute } from './get-organisation-purchase-history';
 import { getOrganisationSessionRoute } from './get-organisation-session';
 import { getOrganisationsRoute } from './get-organisations';
 import { getResellerEligibilityRoute } from './get-reseller-eligibility';
@@ -57,6 +58,7 @@ import { updateOrganisationSettingsRoute } from './update-organisation-settings'
 export const organisationRouter = router({
   get: getOrganisationRoute,
   getMany: getOrganisationsRoute,
+  getPurchaseHistory: getOrganisationPurchaseHistoryRoute,
   create: createOrganisationRoute,
   update: updateOrganisationRoute,
   delete: deleteOrganisationRoute,
