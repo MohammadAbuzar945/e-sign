@@ -124,6 +124,10 @@ vi.mock('./send-reseller-insufficient-credits-email', () => ({
   sendResellerInsufficientCreditsEmail: sendResellerInsufficientCreditsEmailMock,
 }));
 
+vi.mock('@documenso/lib/server-only/billing/send-purchase-invoice-email', () => ({
+  sendPurchaseInvoiceEmail: vi.fn().mockResolvedValue({ sent: true }),
+}));
+
 vi.mock('@documenso/lib/server-only/site-settings/get-reseller-site-settings', () => ({
   getResellerSiteSettings: getResellerSiteSettingsMock,
 }));

@@ -30,6 +30,7 @@ export const getOrganisationPurchaseInvoice = async ({
       where: { id: organisationId },
       select: {
         name: true,
+        url: true,
         owner: {
           select: {
             name: true,
@@ -89,6 +90,46 @@ export const buildPurchaseInvoiceHtml = ({
     )
     .join('');
 
+  const resellerSeller = invoice.resellerSeller;
+  const resellerVatLabel = (() => {
+    if (!resellerSeller) {
+      return null;
+    }
+
+    if (resellerSeller.vatStatus === 'REGISTERED' && resellerSeller.vatNumber) {
+      return `VAT registered — ${resellerSeller.vatNumber}`;
+    }
+
+    if (resellerSeller.vatStatus === 'REGISTERED') {
+      return 'VAT registered';
+    }
+
+    if (resellerSeller.vatStatus === 'NOT_REGISTERED') {
+      return 'Not VAT registered';
+    }
+
+    if (resellerSeller.vatNumber) {
+      return `VAT number — ${resellerSeller.vatNumber}`;
+    }
+
+    return null;
+  })();
+
+  const resellerAddressHtml = resellerSeller?.physicalAddress
+    ? escapeHtml(resellerSeller.physicalAddress).replaceAll('\n', '<br />')
+    : null;
+
+  const resellerSellerBlock = resellerSeller
+    ? `
+      <div class="seller">
+        <strong>Reseller (seller)</strong><br />
+        ${escapeHtml(resellerSeller.name)}
+        ${resellerAddressHtml ? `<br /><span class="muted">${resellerAddressHtml}</span>` : ''}
+        ${resellerVatLabel ? `<br /><span class="muted">${escapeHtml(resellerVatLabel)}</span>` : ''}
+      </div>
+    `
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -147,6 +188,14 @@ export const buildPurchaseInvoiceHtml = ({
 
       .meta-row .right {
         text-align: right;
+      }
+
+      .seller {
+        margin-top: 20px;
+        padding: 12px 14px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #f9fafb;
       }
 
       .title {
@@ -217,7 +266,11 @@ export const buildPurchaseInvoiceHtml = ({
     <div class="page">
       <img class="brand-logo" src="${escapeHtml(logoUrl)}" alt="Nomia" />
       <h1>Tax Invoice</h1>
-      <p class="muted">Issued by Nomia</p>
+      <p class="muted">${
+        resellerSeller
+          ? `Issued via Nomia on behalf of ${escapeHtml(resellerSeller.name)}`
+          : 'Issued by Nomia'
+      }</p>
 
       <div class="meta-row">
         <div>
@@ -233,6 +286,8 @@ export const buildPurchaseInvoiceHtml = ({
           <div><strong>Type</strong> ${escapeHtml(invoice.kind)}</div>
         </div>
       </div>
+
+      ${resellerSellerBlock}
 
       <p class="title">${escapeHtml(invoice.title)}</p>
 

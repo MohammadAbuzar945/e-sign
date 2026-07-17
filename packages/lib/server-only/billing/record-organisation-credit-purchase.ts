@@ -22,6 +22,21 @@ export type CompleteOrganisationCreditPurchaseOptions = {
   purchaseGroupId?: string;
 };
 
+export type CompleteOrganisationCreditPurchaseResult = {
+  purchase: {
+    id: string;
+    paystackReference: string;
+    organisationId: string;
+    userId: number;
+    credits: number;
+    grossAmount: number;
+    currency: string;
+    purchaseGroupId: string | null;
+    status: OrganisationCreditPurchaseStatus;
+  };
+  isNewlyCompleted: boolean;
+};
+
 export const createPendingOrganisationCreditPurchase = async ({
   paystackReference,
   organisationId,
@@ -66,7 +81,7 @@ export const completeOrganisationCreditPurchase = async ({
   grossAmount,
   currency = 'ZAR',
   purchaseGroupId,
-}: CompleteOrganisationCreditPurchaseOptions) => {
+}: CompleteOrganisationCreditPurchaseOptions): Promise<CompleteOrganisationCreditPurchaseResult> => {
   const existingPurchase = await prisma.organisationCreditPurchase.findUnique({
     where: {
       paystackReference,
@@ -74,13 +89,16 @@ export const completeOrganisationCreditPurchase = async ({
   });
 
   if (existingPurchase?.status === OrganisationCreditPurchaseStatus.COMPLETED) {
-    return existingPurchase;
+    return {
+      purchase: existingPurchase,
+      isNewlyCompleted: false,
+    };
   }
 
   const completedAt = new Date();
 
   if (existingPurchase) {
-    return await prisma.organisationCreditPurchase.update({
+    const purchase = await prisma.organisationCreditPurchase.update({
       where: {
         id: existingPurchase.id,
       },
@@ -95,9 +113,14 @@ export const completeOrganisationCreditPurchase = async ({
         completedAt,
       },
     });
+
+    return {
+      purchase,
+      isNewlyCompleted: true,
+    };
   }
 
-  return await prisma.organisationCreditPurchase.create({
+  const purchase = await prisma.organisationCreditPurchase.create({
     data: {
       paystackReference,
       organisationId,
@@ -110,4 +133,25 @@ export const completeOrganisationCreditPurchase = async ({
       completedAt,
     },
   });
+
+  return {
+    purchase,
+    isNewlyCompleted: true,
+  };
 };
+
+export const resolveNomiaPurchaseInvoiceId = ({
+  purchaseId,
+  purchaseGroupId,
+}: {
+  purchaseId: string;
+  purchaseGroupId?: string | null;
+}) => purchaseGroupId || `nomia_${purchaseId}`;
+
+export const resolveResellerPurchaseInvoiceId = ({
+  transactionId,
+  purchaseGroupId,
+}: {
+  transactionId: string;
+  purchaseGroupId?: string | null;
+}) => purchaseGroupId || `reseller_${transactionId}`;

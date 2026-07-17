@@ -77,7 +77,7 @@ describe('record-organisation-credit-purchase', () => {
       status: 'COMPLETED',
     });
 
-    await completeOrganisationCreditPurchase({
+    const result = await completeOrganisationCreditPurchase({
       paystackReference: 'ref_123',
       organisationId: 'org_1',
       userId: 42,
@@ -85,6 +85,7 @@ describe('record-organisation-credit-purchase', () => {
       grossAmount: 45000,
     });
 
+    expect(result.isNewlyCompleted).toBe(true);
     expect(prismaMock.organisationCreditPurchase.update).toHaveBeenCalledWith({
       where: { id: 'purchase_1' },
       data: expect.objectContaining({
@@ -195,5 +196,49 @@ describe('build-purchase-invoice', () => {
     );
     expect(html).toContain('@page');
     expect(html).toContain('size: A4');
+  });
+
+  it('includes reseller VAT and physical address on reseller invoices', async () => {
+    const { buildPurchaseInvoiceHtml } = await import('./build-purchase-invoice');
+
+    const html = buildPurchaseInvoiceHtml({
+      invoice: {
+        invoiceId: 'reseller_1',
+        purchaseGroupId: null,
+        date: new Date('2026-07-15T10:00:00.000Z'),
+        kind: 'reseller',
+        title: 'Credits from Acme Trading',
+        totalCredits: 50,
+        totalGrossAmount: 35000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        resellerSeller: {
+          name: 'Acme Trading',
+          physicalAddress: '1 Main Street\nJohannesburg\n2000',
+          vatStatus: 'REGISTERED',
+          vatNumber: '4123456789',
+        },
+        lineItems: [
+          {
+            provider: 'reseller',
+            description: 'Credits from Acme Trading',
+            credits: 50,
+            grossAmount: 35000,
+            currency: 'ZAR',
+            status: 'COMPLETED',
+            reference: 'ref_1',
+          },
+        ],
+      },
+      organisationName: 'Buyer Org',
+      customerName: 'Buyer',
+      customerEmail: 'buyer@example.com',
+    });
+
+    expect(html).toContain('Reseller (seller)');
+    expect(html).toContain('Acme Trading');
+    expect(html).toContain('1 Main Street');
+    expect(html).toContain('VAT registered — 4123456789');
+    expect(html).toContain('Issued via Nomia on behalf of Acme Trading');
   });
 });
