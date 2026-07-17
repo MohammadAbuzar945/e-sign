@@ -54,10 +54,11 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     });
   }
 
-  const { invoice, organisation: organisationDetails } = await getOrganisationPurchaseInvoice({
-    organisationId: organisation.id,
-    invoiceId: decodeURIComponent(invoiceId),
-  });
+  const { invoice, organisation: organisationDetails, resellerLogoUrl } =
+    await getOrganisationPurchaseInvoice({
+      organisationId: organisation.id,
+      invoiceId: decodeURIComponent(invoiceId),
+    });
 
   const logoUrl =
     (await getInvoiceLogoDataUrl()) ??
@@ -69,6 +70,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     customerName: organisationDetails.owner.name,
     customerEmail: organisationDetails.owner.email,
     logoUrl,
+    resellerLogoUrl,
   });
 
   const pdf = await buildPurchaseInvoicePdf({ html });

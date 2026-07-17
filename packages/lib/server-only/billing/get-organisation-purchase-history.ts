@@ -23,6 +23,8 @@ export type PurchaseInvoiceResellerSeller = {
   physicalAddress: string | null;
   vatStatus: 'NOT_REGISTERED' | 'REGISTERED' | null;
   vatNumber: string | null;
+  affiliateSlug: string;
+  hasLogo: boolean;
 };
 
 export type OrganisationPurchaseHistoryItem = {
@@ -145,11 +147,16 @@ const buildResellerSellerDetails = (profile: {
   physicalAddress: string | null;
   vatStatus: 'NOT_REGISTERED' | 'REGISTERED' | null;
   vatNumber: string | null;
+  affiliateSlug: string;
+  brandingEnabled: boolean;
+  brandingLogo: string | null;
 }): PurchaseInvoiceResellerSeller => ({
   name: getResellerPurchaseDisplayName(profile),
   physicalAddress: profile.physicalAddress,
   vatStatus: profile.vatStatus,
   vatNumber: profile.vatNumber,
+  affiliateSlug: profile.affiliateSlug,
+  hasLogo: Boolean(profile.brandingEnabled && profile.brandingLogo),
 });
 
 export const getOrganisationPurchaseHistory = async ({
@@ -195,6 +202,9 @@ export const getOrganisationPurchaseHistory = async ({
         },
         resellerProfile: {
           select: {
+            affiliateSlug: true,
+            brandingEnabled: true,
+            brandingLogo: true,
             brandingCompanyDetails: true,
             physicalAddress: true,
             vatStatus: true,
