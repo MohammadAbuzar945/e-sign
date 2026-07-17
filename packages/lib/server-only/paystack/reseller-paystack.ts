@@ -75,6 +75,15 @@ export type CreateTransactionOptions = {
   subaccount?: string;
   transaction_charge?: number;
   bearer?: 'account' | 'subaccount';
+  split?: {
+    type: 'flat' | 'percentage';
+    bearer_type: 'account' | 'subaccount' | 'all' | 'all-proportional';
+    subaccounts: Array<{
+      subaccount: string;
+      share: number;
+    }>;
+    bearer_subaccount?: string;
+  };
 };
 
 export const createTransaction = async ({
@@ -82,6 +91,7 @@ export const createTransaction = async ({
   subaccount,
   transaction_charge,
   bearer,
+  split,
   ...options
 }: CreateTransactionOptions): Promise<PaystackInitializeResponse> => {
   const client = secretKey ? createPaystackClient(secretKey) : getNomiaPaystackClient();
@@ -89,13 +99,15 @@ export const createTransaction = async ({
   return client.transaction.initialize({
     ...options,
     amount: options.amount.toString(),
-    ...(subaccount
-      ? {
-          subaccount,
-          ...(transaction_charge !== undefined ? { transaction_charge } : {}),
-          ...(bearer ? { bearer } : {}),
-        }
-      : {}),
+    ...(split
+      ? { split }
+      : subaccount
+        ? {
+            subaccount,
+            ...(transaction_charge !== undefined ? { transaction_charge } : {}),
+            ...(bearer ? { bearer } : {}),
+          }
+        : {}),
   }) as Promise<PaystackInitializeResponse>;
 };
 

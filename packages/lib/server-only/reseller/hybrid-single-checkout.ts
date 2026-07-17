@@ -52,5 +52,33 @@ export const buildHybridTransactionCharge = ({
   return nomiaAmountInCents + platformFee;
 };
 
+/**
+ * Dynamic Paystack split for hybrid checkout. Nomia keeps `transactionCharge`
+ * (via remainder); reseller subaccount gets the rest. Paystack fees are shared
+ * by both the main account and the reseller subaccount (`bearer_type: all`).
+ */
+export const buildHybridPaystackSplit = ({
+  subaccountCode,
+  amountInCents,
+  transactionCharge,
+}: {
+  subaccountCode: string;
+  amountInCents: number;
+  transactionCharge: number;
+}) => {
+  const resellerShareInCents = amountInCents - transactionCharge;
+
+  return {
+    type: 'flat' as const,
+    bearer_type: 'all' as const,
+    subaccounts: [
+      {
+        subaccount: subaccountCode,
+        share: resellerShareInCents,
+      },
+    ],
+  };
+};
+
 export const buildNomiaHybridPurchaseReference = (paystackReference: string) =>
   `${paystackReference}#nomia`;

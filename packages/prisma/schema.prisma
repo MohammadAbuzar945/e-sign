@@ -1352,7 +1352,7 @@ model ResellerProfile {
   allowNegativeCredits  Boolean   @default(false)
   instructionsDismissedAt DateTime?
 
-  payoutMode                ResellerPayoutMode @default(OWN_PAYSTACK)
+  payoutMode                ResellerPayoutMode @default(NOMIA_SUBACCOUNT)
   paystackSubaccountCode    String?
   paystackSubaccountId      Int?
   bankCode                  String?
