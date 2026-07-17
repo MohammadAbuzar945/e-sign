@@ -334,11 +334,14 @@ export async function action({ request }: { request: Request }) {
         }
 
         if (reference && !Number.isNaN(creditsToAdd) && creditsToAdd > 0 && grossAmount > 0) {
-          const { completeOrganisationCreditPurchase } = await import(
+          const {
+            completeOrganisationCreditPurchase,
+            resolveNomiaPurchaseInvoiceId,
+          } = await import(
             '@documenso/lib/server-only/billing/record-organisation-credit-purchase'
           );
 
-          await completeOrganisationCreditPurchase({
+          const { purchase, isNewlyCompleted } = await completeOrganisationCreditPurchase({
             paystackReference: reference,
             organisationId: organisation.id,
             userId: user.id,
@@ -347,6 +350,24 @@ export async function action({ request }: { request: Request }) {
             purchaseGroupId:
               typeof metadata?.purchaseGroupId === 'string' ? metadata.purchaseGroupId : undefined,
           });
+
+          if (isNewlyCompleted) {
+            const { sendPurchaseInvoiceEmail } = await import(
+              '@documenso/lib/server-only/billing/send-purchase-invoice-email'
+            );
+
+            await sendPurchaseInvoiceEmail({
+              organisationId: organisation.id,
+              invoiceId: resolveNomiaPurchaseInvoiceId({
+                purchaseId: purchase.id,
+                purchaseGroupId: purchase.purchaseGroupId,
+              }),
+              recipientEmail: user.email,
+              recipientName: user.name,
+            }).catch((error) => {
+              console.error('[NOMIA]: Failed to send purchase invoice email', error);
+            });
+          }
         }
 
         console.log('Pay as you go credits added successfully');

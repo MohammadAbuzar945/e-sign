@@ -10,6 +10,11 @@ import { prisma } from '@documenso/prisma';
 
 import { calculateResellerVatAmountInCents } from '@documenso/lib/utils/reseller-vat';
 
+import {
+  resolveResellerPurchaseInvoiceId,
+} from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
+import { sendPurchaseInvoiceEmail } from '@documenso/lib/server-only/billing/send-purchase-invoice-email';
+
 import { associateOrganisationWithReseller } from './reseller-association';
 import { markResellerCreditsBalanceChanged } from './reseller-delinquency';
 import { buildNomiaHybridPurchaseReference } from './hybrid-single-checkout';
@@ -382,6 +387,22 @@ export const processResellerPaystackWebhook = async ({
       creditsRequired: resellerCreditsToTransfer,
     }).catch((error) => {
       console.error('[RESELLER]: Failed to send insufficient credits email', error);
+    });
+  }
+
+  if (fulfillmentResult.fulfilled) {
+    const invoiceId = resolveResellerPurchaseInvoiceId({
+      transactionId: fulfillmentResult.transaction.id,
+      purchaseGroupId: fulfillmentResult.transaction.purchaseGroupId,
+    });
+
+    await sendPurchaseInvoiceEmail({
+      organisationId: purchaserOrganisation.id,
+      invoiceId,
+      recipientEmail: purchaserEmail,
+      recipientName: resolvedPurchaserName,
+    }).catch((error) => {
+      console.error('[RESELLER]: Failed to send purchase invoice email', error);
     });
   }
 

@@ -18,6 +18,13 @@ export type PurchaseHistoryLineItem = {
   reference: string | null;
 };
 
+export type PurchaseInvoiceResellerSeller = {
+  name: string;
+  physicalAddress: string | null;
+  vatStatus: 'NOT_REGISTERED' | 'REGISTERED' | null;
+  vatNumber: string | null;
+};
+
 export type OrganisationPurchaseHistoryItem = {
   invoiceId: string;
   purchaseGroupId: string | null;
@@ -29,6 +36,8 @@ export type OrganisationPurchaseHistoryItem = {
   currency: string;
   status: string;
   lineItems: PurchaseHistoryLineItem[];
+  /** Present when any line item is fulfilled by a reseller. */
+  resellerSeller?: PurchaseInvoiceResellerSeller | null;
 };
 
 const HYBRID_MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
@@ -130,6 +139,19 @@ const getResellerPurchaseDisplayName = (profile: {
   brandingCompanyDetails: string | null;
 }) => resolveResellerDisplayName(profile);
 
+const buildResellerSellerDetails = (profile: {
+  organisation: { name: string };
+  brandingCompanyDetails: string | null;
+  physicalAddress: string | null;
+  vatStatus: 'NOT_REGISTERED' | 'REGISTERED' | null;
+  vatNumber: string | null;
+}): PurchaseInvoiceResellerSeller => ({
+  name: getResellerPurchaseDisplayName(profile),
+  physicalAddress: profile.physicalAddress,
+  vatStatus: profile.vatStatus,
+  vatNumber: profile.vatNumber,
+});
+
 export const getOrganisationPurchaseHistory = async ({
   organisationId,
 }: {
@@ -174,6 +196,9 @@ export const getOrganisationPurchaseHistory = async ({
         resellerProfile: {
           select: {
             brandingCompanyDetails: true,
+            physicalAddress: true,
+            vatStatus: true,
+            vatNumber: true,
             organisation: {
               select: {
                 name: true,
@@ -243,6 +268,7 @@ export const getOrganisationPurchaseHistory = async ({
 
     const existing = grouped.get(transaction.purchaseGroupId);
     const resellerDisplayName = getResellerPurchaseDisplayName(transaction.resellerProfile);
+    const resellerSeller = buildResellerSellerDetails(transaction.resellerProfile);
     const resellerLine = buildResellerLineItem({
       resellerDisplayName,
       credits: transaction.credits,
@@ -256,6 +282,7 @@ export const getOrganisationPurchaseHistory = async ({
       existing.lineItems.unshift(resellerLine);
       existing.totalCredits += transaction.credits;
       existing.totalGrossAmount += transaction.grossAmount;
+      existing.resellerSeller = existing.resellerSeller ?? resellerSeller;
       existing.date = new Date(
         Math.max(
           existing.date.getTime(),
@@ -278,6 +305,7 @@ export const getOrganisationPurchaseHistory = async ({
       currency: transaction.currency,
       status: transaction.status,
       lineItems: [resellerLine],
+      resellerSeller,
     });
     consumedResellerIds.add(transaction.id);
   }
@@ -326,6 +354,7 @@ export const getOrganisationPurchaseHistory = async ({
       totalGrossAmount: transaction.grossAmount + matchingNomia.grossAmount,
       currency: transaction.currency,
       status: resolveCombinedStatus([transaction.status, matchingNomia.status]),
+      resellerSeller: buildResellerSellerDetails(transaction.resellerProfile),
       lineItems: [
         buildResellerLineItem({
           resellerDisplayName: getResellerPurchaseDisplayName(transaction.resellerProfile),
@@ -397,6 +426,7 @@ export const getOrganisationPurchaseHistory = async ({
       totalGrossAmount: transaction.grossAmount,
       currency: transaction.currency,
       status: transaction.status,
+      resellerSeller: buildResellerSellerDetails(transaction.resellerProfile),
       lineItems: [
         buildResellerLineItem({
           resellerDisplayName,
