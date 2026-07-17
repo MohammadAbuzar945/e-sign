@@ -19,9 +19,11 @@ import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
+import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -36,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@documenso/ui/primitives/select';
+import { Textarea } from '@documenso/ui/primitives/textarea';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 const ZBankDetailsFormSchema = z
@@ -47,6 +50,15 @@ const ZBankDetailsFormSchema = z
     accountType: z.enum(['personal', 'business']),
     documentType: z.enum(['identityNumber', 'passportNumber', 'businessRegistrationNumber']),
     documentNumber: z.string().trim().min(5).max(64),
+    physicalAddress: z.string().trim().min(5).max(500),
+    contactPhone: z.string().trim().min(7).max(32),
+    contactEmail: z.string().trim().email().max(255),
+    vatStatus: z.enum(['NOT_REGISTERED', 'REGISTERED']),
+    vatNumber: z.string().trim().max(64).optional(),
+    confirmDetailsAccurate: z.boolean().refine((value) => value === true, {
+      message:
+        'You must confirm that the submitted information is accurate, current, lawfully supplied, and belongs to the reseller',
+    }),
   })
   .superRefine((values, context) => {
     if (values.accountType === 'business' && values.documentType !== 'businessRegistrationNumber') {
@@ -67,6 +79,14 @@ const ZBankDetailsFormSchema = z
         path: ['documentType'],
       });
     }
+
+    if (values.vatStatus === 'REGISTERED' && !values.vatNumber?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'VAT registration number is required when VAT registered',
+        path: ['vatNumber'],
+      });
+    }
   });
 
 type ResellerPayoutSettingsProps = {
@@ -79,6 +99,11 @@ type ResellerPayoutSettingsProps = {
   bankAccountType: 'personal' | 'business' | null;
   bankDocumentType: 'identityNumber' | 'passportNumber' | 'businessRegistrationNumber' | null;
   bankDocumentNumber: string | null;
+  physicalAddress: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  vatStatus: 'NOT_REGISTERED' | 'REGISTERED' | null;
+  vatNumber: string | null;
   subaccountStatus: 'PENDING' | 'ACTIVE' | 'FAILED' | null;
   subaccountFailureReason: string | null;
   canAcceptAffiliatePayments: boolean;
@@ -95,6 +120,11 @@ export const ResellerPayoutSettings = ({
   bankAccountType,
   bankDocumentType,
   bankDocumentNumber,
+  physicalAddress,
+  contactPhone,
+  contactEmail,
+  vatStatus,
+  vatNumber,
   subaccountStatus,
   subaccountFailureReason,
   canAcceptAffiliatePayments,
@@ -120,6 +150,9 @@ export const ResellerPayoutSettings = ({
 
   const bankForm = useForm<z.infer<typeof ZBankDetailsFormSchema>>({
     resolver: zodResolver(ZBankDetailsFormSchema),
+    resetOptions: {
+      keepDirtyValues: true,
+    },
     values: {
       bankCode: bankCode ?? '',
       bankName: bankName ?? '',
@@ -128,6 +161,12 @@ export const ResellerPayoutSettings = ({
       accountType: defaultAccountType,
       documentType: bankDocumentType ?? getDefaultResellerBankDocumentType(defaultAccountType),
       documentNumber: '',
+      physicalAddress: physicalAddress ?? '',
+      contactPhone: contactPhone ?? '',
+      contactEmail: contactEmail ?? '',
+      vatStatus: vatStatus ?? 'NOT_REGISTERED',
+      vatNumber: vatNumber ?? '',
+      confirmDetailsAccurate: false,
     },
   });
 
@@ -152,6 +191,7 @@ export const ResellerPayoutSettings = ({
         await onUpdated();
         bankForm.resetField('bankAccountNumber');
         bankForm.resetField('documentNumber');
+        bankForm.resetField('confirmDetailsAccurate');
         toast({
           title: _(msg`Bank details submitted`),
           description: _(
@@ -196,6 +236,7 @@ export const ResellerPayoutSettings = ({
   const banks = useMemo(() => banksData?.banks ?? [], [banksData?.banks]);
   const selectedBankCode = bankForm.watch('bankCode');
   const selectedAccountType = bankForm.watch('accountType');
+  const selectedVatStatus = bankForm.watch('vatStatus');
   const selectedBank = useMemo(
     () => banks.find((bank) => bank.code === selectedBankCode),
     [banks, selectedBankCode],
@@ -569,6 +610,156 @@ export const ResellerPayoutSettings = ({
                         </Trans>
                       </p>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-1 border-t pt-4">
+                  <p className="text-sm font-medium">
+                    <Trans>Reseller details</Trans>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    <Trans>
+                      Provide the reseller's physical address, contact details, and VAT status for
+                      payout compliance.
+                    </Trans>
+                  </p>
+                </div>
+
+                <FormField
+                  control={bankForm.control}
+                  name="physicalAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Trans>Physical address</Trans>
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={3}
+                          placeholder={_(msg`Street address, city, province, postal code`)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={bankForm.control}
+                    name="contactPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>Contact phone</Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder={_(msg`+27 11 123 4567`)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={bankForm.control}
+                    name="contactEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>Contact email</Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" placeholder={_(msg`billing@example.com`)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={bankForm.control}
+                  name="vatStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Trans>VAT status</Trans>
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="NOT_REGISTERED">
+                            <Trans>Not VAT registered</Trans>
+                          </SelectItem>
+                          <SelectItem value="REGISTERED">
+                            <Trans>VAT registered</Trans>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {selectedVatStatus === 'REGISTERED' ? (
+                  <FormField
+                    control={bankForm.control}
+                    name="vatNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>VAT registration number</Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="4123456789" />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          <Trans>
+                            If provided, 15% VAT is calculated on affiliate sales for invoices and
+                            exports.
+                          </Trans>
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
+
+                <FormField
+                  control={bankForm.control}
+                  name="confirmDetailsAccurate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start gap-3 space-y-0 rounded-md border p-3">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked === true);
+                          }}
+                        />
+                      </FormControl>
+                      <div className="space-y-1">
+                        <FormLabel className="font-normal leading-snug">
+                          <Trans>
+                            I confirm that all submitted information is accurate, current, lawfully
+                            supplied, and belongs to this reseller.
+                          </Trans>
+                        </FormLabel>
+                        <FormDescription>
+                          <Trans>
+                            False or outdated details may delay payouts and can lead to account
+                            review.
+                          </Trans>
+                        </FormDescription>
+                        <FormMessage />
+                      </div>
                     </FormItem>
                   )}
                 />

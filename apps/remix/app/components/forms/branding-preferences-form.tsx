@@ -178,6 +178,35 @@ export function BrandingPreferencesForm({
             )}
           />
 
+          {context === 'Reseller' ? (
+            <FormField
+              control={form.control}
+              name="brandingCompanyDetails"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>
+                    <Trans>Trading / legal name & brand details</Trans>
+                  </FormLabel>
+
+                  <FormControl>
+                    <Textarea
+                      placeholder={t`Trading or legal name on the first line`}
+                      className="min-h-[100px] resize-y"
+                      {...field}
+                    />
+                  </FormControl>
+
+                  <FormDescription>
+                    <Trans>
+                      First line is used as your trading or legal name on the /r billing page. If
+                      blank, your organisation name is shown instead.
+                    </Trans>
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+          ) : null}
+
           <div className="relative flex w-full flex-col gap-y-4">
             {!isBrandingEnabled && <div className="bg-background/60 absolute inset-0 z-[9998]" />}
 
@@ -307,41 +336,39 @@ export function BrandingPreferencesForm({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="brandingCompanyDetails"
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>
-                    <Trans>Brand Details</Trans>
-                  </FormLabel>
+            {context !== 'Reseller' ? (
+              <FormField
+                control={form.control}
+                name="brandingCompanyDetails"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>
+                      <Trans>Brand Details</Trans>
+                    </FormLabel>
 
-                  <FormControl>
-                    <Textarea
-                      placeholder={t`Enter your brand details`}
-                      className="min-h-[100px] resize-y"
-                      disabled={!isBrandingEnabled}
-                      {...field}
-                    />
-                  </FormControl>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t`Enter your brand details`}
+                        className="min-h-[100px] resize-y"
+                        disabled={!isBrandingEnabled}
+                        {...field}
+                      />
+                    </FormControl>
 
-                  <FormDescription>
-                    {context === 'Reseller' ? (
-                      <Trans>Additional brand information to display on your affiliate page</Trans>
-                    ) : (
+                    <FormDescription>
                       <Trans>Additional brand information to display at the bottom of emails</Trans>
-                    )}
 
-                    {canInherit && (
-                      <span>
-                        {'. '}
-                        <Trans>Leave blank to inherit from the organisation.</Trans>
-                      </span>
-                    )}
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
+                      {canInherit && (
+                        <span>
+                          {'. '}
+                          <Trans>Leave blank to inherit from the organisation.</Trans>
+                        </span>
+                      )}
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+            ) : null}
           </div>
 
           <div className="flex flex-row justify-end space-x-4">

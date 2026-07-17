@@ -12,6 +12,8 @@ export const ZUpdateResellerPayoutModeResponseSchema = z.object({
   payoutMode: z.enum(['OWN_PAYSTACK', 'NOMIA_SUBACCOUNT']),
 });
 
+export const ZResellerVatStatusSchema = z.enum(['NOT_REGISTERED', 'REGISTERED']);
+
 export const ZUpdateResellerBankDetailsRequestSchema = z.object({
   organisationId: z.string(),
   data: z
@@ -23,6 +25,15 @@ export const ZUpdateResellerBankDetailsRequestSchema = z.object({
       accountType: ZResellerBankAccountTypeSchema,
       documentType: ZResellerBankDocumentTypeSchema,
       documentNumber: z.string().trim().min(5).max(64),
+      physicalAddress: z.string().trim().min(5).max(500),
+      contactPhone: z.string().trim().min(7).max(32),
+      contactEmail: z.string().trim().email().max(255),
+      vatStatus: ZResellerVatStatusSchema,
+      vatNumber: z.string().trim().max(64).optional(),
+      confirmDetailsAccurate: z.boolean().refine((value) => value === true, {
+        message:
+          'You must confirm that the submitted information is accurate, current, lawfully supplied, and belongs to the reseller',
+      }),
     })
     .superRefine((values, context) => {
       if (
@@ -44,6 +55,14 @@ export const ZUpdateResellerBankDetailsRequestSchema = z.object({
           code: z.ZodIssueCode.custom,
           message: 'Personal accounts require an ID card, CNIC, or passport number',
           path: ['documentType'],
+        });
+      }
+
+      if (values.vatStatus === 'REGISTERED' && !values.vatNumber?.trim()) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'VAT registration number is required when VAT registered',
+          path: ['vatNumber'],
         });
       }
     }),

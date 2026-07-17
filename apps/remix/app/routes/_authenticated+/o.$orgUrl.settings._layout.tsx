@@ -46,7 +46,8 @@ export default function SettingsLayout() {
       organisationId: organisation.id,
     },
     {
-      enabled: isResellerFeatureAllowed,
+      enabled:
+        isResellerFeatureAllowed || (isOrganisationOwner && isBillingEnabled),
     },
   );
 
@@ -60,9 +61,10 @@ export default function SettingsLayout() {
   );
 
   const billingPath =
-    billingAttribution?.stickyBillingActive && billingAttribution.affiliateSlug
-      ? `/r/${billingAttribution.affiliateSlug}`
-      : `/o/${organisation.url}/price-plan`;
+    resellerProfile ||
+    !(billingAttribution?.stickyBillingActive && billingAttribution.affiliateSlug)
+      ? `/o/${organisation.url}/price-plan`
+      : `/r/${billingAttribution.affiliateSlug}`;
 
   const organisationSettingRoutes = [
     {

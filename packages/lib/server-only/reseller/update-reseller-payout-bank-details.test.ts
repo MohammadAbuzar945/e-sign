@@ -74,8 +74,24 @@ describe('updateResellerBankDetails', () => {
       accountType: 'personal',
       documentType: 'identityNumber',
       documentNumber: '9001015800088',
+      physicalAddress: '1 Main Street, Johannesburg, 2000',
+      contactPhone: '+27111234567',
+      contactEmail: 'billing@example.com',
+      vatStatus: 'NOT_REGISTERED' as const,
     });
 
+    expect(prismaMock.resellerProfile.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          physicalAddress: '1 Main Street, Johannesburg, 2000',
+          contactPhone: '+27111234567',
+          contactEmail: 'billing@example.com',
+          vatStatus: 'NOT_REGISTERED',
+          vatNumber: null,
+          bankDetailsConfirmedAt: expect.any(Date),
+        }),
+      }),
+    );
     expect(registerResellerPaystackSubaccountMock).toHaveBeenCalledWith(
       expect.objectContaining({
         organisationName: 'Acme Org',

@@ -33,6 +33,7 @@ export const ZGetResellerProfileResponseSchema = z
     paystackPublicKey: z.string().nullable(),
     paystackWebhookUrl: z.string(),
     vatNumber: z.string().nullable(),
+    vatStatus: z.enum(['NOT_REGISTERED', 'REGISTERED']).nullable(),
     allowNegativeCredits: z.boolean(),
     instructionsDismissedAt: z.date().nullable(),
     paystackSubaccountCode: z.string().nullable(),
@@ -45,6 +46,10 @@ export const ZGetResellerProfileResponseSchema = z
       .enum(['identityNumber', 'passportNumber', 'businessRegistrationNumber'])
       .nullable(),
     bankDocumentNumber: z.string().nullable(),
+    physicalAddress: z.string().nullable(),
+    contactPhone: z.string().nullable(),
+    contactEmail: z.string().nullable(),
+    bankDetailsConfirmedAt: z.date().nullable(),
     subaccountStatus: z.enum(['PENDING', 'ACTIVE', 'FAILED']).nullable(),
     subaccountVerifiedAt: z.date().nullable(),
     subaccountFailureReason: z.string().nullable(),

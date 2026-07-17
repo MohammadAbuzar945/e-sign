@@ -579,6 +579,11 @@ export default function OrganisationSettingsResellerPage() {
             bankAccountType={profile.bankAccountType}
             bankDocumentType={profile.bankDocumentType}
             bankDocumentNumber={profile.bankDocumentNumber}
+            physicalAddress={profile.physicalAddress}
+            contactPhone={profile.contactPhone}
+            contactEmail={profile.contactEmail}
+            vatStatus={profile.vatStatus}
+            vatNumber={profile.vatNumber}
             subaccountStatus={profile.subaccountStatus}
             subaccountFailureReason={profile.subaccountFailureReason}
             canAcceptAffiliatePayments={profile.canAcceptAffiliatePayments}
@@ -590,148 +595,133 @@ export default function OrganisationSettingsResellerPage() {
             }}
           />
 
-          <Form {...form}>
-            <form
-              className="space-y-4"
-              autoComplete="off"
-              onSubmit={form.handleSubmit(async (values) => {
-                await updateProfile({
-                  organisationId: organisation.id,
-                  data: values,
-                });
-              })}
-            >
-              <fieldset disabled={isUpdatingProfile} className="space-y-4">
-                {profile.payoutMode === 'OWN_PAYSTACK' ? (
-                  <>
-                    <div className="space-y-1">
-                      <h2 className="text-base font-semibold">
-                        <Trans>Paystack keys</Trans>
-                      </h2>
-                      <p className="text-sm text-muted-foreground">
-                        <Trans>
-                          Affiliate purchases charge your Paystack account. Register the webhook
-                          below so credits transfer after payment.
-                        </Trans>
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg border bg-muted/30 p-3">
-                      <p className="mb-2 text-xs font-medium text-muted-foreground">
-                        <Trans>Webhook URL → Paystack Dashboard → Settings → Webhooks</Trans>
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 break-all text-xs">{profile.paystackWebhookUrl}</code>
-                        <CopyTextButton
-                          value={profile.paystackWebhookUrl}
-                          onCopySuccess={() => toast({ title: _(msg`Webhook URL copied`) })}
-                        />
-                      </div>
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="paystackPublicKey"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            <Trans>Paystack public key</Trans>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              autoComplete="off"
-                              autoCorrect="off"
-                              autoCapitalize="none"
-                              spellCheck={false}
-                              data-1p-ignore
-                              data-lpignore="true"
-                              data-form-type="other"
-                              inputMode="text"
-                              placeholder="pk_live_..."
-                              className="font-mono"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="paystackSecretKey"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            <Trans>Paystack secret key</Trans>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              autoComplete="off"
-                              autoCorrect="off"
-                              autoCapitalize="none"
-                              spellCheck={false}
-                              data-1p-ignore
-                              data-lpignore="true"
-                              data-form-type="other"
-                              inputMode="text"
-                              placeholder="sk_live_..."
-                              className="font-mono"
-                            />
-                          </FormControl>
-                          <p className="text-xs text-muted-foreground">
-                            <Trans>Leave blank to keep your existing secret key.</Trans>
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                ) : (
+          {profile.payoutMode === 'OWN_PAYSTACK' ? (
+            <Form {...form}>
+              <form
+                className="space-y-4"
+                autoComplete="off"
+                onSubmit={form.handleSubmit(async (values) => {
+                  await updateProfile({
+                    organisationId: organisation.id,
+                    data: values,
+                  });
+                })}
+              >
+                <fieldset disabled={isUpdatingProfile} className="space-y-4">
                   <div className="space-y-1">
                     <h2 className="text-base font-semibold">
-                      <Trans>Tax</Trans>
+                      <Trans>Paystack keys</Trans>
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      <Trans>Add a VAT number if you need VAT on sales invoices.</Trans>
+                      <Trans>
+                        Affiliate purchases charge your Paystack account. Register the webhook
+                        below so credits transfer after payment.
+                      </Trans>
                     </p>
                   </div>
-                )}
 
-                <FormField
-                  control={form.control}
-                  name="vatNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Trans>VAT number (optional)</Trans>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="4123456789" />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        <Trans>
-                          If provided, 15% VAT is calculated on affiliate sales for invoices and
-                          exports.
-                        </Trans>
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
+                      <Trans>Webhook URL → Paystack Dashboard → Settings → Webhooks</Trans>
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 break-all text-xs">{profile.paystackWebhookUrl}</code>
+                      <CopyTextButton
+                        value={profile.paystackWebhookUrl}
+                        onCopySuccess={() => toast({ title: _(msg`Webhook URL copied`) })}
+                      />
+                    </div>
+                  </div>
 
-                <Button type="submit" loading={isUpdatingProfile}>
-                  {profile.payoutMode === 'OWN_PAYSTACK' ? (
+                  <FormField
+                    control={form.control}
+                    name="paystackPublicKey"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>Paystack public key</Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="none"
+                            spellCheck={false}
+                            data-1p-ignore
+                            data-lpignore="true"
+                            data-form-type="other"
+                            inputMode="text"
+                            placeholder="pk_live_..."
+                            className="font-mono"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="paystackSecretKey"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>Paystack secret key</Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="text"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="none"
+                            spellCheck={false}
+                            data-1p-ignore
+                            data-lpignore="true"
+                            data-form-type="other"
+                            inputMode="text"
+                            placeholder="sk_live_..."
+                            className="font-mono"
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          <Trans>Leave blank to keep your existing secret key.</Trans>
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="vatNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>VAT number (optional)</Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="4123456789" />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          <Trans>
+                            If provided, 15% VAT is calculated on affiliate sales for invoices and
+                            exports.
+                          </Trans>
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" loading={isUpdatingProfile}>
                     <Trans>Save Paystack settings</Trans>
-                  ) : (
-                    <Trans>Save tax settings</Trans>
-                  )}
-                </Button>
-              </fieldset>
-            </form>
-          </Form>
+                  </Button>
+                </fieldset>
+              </form>
+            </Form>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="branding" className="space-y-8">

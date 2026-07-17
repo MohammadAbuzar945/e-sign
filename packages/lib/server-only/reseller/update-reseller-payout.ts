@@ -3,6 +3,7 @@ import {
   ResellerPayoutMode,
   ResellerProfileStatus,
   ResellerSubaccountStatus,
+  ResellerVatStatus,
 } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
@@ -113,6 +114,11 @@ export type UpdateResellerBankDetailsOptions = {
   accountType: 'personal' | 'business';
   documentType: 'identityNumber' | 'passportNumber' | 'businessRegistrationNumber';
   documentNumber: string;
+  physicalAddress: string;
+  contactPhone: string;
+  contactEmail: string;
+  vatStatus: ResellerVatStatus;
+  vatNumber?: string;
 };
 
 export const updateResellerBankDetails = async ({
@@ -124,6 +130,11 @@ export const updateResellerBankDetails = async ({
   accountType,
   documentType,
   documentNumber,
+  physicalAddress,
+  contactPhone,
+  contactEmail,
+  vatStatus,
+  vatNumber,
 }: UpdateResellerBankDetailsOptions) => {
   const profile = await prisma.resellerProfile.findUnique({
     where: { organisationId },
@@ -152,6 +163,10 @@ export const updateResellerBankDetails = async ({
   const trimmedAccountName = bankAccountName.trim();
   const trimmedDocumentNumber = documentNumber.trim();
   const trimmedBankCode = bankCode.trim();
+  const trimmedPhysicalAddress = physicalAddress.trim();
+  const trimmedContactPhone = contactPhone.trim();
+  const trimmedContactEmail = contactEmail.trim().toLowerCase();
+  const trimmedVatNumber = vatNumber?.trim() ?? '';
 
   ZResellerBankVerificationFieldsSchema.parse({
     accountType,
@@ -162,6 +177,18 @@ export const updateResellerBankDetails = async ({
   if (!trimmedBankCode || !trimmedAccountNumber || !trimmedAccountName) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'Bank code, account number, and account name are required',
+    });
+  }
+
+  if (!trimmedPhysicalAddress || !trimmedContactPhone || !trimmedContactEmail) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Physical address and contact details are required',
+    });
+  }
+
+  if (vatStatus === ResellerVatStatus.REGISTERED && !trimmedVatNumber) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'VAT registration number is required when VAT registered',
     });
   }
 
@@ -178,6 +205,13 @@ export const updateResellerBankDetails = async ({
       bankAccountType: accountType,
       bankDocumentType: documentType,
       bankDocumentNumber: encryptedDocumentNumber,
+      physicalAddress: trimmedPhysicalAddress,
+      contactPhone: trimmedContactPhone,
+      contactEmail: trimmedContactEmail,
+      vatStatus,
+      vatNumber:
+        vatStatus === ResellerVatStatus.REGISTERED ? trimmedVatNumber : null,
+      bankDetailsConfirmedAt: new Date(),
       subaccountFailureReason: null,
     },
   });
