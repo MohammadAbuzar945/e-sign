@@ -43,7 +43,7 @@ export const sendPurchaseInvoiceEmail = async ({
   recipientEmail,
   recipientName,
 }: SendPurchaseInvoiceEmailOptions) => {
-  const { invoice, organisation } = await getOrganisationPurchaseInvoice({
+  const { invoice, organisation, resellerLogoUrl } = await getOrganisationPurchaseInvoice({
     organisationId,
     invoiceId,
   });
@@ -62,6 +62,7 @@ export const sendPurchaseInvoiceEmail = async ({
     customerName: toName,
     customerEmail: toEmail,
     logoUrl,
+    resellerLogoUrl,
   });
   const pdf = await buildPurchaseInvoicePdf({ html: htmlDocument });
 

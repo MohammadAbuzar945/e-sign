@@ -192,7 +192,7 @@ describe('build-purchase-invoice', () => {
     });
 
     expect(html).toContain(
-      '<img class="brand-logo" src="https://sign.nomiadocs.com/android-chrome-512x512.png" alt="Nomia" />',
+      'src="https://sign.nomiadocs.com/android-chrome-512x512.png" alt="Nomia"',
     );
     expect(html).toContain('@page');
     expect(html).toContain('size: A4');
@@ -217,6 +217,8 @@ describe('build-purchase-invoice', () => {
           physicalAddress: '1 Main Street\nJohannesburg\n2000',
           vatStatus: 'REGISTERED',
           vatNumber: '4123456789',
+          affiliateSlug: 'acme',
+          hasLogo: true,
         },
         lineItems: [
           {
@@ -233,6 +235,7 @@ describe('build-purchase-invoice', () => {
       organisationName: 'Buyer Org',
       customerName: 'Buyer',
       customerEmail: 'buyer@example.com',
+      resellerLogoUrl: 'data:image/png;base64,resellerlogo',
     });
 
     expect(html).toContain('Reseller (seller)');
@@ -240,5 +243,7 @@ describe('build-purchase-invoice', () => {
     expect(html).toContain('1 Main Street');
     expect(html).toContain('VAT registered — 4123456789');
     expect(html).toContain('Issued via Nomia on behalf of Acme Trading');
+    expect(html).toContain('data:image/png;base64,resellerlogo');
+    expect(html).toContain('seller-logo');
   });
 });

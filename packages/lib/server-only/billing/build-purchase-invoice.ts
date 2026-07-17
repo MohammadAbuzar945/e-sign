@@ -5,47 +5,10 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { env } from '../../utils/env';
 import {
   formatAmount,
-  getOrganisationPurchaseHistory,
   type OrganisationPurchaseHistoryItem,
 } from './get-organisation-purchase-history';
 
-export const getOrganisationPurchaseInvoice = async ({
-  organisationId,
-  invoiceId,
-}: {
-  organisationId: string;
-  invoiceId: string;
-}) => {
-  const history = await getOrganisationPurchaseHistory({ organisationId });
-  const invoice = history.find((item) => item.invoiceId === invoiceId);
-
-  if (!invoice) {
-    throw new AppError(AppErrorCode.NOT_FOUND, {
-      message: 'Invoice not found',
-    });
-  }
-
-  const organisation = await import('@documenso/prisma').then(({ prisma }) =>
-    prisma.organisation.findUniqueOrThrow({
-      where: { id: organisationId },
-      select: {
-        name: true,
-        url: true,
-        owner: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    }),
-  );
-
-  return {
-    invoice,
-    organisation,
-  };
-};
+export { getOrganisationPurchaseInvoice, resolveResellerInvoiceLogoDataUrl } from './organisation-purchase-invoice';
 
 const escapeHtml = (value: string) =>
   value
@@ -60,12 +23,14 @@ export const buildPurchaseInvoiceHtml = ({
   customerName,
   customerEmail,
   logoUrl = '/android-chrome-512x512.png',
+  resellerLogoUrl,
 }: {
   invoice: OrganisationPurchaseHistoryItem;
   organisationName: string;
   customerName: string | null;
   customerEmail: string;
   logoUrl?: string;
+  resellerLogoUrl?: string | null;
 }) => {
   const issuedAt = invoice.date.toLocaleString(undefined, {
     year: 'numeric',
@@ -122,6 +87,13 @@ export const buildPurchaseInvoiceHtml = ({
   const resellerSellerBlock = resellerSeller
     ? `
       <div class="seller">
+        ${
+          resellerLogoUrl
+            ? `<img class="seller-logo" src="${escapeHtml(resellerLogoUrl)}" alt="${escapeHtml(
+                resellerSeller.name,
+              )}" />`
+            : ''
+        }
         <strong>Reseller (seller)</strong><br />
         ${escapeHtml(resellerSeller.name)}
         ${resellerAddressHtml ? `<br /><span class="muted">${resellerAddressHtml}</span>` : ''}
@@ -167,6 +139,26 @@ export const buildPurchaseInvoiceHtml = ({
         width: auto;
         height: 42px;
         margin-bottom: 20px;
+      }
+
+      .logo-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .logo-row .brand-logo {
+        margin-bottom: 0;
+      }
+
+      .seller-logo {
+        display: block;
+        width: auto;
+        max-width: 160px;
+        max-height: 56px;
+        object-fit: contain;
+        margin-bottom: 10px;
       }
 
       h1 {
@@ -264,7 +256,16 @@ export const buildPurchaseInvoiceHtml = ({
   </head>
   <body>
     <div class="page">
-      <img class="brand-logo" src="${escapeHtml(logoUrl)}" alt="Nomia" />
+      <div class="logo-row">
+        <img class="brand-logo" src="${escapeHtml(logoUrl)}" alt="Nomia" />
+        ${
+          resellerLogoUrl
+            ? `<img class="brand-logo" src="${escapeHtml(resellerLogoUrl)}" alt="${escapeHtml(
+                resellerSeller?.name ?? 'Reseller',
+              )}" />`
+            : ''
+        }
+      </div>
       <h1>Tax Invoice</h1>
       <p class="muted">${
         resellerSeller
