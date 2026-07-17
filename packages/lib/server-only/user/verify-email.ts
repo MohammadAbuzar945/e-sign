@@ -7,6 +7,10 @@ import {
   USER_SIGNUP_VERIFICATION_TOKEN_IDENTIFIER,
 } from '../../constants/email';
 import { jobsClient } from '../../jobs/client';
+import {
+  associateAffiliateSignupOnEmailVerification,
+  parseAffiliateSignupVerificationMetadata,
+} from '../reseller/reseller-association';
 
 export type VerifyEmailProps = {
   token: string;
@@ -33,6 +37,7 @@ export const verifyEmail = async ({ token }: VerifyEmailProps) => {
     return {
       state: EMAIL_VERIFICATION_STATE.NOT_FOUND,
       userId: null,
+      redirectTo: null,
     };
   }
 
@@ -65,6 +70,7 @@ export const verifyEmail = async ({ token }: VerifyEmailProps) => {
     return {
       state: EMAIL_VERIFICATION_STATE.EXPIRED,
       userId: null,
+      redirectTo: null,
     };
   }
 
@@ -72,6 +78,7 @@ export const verifyEmail = async ({ token }: VerifyEmailProps) => {
     return {
       state: EMAIL_VERIFICATION_STATE.ALREADY_VERIFIED,
       userId: null,
+      redirectTo: null,
     };
   }
 
@@ -107,8 +114,22 @@ export const verifyEmail = async ({ token }: VerifyEmailProps) => {
     throw new Error('Something went wrong while verifying your email. Please try again.');
   }
 
+  const affiliateMetadata = parseAffiliateSignupVerificationMetadata(verificationToken.metadata);
+
+  if (affiliateMetadata?.affiliateSlug) {
+    await associateAffiliateSignupOnEmailVerification({
+      userId: updatedUser.id,
+      affiliateSlug: affiliateMetadata.affiliateSlug,
+    }).catch((error) => {
+      console.error('[AFFILIATE_SIGNUP]: Failed to associate organisation after email verification', error);
+    });
+  }
+
   return {
     state: EMAIL_VERIFICATION_STATE.VERIFIED,
     userId: updatedUser.id,
+    redirectTo: affiliateMetadata?.affiliateSlug
+      ? `/r/${affiliateMetadata.affiliateSlug}`
+      : null,
   };
 };

@@ -60,11 +60,15 @@ export default function SettingsLayout() {
     },
   );
 
-  const billingPath =
-    resellerProfile ||
-    !(billingAttribution?.stickyBillingActive && billingAttribution.affiliateSlug)
-      ? `/o/${organisation.url}/price-plan`
-      : `/r/${billingAttribution.affiliateSlug}`;
+  const shouldUseAffiliateSignupBilling =
+    !resellerProfile &&
+    billingAttribution?.stickyBillingActive &&
+    billingAttribution.affiliateSlug &&
+    billingAttribution.associationSource === 'AFFILIATE_SIGNUP';
+
+  const billingPath = shouldUseAffiliateSignupBilling
+    ? `/r/${billingAttribution.affiliateSlug}`
+    : `/o/${organisation.url}/price-plan`;
 
   const organisationSettingRoutes = [
     {

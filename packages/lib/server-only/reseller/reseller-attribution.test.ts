@@ -4,6 +4,7 @@ vi.mock('@documenso/prisma', () => ({
   prisma: {
     organisation: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
@@ -29,8 +30,10 @@ import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-cr
 import { prisma } from '@documenso/prisma';
 
 import {
+  associateAffiliateSignupOnEmailVerification,
   associateOrganisationWithReseller,
   extractAffiliateSlugFromPath,
+  parseAffiliateSignupVerificationMetadata,
   resolveResellerDisplayName,
 } from './reseller-association';
 import { resolveOrganisationPaygBilling } from './resolve-organisation-payg-billing';
@@ -44,6 +47,55 @@ describe('reseller attribution helpers', () => {
     expect(extractAffiliateSlugFromPath('/r/acme-corp')).toBe('acme-corp');
     expect(extractAffiliateSlugFromPath('/r/acme-corp?x=1')).toBe('acme-corp');
     expect(extractAffiliateSlugFromPath('/o/foo')).toBeNull();
+  });
+
+  it('parses affiliate signup metadata from verification tokens', () => {
+    expect(parseAffiliateSignupVerificationMetadata({ affiliateSlug: 'acme' })).toEqual({
+      affiliateSlug: 'acme',
+    });
+    expect(parseAffiliateSignupVerificationMetadata({})).toBeNull();
+    expect(parseAffiliateSignupVerificationMetadata(null)).toBeNull();
+  });
+
+  it('associates organisation with reseller after affiliate signup verification', async () => {
+    vi.mocked(prisma.organisation.findFirst).mockResolvedValue({
+      id: 'org-1',
+    } as never);
+
+    vi.mocked(prisma.resellerProfile.findUnique).mockResolvedValue({
+      id: 'rp-1',
+      status: 'ACTIVE',
+      organisationId: 'reseller-org',
+      isDelinquent: false,
+      affiliateSlug: 'acme',
+    } as never);
+
+    vi.mocked(prisma.organisation.findUnique).mockResolvedValue({
+      id: 'org-1',
+      associatedResellerProfileId: null,
+      resellerRequiresReconsent: false,
+      resellerProfile: null,
+    } as never);
+
+    vi.mocked(prisma.resellerProfile.findUniqueOrThrow).mockResolvedValue({
+      isDelinquent: false,
+    } as never);
+
+    vi.mocked(prisma.organisation.update).mockResolvedValue({} as never);
+
+    const result = await associateAffiliateSignupOnEmailVerification({
+      userId: 1,
+      affiliateSlug: 'acme',
+    });
+
+    expect(result.associated).toBe(true);
+    expect(prisma.organisation.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          resellerAssociationSource: 'AFFILIATE_SIGNUP',
+        }),
+      }),
+    );
   });
 
   it('resolves reseller display name from branding or org name', () => {

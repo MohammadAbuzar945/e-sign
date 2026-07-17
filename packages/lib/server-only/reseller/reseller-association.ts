@@ -194,6 +194,62 @@ export const extractAffiliateSlugFromPath = (path: string | null | undefined): s
   return match?.[1] ?? null;
 };
 
+type AffiliateSignupVerificationMetadata = {
+  affiliateSlug?: string;
+};
+
+export const parseAffiliateSignupVerificationMetadata = (
+  metadata: unknown,
+): AffiliateSignupVerificationMetadata | null => {
+  if (!metadata || typeof metadata !== 'object') {
+    return null;
+  }
+
+  const affiliateSlug = 'affiliateSlug' in metadata ? metadata.affiliateSlug : undefined;
+
+  if (typeof affiliateSlug !== 'string' || !affiliateSlug.trim()) {
+    return null;
+  }
+
+  return { affiliateSlug: affiliateSlug.trim() };
+};
+
+/**
+ * Sticky association when a customer completes email verification after affiliate signup.
+ */
+export const associateAffiliateSignupOnEmailVerification = async ({
+  userId,
+  affiliateSlug,
+}: {
+  userId: number;
+  affiliateSlug: string;
+}) => {
+  const organisation = await prisma.organisation.findFirst({
+    where: { ownerUserId: userId },
+    select: { id: true },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (!organisation) {
+    return { associated: false as const, reason: 'NO_ORGANISATION' as const };
+  }
+
+  const profile = await prisma.resellerProfile.findUnique({
+    where: { affiliateSlug },
+    select: { id: true },
+  });
+
+  if (!profile) {
+    return { associated: false as const, reason: 'NOT_FOUND' as const };
+  }
+
+  return associateOrganisationWithReseller({
+    organisationId: organisation.id,
+    resellerProfileId: profile.id,
+    source: 'AFFILIATE_SIGNUP',
+  });
+};
+
 export const resolveResellerDisplayName = (profile: {
   organisation: { name: string };
   brandingCompanyDetails: string | null;
