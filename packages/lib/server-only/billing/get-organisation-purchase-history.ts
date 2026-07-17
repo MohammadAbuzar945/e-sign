@@ -3,6 +3,7 @@ import {
   ResellerCreditTransactionStatus,
 } from '@prisma/client';
 
+import { getNomiaSubscriptionPlanDetails } from '@documenso/lib/constants/nomia-subscription-plans';
 import { prisma } from '@documenso/prisma';
 
 import { getSubscriptionsByUserId } from '../subscription/get-subscriptions-by-user-id';
@@ -450,28 +451,39 @@ export const getOrganisationPurchaseHistory = async ({
     });
   }
 
-  const subscriptionItems: OrganisationPurchaseHistoryItem[] = subscriptions.map((subscription) => ({
-    invoiceId: `subscription_${subscription.id}`,
-    purchaseGroupId: null,
-    date: subscription.updatedAt,
-    kind: 'subscription' as const,
-    title: subscription.priceId || subscription.planId,
-    totalCredits: 0,
-    totalGrossAmount: 0,
-    currency: 'ZAR',
-    status: subscription.status === 'PAST_DUE' ? 'INCOMPLETE' : subscription.status,
-    lineItems: [
-      {
-        provider: 'nomia' as const,
-        description: subscription.priceId || subscription.planId,
-        credits: 0,
-        grossAmount: 0,
-        currency: 'ZAR',
-        status: subscription.status === 'PAST_DUE' ? 'INCOMPLETE' : subscription.status,
-        reference: subscription.planId,
-      },
-    ],
-  }));
+  const subscriptionItems: OrganisationPurchaseHistoryItem[] = subscriptions.map((subscription) => {
+    const planCode = subscription.priceId || subscription.planId;
+    const planDetails = getNomiaSubscriptionPlanDetails(planCode);
+    const credits = planDetails?.credits ?? 0;
+    const grossAmount = planDetails?.priceInCents ?? 0;
+    const title = planDetails
+      ? `${planDetails.label} — ${planDetails.name}`
+      : planCode;
+    const status = subscription.status === 'PAST_DUE' ? 'INCOMPLETE' : subscription.status;
+
+    return {
+      invoiceId: `subscription_${subscription.id}`,
+      purchaseGroupId: null,
+      date: subscription.updatedAt,
+      kind: 'subscription' as const,
+      title,
+      totalCredits: credits,
+      totalGrossAmount: grossAmount,
+      currency: 'ZAR',
+      status,
+      lineItems: [
+        {
+          provider: 'nomia' as const,
+          description: title,
+          credits,
+          grossAmount,
+          currency: 'ZAR',
+          status,
+          reference: planCode,
+        },
+      ],
+    };
+  });
 
   const groupedItems = [...grouped.values()].map(resolveGroupedPurchaseType);
 

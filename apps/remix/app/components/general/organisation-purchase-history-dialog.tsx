@@ -48,9 +48,13 @@ const formatHistoryDescription = (
   getSubscriptionPlanDetails?: OrganisationPurchaseHistoryDialogProps['getSubscriptionPlanDetails'],
 ) => {
   if (item.kind === 'subscription') {
-    const planDetails = getSubscriptionPlanDetails?.(item.title);
+    const planDetails = getSubscriptionPlanDetails?.(item.lineItems[0]?.reference ?? item.title);
 
-    return planDetails?.label ?? item.title;
+    if (planDetails?.label) {
+      return `${planDetails.label}${planDetails.credits ? ` — ${planDetails.credits} envelopes` : ''}`;
+    }
+
+    return item.title;
   }
 
   if (item.kind === 'hybrid') {
@@ -67,7 +71,11 @@ const formatHistoryAmount = (
   getSubscriptionPlanDetails?: OrganisationPurchaseHistoryDialogProps['getSubscriptionPlanDetails'],
 ) => {
   if (item.kind === 'subscription') {
-    return getSubscriptionPlanDetails?.(item.title)?.amount ?? '—';
+    if (item.totalGrossAmount > 0) {
+      return `${item.currency} ${(item.totalGrossAmount / 100).toFixed(2)}`;
+    }
+
+    return getSubscriptionPlanDetails?.(item.lineItems[0]?.reference ?? item.title)?.amount ?? '—';
   }
 
   return `${item.currency} ${(item.totalGrossAmount / 100).toFixed(2)}`;
@@ -78,7 +86,11 @@ const formatHistoryCredits = (
   getSubscriptionPlanDetails?: OrganisationPurchaseHistoryDialogProps['getSubscriptionPlanDetails'],
 ) => {
   if (item.kind === 'subscription') {
-    return getSubscriptionPlanDetails?.(item.title)?.credits ?? '—';
+    if (item.totalCredits > 0) {
+      return item.totalCredits;
+    }
+
+    return getSubscriptionPlanDetails?.(item.lineItems[0]?.reference ?? item.title)?.credits ?? '—';
   }
 
   return item.totalCredits;
