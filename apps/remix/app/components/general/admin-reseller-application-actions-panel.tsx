@@ -49,6 +49,12 @@ type ResellerApplicationRow = {
       | 'passportNumber'
       | 'businessRegistrationNumber'
       | null;
+    physicalAddress?: string | null;
+    contactPhone?: string | null;
+    contactEmail?: string | null;
+    vatStatus?: 'NOT_REGISTERED' | 'REGISTERED' | null;
+    vatNumber?: string | null;
+    bankDetailsConfirmedAt?: Date | string | null;
     paystackSubaccountCode?: string | null;
     subaccountStatus?: 'PENDING' | 'ACTIVE' | 'FAILED' | null;
     subaccountVerifiedAt?: Date | string | null;
@@ -353,6 +359,34 @@ export const AdminResellerApplicationActionsPanel = ({
                         <Trans>
                           Document: {getResellerBankDocumentTypeLabel(profile.bankDocumentType)}
                         </Trans>
+                      </p>
+                    ) : null}
+                    {profile.physicalAddress ? (
+                      <p>
+                        <Trans>Address: {profile.physicalAddress}</Trans>
+                      </p>
+                    ) : null}
+                    {profile.contactPhone || profile.contactEmail ? (
+                      <p>
+                        <Trans>
+                          Contact: {[profile.contactPhone, profile.contactEmail]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </Trans>
+                      </p>
+                    ) : null}
+                    {profile.vatStatus ? (
+                      <p>
+                        {profile.vatStatus === 'REGISTERED' ? (
+                          <Trans>VAT: Registered ({profile.vatNumber ?? '—'})</Trans>
+                        ) : (
+                          <Trans>VAT: Not registered</Trans>
+                        )}
+                      </p>
+                    ) : null}
+                    {profile.bankDetailsConfirmedAt ? (
+                      <p>
+                        <Trans>Details confirmed by reseller</Trans>
                       </p>
                     ) : null}
                     {profile.paystackSubaccountCode ? (

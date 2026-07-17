@@ -1291,6 +1291,11 @@ enum ResellerSubaccountStatus {
   FAILED
 }
 
+enum ResellerVatStatus {
+  NOT_REGISTERED
+  REGISTERED
+}
+
 model ResellerApplication {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -1343,6 +1348,7 @@ model ResellerProfile {
   paystackSecretKey     String?
   paystackCallbackUrl   String?
   vatNumber             String?
+  vatStatus             ResellerVatStatus?
   allowNegativeCredits  Boolean   @default(false)
   instructionsDismissedAt DateTime?
 
@@ -1356,6 +1362,10 @@ model ResellerProfile {
   bankAccountType           String?
   bankDocumentType          String?
   bankDocumentNumber        String?
+  physicalAddress           String?
+  contactPhone              String?
+  contactEmail              String?
+  bankDetailsConfirmedAt    DateTime?
   subaccountStatus          ResellerSubaccountStatus?
   subaccountVerifiedAt      DateTime?
   subaccountFailureReason   String?

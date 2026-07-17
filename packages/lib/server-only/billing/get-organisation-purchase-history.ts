@@ -6,6 +6,7 @@ import {
 import { prisma } from '@documenso/prisma';
 
 import { getSubscriptionsByUserId } from '../subscription/get-subscriptions-by-user-id';
+import { resolveResellerDisplayName } from '../reseller/reseller-association';
 
 export type PurchaseHistoryLineItem = {
   provider: 'nomia' | 'reseller';
@@ -101,14 +102,14 @@ const buildNomiaLineItem = ({
 });
 
 const buildResellerLineItem = ({
-  resellerOrganisationName,
+  resellerDisplayName,
   credits,
   grossAmount,
   currency,
   status,
   reference,
 }: {
-  resellerOrganisationName: string;
+  resellerDisplayName: string;
   credits: number;
   grossAmount: number;
   currency: string;
@@ -116,13 +117,18 @@ const buildResellerLineItem = ({
   reference: string | null;
 }): PurchaseHistoryLineItem => ({
   provider: 'reseller',
-  description: `Credits from ${resellerOrganisationName}`,
+  description: `Credits from ${resellerDisplayName}`,
   credits,
   grossAmount,
   currency,
   status,
   reference,
 });
+
+const getResellerPurchaseDisplayName = (profile: {
+  organisation: { name: string };
+  brandingCompanyDetails: string | null;
+}) => resolveResellerDisplayName(profile);
 
 export const getOrganisationPurchaseHistory = async ({
   organisationId,
@@ -166,7 +172,8 @@ export const getOrganisationPurchaseHistory = async ({
           },
         },
         resellerProfile: {
-          include: {
+          select: {
+            brandingCompanyDetails: true,
             organisation: {
               select: {
                 name: true,
@@ -235,8 +242,9 @@ export const getOrganisationPurchaseHistory = async ({
     }
 
     const existing = grouped.get(transaction.purchaseGroupId);
+    const resellerDisplayName = getResellerPurchaseDisplayName(transaction.resellerProfile);
     const resellerLine = buildResellerLineItem({
-      resellerOrganisationName: transaction.resellerProfile.organisation.name,
+      resellerDisplayName,
       credits: transaction.credits,
       grossAmount: transaction.grossAmount,
       currency: transaction.currency,
@@ -320,7 +328,7 @@ export const getOrganisationPurchaseHistory = async ({
       status: resolveCombinedStatus([transaction.status, matchingNomia.status]),
       lineItems: [
         buildResellerLineItem({
-          resellerOrganisationName: transaction.resellerProfile.organisation.name,
+          resellerDisplayName: getResellerPurchaseDisplayName(transaction.resellerProfile),
           credits: transaction.credits,
           grossAmount: transaction.grossAmount,
           currency: transaction.currency,
@@ -377,19 +385,21 @@ export const getOrganisationPurchaseHistory = async ({
       continue;
     }
 
+    const resellerDisplayName = getResellerPurchaseDisplayName(transaction.resellerProfile);
+
     standaloneItems.push({
       invoiceId: `reseller_${transaction.id}`,
       purchaseGroupId: transaction.purchaseGroupId,
       date: transaction.completedAt ?? transaction.createdAt,
       kind: 'reseller',
-      title: `Credits from ${transaction.resellerProfile.organisation.name}`,
+      title: `Credits from ${resellerDisplayName}`,
       totalCredits: transaction.credits,
       totalGrossAmount: transaction.grossAmount,
       currency: transaction.currency,
       status: transaction.status,
       lineItems: [
         buildResellerLineItem({
-          resellerOrganisationName: transaction.resellerProfile.organisation.name,
+          resellerDisplayName,
           credits: transaction.credits,
           grossAmount: transaction.grossAmount,
           currency: transaction.currency,

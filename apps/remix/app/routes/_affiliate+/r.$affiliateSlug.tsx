@@ -239,14 +239,14 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
                 <a href={affiliate.brandingUrl} target="_blank" rel="noopener noreferrer">
                   <img
                     src={brandingLogoUrl}
-                    alt={affiliate.organisationName}
+                    alt={affiliate.resellerDisplayName}
                     className="h-16 w-auto max-w-xs object-contain"
                   />
                 </a>
               ) : (
                 <img
                   src={brandingLogoUrl}
-                  alt={affiliate.organisationName}
+                  alt={affiliate.resellerDisplayName}
                   className="h-16 w-auto max-w-xs object-contain"
                 />
               )}
@@ -254,7 +254,10 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
           )}
 
           <div>
-            <h1 className="text-3xl font-semibold">
+            <p className="text-sm font-medium text-muted-foreground">
+              {affiliate.resellerDisplayName}
+            </p>
+            <h1 className="mt-1 text-3xl font-semibold">
               {pageTitle || <Trans>Buy e-sign credits</Trans>}
             </h1>
             <p className="mt-2 text-muted-foreground">
