@@ -576,6 +576,7 @@ describe('activateResellerFromTermsCompletion flow', () => {
         organisationId: 'org_1',
         status: ResellerProfileStatus.ACTIVE,
         affiliateSlug: 'acme-corp',
+        payoutMode: 'NOMIA_SUBACCOUNT',
       }),
     });
     expect(prismaMock.resellerPackage.createMany).toHaveBeenCalledWith({
@@ -1300,7 +1301,7 @@ describe('initializeResellerPurchase flow', () => {
     );
   });
 
-  it('uses account bearer for hybrid single-checkout splits with small reseller shares', async () => {
+  it('uses shared fee bearing for hybrid single-checkout splits', async () => {
     const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
 
     prismaMock.resellerProfile.findUnique.mockResolvedValue({
@@ -1348,14 +1349,27 @@ describe('initializeResellerPurchase flow', () => {
     expect(createTransactionMock).toHaveBeenCalledWith(
       expect.objectContaining({
         amount: 700000,
-        subaccount: 'ACCT_test',
-        bearer: 'account',
-        transaction_charge: 686000,
+        split: {
+          type: 'flat',
+          bearer_type: 'all',
+          subaccounts: [
+            {
+              subaccount: 'ACCT_test',
+              share: 14000,
+            },
+          ],
+        },
         metadata: expect.objectContaining({
           hybridSingleCheckout: true,
           resellerCredits: 20,
           nomiaCredits: 980,
         }),
+      }),
+    );
+    expect(createTransactionMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        bearer: 'account',
+        subaccount: expect.anything(),
       }),
     );
   });

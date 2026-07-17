@@ -8,6 +8,7 @@ import { prefixedId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
 
 import {
+  buildHybridPaystackSplit,
   buildHybridTransactionCharge,
   type HybridCheckoutAmounts,
 } from './hybrid-single-checkout';
@@ -201,16 +202,34 @@ export const initializeResellerPurchase = async ({
       });
     }
 
+    const resellerShareInCents = amountInCents - transactionCharge;
+
+    if (resellerShareInCents <= 0) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: 'Payment split is invalid for this package amount',
+      });
+    }
+
     try {
       transaction = await createTransaction({
         email: purchaserEmail,
         amount: amountInCents,
         callback_url: callbackUrl,
         metadata,
-        subaccount: profile.paystackSubaccountCode,
-        // Hybrid splits leave a small reseller share; Nomia must bear Paystack fees.
-        bearer: isHybridSingleCheckout ? 'account' : 'subaccount',
-        ...(transactionCharge > 0 ? { transaction_charge: transactionCharge } : {}),
+        ...(isHybridSingleCheckout
+          ? {
+              // Both Nomia and the reseller bear Paystack fees (`bearer_type: all`).
+              split: buildHybridPaystackSplit({
+                subaccountCode: profile.paystackSubaccountCode,
+                amountInCents,
+                transactionCharge,
+              }),
+            }
+          : {
+              subaccount: profile.paystackSubaccountCode,
+              bearer: 'subaccount',
+              ...(transactionCharge > 0 ? { transaction_charge: transactionCharge } : {}),
+            }),
       });
     } catch (error) {
       const paystackMessage =

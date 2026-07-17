@@ -61,20 +61,31 @@ export async function createTransaction(options: {
   subaccount?: string;
   transaction_charge?: number;
   bearer?: 'account' | 'subaccount';
+  split?: {
+    type: 'flat' | 'percentage';
+    bearer_type: 'account' | 'subaccount' | 'all' | 'all-proportional';
+    subaccounts: Array<{
+      subaccount: string;
+      share: number;
+    }>;
+    bearer_subaccount?: string;
+  };
 }) {
-  const { secretKey, subaccount, transaction_charge, bearer, ...rest } = options;
+  const { secretKey, subaccount, transaction_charge, bearer, split, ...rest } = options;
   const client = secretKey ? new Paystack(secretKey) : paystack;
 
   return client.transaction.initialize({
     ...rest,
     amount: rest.amount.toString(),
-    ...(subaccount
-      ? {
-          subaccount,
-          ...(transaction_charge !== undefined ? { transaction_charge } : {}),
-          ...(bearer ? { bearer } : {}),
-        }
-      : {}),
+    ...(split
+      ? { split }
+      : subaccount
+        ? {
+            subaccount,
+            ...(transaction_charge !== undefined ? { transaction_charge } : {}),
+            ...(bearer ? { bearer } : {}),
+          }
+        : {}),
   });
 }
 

@@ -1,4 +1,8 @@
-import { ResellerApplicationStatus, ResellerProfileStatus } from '@prisma/client';
+import {
+  ResellerApplicationStatus,
+  ResellerPayoutMode,
+  ResellerProfileStatus,
+} from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
@@ -121,6 +125,7 @@ export const activateResellerFromTermsCompletion = async ({
         organisationId: application.organisationId,
         status: ResellerProfileStatus.ACTIVE,
         affiliateSlug,
+        payoutMode: ResellerPayoutMode.NOMIA_SUBACCOUNT,
       },
     });
 
