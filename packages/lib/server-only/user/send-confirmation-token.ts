@@ -8,11 +8,16 @@ import { ONE_HOUR } from '../../constants/time';
 import { sendConfirmationEmail } from '../auth/send-confirmation-email';
 import { getMostRecentEmailVerificationToken } from './get-most-recent-email-verification-token';
 
-type SendConfirmationTokenOptions = { email: string; force?: boolean };
+type SendConfirmationTokenOptions = {
+  email: string;
+  force?: boolean;
+  affiliateSlug?: string;
+};
 
 export const sendConfirmationToken = async ({
   email,
   force = false,
+  affiliateSlug,
 }: SendConfirmationTokenOptions) => {
   const token = crypto.randomBytes(20).toString('hex');
 
@@ -31,6 +36,14 @@ export const sendConfirmationToken = async ({
   }
 
   const mostRecentToken = await getMostRecentEmailVerificationToken({ userId: user.id });
+  const metadataAffiliateSlug =
+    affiliateSlug?.trim() ||
+    (mostRecentToken?.metadata &&
+    typeof mostRecentToken.metadata === 'object' &&
+    'affiliateSlug' in mostRecentToken.metadata &&
+    typeof mostRecentToken.metadata.affiliateSlug === 'string'
+      ? mostRecentToken.metadata.affiliateSlug
+      : undefined);
 
   // If we've sent a token in the last 5 minutes, don't send another one
   if (
@@ -46,6 +59,9 @@ export const sendConfirmationToken = async ({
       identifier: USER_SIGNUP_VERIFICATION_TOKEN_IDENTIFIER,
       token: token,
       expires: new Date(Date.now() + ONE_HOUR),
+      ...(metadataAffiliateSlug
+        ? { metadata: { affiliateSlug: metadataAffiliateSlug } }
+        : {}),
       user: {
         connect: {
           id: user.id,

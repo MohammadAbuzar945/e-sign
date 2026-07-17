@@ -156,7 +156,7 @@ export const emailPasswordRoute = new Hono<HonoAuthContext>()
       });
     }
 
-    const { name, email, password, signature } = c.req.valid('json');
+    const { name, email, password, signature, affiliateSlug } = c.req.valid('json');
 
     const user = await createUser({ name, email, password, signature }).catch((err) => {
       console.error(err);
@@ -167,6 +167,7 @@ export const emailPasswordRoute = new Hono<HonoAuthContext>()
       name: 'send.signup.confirmation.email',
       payload: {
         email: user.email,
+        ...(affiliateSlug ? { affiliateSlug } : {}),
       },
     });
 
@@ -217,7 +218,7 @@ export const emailPasswordRoute = new Hono<HonoAuthContext>()
    * Verify email endpoint.
    */
   .post('/verify-email', sValidator('json', ZVerifyEmailSchema), async (c) => {
-    const { state, userId } = await verifyEmail({ token: c.req.valid('json').token });
+    const { state, userId, redirectTo } = await verifyEmail({ token: c.req.valid('json').token });
 
     // If email is verified, automatically authenticate user.
     if (state === EMAIL_VERIFICATION_STATE.VERIFIED && userId !== null) {
@@ -226,6 +227,7 @@ export const emailPasswordRoute = new Hono<HonoAuthContext>()
 
     return c.json({
       state,
+      redirectTo: redirectTo ?? null,
     });
   })
   /**

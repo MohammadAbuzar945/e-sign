@@ -48,6 +48,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const { sessionData } = useOptionalSession();
 
   const isAuthenticated = Boolean(sessionData);
+  const isEmailVerified = Boolean(sessionData?.user?.emailVerified);
   const organisations = sessionData?.organisations ?? [];
   const currentUserId = sessionData?.user?.id;
 
@@ -97,9 +98,9 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     ? `/o/${purchaserOrganisation.url}/price-plan?resellerUnavailable=1`
     : null;
 
-  // Sticky association when an authenticated customer visits the affiliate link (§8.2).
+  // Sticky association when an authenticated, verified customer visits the affiliate link (§8.2).
   useEffect(() => {
-    if (!isAuthenticated || !purchaserOrganisation || !affiliate) {
+    if (!isAuthenticated || !isEmailVerified || !purchaserOrganisation || !affiliate) {
       return;
     }
 
@@ -110,7 +111,14 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     }).catch(() => {
       // Non-blocking.
     });
-  }, [affiliate, affiliateSlug, associateReseller, isAuthenticated, purchaserOrganisation]);
+  }, [
+    affiliate,
+    affiliateSlug,
+    associateReseller,
+    isAuthenticated,
+    isEmailVerified,
+    purchaserOrganisation,
+  ]);
 
   useEffect(() => {
     if (!shouldRedirectToNomia || !nomiaPricePlanPath) {

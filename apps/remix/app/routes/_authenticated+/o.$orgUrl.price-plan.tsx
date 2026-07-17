@@ -63,7 +63,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
   const isHybridNomiaRemainder = url.searchParams.get('hybrid') === 'nomia';
   const isResellerUnavailableFallback = url.searchParams.get('resellerUnavailable') === '1';
 
-  // Resellers always use Nomia billing to top up inventory — never redirect to /r/.
+  // Resellers top up inventory through Nomia; affiliate-signup customers use the reseller page.
   const ownResellerProfile = await prisma.resellerProfile.findUnique({
     where: { organisationId: organisation.id },
     select: { id: true },
@@ -72,7 +72,11 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
   if (!ownResellerProfile && !isHybridNomiaRemainder && !isResellerUnavailableFallback) {
     const billingAttribution = await getOrganisationBillingAttributionSummary(organisation.id);
 
-    if (billingAttribution?.stickyBillingActive && billingAttribution.affiliateSlug) {
+    if (
+      billingAttribution?.stickyBillingActive &&
+      billingAttribution.affiliateSlug &&
+      billingAttribution.associationSource === 'AFFILIATE_SIGNUP'
+    ) {
       throw redirect(`/r/${billingAttribution.affiliateSlug}`);
     }
   }
