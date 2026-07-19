@@ -414,18 +414,67 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
   const activeSubscriptionCode = currentSubscriptionData?.planId;
   const searchParams = new URLSearchParams(location.search);
   const trxref: any = searchParams.get('trxref');
+  // Credit/top-up purchases (including reseller purchases fulfilled by Nomia) return with a
+  // `purchase` query param. These do NOT create a subscription, so they must not trigger the
+  // subscription activation polling below (which would otherwise spin forever).
+  const purchaseParam = searchParams.get('purchase');
+  const isCreditPurchaseCallback = Boolean(trxref) && Boolean(purchaseParam);
+
   // State for polling
   const [isPolling, setIsPolling] = useState(false);
   const [pollCount, setPollCount] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingStartedRef = useRef(false);
+  const creditPurchaseHandledRef = useRef(false);
 
-  // Polling logic when trxref is present
+  // Keep the latest revalidator/toast without retriggering the polling effect. Having
+  // `revalidator` in the effect deps previously reset the poll counter on every revalidation,
+  // which prevented the poll from ever completing or timing out.
+  const revalidatorRef = useRef(revalidator);
+  revalidatorRef.current = revalidator;
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+
+  // Credit purchase callback: acknowledge success and refresh credits/history once.
   useEffect(() => {
-    if (trxref && !currentSubscriptionData) {
+    if (!isCreditPurchaseCallback || creditPurchaseHandledRef.current) {
+      return;
+    }
+
+    creditPurchaseHandledRef.current = true;
+
+    toastRef.current({
+      title: 'Payment successful',
+      description: 'Your credits have been added to your organisation.',
+      variant: 'default',
+    });
+
+    revalidatorRef.current.revalidate();
+
+    const newUrl = new URL(window.location.href);
+    for (const key of [
+      'trxref',
+      'reference',
+      'purchase',
+      'hybrid',
+      'catalogPackageId',
+      'nomiaCredits',
+      'nomiaAmount',
+      'purchaseGroupId',
+    ]) {
+      newUrl.searchParams.delete(key);
+    }
+    window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+  }, [isCreditPurchaseCallback]);
+
+  // Subscription checkout callback: poll until the subscription becomes active.
+  useEffect(() => {
+    if (trxref && !purchaseParam && !currentSubscriptionData && !pollingStartedRef.current) {
+      pollingStartedRef.current = true;
       setIsPolling(true);
       setPollCount(0);
 
-      toast({
+      toastRef.current({
         title: 'Processing payment...',
         description: 'Please wait while we confirm your subscription.',
         variant: 'default',
@@ -437,7 +486,12 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
 
           if (newCount >= 20) {
             setIsPolling(false);
-            toast({
+
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+            }
+
+            toastRef.current({
               title: 'Taking longer than expected',
               description:
                 'Your payment is being processed. Please refresh the page in a few minutes.',
@@ -450,21 +504,16 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
 
             return newCount;
           }
-          revalidator.revalidate();
+
+          revalidatorRef.current.revalidate();
           return newCount;
         });
       }, 3000);
-
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-        }
-      };
     }
-  }, [trxref, currentSubscriptionData, revalidator, toast]);
+  }, [trxref, purchaseParam, currentSubscriptionData]);
 
   useEffect(() => {
-    if (trxref && currentSubscriptionData && isPolling) {
+    if (trxref && !purchaseParam && currentSubscriptionData && isPolling) {
       setIsPolling(false);
 
       if (intervalRef.current) {
@@ -472,7 +521,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
       }
 
       // Show success toast
-      toast({
+      toastRef.current({
         title: 'Subscription activated!',
         description: 'Your subscription has been successfully activated.',
         variant: 'default',
@@ -483,7 +532,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
       newUrl.searchParams.delete('trxref');
       window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
     }
-  }, [trxref, currentSubscriptionData, isPolling, toast]);
+  }, [trxref, purchaseParam, currentSubscriptionData, isPolling]);
 
   // Cleanup on unmount
   useEffect(() => {
