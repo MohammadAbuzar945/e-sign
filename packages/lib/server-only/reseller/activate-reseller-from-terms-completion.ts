@@ -1,5 +1,6 @@
 import {
   ResellerApplicationStatus,
+  ResellerAssociationSource,
   ResellerPayoutMode,
   ResellerProfileStatus,
 } from '@prisma/client';
@@ -126,6 +127,20 @@ export const activateResellerFromTermsCompletion = async ({
         status: ResellerProfileStatus.ACTIVE,
         affiliateSlug,
         payoutMode: ResellerPayoutMode.NOMIA_SUBACCOUNT,
+      },
+    });
+
+    // A newly-activated reseller shouldn't carry a sticky affiliate "signup" attribution to
+    // another reseller. Downgrade any existing signup relation to a plain visit, keeping the
+    // association but removing its sticky-signup status (§8 attribution).
+    await tx.organisation.updateMany({
+      where: {
+        id: application.organisationId,
+        associatedResellerProfileId: { not: null },
+        resellerAssociationSource: ResellerAssociationSource.AFFILIATE_SIGNUP,
+      },
+      data: {
+        resellerAssociationSource: ResellerAssociationSource.AFFILIATE_VISIT,
       },
     });
 

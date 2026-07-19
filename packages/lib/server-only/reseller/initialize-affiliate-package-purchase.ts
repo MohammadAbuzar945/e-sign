@@ -59,10 +59,9 @@ export const initializeAffiliatePackagePurchase = async ({
     // Association is best-effort; purchase can still proceed.
   });
 
-  const purchaserOrganisation = await prisma.organisation.findUniqueOrThrow({
-    where: { id: purchaserOrganisationId },
-    select: { url: true },
-  });
+  // Purchases initiated from the affiliate page must always return to the affiliate page,
+  // regardless of whether the reseller can fulfill from stock or Nomia handles it.
+  const affiliateCallbackPath = `/r/${affiliateSlug}?purchase=success`;
 
   const purchaseGroupId = prefixedId('pur');
   const availableCredits = await getOrganisationCredits(profile.organisationId);
@@ -84,7 +83,7 @@ export const initializeAffiliatePackagePurchase = async ({
       purchaserOrganisationId,
       purchaserUserId,
       purchaserEmail,
-      callbackPath: `/r/${affiliateSlug}?purchase=success`,
+      callbackPath: affiliateCallbackPath,
       purchaseGroupId,
     });
 
@@ -115,12 +114,12 @@ export const initializeAffiliatePackagePurchase = async ({
               ...hybridAmounts,
               catalogPackageId: pkg.catalogPackageId,
             },
-            callbackPath: `/r/${affiliateSlug}?purchase=success`,
+            callbackPath: affiliateCallbackPath,
           }
         : {
             creditAmountOverride: hybridAmounts.resellerCredits,
             amountInCentsOverride: hybridAmounts.resellerAmountInCents,
-            callbackPath: `/o/${purchaserOrganisation.url}/price-plan?hybrid=nomia&catalogPackageId=${pkg.catalogPackageId}&nomiaCredits=${hybridAmounts.nomiaCredits}&nomiaAmount=${hybridAmounts.nomiaAmountInCents}&purchaseGroupId=${purchaseGroupId}&purchase=reseller-partial`,
+            callbackPath: `${affiliateCallbackPath}&hybrid=nomia&catalogPackageId=${pkg.catalogPackageId}&nomiaCredits=${hybridAmounts.nomiaCredits}&nomiaAmount=${hybridAmounts.nomiaAmountInCents}&purchaseGroupId=${purchaseGroupId}`,
           }),
     });
 
@@ -141,7 +140,7 @@ export const initializeAffiliatePackagePurchase = async ({
   const transaction = await createTransaction({
     email: purchaserEmail,
     amount: catalog.priceInCents,
-    callback_url: `${NEXT_PUBLIC_WEBAPP_URL()}/o/${purchaserOrganisation.url}/price-plan?purchase=success`,
+    callback_url: `${NEXT_PUBLIC_WEBAPP_URL()}${affiliateCallbackPath}`,
     metadata: {
       value: catalog.credits,
       organisationId: purchaserOrganisationId,

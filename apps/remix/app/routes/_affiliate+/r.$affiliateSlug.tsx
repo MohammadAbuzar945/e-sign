@@ -46,6 +46,8 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
+  const [isReconsentOpen, setIsReconsentOpen] = useState(false);
+  const [isSubmittingConsent, setIsSubmittingConsent] = useState(false);
   const { sessionData } = useOptionalSession();
 
   const isAuthenticated = Boolean(sessionData);
@@ -117,6 +119,8 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     : null;
 
   // Sticky association when an authenticated, verified customer visits the affiliate link (§8.2).
+  // If the reseller went delinquent, the org is flagged for reconsent (§12.3 / §12.5): sticky
+  // billing is paused until the customer explicitly reconfirms, so we surface a modal here.
   useEffect(() => {
     if (!isAuthenticated || !isEmailVerified || !purchaserOrganisation || !affiliate) {
       return;
@@ -126,9 +130,20 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       organisationId: purchaserOrganisation.id,
       affiliateSlug,
       source: 'AFFILIATE_VISIT',
-    }).catch(() => {
-      // Non-blocking.
-    });
+    })
+      .then((result) => {
+        const needsReconsent =
+          Boolean(result?.requiresReconsent) ||
+          result?.reason === 'NEEDS_RECONSENT' ||
+          result?.reason === 'DELINQUENT_NEEDS_CONSENT';
+
+        if (needsReconsent) {
+          setIsReconsentOpen(true);
+        }
+      })
+      .catch(() => {
+        // Non-blocking.
+      });
   }, [
     affiliate,
     affiliateSlug,
@@ -137,6 +152,59 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     isEmailVerified,
     purchaserOrganisation,
   ]);
+
+  const handleConfirmReconsent = async () => {
+    if (!purchaserOrganisation) {
+      return;
+    }
+
+    setIsSubmittingConsent(true);
+
+    try {
+      const result = await associateReseller({
+        organisationId: purchaserOrganisation.id,
+        affiliateSlug,
+        source: 'CUSTOMER_CONSENT',
+        customerConsent: true,
+      });
+
+      if (result?.associated) {
+        toast({
+          title: _(msg`Reseller confirmed`),
+          description: _(
+            msg`Your purchases will continue to be supported by ${affiliate?.resellerDisplayName ?? 'this reseller'}.`,
+          ),
+          variant: 'default',
+        });
+
+        setIsReconsentOpen(false);
+        void refetchPurchaseHistory();
+        return;
+      }
+
+      toast({
+        title: _(msg`Could not confirm reseller`),
+        description: _(msg`Please try again or continue with Nomia billing.`),
+        variant: 'destructive',
+      });
+    } catch (error) {
+      toast({
+        title: _(msg`Something went wrong`),
+        description: AppError.parseError(error).message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingConsent(false);
+    }
+  };
+
+  const handleUseNomiaBilling = () => {
+    setIsReconsentOpen(false);
+
+    if (purchaserOrganisation?.url) {
+      navigate(`/o/${purchaserOrganisation.url}/price-plan`);
+    }
+  };
 
   useEffect(() => {
     if (!shouldRedirectToNomia || !nomiaPricePlanPath) {
@@ -257,6 +325,33 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-8 md:py-12">
+      <Dialog open={isReconsentOpen} onOpenChange={setIsReconsentOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              <Trans>Confirm your reseller</Trans>
+            </DialogTitle>
+            <DialogDescription>
+              <Trans>
+                {affiliate.resellerDisplayName} referred you to Nomia, but their reseller account
+                currently needs your confirmation before we continue attributing your purchases to
+                them. You can confirm to continue with this reseller, or switch to buying directly
+                from Nomia.
+              </Trans>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={handleUseNomiaBilling} disabled={isSubmittingConsent}>
+              <Trans>Use Nomia billing instead</Trans>
+            </Button>
+            <Button onClick={handleConfirmReconsent} loading={isSubmittingConsent}>
+              <Trans>Yes, continue with {affiliate.resellerDisplayName}</Trans>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <header className="flex flex-col gap-6 border-b border-border pb-8 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col items-center gap-4 text-center sm:items-start sm:text-left">
           {hasBrandingLogo && (
