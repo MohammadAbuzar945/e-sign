@@ -6,6 +6,7 @@ import {
   StoreIcon,
   Trophy,
   Users,
+  WebhookIcon,
 } from 'lucide-react';
 import { Link, Outlet, redirect, useLocation } from 'react-router';
 
@@ -146,6 +147,20 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
               </Link>
             </Button>
           )}
+
+          <Button
+            variant="ghost"
+            className={cn(
+              'justify-start md:w-full',
+              pathname?.startsWith('/admin/paystack-webhooks') && 'bg-secondary',
+            )}
+            asChild
+          >
+            <Link to="/admin/paystack-webhooks">
+              <WebhookIcon className="mr-2 h-5 w-5" />
+              <Trans>Paystack Webhooks</Trans>
+            </Link>
+          </Button>
 
           <Button
             variant="ghost"

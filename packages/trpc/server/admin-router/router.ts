@@ -11,8 +11,10 @@ import { findAdminOrganisationsRoute } from './find-admin-organisations';
 import { findDocumentAuditLogsRoute } from './find-document-audit-logs';
 import { findDocumentJobsRoute } from './find-document-jobs';
 import { findDocumentsRoute } from './find-documents';
+import { findPaystackWebhookEventsRoute } from './find-paystack-webhook-events';
 import { findSubscriptionClaimsRoute } from './find-subscription-claims';
 import { getAdminOrganisationRoute } from './get-admin-organisation';
+import { getPaystackWebhookEventRoute } from './get-paystack-webhook-event';
 import { getUserRoute } from './get-user';
 import { promoteMemberToOwnerRoute } from './promote-member-to-owner';
 import { cancelResellerApplicationRoute } from './cancel-reseller-application';
@@ -96,6 +98,10 @@ export const adminRouter = router({
     reseal: resealDocumentRoute,
     findJobs: findDocumentJobsRoute,
     findAuditLogs: findDocumentAuditLogsRoute,
+  },
+  paystackWebhooks: {
+    find: findPaystackWebhookEventsRoute,
+    get: getPaystackWebhookEventRoute,
   },
   recipient: {
     update: updateRecipientRoute,
