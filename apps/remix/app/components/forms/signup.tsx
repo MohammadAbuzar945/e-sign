@@ -15,7 +15,7 @@ import communityCardsImage from '@documenso/assets/images/community-cards.png';
 import { authClient } from '@documenso/auth/client';
 import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { extractAffiliateSlugFromPath } from '@documenso/lib/server-only/reseller/reseller-association';
+import { extractAffiliateSlugFromPath } from '@documenso/lib/utils/affiliate-slug';
 import { ZPasswordSchema } from '@documenso/trpc/server/auth-router/schema';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';

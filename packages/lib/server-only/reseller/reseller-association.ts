@@ -184,15 +184,7 @@ export const getOrganisationResellerAssociation = async (organisationId: string)
   });
 };
 
-export const extractAffiliateSlugFromPath = (path: string | null | undefined): string | null => {
-  if (!path) {
-    return null;
-  }
-
-  const match = path.trim().match(/^\/r\/([^/?#]+)/);
-
-  return match?.[1] ?? null;
-};
+export { extractAffiliateSlugFromPath } from '@documenso/lib/utils/affiliate-slug';
 
 type AffiliateSignupVerificationMetadata = {
   affiliateSlug?: string;

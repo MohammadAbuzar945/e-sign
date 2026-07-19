@@ -1457,3 +1457,37 @@ model ResellerCreditTransaction {
   @@index([createdAt])
   @@index([purchaseGroupId])
 }
+
+enum PaystackWebhookEventStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  IGNORED
+}
+
+/// Inbound Paystack webhook payloads and processing outcomes (admin audit log).
+model PaystackWebhookEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Paystack event name, e.g. charge.success, subscription.create
+  event  String
+  status PaystackWebhookEventStatus @default(PENDING)
+
+  payload Json
+  result  Json?
+  error   String?
+
+  /// Paystack transaction reference or subscription_code when present
+  reference     String?
+  customerEmail String?
+
+  processedAt DateTime?
+
+  @@index([event])
+  @@index([status])
+  @@index([createdAt])
+  @@index([reference])
+  @@index([customerEmail])
+}

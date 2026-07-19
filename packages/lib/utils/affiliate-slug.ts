@@ -89,3 +89,13 @@ export const buildAffiliateUrl = (slug: string, baseUrl: string) => {
 
   return `${base}/r/${slug}`;
 };
+
+export const extractAffiliateSlugFromPath = (path: string | null | undefined): string | null => {
+  if (!path) {
+    return null;
+  }
+
+  const match = path.trim().match(/^\/r\/([^/?#]+)/);
+
+  return match?.[1] ?? null;
+};
