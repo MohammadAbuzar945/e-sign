@@ -2,7 +2,7 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
 import { AppError } from '@documenso/lib/errors/app-error';
@@ -44,6 +44,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const { _ } = useLingui();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
   const { sessionData } = useOptionalSession();
 
@@ -52,8 +53,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const organisations = sessionData?.organisations ?? [];
   const currentUserId = sessionData?.user?.id;
 
-  const purchaserOrganisation =
-    organisations.find((org) => org.type === 'ORGANISATION') ?? organisations[0];
+  const purchaserOrganisation = organisations.find((org) => org.ownerUserId === currentUserId);
   const canViewPurchaseHistory =
     Boolean(purchaserOrganisation) &&
     Boolean(currentUserId) &&
@@ -63,7 +63,8 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     affiliateSlug,
   });
 
-  const { data: purchaseHistory = [] } = trpc.organisation.getPurchaseHistory.useQuery(
+  const { data: purchaseHistory = [], refetch: refetchPurchaseHistory } =
+    trpc.organisation.getPurchaseHistory.useQuery(
     {
       organisationId: purchaserOrganisation?.id ?? '',
     },
@@ -71,6 +72,23 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       enabled: Boolean(canViewPurchaseHistory && purchaserOrganisation?.id),
     },
   );
+
+  useEffect(() => {
+    if (searchParams.get('purchase') !== 'success' || !canViewPurchaseHistory) {
+      return;
+    }
+
+    void refetchPurchaseHistory();
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('purchase');
+    setSearchParams(nextParams, { replace: true });
+  }, [
+    canViewPurchaseHistory,
+    refetchPurchaseHistory,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const { mutateAsync: associateReseller } =
     trpc.organisation.reseller.associateReseller.useMutation();
