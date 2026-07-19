@@ -166,6 +166,55 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
       totalCredits: 1000,
     });
   });
+
+  it('includes standalone reseller purchases in billing history', async () => {
+    const { getOrganisationPurchaseHistory } = await import('./get-organisation-purchase-history');
+
+    prismaMock.organisationCreditPurchase.findMany.mockResolvedValue([]);
+    prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([
+      {
+        id: 'reseller_tx_1',
+        purchaseGroupId: null,
+        completedAt: new Date('2026-07-16T10:00:00.000Z'),
+        createdAt: new Date('2026-07-16T09:55:00.000Z'),
+        credits: 50,
+        grossAmount: 35000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        paystackReference: 'ref_reseller_1',
+        package: {
+          creditAmount: 50,
+          catalogPackageId: 'payg-50',
+        },
+        resellerProfile: {
+          affiliateSlug: 'acme',
+          brandingEnabled: false,
+          brandingLogo: null,
+          brandingCompanyDetails: 'Acme Trading',
+          physicalAddress: '1 Main Street',
+          vatStatus: 'REGISTERED',
+          vatNumber: '4123456789',
+          organisation: {
+            name: 'Acme Org',
+          },
+        },
+      },
+    ]);
+
+    const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
+
+    expect(history).toHaveLength(1);
+    expect(history[0]).toMatchObject({
+      kind: 'reseller',
+      invoiceId: 'reseller_reseller_tx_1',
+      totalCredits: 50,
+      totalGrossAmount: 35000,
+      resellerSeller: expect.objectContaining({
+        affiliateSlug: 'acme',
+        name: 'Acme Trading',
+      }),
+    });
+  });
 });
 
 describe('build-purchase-invoice', () => {
