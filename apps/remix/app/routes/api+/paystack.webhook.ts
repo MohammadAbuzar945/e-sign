@@ -75,21 +75,23 @@ export async function action({ request }: { request: Request }) {
     return jsonResponse({ success: false, error: 'Missing event or data in payload' }, 400);
   }
 
-  const webhookEvent = await createPaystackWebhookEvent({
+  const validatedEvent: { event: string; data: Record<string, unknown> } = {
     event: event.event,
     data: event.data,
-  });
+  };
+
+  const webhookEvent = await createPaystackWebhookEvent(validatedEvent);
 
   let outcome: WebhookOutcome = {
     status: PaystackWebhookEventStatus.SUCCESS,
-    result: { action: 'acknowledged', event: event.event },
+    result: { action: 'acknowledged', event: validatedEvent.event },
     response: jsonResponse({ success: true }),
   };
 
   try {
-    console.log('Paystack webhook received event:', JSON.stringify(event));
+    console.log('Paystack webhook received event:', JSON.stringify(validatedEvent));
 
-    outcome = await processPaystackWebhookEvent(event);
+    outcome = await processPaystackWebhookEvent(validatedEvent);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? error.stack : undefined;
