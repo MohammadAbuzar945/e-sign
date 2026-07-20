@@ -410,9 +410,7 @@ export default function AdminPaystackWebhooksPage() {
                 <Trans>Previous</Trans>
               </Button>
               <p className="text-muted-foreground text-xs">
-                <Trans>
-                  Page {results.currentPage} of {results.totalPages}
-                </Trans>
+                {`${_(msg`Page`)} ${results.currentPage} ${_(msg`of`)} ${results.totalPages}`}
               </p>
               <Button
                 type="button"
@@ -428,45 +426,47 @@ export default function AdminPaystackWebhooksPage() {
         </div>
 
         <div className="hidden md:block">
-        <DataTable
-          columns={columns}
-          data={results.data}
-          perPage={results.perPage}
-          currentPage={results.currentPage}
-          totalPages={results.totalPages}
-          onPaginationChange={onPaginationChange}
-          onRowClick={(row) => setSelectedEvent(row)}
-          rowClassName="cursor-pointer group"
-          error={{
-            enable: isLoadingError,
-          }}
-          skeleton={{
-            enable: isLoading,
-            rows: 8,
-            component: (
-              <>
-                <TableCell>
-                  <Skeleton className="h-5 w-24 rounded-full" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-36" />
-                  <Skeleton className="mt-1 h-3 w-48" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-28" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-40" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-24" />
-                </TableCell>
-              </>
-            ),
-          }}
-        >
-          {(table) => <DataTablePagination additionalInformation="VisibleCount" table={table} />}
-        </DataTable>
+          <DataTable
+            columns={columns}
+            data={results.data}
+            perPage={results.perPage}
+            currentPage={results.currentPage}
+            totalPages={results.totalPages}
+            onPaginationChange={onPaginationChange}
+            onRowClick={(row) => setSelectedEvent(row)}
+            rowClassName="cursor-pointer group"
+            error={{
+              enable: isLoadingError,
+            }}
+            skeleton={{
+              enable: isLoading,
+              rows: 8,
+              component: (
+                <>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="mt-1 h-3 w-48" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-28" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-40" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                </>
+              ),
+            }}
+          >
+            {(table) => (
+              <DataTablePagination additionalInformation="VisibleCount" table={table} />
+            )}
+          </DataTable>
         </div>
       </div>
 
