@@ -7,10 +7,12 @@ import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { trpc } from '@documenso/trpc/react';
+import { Badge } from '@documenso/ui/primitives/badge';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import {
   AdminResellerBulkRatesEditor,
+  formatBulkRateTierSummary,
   type BulkRateTierDraft,
 } from '~/components/general/admin-reseller-bulk-rates-editor';
 import { SettingsHeader } from '~/components/general/settings-header';
@@ -31,6 +33,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   return null;
 }
+
+const formatZarFromCents = (cents: number) => `ZAR ${(cents / 100).toFixed(2)}`;
 
 export default function AdminResellerBulkRatesPage() {
   const { _ } = useLingui();
@@ -60,8 +64,10 @@ export default function AdminResellerBulkRatesPage() {
       isEnabled: tier.isEnabled,
     })) ?? [];
 
+  const summary = formatBulkRateTierSummary(initialTiers);
+
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-4xl">
       <SettingsHeader
         title={_(msg`Reseller bulk rates`)}
         subtitle={_(
@@ -69,7 +75,17 @@ export default function AdminResellerBulkRatesPage() {
         )}
       />
 
-      <div className="mt-6 rounded-lg border p-4">
+      {summary ? (
+        <div className="mt-6 flex flex-wrap gap-2">
+          {summary.tiers.map((tier) => (
+            <Badge key={tier.minCredits} variant="neutral" className="font-normal">
+              {tier.minCredits.toLocaleString()}+ · {formatZarFromCents(tier.pricePerCreditCents)}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="mt-4 rounded-lg border p-4 sm:p-6">
         {isLoading ? (
           <p className="text-sm text-muted-foreground">
             <Trans>Loading rates…</Trans>

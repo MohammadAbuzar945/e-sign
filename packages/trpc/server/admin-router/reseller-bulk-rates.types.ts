@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { MAX_RESELLER_BULK_RATE_TIERS } from '@documenso/lib/constants/reseller-bulk-rates';
+
 export const ZResellerBulkRateTierSchema = z.object({
   minCredits: z.number().int().positive(),
   pricePerCreditCents: z.number().int().positive(),
@@ -18,7 +20,7 @@ export const ZListGlobalResellerBulkRatesResponseSchema = z.object({
 });
 
 export const ZReplaceGlobalResellerBulkRatesRequestSchema = z.object({
-  tiers: z.array(ZResellerBulkRateTierSchema).min(1),
+  tiers: z.array(ZResellerBulkRateTierSchema).min(1).max(MAX_RESELLER_BULK_RATE_TIERS),
 });
 
 export const ZReplaceGlobalResellerBulkRatesResponseSchema =
@@ -43,7 +45,7 @@ export const ZGetResellerBulkRatesResponseSchema = z.object({
 export const ZReplaceResellerBulkRatesRequestSchema = z.object({
   resellerProfileId: z.string(),
   bulkRatesUseCustom: z.boolean(),
-  tiers: z.array(ZResellerBulkRateTierSchema),
+  tiers: z.array(ZResellerBulkRateTierSchema).max(MAX_RESELLER_BULK_RATE_TIERS),
 });
 
 export const ZReplaceResellerBulkRatesResponseSchema = ZGetResellerBulkRatesResponseSchema;
