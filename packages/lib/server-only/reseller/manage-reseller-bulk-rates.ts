@@ -1,4 +1,5 @@
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { MAX_RESELLER_BULK_RATE_TIERS } from '@documenso/lib/constants/reseller-bulk-rates';
 import { prisma } from '@documenso/prisma';
 
 export type BulkRateTierInput = {
@@ -11,6 +12,12 @@ const validateBulkRateTiers = (tiers: BulkRateTierInput[]) => {
   if (tiers.length === 0) {
     throw new AppError(AppErrorCode.INVALID_BODY, {
       message: 'At least one bulk rate tier is required',
+    });
+  }
+
+  if (tiers.length > MAX_RESELLER_BULK_RATE_TIERS) {
+    throw new AppError(AppErrorCode.INVALID_BODY, {
+      message: `A maximum of ${MAX_RESELLER_BULK_RATE_TIERS} bulk rate tiers is allowed`,
     });
   }
 

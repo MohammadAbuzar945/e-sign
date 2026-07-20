@@ -864,12 +864,6 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
           getSubscriptionPlanDetails={getActiveSubscriptionDetails}
         />
 
-        {isActiveReseller ? (
-          <div className="mb-8">
-            <ResellerBulkInventoryPurchase organisationId={organisation.id} />
-          </div>
-        ) : null}
-
         {currentSubscriptionData && (
           <div>
             <div className="flex w-full items-center justify-between">
@@ -937,6 +931,12 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
             />
           ))}
         </div>
+
+        {isActiveReseller ? (
+          <div className="mt-8">
+            <ResellerBulkInventoryPurchase organisationId={organisation.id} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
