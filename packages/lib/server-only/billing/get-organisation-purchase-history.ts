@@ -32,7 +32,7 @@ export type OrganisationPurchaseHistoryItem = {
   invoiceId: string;
   purchaseGroupId: string | null;
   date: Date;
-  kind: 'subscription' | 'pay_as_you_go' | 'reseller' | 'hybrid';
+  kind: 'subscription' | 'pay_as_you_go' | 'reseller' | 'hybrid' | 'bulk';
   title: string;
   totalCredits: number;
   totalGrossAmount: number;
@@ -401,7 +401,7 @@ export const getOrganisationPurchaseHistory = async ({
       invoiceId: `nomia_${purchase.id}`,
       purchaseGroupId: purchase.purchaseGroupId,
       date: purchase.completedAt ?? purchase.createdAt,
-      kind: 'pay_as_you_go',
+      kind: purchase.purchaseType === 'BULK' ? 'bulk' : 'pay_as_you_go',
       title:
         purchase.purchaseType === 'BULK'
           ? 'Bulk inventory top-up'
