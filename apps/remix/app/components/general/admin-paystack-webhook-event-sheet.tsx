@@ -70,7 +70,11 @@ export const AdminPaystackWebhookEventSheet = ({
 
   return (
     <Sheet open={true} onOpenChange={(value) => (!value ? onClose() : null)}>
-      <SheetContent position="right" size="lg" className="max-w-2xl overflow-y-auto">
+      <SheetContent
+        position="right"
+        size="lg"
+        className="w-full max-w-[100vw] overflow-y-auto sm:max-w-2xl"
+      >
         <SheetTitle>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold">

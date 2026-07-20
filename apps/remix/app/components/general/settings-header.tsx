@@ -19,7 +19,7 @@ export const SettingsHeader = ({
 }: SettingsHeaderProps) => {
   return (
     <>
-      <div className={cn('flex flex-row items-center justify-between', className)}>
+      <div className={cn('flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', className)}>
         <div>
           <h3 className="text-lg font-medium">{title}</h3>
 

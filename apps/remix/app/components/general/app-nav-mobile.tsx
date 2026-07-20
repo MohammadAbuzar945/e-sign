@@ -7,12 +7,14 @@ import { Link } from 'react-router';
 
 import { authClient } from '@documenso/auth/client';
 import { useSession } from '@documenso/lib/client-only/providers/session';
+import { isAdmin } from '@documenso/lib/utils/is-admin';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import { Sheet, SheetContent } from '@documenso/ui/primitives/sheet';
 import { ThemeSwitcher } from '@documenso/ui/primitives/theme-switcher';
 
 import { BrandingLogo } from '~/components/general/branding-logo';
+import { AdminNavLinks } from '~/components/general/admin-nav-links';
 import { useOptionalCurrentTeam } from '~/providers/team';
 
 export type AppNavMobileProps = {
@@ -23,7 +25,9 @@ export type AppNavMobileProps = {
 export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps) => {
   const { t } = useLingui();
 
-  const { organisations } = useSession();
+  const { organisations, user } = useSession();
+
+  const isUserAdmin = isAdmin(user);
 
   const currentTeam = useOptionalCurrentTeam();
 
@@ -103,6 +107,19 @@ export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps
               )}
             </Link>
           ))}
+
+          {isUserAdmin ? (
+            <div className="w-full border-t pt-4">
+              <p className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
+                <Trans>Admin</Trans>
+              </p>
+              <AdminNavLinks
+                onNavigate={handleMenuItemClick}
+                className="gap-0.5"
+                buttonClassName="text-base font-medium"
+              />
+            </div>
+          ) : null}
 
           <button
             className="text-foreground hover:text-foreground/80 text-2xl font-semibold"

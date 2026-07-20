@@ -19,6 +19,7 @@ export const ZGetOrganisationBillingAttributionResponseSchema = z
     resellerDisplayName: z.string().nullable(),
     affiliateSlug: z.string().nullable(),
     resellerProfileId: z.string().nullable(),
+    isResellerOrganisation: z.boolean(),
     disclosure: z.string().nullable(),
     isDelinquent: z.boolean(),
     packages: z.array(

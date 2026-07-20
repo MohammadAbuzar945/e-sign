@@ -325,6 +325,10 @@ export const getOrganisationBillingAttributionSummary = async (organisationId: s
 
   const payout = profile ? getResellerPayoutReadiness(profile) : null;
   const displayName = profile ? resolveResellerDisplayName(profile) : null;
+  const ownResellerProfile = await prisma.resellerProfile.findUnique({
+    where: { organisationId },
+    select: { id: true },
+  });
   const stickyBillingActive =
     Boolean(profile) &&
     !organisation.resellerRequiresReconsent &&
@@ -344,6 +348,7 @@ export const getOrganisationBillingAttributionSummary = async (organisationId: s
     resellerDisplayName: displayName,
     affiliateSlug: profile?.affiliateSlug ?? null,
     resellerProfileId: profile?.id ?? null,
+    isResellerOrganisation: Boolean(ownResellerProfile),
     disclosure:
       stickyBillingActive && displayName
         ? `${RESELLER_BILLING_DISCLOSURE_PREFIX} ${displayName}`

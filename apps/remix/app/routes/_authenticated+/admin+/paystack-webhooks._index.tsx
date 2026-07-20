@@ -24,6 +24,7 @@ import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { trpc } from '@documenso/trpc/react';
 import type { TFindPaystackWebhookEventsResponse } from '@documenso/trpc/server/admin-router/find-paystack-webhook-events.types';
 import { Badge } from '@documenso/ui/primitives/badge';
+import { Button } from '@documenso/ui/primitives/button';
 import type { DataTableColumnDef } from '@documenso/ui/primitives/data-table';
 import { DataTable } from '@documenso/ui/primitives/data-table';
 import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
@@ -37,11 +38,19 @@ import {
 } from '@documenso/ui/primitives/select';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
-import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
+import { cn } from '@documenso/ui/lib/utils';
 
 import { AdminPaystackWebhookEventSheet } from '~/components/general/admin-paystack-webhook-event-sheet';
 import { SettingsHeader } from '~/components/general/settings-header';
 import { appMetaTags } from '~/utils/meta';
+
+const PAYSTACK_WEBHOOK_STATUS_TABS = [
+  { value: '', label: msg`All` },
+  { value: PAYSTACK_WEBHOOK_EVENT_STATUS.SUCCESS, label: msg`Success` },
+  { value: PAYSTACK_WEBHOOK_EVENT_STATUS.FAILED, label: msg`Failed` },
+  { value: PAYSTACK_WEBHOOK_EVENT_STATUS.IGNORED, label: msg`Ignored` },
+  { value: PAYSTACK_WEBHOOK_EVENT_STATUS.PENDING, label: msg`Pending` },
+] as const;
 
 const PAYSTACK_EVENT_TYPES = [
   'charge.success',
@@ -168,6 +177,13 @@ export default function AdminPaystackWebhooksPage() {
     });
   };
 
+  const onStatusFilterChange = (value: string) => {
+    updateSearchParams({
+      status: value === 'all' ? null : value,
+      page: 1,
+    });
+  };
+
   const columns = useMemo(() => {
     return [
       {
@@ -234,35 +250,49 @@ export default function AdminPaystackWebhooksPage() {
       />
 
       <div className="mt-6 flex flex-col gap-4">
-        <Tabs value={parsedSearchParams.status ?? ''} className="overflow-x-auto">
-          <TabsList>
-            <TabsTrigger value="" asChild>
-              <Link to={getStatusHref('')} preventScrollReset>
-                <Trans>All</Trans>
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value={PAYSTACK_WEBHOOK_EVENT_STATUS.SUCCESS} asChild>
-              <Link to={getStatusHref(PAYSTACK_WEBHOOK_EVENT_STATUS.SUCCESS)} preventScrollReset>
-                <Trans>Success</Trans>
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value={PAYSTACK_WEBHOOK_EVENT_STATUS.FAILED} asChild>
-              <Link to={getStatusHref(PAYSTACK_WEBHOOK_EVENT_STATUS.FAILED)} preventScrollReset>
-                <Trans>Failed</Trans>
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value={PAYSTACK_WEBHOOK_EVENT_STATUS.IGNORED} asChild>
-              <Link to={getStatusHref(PAYSTACK_WEBHOOK_EVENT_STATUS.IGNORED)} preventScrollReset>
-                <Trans>Ignored</Trans>
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value={PAYSTACK_WEBHOOK_EVENT_STATUS.PENDING} asChild>
-              <Link to={getStatusHref(PAYSTACK_WEBHOOK_EVENT_STATUS.PENDING)} preventScrollReset>
-                <Trans>Pending</Trans>
-              </Link>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <Select
+          value={parsedSearchParams.status ?? 'all'}
+          onValueChange={onStatusFilterChange}
+          className="md:hidden"
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={t`Status`} />
+          </SelectTrigger>
+          <SelectContent>
+            {PAYSTACK_WEBHOOK_STATUS_TABS.map((tab) => (
+              <SelectItem key={tab.value || 'all'} value={tab.value || 'all'}>
+                {_(tab.label)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="hidden overflow-x-auto md:block">
+          <nav
+            aria-label={_(msg`Webhook status filters`)}
+            className="bg-muted text-muted-foreground inline-flex h-10 flex-wrap items-center justify-center rounded-md p-1"
+          >
+            {PAYSTACK_WEBHOOK_STATUS_TABS.map((tab) => {
+              const isActive = (parsedSearchParams.status ?? '') === tab.value;
+
+              return (
+                <Link
+                  key={tab.value || 'all'}
+                  to={getStatusHref(tab.value)}
+                  preventScrollReset
+                  className={cn(
+                    'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all',
+                    isActive
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'hover:text-foreground',
+                  )}
+                >
+                  {_(tab.label)}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Select
@@ -294,6 +324,91 @@ export default function AdminPaystackWebhooksPage() {
           </div>
         </div>
 
+        {/* Mobile: card list */}
+        <div className="space-y-3 md:hidden">
+          {isLoading ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <div key={`webhook-skeleton-${index}`} className="space-y-2 rounded-lg border p-4">
+                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))
+          ) : isLoadingError ? (
+            <p className="text-destructive text-sm">
+              <Trans>Could not load webhook events.</Trans>
+            </p>
+          ) : results.data.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              <Trans>No webhook events found.</Trans>
+            </p>
+          ) : (
+            results.data.map((event) => (
+              <button
+                key={event.id}
+                type="button"
+                className="hover:bg-muted/50 w-full rounded-lg border p-4 text-left transition-colors"
+                onClick={() => setSelectedEvent(event)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <Badge variant={statusBadgeVariant(event.status)} className="shrink-0">
+                    <StatusIcon status={event.status} />
+                    {event.status}
+                  </Badge>
+                  <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                </div>
+                <p className="text-foreground mt-2 font-mono text-sm font-semibold">{event.event}</p>
+                <p className="text-muted-foreground mt-1 truncate font-mono text-xs">{event.id}</p>
+                {event.reference ? (
+                  <p className="text-muted-foreground mt-2 truncate font-mono text-xs">
+                    {event.reference}
+                  </p>
+                ) : null}
+                {event.customerEmail ? (
+                  <p className="text-muted-foreground mt-1 truncate text-sm">
+                    {event.customerEmail}
+                  </p>
+                ) : null}
+                <p className="text-muted-foreground mt-2 text-xs">
+                  {i18n.date(event.createdAt, {
+                    timeStyle: 'short',
+                    dateStyle: 'short',
+                  })}
+                </p>
+              </button>
+            ))
+          )}
+
+          {results.totalPages > 1 ? (
+            <div className="flex items-center justify-between gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={results.currentPage <= 1}
+                onClick={() => onPaginationChange(results.currentPage - 1, results.perPage)}
+              >
+                <Trans>Previous</Trans>
+              </Button>
+              <p className="text-muted-foreground text-xs">
+                <Trans>
+                  Page {results.currentPage} of {results.totalPages}
+                </Trans>
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={results.currentPage >= results.totalPages}
+                onClick={() => onPaginationChange(results.currentPage + 1, results.perPage)}
+              >
+                <Trans>Next</Trans>
+              </Button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="hidden md:block">
         <DataTable
           columns={columns}
           data={results.data}
@@ -333,6 +448,7 @@ export default function AdminPaystackWebhooksPage() {
         >
           {(table) => <DataTablePagination additionalInformation="VisibleCount" table={table} />}
         </DataTable>
+        </div>
       </div>
 
       {selectedEvent && (

@@ -67,7 +67,7 @@ export default function AdminResellerBulkRatesPage() {
   const summary = formatBulkRateTierSummary(initialTiers);
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full min-w-0 max-w-4xl">
       <SettingsHeader
         title={_(msg`Reseller bulk rates`)}
         subtitle={_(

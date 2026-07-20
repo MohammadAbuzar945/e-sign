@@ -215,6 +215,142 @@ export const AdminResellerBulkRatesEditor = ({
             </span>
           ) : null}
         </div>
+
+        {/* Mobile: card layout */}
+        <div className="space-y-3 p-3 md:hidden">
+          {tiers.map((tier, index) => {
+            const orderTotalCents =
+              tier.minCredits > 0 && tier.pricePerCreditCents > 0
+                ? tier.minCredits * tier.pricePerCreditCents
+                : null;
+
+            return (
+              <div
+                key={`tier-card-${index}`}
+                className="space-y-3 rounded-lg border bg-background p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">
+                    <Trans>Tier {index + 1}</Trans>
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {showEnabledToggle ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs">
+                          <Trans>On</Trans>
+                        </span>
+                        <Switch
+                          checked={tier.isEnabled}
+                          onCheckedChange={(checked) => {
+                            updateTier(index, { isEnabled: checked });
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                      disabled={tiers.length <= 1}
+                      onClick={() => {
+                        const nextTiers = tiers.filter((_, itemIndex) => itemIndex !== index);
+                        setTiers(nextTiers);
+                        setZarInputs(
+                          Object.fromEntries(
+                            nextTiers.map((nextTier, nextIndex) => [
+                              nextIndex,
+                              centsToZarInput(nextTier.pricePerCreditCents),
+                            ]),
+                          ),
+                        );
+                        setCreditInputs(
+                          Object.fromEntries(
+                            nextTiers.map((nextTier, nextIndex) => [
+                              nextIndex,
+                              String(nextTier.minCredits),
+                            ]),
+                          ),
+                        );
+                      }}
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-xs font-medium">
+                      <Trans>Min credits</Trans>
+                    </label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      className="h-9 tabular-nums"
+                      value={creditInputs[index] ?? String(tier.minCredits || '')}
+                      placeholder="500"
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setCreditInputs((current) => ({ ...current, [index]: value }));
+                        updateTier(index, {
+                          minCredits: parseCreditsInput(value),
+                        });
+                      }}
+                      onBlur={() => {
+                        setCreditInputs((current) => ({
+                          ...current,
+                          [index]: tier.minCredits > 0 ? String(tier.minCredits) : '',
+                        }));
+                      }}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-xs font-medium">
+                      <Trans>Rate (ZAR)</Trans>
+                    </label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      className="h-9 tabular-nums"
+                      value={zarInputs[index] ?? centsToZarInput(tier.pricePerCreditCents)}
+                      placeholder="6.00"
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setZarInputs((current) => ({ ...current, [index]: value }));
+                        updateTier(index, {
+                          pricePerCreditCents: parseZarInputToCents(value),
+                        });
+                      }}
+                      onBlur={() => {
+                        setZarInputs((current) => ({
+                          ...current,
+                          [index]: centsToZarInput(tier.pricePerCreditCents),
+                        }));
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-sm">
+                  <span className="text-muted-foreground text-xs">
+                    <Trans>Total at minimum</Trans>
+                    {': '}
+                  </span>
+                  {orderTotalCents !== null ? (
+                    <span className="font-medium">{formatZarFromCents(orderTotalCents)}</span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: table layout */}
+        <div className="hidden overflow-x-auto md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -355,6 +491,7 @@ export const AdminResellerBulkRatesEditor = ({
             })}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {validationError ? (
