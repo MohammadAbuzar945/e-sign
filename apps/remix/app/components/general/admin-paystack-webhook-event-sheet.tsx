@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { Trans, useLingui } from '@lingui/react/macro';
-import { PaystackWebhookEventStatus } from '@prisma/client';
+import { PAYSTACK_WEBHOOK_EVENT_STATUS } from '@documenso/lib/constants/paystack-webhook-event-status';
 
 import type { TFindPaystackWebhookEventsResponse } from '@documenso/trpc/server/admin-router/find-paystack-webhook-events.types';
 import { CopyTextButton } from '@documenso/ui/components/common/copy-text-button';
@@ -78,9 +78,9 @@ export const AdminPaystackWebhookEventSheet = ({
             </h2>
             <Badge
               variant={
-                webhookEvent.status === PaystackWebhookEventStatus.SUCCESS
+                webhookEvent.status === PAYSTACK_WEBHOOK_EVENT_STATUS.SUCCESS
                   ? 'default'
-                  : webhookEvent.status === PaystackWebhookEventStatus.FAILED
+                  : webhookEvent.status === PAYSTACK_WEBHOOK_EVENT_STATUS.FAILED
                     ? 'destructive'
                     : 'secondary'
               }

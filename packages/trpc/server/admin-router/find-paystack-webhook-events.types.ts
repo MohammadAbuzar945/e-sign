@@ -1,10 +1,10 @@
-import { PaystackWebhookEventStatus } from '@prisma/client';
+import { ZPaystackWebhookEventStatusSchema } from '@documenso/lib/constants/paystack-webhook-event-status';
 import { z } from 'zod';
 
 import { ZFindResultResponse, ZFindSearchParamsSchema } from '@documenso/lib/types/search-params';
 
 export const ZFindPaystackWebhookEventsRequestSchema = ZFindSearchParamsSchema.extend({
-  status: z.nativeEnum(PaystackWebhookEventStatus).optional(),
+  status: ZPaystackWebhookEventStatusSchema.optional(),
   event: z.string().optional(),
 });
 
@@ -13,7 +13,7 @@ export const ZPaystackWebhookEventSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   event: z.string(),
-  status: z.nativeEnum(PaystackWebhookEventStatus),
+  status: ZPaystackWebhookEventStatusSchema,
   payload: z.unknown(),
   result: z.unknown().nullable(),
   error: z.string().nullable(),

@@ -1,0 +1,18 @@
+import { z } from 'zod';
+
+export const PAYSTACK_WEBHOOK_EVENT_STATUS = {
+  PENDING: 'PENDING',
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+  IGNORED: 'IGNORED',
+} as const;
+
+export type PaystackWebhookEventStatus =
+  (typeof PAYSTACK_WEBHOOK_EVENT_STATUS)[keyof typeof PAYSTACK_WEBHOOK_EVENT_STATUS];
+
+export const ZPaystackWebhookEventStatusSchema = z.enum([
+  PAYSTACK_WEBHOOK_EVENT_STATUS.PENDING,
+  PAYSTACK_WEBHOOK_EVENT_STATUS.SUCCESS,
+  PAYSTACK_WEBHOOK_EVENT_STATUS.FAILED,
+  PAYSTACK_WEBHOOK_EVENT_STATUS.IGNORED,
+]);
