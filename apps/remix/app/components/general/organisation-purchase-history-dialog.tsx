@@ -40,6 +40,10 @@ const formatHistorySource = (item: OrganisationPurchaseHistoryItem) => {
     return <Trans>Reseller</Trans>;
   }
 
+  if (item.kind === 'bulk') {
+    return <Trans>Bulk</Trans>;
+  }
+
   return <Trans>Nomia</Trans>;
 };
 

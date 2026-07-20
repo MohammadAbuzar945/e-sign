@@ -148,6 +148,22 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             </Button>
           )}
 
+          {isResellerFeatureAllowed && (
+            <Button
+              variant="ghost"
+              className={cn(
+                'justify-start md:w-full',
+                pathname?.startsWith('/admin/reseller-bulk-rates') && 'bg-secondary',
+              )}
+              asChild
+            >
+              <Link to="/admin/reseller-bulk-rates">
+                <StoreIcon className="mr-2 h-5 w-5" />
+                <Trans>Bulk rates</Trans>
+              </Link>
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             className={cn(

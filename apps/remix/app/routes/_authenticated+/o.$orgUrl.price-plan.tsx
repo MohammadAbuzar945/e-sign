@@ -23,6 +23,7 @@ import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { OrganisationPurchaseHistoryDialog } from '~/components/general/organisation-purchase-history-dialog';
+import { ResellerBulkInventoryPurchase } from '~/components/general/reseller-bulk-inventory-purchase';
 import { appMetaTags } from '~/utils/meta';
 import { superLoaderJson, useSuperLoaderData } from '~/utils/super-json-loader';
 
@@ -56,12 +57,22 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     });
   }
 
-  const [subscriptions, purchaseHistory] = await Promise.all([
+  const [subscriptions, purchaseHistory, resellerProfile] = await Promise.all([
     getSubscriptionsByUserId({ organisationId: organisation.id }),
     getOrganisationPurchaseHistory({ organisationId: organisation.id }),
+    prisma.resellerProfile.findUnique({
+      where: { organisationId: organisation.id },
+      select: { id: true, status: true },
+    }),
   ]);
 
-  return superLoaderJson({ subscriptions, purchaseHistory, user, organisation });
+  return superLoaderJson({
+    subscriptions,
+    purchaseHistory,
+    user,
+    organisation,
+    isActiveReseller: resellerProfile?.status === 'ACTIVE',
+  });
 };
 
 const payAsYouGoRedirects = {
@@ -408,7 +419,8 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
   const revalidator = useRevalidator();
 
   const { orgUrl } = params;
-  const { subscriptions, purchaseHistory, organisation } = useSuperLoaderData<typeof loader>();
+  const { subscriptions, purchaseHistory, organisation, isActiveReseller } =
+    useSuperLoaderData<typeof loader>();
   const currentSubscriptionData: any = subscriptions?.find((data: any) => data.status === 'ACTIVE');
   const activeSubscriptionPlanId = currentSubscriptionData?.priceId;
   const activeSubscriptionCode = currentSubscriptionData?.planId;
@@ -851,6 +863,12 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
           purchaseHistory={purchaseHistory}
           getSubscriptionPlanDetails={getActiveSubscriptionDetails}
         />
+
+        {isActiveReseller ? (
+          <div className="mb-8">
+            <ResellerBulkInventoryPurchase organisationId={organisation.id} />
+          </div>
+        ) : null}
 
         {currentSubscriptionData && (
           <div>
