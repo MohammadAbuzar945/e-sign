@@ -1,4 +1,4 @@
-import { ResellerApplicationStatus } from '@prisma/client';
+import { ResellerApplicationStatus, type Prisma } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
@@ -11,12 +11,14 @@ export type CreateResellerApplicationOptions = {
   organisationId: string;
   applicantUserId: number;
   applicantUserEmail: string;
+  variableValues?: Record<string, string>;
 };
 
 export const createResellerApplication = async ({
   organisationId,
   applicantUserId,
   applicantUserEmail,
+  variableValues,
 }: CreateResellerApplicationOptions) => {
   const eligibility = await getResellerEligibility({
     organisationId,
@@ -40,6 +42,11 @@ export const createResellerApplication = async ({
 
   const metrics = await getOrganisationResellerMetrics(organisationId);
 
+  const normalizedVariableValues =
+    variableValues && Object.keys(variableValues).length > 0
+      ? (variableValues as Prisma.InputJsonValue)
+      : undefined;
+
   const applicationData = {
     applicantUserId,
     status: ResellerApplicationStatus.PENDING,
@@ -59,6 +66,7 @@ export const createResellerApplication = async ({
     termsTemplateId: null,
     termsEnvelopeId: null,
     externalDocGenRequestId: null,
+    termsVariableValues: normalizedVariableValues ?? null,
   };
 
   const existingApplication = await prisma.resellerApplication.findUnique({
@@ -71,16 +79,16 @@ export const createResellerApplication = async ({
       existingApplication.status === ResellerApplicationStatus.CANCELLED);
 
   const application = canReapplyExistingApplication
-      ? await prisma.resellerApplication.update({
-          where: { id: existingApplication.id },
-          data: applicationData,
-        })
-      : await prisma.resellerApplication.create({
-          data: {
-            organisationId,
-            ...applicationData,
-          },
-        });
+    ? await prisma.resellerApplication.update({
+        where: { id: existingApplication.id },
+        data: applicationData,
+      })
+    : await prisma.resellerApplication.create({
+        data: {
+          organisationId,
+          ...applicationData,
+        },
+      });
 
   await sendResellerApplicationAdminNotification({
     applicationId: application.id,

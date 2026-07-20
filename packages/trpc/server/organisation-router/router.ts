@@ -1,6 +1,7 @@
 import { router } from '../trpc';
 import { acceptOrganisationMemberInviteRoute } from './accept-organisation-member-invite';
 import { applyResellerRoute } from './apply-reseller';
+import { getOrganisationResellerTermsTemplateVariablesRoute } from './get-reseller-terms-template-variables';
 import { createOrganisationRoute } from './create-organisation';
 import { createOrganisationGroupRoute } from './create-organisation-group';
 import { createOrganisationMemberInvitesRoute } from './create-organisation-member-invites';
@@ -94,6 +95,7 @@ export const organisationRouter = router({
   reseller: {
     getEligibility: getResellerEligibilityRoute,
     apply: applyResellerRoute,
+    getTermsTemplateVariables: getOrganisationResellerTermsTemplateVariablesRoute,
     getProfile: getResellerProfileRoute,
     updateProfile: updateResellerProfileRoute,
     checkAffiliateSlug: checkResellerAffiliateSlugRoute,

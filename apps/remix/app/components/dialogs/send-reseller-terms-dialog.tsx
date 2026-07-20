@@ -9,6 +9,8 @@ import { z } from 'zod';
 import {
   createDefaultResellerTermsVariableValues,
   formatResellerTermsVariableLabel,
+  parseResellerTermsVariableValues,
+  type ResellerTermsVariableValues,
 } from '@documenso/lib/constants/reseller-terms-variables';
 import type { NomiaDocGenTemplateVariable } from '@documenso/lib/server-only/nomia-docgen/fetch-template-variables';
 import { AppError } from '@documenso/lib/errors/app-error';
@@ -40,6 +42,7 @@ type ResellerApplicationRow = {
   snapshotOrgName: string;
   snapshotApplicantName: string;
   snapshotApplicantEmail: string;
+  termsVariableValues?: unknown;
 };
 
 type SendResellerTermsDialogProps = {
@@ -62,15 +65,18 @@ type TResellerTermsFormSchema = z.infer<typeof ZResellerTermsFormSchema>;
 const createDefaultFormValues = ({
   application,
   templateVariables,
+  storedVariableValues,
 }: {
   application: ResellerApplicationRow | null;
   templateVariables: NomiaDocGenTemplateVariable[];
+  storedVariableValues?: ResellerTermsVariableValues | null;
 }): TResellerTermsFormSchema => ({
   variableValues: createDefaultResellerTermsVariableValues({
     organisationName: application?.snapshotOrgName ?? '',
     applicantName: application?.snapshotApplicantName ?? '',
     applicantEmail: application?.snapshotApplicantEmail ?? '',
     templateVariables,
+    storedVariableValues,
   }),
   showInNomia: true,
   buildForEsign: false,
@@ -97,14 +103,19 @@ export const SendResellerTermsDialog = ({
   });
 
   const editableVariables = templateVariablesData?.editableVariables ?? [];
+  const storedVariableValues = useMemo(
+    () => parseResellerTermsVariableValues(application?.termsVariableValues),
+    [application?.termsVariableValues],
+  );
 
   const defaultValues = useMemo(
     () =>
       createDefaultFormValues({
         application,
         templateVariables: editableVariables,
+        storedVariableValues,
       }),
-    [application, editableVariables],
+    [application, editableVariables, storedVariableValues],
   );
 
   const form = useForm<TResellerTermsFormSchema>({
@@ -118,10 +129,11 @@ export const SendResellerTermsDialog = ({
         createDefaultFormValues({
           application,
           templateVariables: editableVariables,
+          storedVariableValues,
         }),
       );
     }
-  }, [application, editableVariables, form, open]);
+  }, [application, editableVariables, form, open, storedVariableValues]);
 
   const { mutateAsync: sendTerms, isPending } = trpc.admin.resellerApplications.sendTerms.useMutation({
     onSuccess: async () => {

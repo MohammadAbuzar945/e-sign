@@ -1335,6 +1335,9 @@ model ResellerApplication {
   termsEnvelopeId         String? @unique
   externalDocGenRequestId String?
 
+  /// Applicant-supplied DocGen template variable values (variable_name -> value).
+  termsVariableValues Json?
+
   @@index([status])
   @@index([applicantUserId])
 }

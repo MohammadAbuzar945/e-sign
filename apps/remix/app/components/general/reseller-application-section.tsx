@@ -1,13 +1,20 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { CheckCircle2Icon, CircleIcon, Clock3Icon, StoreIcon } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useForm } from 'react-hook-form';
 import { Link } from 'react-router';
+import { z } from 'zod';
 
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
+import {
+  createDefaultResellerTermsVariableValues,
+  formatResellerTermsVariableLabel,
+} from '@documenso/lib/constants/reseller-terms-variables';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { cn } from '@documenso/ui/lib/utils';
 import { trpc } from '@documenso/trpc/react';
@@ -21,10 +28,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
+import { Input } from '@documenso/ui/primitives/input';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { ResellerApplicationTimeline } from '~/components/general/reseller-application-timeline';
+
+const ZApplyResellerFormSchema = z.object({
+  variableValues: z.record(z.string(), z.string()),
+});
+
+type TApplyResellerFormSchema = z.infer<typeof ZApplyResellerFormSchema>;
 
 type EligibilityRequirementProps = {
   isMet: boolean;
@@ -100,6 +122,50 @@ export const ResellerApplicationSection = () => {
       enabled: isResellerFeatureAllowed,
     },
   );
+
+  const {
+    data: templateVariablesData,
+    isLoading: isLoadingTemplateVariables,
+    error: templateVariablesError,
+  } = trpc.organisation.reseller.getTermsTemplateVariables.useQuery(
+    {
+      organisationId: organisation.id,
+    },
+    {
+      enabled: isResellerFeatureAllowed && isOpen,
+      retry: false,
+    },
+  );
+
+  const editableVariables = templateVariablesData?.editableVariables ?? [];
+
+  const defaultVariableValues = useMemo(
+    () =>
+      createDefaultResellerTermsVariableValues({
+        organisationName: organisation.name,
+        applicantName: user.name ?? user.email,
+        applicantEmail: user.email,
+        templateVariables: editableVariables,
+      }),
+    [editableVariables, organisation.name, user.email, user.name],
+  );
+
+  const form = useForm<TApplyResellerFormSchema>({
+    resolver: zodResolver(ZApplyResellerFormSchema),
+    defaultValues: {
+      variableValues: defaultVariableValues,
+    },
+  });
+
+  useEffect(() => {
+    if (!isOpen || editableVariables.length === 0) {
+      return;
+    }
+
+    form.reset({
+      variableValues: defaultVariableValues,
+    });
+  }, [defaultVariableValues, editableVariables.length, form, isOpen]);
 
   const utils = trpc.useUtils();
 
@@ -183,6 +249,17 @@ export const ResellerApplicationSection = () => {
       </Badge>
     );
   })();
+
+  const templateVariablesErrorMessage = templateVariablesError
+    ? AppError.parseError(templateVariablesError).message
+    : null;
+
+  const onSubmitApplication = async (values: TApplyResellerFormSchema) => {
+    await applyReseller({
+      organisationId: organisation.id,
+      variableValues: values.variableValues,
+    });
+  };
 
   return (
     <>
@@ -272,7 +349,8 @@ export const ResellerApplicationSection = () => {
                     title={<Trans>Use platform credits</Trans>}
                     description={
                       <Trans>
-                        Use at least {eligibility?.requiredCredits ?? 50} e-sign credits before applying.
+                        Use at least {eligibility?.requiredCredits ?? 50} e-sign credits before
+                        applying.
                       </Trans>
                     }
                     progressLabel={`${eligibility?.creditsUsed ?? 0} / ${eligibility?.requiredCredits ?? 50} credits`}
@@ -319,8 +397,8 @@ export const ResellerApplicationSection = () => {
               {!isLoading && canApply && !hasActiveApplication ? (
                 <p className="text-sm text-muted-foreground">
                   <Trans>
-                    You meet the requirements. Submit your application and our team will send reseller
-                    terms for review.
+                    You meet the requirements. Submit your application and our team will send
+                    reseller terms for review.
                   </Trans>
                 </p>
               ) : null}
@@ -334,57 +412,124 @@ export const ResellerApplicationSection = () => {
       </section>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               <Trans>Apply to become a reseller</Trans>
             </DialogTitle>
             <DialogDescription>
               <Trans>
-                Submit {organisation.name} for review. If approved, you will receive reseller terms
-                for e-signing before your account is activated.
+                Submit {organisation.name} for review. Fill in the terms template details below —
+                these will be used when we send your reseller agreement.
               </Trans>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 rounded-lg border bg-muted/20 p-4 text-sm">
-            <p className="font-medium text-foreground">
-              <Trans>Your organisation snapshot</Trans>
-            </p>
-            <ul className="space-y-2 text-muted-foreground">
-              <li>
-                <Trans>Credits used: {eligibility?.creditsUsed ?? 0}</Trans>
-              </li>
-              <li>
-                <Trans>
-                  Subscription requirement:{' '}
-                  {hasMetSubscription ? (
-                    <span className="text-foreground">
-                      <Trans>Met</Trans>
-                    </span>
-                  ) : (
-                    <span className="text-foreground">
-                      <Trans>Not met yet</Trans>
-                    </span>
-                  )}
-                </Trans>
-              </li>
-            </ul>
-          </div>
+          <Form {...form}>
+            <form className="space-y-4" onSubmit={form.handleSubmit(onSubmitApplication)}>
+              <fieldset className="space-y-4" disabled={isPending || isLoadingTemplateVariables}>
+                <div className="space-y-3 rounded-lg border bg-muted/20 p-4 text-sm">
+                  <p className="font-medium text-foreground">
+                    <Trans>Your organisation snapshot</Trans>
+                  </p>
+                  <ul className="space-y-2 text-muted-foreground">
+                    <li>
+                      <Trans>Credits used: {eligibility?.creditsUsed ?? 0}</Trans>
+                    </li>
+                    <li>
+                      <Trans>
+                        Subscription requirement:{' '}
+                        {hasMetSubscription ? (
+                          <span className="text-foreground">
+                            <Trans>Met</Trans>
+                          </span>
+                        ) : (
+                          <span className="text-foreground">
+                            <Trans>Not met yet</Trans>
+                          </span>
+                        )}
+                      </Trans>
+                    </li>
+                  </ul>
+                </div>
 
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsOpen(false)} disabled={isPending}>
-              <Trans>Cancel</Trans>
-            </Button>
-            <Button
-              loading={isPending}
-              onClick={async () => {
-                await applyReseller({ organisationId: organisation.id });
-              }}
-            >
-              <Trans>Submit application</Trans>
-            </Button>
-          </DialogFooter>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      <Trans>Agreement details</Trans>
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      <Trans>
+                        These values come from the Nomia DocGen terms template and will be reused
+                        when admin sends T&Cs.
+                      </Trans>
+                    </p>
+                  </div>
+
+                  {isLoadingTemplateVariables ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Skeleton className="h-16 rounded-lg" />
+                      <Skeleton className="h-16 rounded-lg" />
+                    </div>
+                  ) : null}
+
+                  {templateVariablesErrorMessage ? (
+                    <p className="text-destructive text-sm">{templateVariablesErrorMessage}</p>
+                  ) : null}
+
+                  {!isLoadingTemplateVariables &&
+                  !templateVariablesErrorMessage &&
+                  editableVariables.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">
+                      <Trans>
+                        No editable template variables were returned. You can still submit your
+                        application.
+                      </Trans>
+                    </p>
+                  ) : null}
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {editableVariables.map((variable) => (
+                      <FormField
+                        key={variable.variable_name}
+                        control={form.control}
+                        name={`variableValues.${variable.variable_name}`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              {formatResellerTermsVariableLabel(variable.variable_name)}
+                            </FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value ?? ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </fieldset>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsOpen(false)}
+                  disabled={isPending}
+                >
+                  <Trans>Cancel</Trans>
+                </Button>
+                <Button
+                  type="submit"
+                  loading={isPending}
+                  disabled={isLoadingTemplateVariables}
+                >
+                  <Trans>Submit application</Trans>
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </>
