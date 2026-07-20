@@ -192,8 +192,8 @@ export const SendResellerTermsDialog = ({
           </DialogTitle>
           <DialogDescription>
             <Trans>
-              Choose how Nomia should generate the document for {application?.snapshotOrgName} and
-              fill in the template variables.
+              Values below are prefilled from what the reseller entered when applying. You can
+              override any field before sending T&Cs for {application?.snapshotOrgName}.
             </Trans>
           </DialogDescription>
         </DialogHeader>
@@ -326,7 +326,14 @@ export const SendResellerTermsDialog = ({
                     name={`variableValues.${variable.variable_name}`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{formatResellerTermsVariableLabel(variable.variable_name)}</FormLabel>
+                        <FormLabel>
+                          {formatResellerTermsVariableLabel(variable.variable_name)}
+                          {storedVariableValues?.[variable.variable_name] !== undefined ? (
+                            <span className="text-muted-foreground ml-1 text-xs font-normal">
+                              <Trans>(from applicant)</Trans>
+                            </span>
+                          ) : null}
+                        </FormLabel>
                         <FormControl>
                           <Input {...field} value={field.value ?? ''} />
                         </FormControl>
