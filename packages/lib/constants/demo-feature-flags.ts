@@ -3,7 +3,7 @@
  * Set a flag to `true` to re-enable that feature after your demo.
  */
 export const DEMO_FEATURE_VISIBILITY = {
-  RESELLER_USER_FACING: false,
+  RESELLER_USER_FACING: true,
   ADMIN_RESELLERS: true,
   ADMIN_BULK_RATES: false,
   ADMIN_PAYSTACK_WEBHOOKS: false,
