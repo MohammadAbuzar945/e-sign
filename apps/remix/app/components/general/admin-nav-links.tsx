@@ -12,6 +12,7 @@ import {
 import { Link, useLocation } from 'react-router';
 
 import { useSession } from '@documenso/lib/client-only/providers/session';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
@@ -59,7 +60,7 @@ export const AdminNavLinks = ({
       icon: Trophy,
       isActive: pathname?.startsWith('/admin/organisation-insights'),
     },
-    ...(isResellerFeatureAllowed
+    ...(isResellerFeatureAllowed && isDemoFeatureVisible('ADMIN_RESELLERS')
       ? [
           {
             href: '/admin/reseller-applications',
@@ -67,6 +68,10 @@ export const AdminNavLinks = ({
             icon: StoreIcon,
             isActive: pathname?.startsWith('/admin/reseller-applications'),
           },
+        ]
+      : []),
+    ...(isResellerFeatureAllowed && isDemoFeatureVisible('ADMIN_BULK_RATES')
+      ? [
           {
             href: '/admin/reseller-bulk-rates',
             label: <Trans>Bulk rates</Trans>,
@@ -75,12 +80,16 @@ export const AdminNavLinks = ({
           },
         ]
       : []),
-    {
-      href: '/admin/paystack-webhooks',
-      label: <Trans>Paystack Webhooks</Trans>,
-      icon: WebhookIcon,
-      isActive: pathname?.startsWith('/admin/paystack-webhooks'),
-    },
+    ...(isDemoFeatureVisible('ADMIN_PAYSTACK_WEBHOOKS')
+      ? [
+          {
+            href: '/admin/paystack-webhooks',
+            label: <Trans>Paystack Webhooks</Trans>,
+            icon: WebhookIcon,
+            isActive: pathname?.startsWith('/admin/paystack-webhooks'),
+          },
+        ]
+      : []),
     {
       href: '/admin/site-settings',
       label: <Trans>Site Settings</Trans>,

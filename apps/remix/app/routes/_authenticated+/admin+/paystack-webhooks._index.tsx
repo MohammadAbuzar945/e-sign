@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans, useLingui as useLinguiMacro } from '@lingui/react/macro';
+import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import {
   PAYSTACK_WEBHOOK_EVENT_STATUS,
   type PaystackWebhookEventStatus,
@@ -15,7 +17,7 @@ import {
   SkipForwardIcon,
   XCircleIcon,
 } from 'lucide-react';
-import { Link, useLocation, useSearchParams } from 'react-router';
+import { Link, redirect, useLocation, useSearchParams } from 'react-router';
 import { z } from 'zod';
 
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
@@ -44,6 +46,8 @@ import { AdminPaystackWebhookEventSheet } from '~/components/general/admin-payst
 import { SettingsHeader } from '~/components/general/settings-header';
 import { appMetaTags } from '~/utils/meta';
 
+import type { Route } from './+types/paystack-webhooks._index';
+
 const PAYSTACK_WEBHOOK_STATUS_TABS = [
   { value: '', label: msg`All` },
   { value: PAYSTACK_WEBHOOK_EVENT_STATUS.SUCCESS, label: msg`Success` },
@@ -68,6 +72,20 @@ const PaystackWebhookSearchParamsSchema = ZUrlSearchParamsSchema.extend({
 
 export function meta() {
   return appMetaTags('Paystack Webhooks');
+}
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const { user } = await getSession(request);
+
+  if (!user) {
+    throw redirect('/');
+  }
+
+  if (!isDemoFeatureVisible('ADMIN_PAYSTACK_WEBHOOKS')) {
+    throw redirect('/admin');
+  }
+
+  return null;
 }
 
 const statusBadgeVariant = (status: PaystackWebhookEventStatus) => {

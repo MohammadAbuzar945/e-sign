@@ -7,6 +7,7 @@ import { Link } from 'react-router';
 
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { cn } from '@documenso/ui/lib/utils';
@@ -25,6 +26,7 @@ import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { ResellerApplicationTimeline } from '~/components/general/reseller-application-timeline';
+import { ComingSoonPlaceholder } from '~/components/general/coming-soon-placeholder';
 
 type EligibilityRequirementProps = {
   isMet: boolean;
@@ -131,6 +133,19 @@ export const ResellerApplicationSection = () => {
 
   if (!isResellerFeatureAllowed) {
     return null;
+  }
+
+  if (!isDemoFeatureVisible('RESELLER_USER_FACING')) {
+    return (
+      <>
+        <hr className="my-8" />
+        <section className="overflow-hidden rounded-xl border bg-gradient-to-br from-muted/40 via-background to-background shadow-sm">
+          <div className="px-6 py-8">
+            <ComingSoonPlaceholder className="min-h-[24vh] border-0 bg-transparent" />
+          </div>
+        </section>
+      </>
+    );
   }
 
   const creditsProgress = eligibility

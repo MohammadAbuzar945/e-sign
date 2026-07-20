@@ -22,6 +22,7 @@ import {
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import { OrganisationPurchaseHistoryDialog } from '~/components/general/organisation-purchase-history-dialog';
 import { ResellerBulkInventoryPurchase } from '~/components/general/reseller-bulk-inventory-purchase';
 import { appMetaTags } from '~/utils/meta';
@@ -932,7 +933,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
           ))}
         </div>
 
-        {isActiveReseller ? (
+        {isActiveReseller && isDemoFeatureVisible('RESELLER_USER_FACING') ? (
           <div className="mt-8">
             <ResellerBulkInventoryPurchase organisationId={organisation.id} />
           </div>

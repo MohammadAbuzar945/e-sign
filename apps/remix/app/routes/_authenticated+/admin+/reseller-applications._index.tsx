@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Link, redirect, useLocation, useSearchParams } from 'react-router';
 
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import {
@@ -29,6 +30,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   const { user } = await getSession(request);
 
   if (!user?.email || !isResellerFeatureAllowedEmail(user.email)) {
+    throw redirect('/admin');
+  }
+
+  if (!isDemoFeatureVisible('ADMIN_RESELLERS')) {
     throw redirect('/admin');
   }
 
