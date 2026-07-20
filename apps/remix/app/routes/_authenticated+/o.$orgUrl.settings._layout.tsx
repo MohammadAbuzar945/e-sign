@@ -17,6 +17,7 @@ import { useSession } from '@documenso/lib/client-only/providers/session';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
+import { resolveOrganisationBillingPath } from '@documenso/lib/utils/organisation-billing-path';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import { cn } from '@documenso/ui/lib/utils';
@@ -46,8 +47,7 @@ export default function SettingsLayout() {
       organisationId: organisation.id,
     },
     {
-      enabled:
-        isResellerFeatureAllowed || (isOrganisationOwner && isBillingEnabled),
+      enabled: isResellerFeatureAllowed,
     },
   );
 
@@ -60,15 +60,10 @@ export default function SettingsLayout() {
     },
   );
 
-  const shouldUseAffiliateSignupBilling =
-    !resellerProfile &&
-    billingAttribution?.stickyBillingActive &&
-    billingAttribution.affiliateSlug &&
-    billingAttribution.associationSource === 'AFFILIATE_SIGNUP';
-
-  const billingPath = shouldUseAffiliateSignupBilling
-    ? `/r/${billingAttribution.affiliateSlug}`
-    : `/o/${organisation.url}/price-plan`;
+  const billingPath = resolveOrganisationBillingPath({
+    organisationUrl: organisation.url,
+    billingAttribution: billingAttribution ?? undefined,
+  });
 
   const organisationSettingRoutes = [
     {

@@ -4,6 +4,7 @@ import { Trans } from '@lingui/react/macro';
 import { redirect } from 'react-router';
 
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { trpc } from '@documenso/trpc/react';
@@ -28,6 +29,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   const { user } = await getSession(request);
 
   if (!user?.email || !isResellerFeatureAllowedEmail(user.email)) {
+    throw redirect('/admin');
+  }
+
+  if (!isDemoFeatureVisible('ADMIN_BULK_RATES')) {
     throw redirect('/admin');
   }
 
@@ -67,7 +72,7 @@ export default function AdminResellerBulkRatesPage() {
   const summary = formatBulkRateTierSummary(initialTiers);
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full min-w-0 max-w-4xl">
       <SettingsHeader
         title={_(msg`Reseller bulk rates`)}
         subtitle={_(

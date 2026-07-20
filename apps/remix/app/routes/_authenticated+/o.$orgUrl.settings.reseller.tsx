@@ -12,6 +12,7 @@ import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { putFile } from '@documenso/lib/universal/upload/put-file';
@@ -65,6 +66,7 @@ import {
 } from '~/components/forms/reseller-affiliate-page-form';
 import { ResellerAffiliateSlugForm } from '~/components/forms/reseller-affiliate-slug-form';
 import { GenericErrorLayout } from '~/components/general/generic-error-layout';
+import { ComingSoonPlaceholder } from '~/components/general/coming-soon-placeholder';
 import {
   ResellerOnboardingChecklist,
   type ResellerSetupSection,
@@ -229,6 +231,18 @@ export default function OrganisationSettingsResellerPage() {
         primaryButton={null}
         secondaryButton={null}
       />
+    );
+  }
+
+  if (!isDemoFeatureVisible('RESELLER_USER_FACING')) {
+    return (
+      <div>
+        <SettingsHeader
+          title={_(msg`Reseller`)}
+          subtitle={_(msg`Reseller programme settings.`)}
+        />
+        <ComingSoonPlaceholder className="mt-6" />
+      </div>
     );
   }
 
