@@ -44,6 +44,21 @@ const ZResellerFormSchema = ZSiteSettingsResellerSchema;
 type TBannerFormSchema = z.infer<typeof ZBannerFormSchema>;
 type TResellerFormSchema = z.infer<typeof ZResellerFormSchema>;
 
+const toOptionalSiteSettingId = (value: number | null | undefined) =>
+  value && value > 0 ? value : undefined;
+
+const parseOptionalSiteSettingIdInput = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+
+  if (!digits) {
+    return undefined;
+  }
+
+  const parsed = Number(digits);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+};
+
 export async function loader({ request }: Route.LoaderArgs) {
   const { user } = await getSession(request);
   const settings = await getSiteSettings();
@@ -86,10 +101,12 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
       id: SITE_SETTINGS_RESELLER_ID,
       enabled: reseller?.enabled ?? true,
       data: {
-        termsDocGenTemplateId: reseller?.data?.termsDocGenTemplateId,
-        termsDocGenOrganizationId: reseller?.data?.termsDocGenOrganizationId,
-        termsDocGenWorkspaceId: reseller?.data?.termsDocGenWorkspaceId,
-        termsInternalTemplateId: reseller?.data?.termsInternalTemplateId,
+        termsDocGenTemplateId: toOptionalSiteSettingId(reseller?.data?.termsDocGenTemplateId),
+        termsDocGenOrganizationId: toOptionalSiteSettingId(
+          reseller?.data?.termsDocGenOrganizationId,
+        ),
+        termsDocGenWorkspaceId: toOptionalSiteSettingId(reseller?.data?.termsDocGenWorkspaceId),
+        termsInternalTemplateId: toOptionalSiteSettingId(reseller?.data?.termsInternalTemplateId),
         docGenApiUrl: reseller?.data?.docGenApiUrl ?? '',
         docGenAuthToken: reseller?.data?.docGenAuthToken ?? '',
         docGenApiKey: reseller?.data?.docGenApiKey ?? '',
@@ -420,19 +437,23 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="Set organization ID"
                         value={field.value ?? ''}
                         onChange={(event) => {
-                          const value = event.target.value;
-                          field.onChange(value ? Number(value) : undefined);
+                          field.onChange(parseOptionalSiteSettingIdInput(event.target.value));
                         }}
                       />
                     </FormControl>
                     <FormDescription>
                       <Trans>
-                        Nomia organization ID used to fetch template variables (e.g. 20).
+                        Nomia organization ID used to fetch template variables (e.g. 20). Leave
+                        blank until you set it.
                       </Trans>
                     </FormDescription>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -447,19 +468,23 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="Set template ID"
                         value={field.value ?? ''}
                         onChange={(event) => {
-                          const value = event.target.value;
-                          field.onChange(value ? Number(value) : undefined);
+                          field.onChange(parseOptionalSiteSettingIdInput(event.target.value));
                         }}
                       />
                     </FormControl>
                     <FormDescription>
                       <Trans>
-                        Nomia DocGen template ID for reseller T&Cs (e.g. 127).
+                        Nomia DocGen template ID for reseller T&Cs (e.g. 127). Leave blank until you
+                        set it.
                       </Trans>
                     </FormDescription>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -474,17 +499,22 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="Set workspace ID"
                         value={field.value ?? ''}
                         onChange={(event) => {
-                          const value = event.target.value;
-                          field.onChange(value ? Number(value) : undefined);
+                          field.onChange(parseOptionalSiteSettingIdInput(event.target.value));
                         }}
                       />
                     </FormControl>
                     <FormDescription>
-                      <Trans>Nomia workspace ID (e.g. 35).</Trans>
+                      <Trans>
+                        Nomia workspace ID (e.g. 35). Leave blank until you set it.
+                      </Trans>
                     </FormDescription>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -499,17 +529,23 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="Set internal template ID"
                         value={field.value ?? ''}
                         onChange={(event) => {
-                          const value = event.target.value;
-                          field.onChange(value ? Number(value) : undefined);
+                          field.onChange(parseOptionalSiteSettingIdInput(event.target.value));
                         }}
                       />
                     </FormControl>
                     <FormDescription>
-                      <Trans>Fallback internal template ID if DocGen is not configured.</Trans>
+                      <Trans>
+                        Fallback internal template ID if DocGen is not configured. Leave blank until
+                        you set it.
+                      </Trans>
                     </FormDescription>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
