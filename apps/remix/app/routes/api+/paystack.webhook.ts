@@ -546,6 +546,8 @@ const processPaystackWebhookEvent = async (event: {
             grossAmount,
             purchaseGroupId:
               typeof metadata?.purchaseGroupId === 'string' ? metadata.purchaseGroupId : undefined,
+            purchaseType:
+              metadata?.type === 'reseller-bulk-purchase' ? 'BULK' : 'PAYG',
           });
 
         purchaseId = purchase.id;
@@ -570,12 +572,19 @@ const processPaystackWebhookEvent = async (event: {
         }
       }
 
-      console.log('Pay as you go credits added successfully');
+      console.log(
+        metadata?.type === 'reseller-bulk-purchase'
+          ? 'Bulk inventory credits added successfully'
+          : 'Pay as you go credits added successfully',
+      );
 
       return {
         status: PaystackWebhookEventStatus.SUCCESS,
         result: {
-          action: 'payg_credits_added',
+          action:
+            metadata?.type === 'reseller-bulk-purchase'
+              ? 'bulk_inventory_credits_added'
+              : 'payg_credits_added',
           organisationId: organisation.id,
           userId: user.id,
           creditsAdded: !Number.isNaN(creditsToAdd) && creditsToAdd > 0 ? creditsToAdd : 0,

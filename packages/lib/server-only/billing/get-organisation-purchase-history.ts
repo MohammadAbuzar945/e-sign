@@ -402,7 +402,10 @@ export const getOrganisationPurchaseHistory = async ({
       purchaseGroupId: purchase.purchaseGroupId,
       date: purchase.completedAt ?? purchase.createdAt,
       kind: 'pay_as_you_go',
-      title: 'Pay as you go top-up',
+      title:
+        purchase.purchaseType === 'BULK'
+          ? 'Bulk inventory top-up'
+          : 'Pay as you go top-up',
       totalCredits: purchase.credits,
       totalGrossAmount: purchase.grossAmount,
       currency: purchase.currency,
@@ -414,7 +417,10 @@ export const getOrganisationPurchaseHistory = async ({
           currency: purchase.currency,
           status: purchase.status,
           reference: purchase.paystackReference,
-          description: 'Pay as you go top-up',
+          description:
+            purchase.purchaseType === 'BULK'
+              ? 'Bulk inventory top-up'
+              : 'Pay as you go top-up',
         }),
       ],
     });

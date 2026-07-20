@@ -1226,6 +1226,11 @@ enum OrganisationCreditPurchaseStatus {
   FAILED
 }
 
+enum OrganisationCreditPurchaseType {
+  PAYG
+  BULK
+}
+
 model OrganisationCreditPurchase {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -1242,6 +1247,7 @@ model OrganisationCreditPurchase {
   grossAmount       Int
   currency          String @default("ZAR")
   status            OrganisationCreditPurchaseStatus @default(PENDING)
+  purchaseType      OrganisationCreditPurchaseType @default(PAYG)
   completedAt       DateTime?
   purchaseGroupId   String?
 
@@ -1249,6 +1255,7 @@ model OrganisationCreditPurchase {
   @@index([status])
   @@index([createdAt])
   @@index([purchaseGroupId])
+  @@index([purchaseType])
 }
 
 enum ResellerApplicationStatus {
@@ -1387,13 +1394,46 @@ model ResellerProfile {
   isDelinquent     Boolean   @default(false)
   delinquentAt     DateTime?
 
+  // Bulk inventory pricing: when true, use ResellerProfileBulkRateTier instead of global
+  bulkRatesUseCustom Boolean @default(false)
+
   packages     ResellerPackage[]
   transactions ResellerCreditTransaction[] @relation("ResellerTransactions")
   associatedBuyerOrganisations Organisation[] @relation("AssociatedBuyerOrganisations")
+  bulkRateTiers ResellerProfileBulkRateTier[]
 
   @@index([affiliateSlug])
   @@index([status])
   @@index([isDelinquent])
+}
+
+model ResellerBulkRateTier {
+  id                  String   @id @default(cuid())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  minCredits          Int
+  pricePerCreditCents Int
+  isEnabled           Boolean  @default(true)
+
+  @@unique([minCredits])
+  @@index([isEnabled, minCredits])
+}
+
+model ResellerProfileBulkRateTier {
+  id                  String   @id @default(cuid())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  resellerProfileId   String
+  resellerProfile     ResellerProfile @relation(fields: [resellerProfileId], references: [id], onDelete: Cascade)
+
+  minCredits          Int
+  pricePerCreditCents Int
+  isEnabled           Boolean  @default(true)
+
+  @@unique([resellerProfileId, minCredits])
+  @@index([resellerProfileId, isEnabled, minCredits])
 }
 
 model ResellerPackage {

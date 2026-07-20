@@ -1,7 +1,7 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -110,6 +110,19 @@ type ResellerPayoutSettingsProps = {
   payoutBlockingReason: string | null;
   onUpdated: () => Promise<unknown> | unknown;
 };
+const SavedDetailRow = ({
+  label,
+  value,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+}) => (
+  <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-3">
+    <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+    <dd className="whitespace-pre-wrap text-sm text-foreground">{value}</dd>
+  </div>
+);
+
 export const ResellerPayoutSettings = ({
   organisationId,
   payoutMode,
@@ -134,11 +147,21 @@ export const ResellerPayoutSettings = ({
   const { _ } = useLingui();
   const { toast } = useToast();
   const [selectedMode, setSelectedMode] = useState(payoutMode);
+  const hasSavedBankDetails = Boolean(
+    bankName || bankAccountNumber || bankAccountName || physicalAddress,
+  );
+  const [isEditingBankDetails, setIsEditingBankDetails] = useState(!hasSavedBankDetails);
   const defaultAccountType = bankAccountType ?? 'personal';
 
   useEffect(() => {
     setSelectedMode(payoutMode);
   }, [payoutMode]);
+
+  useEffect(() => {
+    if (!hasSavedBankDetails) {
+      setIsEditingBankDetails(true);
+    }
+  }, [hasSavedBankDetails]);
 
   const { data: banksData, isLoading: isLoadingBanks } =
     trpc.organisation.reseller.listBanks.useQuery(
@@ -192,6 +215,7 @@ export const ResellerPayoutSettings = ({
         bankForm.resetField('bankAccountNumber');
         bankForm.resetField('documentNumber');
         bankForm.resetField('confirmDetailsAccurate');
+        setIsEditingBankDetails(false);
         toast({
           title: _(msg`Bank details submitted`),
           description: _(
@@ -207,6 +231,11 @@ export const ResellerPayoutSettings = ({
         });
       },
     });
+
+  const handleCancelBankDetailsEdit = () => {
+    bankForm.reset();
+    setIsEditingBankDetails(false);
+  };
 
   const { mutateAsync: refreshSubaccountStatus, isPending: isRefreshingSubaccountStatus } =
     trpc.organisation.reseller.refreshSubaccountStatus.useMutation({
@@ -412,29 +441,114 @@ export const ResellerPayoutSettings = ({
             </Alert>
           ) : null}
 
-          {bankAccountNumber ? (
-            <p className="text-xs text-muted-foreground">
-              <Trans>Saved account: {bankAccountNumber}</Trans>
-            </p>
-          ) : null}
+          {hasSavedBankDetails && !isEditingBankDetails ? (
+            <div className="space-y-4">
+              <dl className="space-y-3 rounded-md border bg-muted/20 p-4">
+                <SavedDetailRow
+                  label={<Trans>Bank</Trans>}
+                  value={bankName || '—'}
+                />
+                <SavedDetailRow
+                  label={<Trans>Account number</Trans>}
+                  value={bankAccountNumber || '—'}
+                />
+                <SavedDetailRow
+                  label={<Trans>Account name</Trans>}
+                  value={bankAccountName || '—'}
+                />
+                <SavedDetailRow
+                  label={<Trans>Account type</Trans>}
+                  value={
+                    bankAccountType
+                      ? getResellerBankAccountTypeLabel(bankAccountType)
+                      : '—'
+                  }
+                />
+                <SavedDetailRow
+                  label={<Trans>Document type</Trans>}
+                  value={
+                    bankDocumentType
+                      ? getResellerBankDocumentTypeLabel(bankDocumentType)
+                      : '—'
+                  }
+                />
+                <SavedDetailRow
+                  label={<Trans>Document number</Trans>}
+                  value={bankDocumentNumber || '—'}
+                />
+                <SavedDetailRow
+                  label={<Trans>Physical address</Trans>}
+                  value={physicalAddress || '—'}
+                />
+                <SavedDetailRow
+                  label={<Trans>Contact phone</Trans>}
+                  value={contactPhone || '—'}
+                />
+                <SavedDetailRow
+                  label={<Trans>Contact email</Trans>}
+                  value={contactEmail || '—'}
+                />
+                <SavedDetailRow
+                  label={<Trans>VAT status</Trans>}
+                  value={
+                    vatStatus === 'REGISTERED' ? (
+                      <Trans>VAT registered</Trans>
+                    ) : vatStatus === 'NOT_REGISTERED' ? (
+                      <Trans>Not VAT registered</Trans>
+                    ) : (
+                      '—'
+                    )
+                  }
+                />
+                {vatStatus === 'REGISTERED' ? (
+                  <SavedDetailRow
+                    label={<Trans>VAT number</Trans>}
+                    value={vatNumber || '—'}
+                  />
+                ) : null}
+              </dl>
 
-          {bankDocumentNumber ? (
-            <p className="text-xs text-muted-foreground">
-              <Trans>Saved document: {bankDocumentNumber}</Trans>
-            </p>
-          ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditingBankDetails(true);
+                }}
+              >
+                <Trans>Update details</Trans>
+              </Button>
+            </div>
+          ) : (
+            <Form {...bankForm}>
+              <form
+                className="space-y-4"
+                onSubmit={bankForm.handleSubmit(async (values) => {
+                  await updateBankDetails({
+                    organisationId,
+                    data: values,
+                  });
+                })}
+              >
+                <fieldset disabled={isUpdatingBank} className="space-y-4">
+                  {hasSavedBankDetails ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-muted-foreground">
+                        <Trans>
+                          Update your bank and reseller details below. Confirm accuracy before
+                          saving.
+                        </Trans>
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelBankDetailsEdit}
+                      >
+                        <Trans>Cancel</Trans>
+                      </Button>
+                    </div>
+                  ) : null}
 
-          <Form {...bankForm}>
-            <form
-              className="space-y-4"
-              onSubmit={bankForm.handleSubmit(async (values) => {
-                await updateBankDetails({
-                  organisationId,
-                  data: values,
-                });
-              })}
-            >
-              <fieldset disabled={isUpdatingBank} className="space-y-4">
                 <FormField
                   control={bankForm.control}
                   name="bankCode"
@@ -764,12 +878,28 @@ export const ResellerPayoutSettings = ({
                   )}
                 />
 
-                <Button type="submit" loading={isUpdatingBank}>
-                  <Trans>Submit for verification</Trans>
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="submit" loading={isUpdatingBank}>
+                    {hasSavedBankDetails ? (
+                      <Trans>Save updated details</Trans>
+                    ) : (
+                      <Trans>Submit for verification</Trans>
+                    )}
+                  </Button>
+                  {hasSavedBankDetails ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCancelBankDetailsEdit}
+                    >
+                      <Trans>Cancel</Trans>
+                    </Button>
+                  ) : null}
+                </div>
               </fieldset>
             </form>
           </Form>
+          )}
         </div>
       )}
     </div>

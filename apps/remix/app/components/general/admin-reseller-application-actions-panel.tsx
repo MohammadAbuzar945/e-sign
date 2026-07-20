@@ -21,6 +21,8 @@ import { Label } from '@documenso/ui/primitives/label';
 import { Separator } from '@documenso/ui/primitives/separator';
 import { Switch } from '@documenso/ui/primitives/switch';
 
+import { AdminResellerCustomBulkRatesPanel } from '~/components/general/admin-reseller-custom-bulk-rates-panel';
+
 type ResellerApplicationRow = {
   id: string;
   status: string;
@@ -34,6 +36,7 @@ type ResellerApplicationRow = {
   liveOrgUserCount?: number;
   snapshotOrgSignupDate?: Date | string;
   resellerProfile?: {
+    id?: string;
     status: string;
     allowNegativeCredits?: boolean;
     availableCredits?: number;
@@ -307,6 +310,13 @@ export const AdminResellerApplicationActionsPanel = ({
                 </div>
               </section>
             )}
+
+            {profile.id ? (
+              <>
+                <Separator />
+                <AdminResellerCustomBulkRatesPanel resellerProfileId={profile.id} />
+              </>
+            ) : null}
 
             <Separator />
 

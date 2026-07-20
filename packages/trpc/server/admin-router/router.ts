@@ -28,6 +28,12 @@ import {
 } from './reseller-applications';
 import { getResellerTermsTemplateVariablesRoute } from './get-reseller-terms-template-variables';
 import { reactivateResellerProfileRoute } from './reactivate-reseller-profile';
+import {
+  getResellerBulkRatesRoute,
+  listGlobalResellerBulkRatesRoute,
+  replaceGlobalResellerBulkRatesRoute,
+  replaceResellerBulkRatesRoute,
+} from './reseller-bulk-rates';
 import { updateResellerAllowNegativeCreditsRoute } from './update-reseller-allow-negative-credits';
 import {
   refreshResellerBankAccountStatusRoute,
@@ -77,6 +83,12 @@ export const adminRouter = router({
     refreshBankAccountStatus: refreshResellerBankAccountStatusRoute,
     retrySubaccount: retryResellerSubaccountRoute,
     delete: deleteResellerRoute,
+  },
+  resellerBulkRates: {
+    listGlobal: listGlobalResellerBulkRatesRoute,
+    replaceGlobal: replaceGlobalResellerBulkRatesRoute,
+    getForReseller: getResellerBulkRatesRoute,
+    replaceForReseller: replaceResellerBulkRatesRoute,
   },
   stripe: {
     createCustomer: createStripeCustomerRoute,

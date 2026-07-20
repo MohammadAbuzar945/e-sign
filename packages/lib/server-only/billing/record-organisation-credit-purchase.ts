@@ -1,4 +1,4 @@
-import { OrganisationCreditPurchaseStatus } from '@prisma/client';
+import { OrganisationCreditPurchaseStatus, OrganisationCreditPurchaseType } from '@prisma/client';
 
 import { prisma } from '@documenso/prisma';
 
@@ -10,6 +10,7 @@ export type CreatePendingOrganisationCreditPurchaseOptions = {
   grossAmount: number;
   currency?: string;
   purchaseGroupId?: string;
+  purchaseType?: OrganisationCreditPurchaseType;
 };
 
 export type CompleteOrganisationCreditPurchaseOptions = {
@@ -20,6 +21,7 @@ export type CompleteOrganisationCreditPurchaseOptions = {
   grossAmount: number;
   currency?: string;
   purchaseGroupId?: string;
+  purchaseType?: OrganisationCreditPurchaseType;
 };
 
 export type CompleteOrganisationCreditPurchaseResult = {
@@ -32,6 +34,7 @@ export type CompleteOrganisationCreditPurchaseResult = {
     grossAmount: number;
     currency: string;
     purchaseGroupId: string | null;
+    purchaseType: OrganisationCreditPurchaseType;
     status: OrganisationCreditPurchaseStatus;
   };
   isNewlyCompleted: boolean;
@@ -45,6 +48,7 @@ export const createPendingOrganisationCreditPurchase = async ({
   grossAmount,
   currency = 'ZAR',
   purchaseGroupId,
+  purchaseType = OrganisationCreditPurchaseType.PAYG,
 }: CreatePendingOrganisationCreditPurchaseOptions) => {
   return await prisma.organisationCreditPurchase.upsert({
     where: {
@@ -58,6 +62,7 @@ export const createPendingOrganisationCreditPurchase = async ({
       grossAmount,
       currency,
       purchaseGroupId,
+      purchaseType,
       status: OrganisationCreditPurchaseStatus.PENDING,
     },
     update: {
@@ -67,6 +72,7 @@ export const createPendingOrganisationCreditPurchase = async ({
       grossAmount,
       currency,
       purchaseGroupId,
+      purchaseType,
       status: OrganisationCreditPurchaseStatus.PENDING,
       completedAt: null,
     },
@@ -81,6 +87,7 @@ export const completeOrganisationCreditPurchase = async ({
   grossAmount,
   currency = 'ZAR',
   purchaseGroupId,
+  purchaseType,
 }: CompleteOrganisationCreditPurchaseOptions): Promise<CompleteOrganisationCreditPurchaseResult> => {
   const existingPurchase = await prisma.organisationCreditPurchase.findUnique({
     where: {
@@ -96,6 +103,8 @@ export const completeOrganisationCreditPurchase = async ({
   }
 
   const completedAt = new Date();
+  const resolvedPurchaseType =
+    purchaseType ?? existingPurchase?.purchaseType ?? OrganisationCreditPurchaseType.PAYG;
 
   if (existingPurchase) {
     const purchase = await prisma.organisationCreditPurchase.update({
@@ -109,6 +118,7 @@ export const completeOrganisationCreditPurchase = async ({
         grossAmount,
         currency,
         purchaseGroupId: purchaseGroupId ?? existingPurchase.purchaseGroupId,
+        purchaseType: resolvedPurchaseType,
         status: OrganisationCreditPurchaseStatus.COMPLETED,
         completedAt,
       },
@@ -129,6 +139,7 @@ export const completeOrganisationCreditPurchase = async ({
       grossAmount,
       currency,
       purchaseGroupId,
+      purchaseType: resolvedPurchaseType,
       status: OrganisationCreditPurchaseStatus.COMPLETED,
       completedAt,
     },
