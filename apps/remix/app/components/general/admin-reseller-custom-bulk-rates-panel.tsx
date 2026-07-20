@@ -215,7 +215,7 @@ export const AdminResellerCustomBulkRatesPanel = ({
       </section>
 
       <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
-        <DialogContent className="max-w-3xl gap-0 p-0">
+        <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-3xl gap-0 overflow-y-auto p-0">
           <DialogHeader className="space-y-2 border-b px-6 py-5">
             <DialogTitle>
               <Trans>Custom bulk rates</Trans>

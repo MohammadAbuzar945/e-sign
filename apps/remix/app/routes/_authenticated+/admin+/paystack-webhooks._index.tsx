@@ -250,22 +250,23 @@ export default function AdminPaystackWebhooksPage() {
       />
 
       <div className="mt-6 flex flex-col gap-4">
-        <Select
-          value={parsedSearchParams.status ?? 'all'}
-          onValueChange={onStatusFilterChange}
-          className="md:hidden"
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={t`Status`} />
-          </SelectTrigger>
-          <SelectContent>
-            {PAYSTACK_WEBHOOK_STATUS_TABS.map((tab) => (
-              <SelectItem key={tab.value || 'all'} value={tab.value || 'all'}>
-                {_(tab.label)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="md:hidden">
+          <Select
+            value={parsedSearchParams.status ?? 'all'}
+            onValueChange={onStatusFilterChange}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t`Status`} />
+            </SelectTrigger>
+            <SelectContent>
+              {PAYSTACK_WEBHOOK_STATUS_TABS.map((tab) => (
+                <SelectItem key={tab.value || 'all'} value={tab.value || 'all'}>
+                  {_(tab.label)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="hidden overflow-x-auto md:block">
           <nav

@@ -86,7 +86,7 @@ export const AppNavMobile = ({ isMenuOpen, onMenuOpenChange }: AppNavMobileProps
 
   return (
     <Sheet open={isMenuOpen} onOpenChange={onMenuOpenChange}>
-      <SheetContent className="flex w-full max-w-[350px] flex-col">
+      <SheetContent className="flex w-full max-w-[min(100vw-2rem,22rem)] flex-col overflow-y-auto">
         <Link to="/" onClick={handleMenuItemClick}>
           <BrandingLogo alt="Nomia Logo" className="h-6 w-auto" />
         </Link>
