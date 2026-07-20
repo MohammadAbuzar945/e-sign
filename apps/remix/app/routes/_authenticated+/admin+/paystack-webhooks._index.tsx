@@ -3,7 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans, useLingui as useLinguiMacro } from '@lingui/react/macro';
-import { PaystackWebhookEventStatus } from '@prisma/client';
+import {
+  PAYSTACK_WEBHOOK_EVENT_STATUS,
+  type PaystackWebhookEventStatus,
+  ZPaystackWebhookEventStatusSchema,
+} from '@documenso/lib/constants/paystack-webhook-event-status';
 import {
   CheckCircle2Icon,
   ChevronRightIcon,
@@ -49,7 +53,7 @@ const PAYSTACK_EVENT_TYPES = [
 ] as const;
 
 const PaystackWebhookSearchParamsSchema = ZUrlSearchParamsSchema.extend({
-  status: z.nativeEnum(PaystackWebhookEventStatus).optional(),
+  status: ZPaystackWebhookEventStatusSchema.optional(),
   event: z.string().optional(),
 });
 
@@ -59,13 +63,13 @@ export function meta() {
 
 const statusBadgeVariant = (status: PaystackWebhookEventStatus) => {
   switch (status) {
-    case PaystackWebhookEventStatus.SUCCESS:
+    case PAYSTACK_WEBHOOK_EVENT_STATUS.SUCCESS:
       return 'default' as const;
-    case PaystackWebhookEventStatus.FAILED:
+    case PAYSTACK_WEBHOOK_EVENT_STATUS.FAILED:
       return 'destructive' as const;
-    case PaystackWebhookEventStatus.IGNORED:
+    case PAYSTACK_WEBHOOK_EVENT_STATUS.IGNORED:
       return 'secondary' as const;
-    case PaystackWebhookEventStatus.PENDING:
+    case PAYSTACK_WEBHOOK_EVENT_STATUS.PENDING:
     default:
       return 'neutral' as const;
   }
@@ -73,13 +77,13 @@ const statusBadgeVariant = (status: PaystackWebhookEventStatus) => {
 
 const StatusIcon = ({ status }: { status: PaystackWebhookEventStatus }) => {
   switch (status) {
-    case PaystackWebhookEventStatus.SUCCESS:
+    case PAYSTACK_WEBHOOK_EVENT_STATUS.SUCCESS:
       return <CheckCircle2Icon className="mr-2 h-4 w-4" />;
-    case PaystackWebhookEventStatus.FAILED:
+    case PAYSTACK_WEBHOOK_EVENT_STATUS.FAILED:
       return <XCircleIcon className="mr-2 h-4 w-4" />;
-    case PaystackWebhookEventStatus.IGNORED:
+    case PAYSTACK_WEBHOOK_EVENT_STATUS.IGNORED:
       return <SkipForwardIcon className="mr-2 h-4 w-4" />;
-    case PaystackWebhookEventStatus.PENDING:
+    case PAYSTACK_WEBHOOK_EVENT_STATUS.PENDING:
     default:
       return <CircleDashedIcon className="mr-2 h-4 w-4" />;
   }
@@ -237,23 +241,23 @@ export default function AdminPaystackWebhooksPage() {
                 <Trans>All</Trans>
               </Link>
             </TabsTrigger>
-            <TabsTrigger value={PaystackWebhookEventStatus.SUCCESS} asChild>
-              <Link to={getStatusHref(PaystackWebhookEventStatus.SUCCESS)} preventScrollReset>
+            <TabsTrigger value={PAYSTACK_WEBHOOK_EVENT_STATUS.SUCCESS} asChild>
+              <Link to={getStatusHref(PAYSTACK_WEBHOOK_EVENT_STATUS.SUCCESS)} preventScrollReset>
                 <Trans>Success</Trans>
               </Link>
             </TabsTrigger>
-            <TabsTrigger value={PaystackWebhookEventStatus.FAILED} asChild>
-              <Link to={getStatusHref(PaystackWebhookEventStatus.FAILED)} preventScrollReset>
+            <TabsTrigger value={PAYSTACK_WEBHOOK_EVENT_STATUS.FAILED} asChild>
+              <Link to={getStatusHref(PAYSTACK_WEBHOOK_EVENT_STATUS.FAILED)} preventScrollReset>
                 <Trans>Failed</Trans>
               </Link>
             </TabsTrigger>
-            <TabsTrigger value={PaystackWebhookEventStatus.IGNORED} asChild>
-              <Link to={getStatusHref(PaystackWebhookEventStatus.IGNORED)} preventScrollReset>
+            <TabsTrigger value={PAYSTACK_WEBHOOK_EVENT_STATUS.IGNORED} asChild>
+              <Link to={getStatusHref(PAYSTACK_WEBHOOK_EVENT_STATUS.IGNORED)} preventScrollReset>
                 <Trans>Ignored</Trans>
               </Link>
             </TabsTrigger>
-            <TabsTrigger value={PaystackWebhookEventStatus.PENDING} asChild>
-              <Link to={getStatusHref(PaystackWebhookEventStatus.PENDING)} preventScrollReset>
+            <TabsTrigger value={PAYSTACK_WEBHOOK_EVENT_STATUS.PENDING} asChild>
+              <Link to={getStatusHref(PAYSTACK_WEBHOOK_EVENT_STATUS.PENDING)} preventScrollReset>
                 <Trans>Pending</Trans>
               </Link>
             </TabsTrigger>
