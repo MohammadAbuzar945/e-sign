@@ -18,7 +18,7 @@ export const ZOrganisationPurchaseHistoryItemSchema = z.object({
   invoiceId: z.string(),
   purchaseGroupId: z.string().nullable(),
   date: z.date(),
-  kind: z.enum(['subscription', 'pay_as_you_go', 'reseller', 'hybrid']),
+  kind: z.enum(['subscription', 'pay_as_you_go', 'reseller', 'hybrid', 'bulk']),
   title: z.string(),
   totalCredits: z.number(),
   totalGrossAmount: z.number(),

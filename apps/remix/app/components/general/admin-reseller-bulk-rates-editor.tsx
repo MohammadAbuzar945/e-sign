@@ -111,7 +111,7 @@ export const AdminResellerBulkRatesEditor = ({
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size="sm"
               disabled={tiers.length <= 1}
               onClick={() => {
                 setTiers(tiers.filter((_, itemIndex) => itemIndex !== index));
