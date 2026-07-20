@@ -64,7 +64,7 @@ export const AdminNavLinks = ({
       ? [
           {
             href: '/admin/reseller-applications',
-            label: <Trans>Resellers</Trans>,
+            label: <Trans>Reseller Applications</Trans>,
             icon: StoreIcon,
             isActive: pathname?.startsWith('/admin/reseller-applications'),
           },
