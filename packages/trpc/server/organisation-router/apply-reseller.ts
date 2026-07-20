@@ -11,7 +11,7 @@ export const applyResellerRoute = authenticatedProcedure
   .input(ZApplyResellerRequestSchema)
   .output(ZApplyResellerResponseSchema)
   .mutation(async ({ input, ctx }) => {
-    const { organisationId } = input;
+    const { organisationId, variableValues } = input;
 
     assertResellerFeatureAccess(ctx.user.email);
 
@@ -27,6 +27,7 @@ export const applyResellerRoute = authenticatedProcedure
       organisationId,
       applicantUserId: ctx.user.id,
       applicantUserEmail: ctx.user.email,
+      variableValues,
     });
 
     return {
