@@ -16,6 +16,12 @@ import {
   PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR,
   RESELLER_BANK_ACCOUNT_TYPES,
 } from '@documenso/lib/constants/reseller-bank-verification';
+import {
+  normalizeSaBankAccountNumber,
+  normalizeSaPhoneNumber,
+  refineResellerSaBankDetails,
+  stripNonDigits,
+} from '@documenso/lib/constants/reseller-sa-validation';
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Badge } from '@documenso/ui/primitives/badge';
@@ -46,13 +52,13 @@ const ZBankDetailsFormSchema = z
   .object({
     bankCode: z.string().min(1),
     bankName: z.string().min(1),
-    bankAccountNumber: z.string().min(5),
+    bankAccountNumber: z.string().trim().min(1),
     bankAccountName: z.string().min(1),
     accountType: z.enum(['personal', 'business']),
     documentType: z.enum(['identityNumber', 'passportNumber', 'businessRegistrationNumber']),
-    documentNumber: z.string().trim().min(5).max(64),
+    documentNumber: z.string().trim().min(1).max(64),
     physicalAddress: z.string().trim().min(5).max(500),
-    contactPhone: z.string().trim().min(7).max(32),
+    contactPhone: z.string().trim().min(1).max(32),
     contactEmail: z.string().trim().email().max(255),
     vatStatus: z.enum(['NOT_REGISTERED', 'REGISTERED']),
     vatNumber: z.string().trim().max(64).optional(),
@@ -76,7 +82,7 @@ const ZBankDetailsFormSchema = z
     ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Personal accounts require an ID card, CNIC, or passport number',
+        message: 'Personal accounts require a South African ID or passport number',
         path: ['documentType'],
       });
     }
@@ -88,6 +94,28 @@ const ZBankDetailsFormSchema = z
         path: ['vatNumber'],
       });
     }
+
+    refineResellerSaBankDetails(values, (issue) => {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: issue.message,
+        path: issue.path,
+      });
+    });
+  })
+  .transform((values) => {
+    const normalizedPhone = normalizeSaPhoneNumber(values.contactPhone);
+    const normalizedDocumentNumber =
+      values.documentType === 'identityNumber'
+        ? stripNonDigits(values.documentNumber)
+        : values.documentNumber.trim().toUpperCase();
+
+    return {
+      ...values,
+      bankAccountNumber: normalizeSaBankAccountNumber(values.bankAccountNumber),
+      contactPhone: normalizedPhone ?? values.contactPhone,
+      documentNumber: normalizedDocumentNumber,
+    };
   });
 
 type ResellerPayoutSettingsProps = {
@@ -273,6 +301,7 @@ export const ResellerPayoutSettings = ({
   const banks = useMemo(() => banksData?.banks ?? [], [banksData?.banks]);
   const selectedBankCode = bankForm.watch('bankCode');
   const selectedAccountType = bankForm.watch('accountType');
+  const selectedDocumentType = bankForm.watch('documentType');
   const selectedVatStatus = bankForm.watch('vatStatus');
   const selectedBank = useMemo(
     () => banks.find((bank) => bank.code === selectedBankCode),
@@ -585,6 +614,7 @@ export const ResellerPayoutSettings = ({
                             bankForm.setValue('bankName', nextBank?.name ?? '', {
                               shouldValidate: true,
                             });
+                            void bankForm.trigger('bankAccountNumber');
                           }}
                         />
                       </FormControl>
@@ -604,6 +634,8 @@ export const ResellerPayoutSettings = ({
                       <FormControl>
                         <Input
                           {...field}
+                          inputMode="numeric"
+                          autoComplete="off"
                           placeholder={
                             bankAccountNumber
                               ? _(msg`Enter a new account number to replace ${bankAccountNumber}`)
@@ -611,6 +643,9 @@ export const ResellerPayoutSettings = ({
                           }
                         />
                       </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        <Trans>Enter the account number for the selected bank</Trans>
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -694,7 +729,13 @@ export const ResellerPayoutSettings = ({
                       <FormLabel>
                         <Trans>Document type</Trans>
                       </FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          void bankForm.trigger('documentNumber');
+                        }}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue />
@@ -718,16 +759,22 @@ export const ResellerPayoutSettings = ({
                   name="documentNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        <Trans>Document number</Trans>
-                      </FormLabel>
+                      <FormLabel>{getResellerBankDocumentTypeLabel(selectedDocumentType)}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
+                          inputMode={
+                            selectedDocumentType === 'identityNumber' ? 'numeric' : 'text'
+                          }
+                          autoComplete="off"
                           placeholder={
                             bankDocumentNumber
-                              ? _(msg`Enter document number to update ${bankDocumentNumber}`)
-                              : _(msg`ID, passport, or company registration number`)
+                              ? _(msg`Enter a new number to replace ${bankDocumentNumber}`)
+                              : selectedDocumentType === 'identityNumber'
+                                ? _(msg`13-digit South African ID number`)
+                                : selectedDocumentType === 'passportNumber'
+                                  ? _(msg`e.g. A12345678`)
+                                  : _(msg`e.g. 2020/123456/07`)
                           }
                         />
                       </FormControl>
@@ -784,7 +831,13 @@ export const ResellerPayoutSettings = ({
                           <Trans>Contact phone</Trans>
                         </FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder={_(msg`+27 11 123 4567`)} />
+                          <Input
+                            {...field}
+                            type="tel"
+                            inputMode="tel"
+                            autoComplete="tel"
+                            placeholder={_(msg`0821234567 or +27821234567`)}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

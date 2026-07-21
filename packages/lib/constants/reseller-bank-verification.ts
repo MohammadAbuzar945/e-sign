@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { validateSaDocumentNumber } from './reseller-sa-validation';
+
 export const PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR = 3;
 export const PAYSTACK_SA_BANK_VALIDATION_FEE_CENTS = PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR * 100;
 
@@ -21,7 +23,7 @@ export const ZResellerBankVerificationFieldsSchema = z
   .object({
     accountType: ZResellerBankAccountTypeSchema,
     documentType: ZResellerBankDocumentTypeSchema,
-    documentNumber: z.string().trim().min(5).max(64),
+    documentNumber: z.string().trim().min(1).max(64),
   })
   .superRefine((values, context) => {
     if (values.accountType === 'business' && values.documentType !== 'businessRegistrationNumber') {
@@ -38,8 +40,21 @@ export const ZResellerBankVerificationFieldsSchema = z
     ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Personal accounts require an ID card, CNIC, or passport number',
+        message: 'Personal accounts require a South African ID or passport number',
         path: ['documentType'],
+      });
+    }
+
+    const documentError = validateSaDocumentNumber({
+      documentType: values.documentType,
+      documentNumber: values.documentNumber,
+    });
+
+    if (documentError) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: documentError,
+        path: ['documentNumber'],
       });
     }
   });
@@ -58,9 +73,9 @@ export const getResellerBankAccountTypeLabel = (accountType: ResellerBankAccount
 export const getResellerBankDocumentTypeLabel = (documentType: ResellerBankDocumentType) => {
   switch (documentType) {
     case 'identityNumber':
-      return 'ID card / CNIC';
+      return 'South African ID number';
     case 'passportNumber':
-      return 'Passport number';
+      return 'South African passport number';
     case 'businessRegistrationNumber':
       return 'Business registration number';
     default:
