@@ -132,12 +132,15 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
     resellerForm.watch('data.termsProvider') ?? DEFAULT_RESELLER_TERMS_PROVIDER;
   const usesNomiaDocGen = termsProvider === RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN;
 
-  const { mutateAsync: updateSiteSetting, isPending: isUpdateSiteSettingLoading } =
+  const { mutateAsync: updateBannerSetting, isPending: isUpdatingBanner } =
+    trpcReact.admin.updateSiteSetting.useMutation();
+
+  const { mutateAsync: updateResellerSetting, isPending: isUpdatingReseller } =
     trpcReact.admin.updateSiteSetting.useMutation();
 
   const onBannerUpdate = async ({ id, enabled, data }: TBannerFormSchema) => {
     try {
-      await updateSiteSetting({
+      await updateBannerSetting({
         id,
         enabled,
         data,
@@ -163,7 +166,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
 
   const onResellerUpdate = async (values: TResellerFormSchema) => {
     try {
-      await updateSiteSetting(values);
+      await updateResellerSetting(values);
 
       toast({
         title: _(msg`Reseller settings updated`),
@@ -304,7 +307,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
 
               <Button
                 type="submit"
-                loading={isUpdateSiteSettingLoading}
+                loading={isUpdatingBanner}
                 className="mt-4 justify-end self-end"
               >
                 <Trans>Update Banner</Trans>
@@ -585,7 +588,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
               />
               )}
 
-              <Button type="submit" loading={isUpdateSiteSettingLoading}>
+              <Button type="submit" loading={isUpdatingReseller}>
                 <Trans>Save reseller T&Cs settings</Trans>
               </Button>
             </form>
