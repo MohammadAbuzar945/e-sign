@@ -51,20 +51,22 @@ export default function SettingsLayout() {
     },
   );
 
-  const { data: billingAttribution } = trpc.organisation.reseller.getBillingAttribution.useQuery(
-    {
-      organisationId: organisation.id,
-    },
-    {
-      enabled: isOrganisationOwner && isBillingEnabled,
-    },
-  );
+  const { data: billingAttribution, isFetched: isBillingAttributionFetched } =
+    trpc.organisation.reseller.getBillingAttribution.useQuery(
+      {
+        organisationId: organisation.id,
+      },
+      {
+        enabled: isOrganisationOwner && isBillingEnabled,
+      },
+    );
 
   const billingPath = resolveOrganisationBillingPath({
     organisationUrl: organisation.url,
     billingAttribution: billingAttribution ?? undefined,
   });
 
+  const shouldWaitForBillingAttribution = isOrganisationOwner && isBillingEnabled;
   const organisationSettingRoutes = [
     {
       path: `/o/${organisation.url}/settings/general`,
@@ -131,8 +133,14 @@ export default function SettingsLayout() {
       label: t`Billing`,
       icon: CreditCardIcon,
       requiresOwner: true as const,
+      // Avoid linking to price-plan before affiliate attribution resolves to /r/{slug}.
+      hideUntilReady: shouldWaitForBillingAttribution && !isBillingAttributionFetched,
     },
   ].filter((route) => {
+    if ('hideUntilReady' in route && route.hideUntilReady) {
+      return false;
+    }
+
     if ('requiresOwner' in route && route.requiresOwner && !isOrganisationOwner) {
       return false;
     }
