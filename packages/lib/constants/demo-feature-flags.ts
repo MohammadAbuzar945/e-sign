@@ -8,6 +8,7 @@ export const DEMO_FEATURE_VISIBILITY = {
   ADMIN_BULK_RATES: true,
   ADMIN_PAYSTACK_WEBHOOKS: true,
   INVOICE_HISTORY: false,
+  OWN_PAYSTACK_PAYOUT: false,
 } as const;
 
 export type DemoFeatureFlag = keyof typeof DEMO_FEATURE_VISIBILITY;

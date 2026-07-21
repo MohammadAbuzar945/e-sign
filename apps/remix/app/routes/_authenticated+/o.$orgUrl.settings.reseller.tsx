@@ -409,7 +409,8 @@ export default function OrganisationSettingsResellerPage() {
                       <Trans>Customize your affiliate page, then share your link with clients.</Trans>
                     </li>
                   </ol>
-                  {profile.payoutMode === 'OWN_PAYSTACK' ? (
+                  {profile.payoutMode === 'OWN_PAYSTACK' &&
+                  isDemoFeatureVisible('OWN_PAYSTACK_PAYOUT') ? (
                     <div className="rounded-md border bg-muted/40 p-3">
                       <p className="mb-2 font-medium text-foreground">
                         <Trans>Nomia webhook URL</Trans>
@@ -609,7 +610,7 @@ export default function OrganisationSettingsResellerPage() {
             }}
           />
 
-          {profile.payoutMode === 'OWN_PAYSTACK' ? (
+          {profile.payoutMode === 'OWN_PAYSTACK' && isDemoFeatureVisible('OWN_PAYSTACK_PAYOUT') ? (
             <Form {...form}>
               <form
                 className="space-y-4"
