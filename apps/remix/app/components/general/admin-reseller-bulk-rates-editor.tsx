@@ -137,8 +137,17 @@ export const AdminResellerBulkRatesEditor = ({
   const [creditInputs, setCreditInputs] = useState<Record<number, string>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Compare content, not array identity — parents often pass a fresh `.map()` each render,
+  // which would wipe in-progress edits (and flash the old "Total at minimum" on save).
+  const initialTiersKey = useMemo(() => JSON.stringify(initialTiers), [initialTiers]);
+
   useEffect(() => {
-    const nextTiers = initialTiers.length > 0 ? sortTiers(initialTiers) : [emptyTier()];
+    if (isSaving) {
+      return;
+    }
+
+    const parsedTiers = JSON.parse(initialTiersKey) as BulkRateTierDraft[];
+    const nextTiers = parsedTiers.length > 0 ? sortTiers(parsedTiers) : [emptyTier()];
     setTiers(nextTiers);
     setZarInputs(
       Object.fromEntries(
@@ -149,7 +158,7 @@ export const AdminResellerBulkRatesEditor = ({
       Object.fromEntries(nextTiers.map((tier, index) => [index, String(tier.minCredits || '')])),
     );
     setValidationError(null);
-  }, [initialTiers]);
+  }, [initialTiersKey, isSaving]);
 
   const previewTiers = useMemo(() => sortTiers(tiers).filter((tier) => tier.isEnabled), [tiers]);
 
