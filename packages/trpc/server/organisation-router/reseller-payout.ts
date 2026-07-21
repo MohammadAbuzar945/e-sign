@@ -99,25 +99,15 @@ export const listPaystackBanksRoute = authenticatedProcedure
 
     const country = input.country ?? 'south africa';
 
-    const [allBanks, verificationBanks] = await Promise.all([
-      listPaystackBanks({ country, enabledForVerification: false }),
-      listPaystackBanks({ country, enabledForVerification: true }),
-    ]);
-
-    const verificationByCode = new Map(verificationBanks.map((bank) => [bank.code, bank]));
+    const banks = await listPaystackBanks({ country });
 
     return {
-      banks: allBanks.map((bank) => {
-        const verificationBank = verificationByCode.get(bank.code);
-
-        return {
-          name: bank.name,
-          code: bank.code,
-          currency: bank.currency,
-          supportsVerification: Boolean(verificationBank),
-          supportedTypes: verificationBank?.supportedTypes ?? [],
-        };
-      }),
+      banks: banks.map((bank) => ({
+        name: bank.name,
+        code: bank.code,
+        currency: bank.currency,
+        supportedTypes: bank.supportedTypes ?? [],
+      })),
     };
   });
 

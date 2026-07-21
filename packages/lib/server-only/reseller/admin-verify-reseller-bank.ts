@@ -1,20 +1,13 @@
 import { ResellerProfileStatus, ResellerSubaccountStatus } from '@prisma/client';
 
 import {
-  PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR,
-} from '@documenso/lib/constants/reseller-bank-verification';
-import {
   parseResellerBankAccountType,
   parseResellerBankDocumentType,
 } from '@documenso/lib/constants/reseller-bank-verification';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import {
-  getPaystackSubaccount,
-  validatePaystackBankAccount,
-} from '@documenso/lib/server-only/paystack';
+import { getPaystackSubaccount } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 
-import { bankSupportsPaystackAccountValidation } from './paystack-bank-verification-support';
 import { registerResellerPaystackSubaccount } from './register-reseller-paystack-subaccount';
 import { decryptResellerSecret } from './reseller-secrets';
 import { syncResellerSubaccountStatus } from './update-reseller-payout';
@@ -74,176 +67,6 @@ const getResellerProfileForBankVerification = async (applicationId: string) => {
     accountType,
     documentType,
     documentNumber: decryptResellerSecret(profile.bankDocumentNumber),
-  };
-};
-
-const markResellerBankVerificationFailed = async ({
-  profileId,
-  message,
-}: {
-  profileId: string;
-  message: string;
-}) => {
-  await prisma.resellerProfile.update({
-    where: { id: profileId },
-    data: {
-      subaccountStatus: ResellerSubaccountStatus.FAILED,
-      subaccountFailureReason: message,
-      subaccountVerifiedAt: null,
-    },
-  });
-};
-
-export type AdminVerifyResellerBankAccountOptions = {
-  applicationId: string;
-};
-
-export const adminVerifyResellerBankAccount = async ({
-  applicationId,
-}: AdminVerifyResellerBankAccountOptions) => {
-  const {
-    profile,
-    organisationName,
-    accountNumber,
-    accountType,
-    documentType,
-    documentNumber,
-  } = await getResellerProfileForBankVerification(applicationId);
-
-  let registeredProfile = profile;
-
-  try {
-    const registration = await registerResellerPaystackSubaccount({
-      organisationName,
-      affiliateSlug: profile.affiliateSlug,
-      bankCode: profile.bankCode!,
-      accountNumber,
-      platformFeePercent: profile.platformFeePercent,
-      existingSubaccountCode: profile.paystackSubaccountCode,
-    });
-
-    registeredProfile = await prisma.resellerProfile.update({
-      where: { id: profile.id },
-      data: {
-        paystackSubaccountCode: registration.subaccount.subaccount_code,
-        paystackSubaccountId: registration.subaccount.id,
-        subaccountStatus: registration.subaccountStatus,
-        subaccountVerifiedAt: registration.subaccountVerifiedAt,
-        subaccountFailureReason: null,
-      },
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Failed to register Paystack subaccount';
-
-    await markResellerBankVerificationFailed({
-      profileId: profile.id,
-      message,
-    });
-
-    throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message,
-    });
-  }
-
-  const supportsValidation = await bankSupportsPaystackAccountValidation(
-    profile.bankCode!,
-    accountType,
-  );
-
-  if (!supportsValidation) {
-    const updatedProfile = await prisma.resellerProfile.update({
-      where: { id: profile.id },
-      data: {
-        subaccountStatus: ResellerSubaccountStatus.ACTIVE,
-        subaccountVerifiedAt: registeredProfile.subaccountVerifiedAt ?? new Date(),
-        subaccountFailureReason: null,
-      },
-    });
-
-    return {
-      verified: true as const,
-      validationSkipped: true as const,
-      validationFeeZar: 0,
-      verificationMessage:
-        'This bank does not support Paystack account validation. Subaccount registered without validation.',
-      accountHolderMatch: null,
-      subaccountStatus: updatedProfile.subaccountStatus,
-      paystackSubaccountCode: updatedProfile.paystackSubaccountCode,
-      bankAccountNumber: updatedProfile.bankAccountNumber
-        ? decryptResellerSecret(updatedProfile.bankAccountNumber)
-        : null,
-      bankAccountName: updatedProfile.bankAccountName,
-      bankName: updatedProfile.bankName,
-      bankCode: updatedProfile.bankCode,
-      bankAccountType: accountType,
-      bankDocumentType: documentType,
-    };
-  }
-
-  let validation;
-
-  try {
-    validation = await validatePaystackBankAccount({
-      accountNumber,
-      accountName: profile.bankAccountName!,
-      bankCode: profile.bankCode!,
-      countryCode: 'ZA',
-      accountType,
-      documentType,
-      documentNumber,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Bank account validation failed';
-
-    await markResellerBankVerificationFailed({
-      profileId: profile.id,
-      message,
-    });
-
-    throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message,
-    });
-  }
-
-  if (!validation.verified) {
-    const message = validation.verificationMessage || 'Bank account could not be verified';
-
-    await markResellerBankVerificationFailed({
-      profileId: profile.id,
-      message,
-    });
-
-    throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message,
-    });
-  }
-
-  const updatedProfile = await prisma.resellerProfile.update({
-    where: { id: profile.id },
-    data: {
-      subaccountStatus: ResellerSubaccountStatus.ACTIVE,
-      subaccountVerifiedAt: new Date(),
-      subaccountFailureReason: null,
-    },
-  });
-
-  return {
-    verified: true as const,
-    validationSkipped: false as const,
-    validationFeeZar: PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR,
-    verificationMessage: validation.verificationMessage || 'Account is verified successfully',
-    accountHolderMatch: validation.accountHolderMatch ?? null,
-    subaccountStatus: updatedProfile.subaccountStatus,
-    paystackSubaccountCode: updatedProfile.paystackSubaccountCode,
-    bankAccountNumber: updatedProfile.bankAccountNumber
-        ? decryptResellerSecret(updatedProfile.bankAccountNumber)
-        : null,
-    bankAccountName: updatedProfile.bankAccountName,
-    bankName: updatedProfile.bankName,
-    bankCode: updatedProfile.bankCode,
-    bankAccountType: accountType,
-    bankDocumentType: documentType,
   };
 };
 
