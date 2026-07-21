@@ -5,9 +5,17 @@ import { ZFindSearchParamsSchema } from '@documenso/lib/types/search-params';
 
 export const ZResellerTermsVariableValuesSchema = z.record(z.string(), z.string());
 
+export const ZResellerTermsSignatorySchema = z.object({
+  signatoryIndex: z.number().int().positive(),
+  fullName: z.string().min(1),
+  email: z.string().email(),
+  role: z.literal('SIGNER'),
+});
+
 export const ZSendResellerTermsApplicationSchema = z.object({
   applicationId: z.string(),
   variableValues: ZResellerTermsVariableValuesSchema,
+  signatories: z.array(ZResellerTermsSignatorySchema).min(1),
   docGenOptions: z.object({
     showInNomia: z.boolean(),
     buildForEsign: z.boolean(),

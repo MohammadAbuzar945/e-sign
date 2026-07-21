@@ -70,6 +70,20 @@ export const isSignatureTemplateVariable = (variable: NomiaDocGenTemplateVariabl
 export const getEditableTemplateVariables = (variables: NomiaDocGenTemplateVariable[]) =>
   variables.filter((variable) => !isSignatureTemplateVariable(variable));
 
+export const getTemplateSignatoryIndexes = (variables: NomiaDocGenTemplateVariable[]) => {
+  const indexes = new Set<number>();
+
+  for (const variable of variables) {
+    const contentFormat = parseTemplateVariableContentFormat(variable.content_format);
+
+    if (typeof contentFormat.signatory === 'number' && contentFormat.signatory > 0) {
+      indexes.add(contentFormat.signatory);
+    }
+  }
+
+  return [...indexes].sort((a, b) => a - b);
+};
+
 export const fetchResellerTermsTemplateVariables = async ({
   organizationId,
   templateId,

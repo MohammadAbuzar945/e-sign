@@ -11,6 +11,7 @@ export type { NomiaDocGenTemplateVariable } from './fetch-template-variables';
 export {
   fetchResellerTermsTemplateVariables,
   getEditableTemplateVariables,
+  getTemplateSignatoryIndexes,
   getNomiaApiBaseUrl,
   isSignatureTemplateVariable,
   parseTemplateVariableContentFormat,

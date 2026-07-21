@@ -16,6 +16,12 @@ import { prisma } from '@documenso/prisma';
 export type SendResellerTermsApplicationInput = {
   applicationId: string;
   variableValues: ResellerTermsVariableValues;
+  signatories: Array<{
+    signatoryIndex: number;
+    fullName: string;
+    email: string;
+    role: 'SIGNER';
+  }>;
   docGenOptions: {
     showInNomia: boolean;
     buildForEsign: boolean;
@@ -131,7 +137,7 @@ export const sendResellerTerms = async ({
     });
   }
 
-  for (const { applicationId, variableValues, docGenOptions } of applications) {
+  for (const { applicationId, variableValues, signatories, docGenOptions } of applications) {
     const application = await prisma.resellerApplication.findUnique({
       where: { id: applicationId },
       include: {
@@ -202,14 +208,12 @@ export const sendResellerTerms = async ({
             apiEndpoint: templateConfig.docGenApiEndpoint,
             esignApiKey: templateConfig.docGenEsignApiKey,
           },
-          signatories: [
-            {
-              fullName: application.snapshotApplicantName,
-              email: application.snapshotApplicantEmail,
-              signatoryIndex: 1,
-              role: 'SIGNER',
-            },
-          ],
+          signatories: signatories.map((signatory) => ({
+            fullName: signatory.fullName,
+            email: signatory.email,
+            signatoryIndex: signatory.signatoryIndex,
+            role: signatory.role,
+          })),
           externalId: application.id,
         });
 
