@@ -5,6 +5,10 @@ import {
   getEditableTemplateVariables,
 } from '@documenso/lib/server-only/nomia-docgen';
 import { getResellerSiteSettings } from '@documenso/lib/server-only/site-settings/get-reseller-site-settings';
+import {
+  RESELLER_TERMS_PROVIDER,
+  resolveResellerTermsProvider,
+} from '@documenso/lib/server-only/site-settings/schemas/reseller';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { assertResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import { prisma } from '@documenso/prisma';
@@ -32,6 +36,15 @@ export const getOrganisationResellerTermsTemplateVariablesRoute = authenticatedP
     });
 
     const resellerSettings = await getResellerSiteSettings();
+    const provider = resolveResellerTermsProvider(resellerSettings?.termsProvider);
+
+    if (provider === RESELLER_TERMS_PROVIDER.INTERNAL) {
+      return {
+        provider,
+        variables: [],
+        editableVariables: [],
+      };
+    }
 
     if (!resellerSettings?.termsDocGenTemplateId) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -61,6 +74,7 @@ export const getOrganisationResellerTermsTemplateVariablesRoute = authenticatedP
     });
 
     return {
+      provider,
       variables,
       editableVariables: getEditableTemplateVariables(variables),
     };

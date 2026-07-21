@@ -1127,7 +1127,7 @@ describe('admin reseller application actions', () => {
 });
 
 describe('sendResellerTerms flow', () => {
-  it('requires a configured terms template', async () => {
+  it('requires a configured DocGen template when provider is Nomia DocGen', async () => {
     getResellerSiteSettingsMock.mockResolvedValue({});
 
     await expect(
@@ -1138,11 +1138,12 @@ describe('sendResellerTerms flow', () => {
           userAgent: 'vitest',
         },
       }),
-    ).rejects.toThrow('Reseller T&Cs template is not configured');
+    ).rejects.toThrow('Nomia DocGen template ID is not configured');
   });
 
   it('requires DocGen organization id when DocGen template is configured', async () => {
     getResellerSiteSettingsMock.mockResolvedValue({
+      termsProvider: 'NOMIA_DOCGEN',
       termsDocGenTemplateId: 839,
     });
 
@@ -1155,6 +1156,22 @@ describe('sendResellerTerms flow', () => {
         },
       }),
     ).rejects.toThrow('Nomia DocGen organization ID is not configured');
+  });
+
+  it('requires an internal template when provider is Internal', async () => {
+    getResellerSiteSettingsMock.mockResolvedValue({
+      termsProvider: 'INTERNAL',
+    });
+
+    await expect(
+      sendResellerTerms({
+        applications: [],
+        requestMetadata: {
+          ipAddress: '127.0.0.1',
+          userAgent: 'vitest',
+        },
+      }),
+    ).rejects.toThrow('Internal e-sign template ID is not configured');
   });
 });
 

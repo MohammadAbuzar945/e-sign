@@ -4,6 +4,27 @@ import { ZSiteSettingsBaseSchema } from './_base';
 
 export const SITE_SETTINGS_RESELLER_ID = 'reseller' as const;
 
+export const RESELLER_TERMS_PROVIDER = {
+  NOMIA_DOCGEN: 'NOMIA_DOCGEN',
+  INTERNAL: 'INTERNAL',
+} as const;
+
+export type ResellerTermsProvider =
+  (typeof RESELLER_TERMS_PROVIDER)[keyof typeof RESELLER_TERMS_PROVIDER];
+
+export const DEFAULT_RESELLER_TERMS_PROVIDER = RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN;
+
+export const ZResellerTermsProviderSchema = z.preprocess(
+  (value) => {
+    if (value === '' || value === null || value === undefined) {
+      return DEFAULT_RESELLER_TERMS_PROVIDER;
+    }
+
+    return value;
+  },
+  z.enum([RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN, RESELLER_TERMS_PROVIDER.INTERNAL]),
+);
+
 /**
  * Optional numeric IDs for site settings.
  * Empty / missing values stay unset (never coerced to 0).
@@ -27,6 +48,7 @@ const ZOptionalSiteSettingIdSchema = z.preprocess((value) => {
 export const ZSiteSettingsResellerSchema = ZSiteSettingsBaseSchema.extend({
   id: z.literal(SITE_SETTINGS_RESELLER_ID),
   data: z.object({
+    termsProvider: ZResellerTermsProviderSchema,
     termsDocGenTemplateId: ZOptionalSiteSettingIdSchema,
     termsDocGenOrganizationId: ZOptionalSiteSettingIdSchema,
     termsDocGenWorkspaceId: ZOptionalSiteSettingIdSchema,
@@ -40,3 +62,11 @@ export const ZSiteSettingsResellerSchema = ZSiteSettingsBaseSchema.extend({
 });
 
 export type TSiteSettingsResellerSchema = z.infer<typeof ZSiteSettingsResellerSchema>;
+
+export const resolveResellerTermsProvider = (
+  value: unknown,
+): ResellerTermsProvider => {
+  const parsed = ZResellerTermsProviderSchema.safeParse(value);
+
+  return parsed.success ? parsed.data : DEFAULT_RESELLER_TERMS_PROVIDER;
+};

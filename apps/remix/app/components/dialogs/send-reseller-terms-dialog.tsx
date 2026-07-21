@@ -13,6 +13,7 @@ import {
   type ResellerTermsVariableValues,
 } from '@documenso/lib/constants/reseller-terms-variables';
 import type { NomiaDocGenTemplateVariable } from '@documenso/lib/server-only/nomia-docgen/fetch-template-variables';
+import { RESELLER_TERMS_PROVIDER } from '@documenso/lib/server-only/site-settings/schemas/reseller';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
@@ -137,6 +138,9 @@ export const SendResellerTermsDialog = ({
 
   const editableVariables = templateVariablesData?.editableVariables ?? [];
   const allTemplateVariables = templateVariablesData?.variables ?? [];
+  const usesNomiaDocGen =
+    (templateVariablesData?.provider ?? RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN) ===
+    RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN;
 
   const organisationName =
     applicationDetails?.snapshotOrgName ?? application?.snapshotOrgName ?? '';
@@ -177,7 +181,11 @@ export const SendResellerTermsDialog = ({
   });
 
   useEffect(() => {
-    if (!open || !application || allTemplateVariables.length === 0 || isLoadingPrefillData) {
+    if (!open || !application || isLoadingPrefillData) {
+      return;
+    }
+
+    if (usesNomiaDocGen && allTemplateVariables.length === 0) {
       return;
     }
 
@@ -200,6 +208,7 @@ export const SendResellerTermsDialog = ({
     open,
     organisationName,
     storedVariableValues,
+    usesNomiaDocGen,
   ]);
 
   const { mutateAsync: sendTerms, isPending } = trpc.admin.resellerApplications.sendTerms.useMutation(
@@ -207,7 +216,9 @@ export const SendResellerTermsDialog = ({
       onSuccess: async () => {
         toast({
           title: _(msg`Terms sent`),
-          description: _(msg`Reseller T&Cs have been sent via Nomia DocGen.`),
+          description: usesNomiaDocGen
+            ? _(msg`Reseller T&Cs have been sent via Nomia DocGen.`)
+            : _(msg`Reseller T&Cs have been sent via the internal e-sign template.`),
         });
 
         onOpenChange(false);
@@ -287,7 +298,16 @@ export const SendResellerTermsDialog = ({
           <p className="text-destructive text-sm">{applicationDetailsErrorMessage}</p>
         ) : null}
 
-        {!isLoadingPrefillData && !storedVariableValues ? (
+        {!usesNomiaDocGen && !isLoadingPrefillData ? (
+          <p className="text-muted-foreground rounded-md border p-3 text-sm">
+            <Trans>
+              Site settings are using the internal e-sign template. DocGen variables and options
+              are not required.
+            </Trans>
+          </p>
+        ) : null}
+
+        {!isLoadingPrefillData && usesNomiaDocGen && !storedVariableValues ? (
           <p className="text-muted-foreground rounded-md border border-amber-200 bg-amber-50/80 p-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
             <Trans>
               No applicant-submitted variable values were found for this application. Showing
@@ -302,6 +322,8 @@ export const SendResellerTermsDialog = ({
               className="space-y-4"
               disabled={isPending || isLoadingPrefillData || !!templateVariablesErrorMessage}
             >
+              {usesNomiaDocGen ? (
+                <>
               <div className="rounded-md border p-4">
                 <p className="text-sm font-medium">
                   <Trans>Nomia DocGen options</Trans>
@@ -506,6 +528,8 @@ export const SendResellerTermsDialog = ({
                   />
                 ))}
               </div>
+                </>
+              ) : null}
             </fieldset>
 
             <DialogFooter>
@@ -518,7 +542,7 @@ export const SendResellerTermsDialog = ({
                 disabled={
                   isLoadingPrefillData ||
                   !!templateVariablesErrorMessage ||
-                  editableVariables.length === 0
+                  (usesNomiaDocGen && editableVariables.length === 0)
                 }
               >
                 <Trans>Send T&Cs</Trans>

@@ -16,6 +16,7 @@ import {
   formatResellerTermsVariableLabel,
 } from '@documenso/lib/constants/reseller-terms-variables';
 import { AppError } from '@documenso/lib/errors/app-error';
+import { RESELLER_TERMS_PROVIDER } from '@documenso/lib/server-only/site-settings/schemas/reseller';
 import { cn } from '@documenso/ui/lib/utils';
 import { trpc } from '@documenso/trpc/react';
 import { Badge } from '@documenso/ui/primitives/badge';
@@ -138,6 +139,9 @@ export const ResellerApplicationSection = () => {
   );
 
   const editableVariables = templateVariablesData?.editableVariables ?? [];
+  const usesNomiaDocGen =
+    (templateVariablesData?.provider ?? RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN) ===
+    RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN;
 
   const defaultVariableValues = useMemo(
     () =>
@@ -418,10 +422,17 @@ export const ResellerApplicationSection = () => {
               <Trans>Apply to become a reseller</Trans>
             </DialogTitle>
             <DialogDescription>
-              <Trans>
-                Submit {organisation.name} for review. Fill in the terms template details below —
-                these will be used when we send your reseller agreement.
-              </Trans>
+              {usesNomiaDocGen ? (
+                <Trans>
+                  Submit {organisation.name} for review. Fill in the terms template details below —
+                  these will be used when we send your reseller agreement.
+                </Trans>
+              ) : (
+                <Trans>
+                  Submit {organisation.name} for review. Terms will be sent from the internal e-sign
+                  template configured by admin.
+                </Trans>
+              )}
             </DialogDescription>
           </DialogHeader>
 
@@ -453,6 +464,7 @@ export const ResellerApplicationSection = () => {
                   </ul>
                 </div>
 
+                {usesNomiaDocGen ? (
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm font-medium text-foreground">
@@ -509,6 +521,13 @@ export const ResellerApplicationSection = () => {
                     ))}
                   </div>
                 </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    <Trans>
+                      No DocGen template variables are required for this application.
+                    </Trans>
+                  </p>
+                )}
               </fieldset>
 
               <DialogFooter>

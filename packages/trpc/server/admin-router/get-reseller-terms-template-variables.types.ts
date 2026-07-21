@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+import {
+  RESELLER_TERMS_PROVIDER,
+  ZResellerTermsProviderSchema,
+} from '@documenso/lib/server-only/site-settings/schemas/reseller';
+
 export const ZGetResellerTermsTemplateVariablesRequestSchema = z.void();
 
 export const ZResellerTermsTemplateVariableSchema = z.object({
@@ -13,6 +18,7 @@ export const ZResellerTermsTemplateVariableSchema = z.object({
 });
 
 export const ZGetResellerTermsTemplateVariablesResponseSchema = z.object({
+  provider: ZResellerTermsProviderSchema,
   variables: z.array(ZResellerTermsTemplateVariableSchema),
   editableVariables: z.array(ZResellerTermsTemplateVariableSchema),
 });
@@ -20,3 +26,5 @@ export const ZGetResellerTermsTemplateVariablesResponseSchema = z.object({
 export type TGetResellerTermsTemplateVariablesResponse = z.infer<
   typeof ZGetResellerTermsTemplateVariablesResponseSchema
 >;
+
+export { RESELLER_TERMS_PROVIDER };

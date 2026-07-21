@@ -8,6 +8,10 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { sendDocument } from '@documenso/lib/server-only/document/send-document';
 import { generateResellerTermsDocument, fetchResellerTermsTemplateVariables } from '@documenso/lib/server-only/nomia-docgen';
 import { getResellerSiteSettings } from '@documenso/lib/server-only/site-settings/get-reseller-site-settings';
+import {
+  RESELLER_TERMS_PROVIDER,
+  resolveResellerTermsProvider,
+} from '@documenso/lib/server-only/site-settings/schemas/reseller';
 import { createDocumentFromTemplate } from '@documenso/lib/server-only/template/create-document-from-template';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { mapTemplateIdToSecondaryId } from '@documenso/lib/utils/envelope';
@@ -37,8 +41,10 @@ export type SendResellerTermsOptions = {
 
 const getResellerTermsTemplateConfig = async () => {
   const resellerSettings = await getResellerSiteSettings();
+  const termsProvider = resolveResellerTermsProvider(resellerSettings?.termsProvider);
 
   return {
+    termsProvider,
     termsDocGenTemplateId: resellerSettings?.termsDocGenTemplateId,
     termsDocGenOrganizationId: resellerSettings?.termsDocGenOrganizationId,
     termsDocGenWorkspaceId: resellerSettings?.termsDocGenWorkspaceId,
@@ -100,11 +106,19 @@ export const sendResellerTerms = async ({
   requestMetadata,
 }: SendResellerTermsOptions) => {
   const templateConfig = await getResellerTermsTemplateConfig();
+  const usesNomiaDocGen = templateConfig.termsProvider === RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN;
 
-  if (!templateConfig.termsDocGenTemplateId && !templateConfig.termsInternalTemplateId) {
+  if (usesNomiaDocGen && !templateConfig.termsDocGenTemplateId) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message:
-        'Reseller T&Cs template is not configured. Please set it in Admin Site Settings first.',
+        'Nomia DocGen template ID is not configured. Set it in Admin Site Settings, or switch the T&Cs provider to Internal.',
+    });
+  }
+
+  if (!usesNomiaDocGen && !templateConfig.termsInternalTemplateId) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message:
+        'Internal e-sign template ID is not configured. Set it in Admin Site Settings, or switch the T&Cs provider to Nomia DocGen.',
     });
   }
 
@@ -112,7 +126,7 @@ export const sendResellerTerms = async ({
   let templateVariables: Awaited<ReturnType<typeof fetchResellerTermsTemplateVariables>> | null =
     null;
 
-  if (templateConfig.termsDocGenTemplateId) {
+  if (usesNomiaDocGen) {
     if (!templateConfig.termsDocGenOrganizationId) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message:
@@ -129,7 +143,7 @@ export const sendResellerTerms = async ({
 
     templateVariables = await fetchResellerTermsTemplateVariables({
       organizationId: templateConfig.termsDocGenOrganizationId,
-      templateId: templateConfig.termsDocGenTemplateId,
+      templateId: templateConfig.termsDocGenTemplateId!,
       credentials: {
         apiUrl: templateConfig.docGenApiUrl,
         authToken: templateConfig.docGenAuthToken,
@@ -171,11 +185,11 @@ export const sendResellerTerms = async ({
 
     let termsEnvelopeId = application.termsEnvelopeId ?? undefined;
     let externalDocGenRequestId = application.externalDocGenRequestId ?? undefined;
-    let termsTemplateId =
-      templateConfig.termsDocGenTemplateId?.toString() ??
-      String(templateConfig.termsInternalTemplateId);
+    let termsTemplateId = usesNomiaDocGen
+      ? String(templateConfig.termsDocGenTemplateId)
+      : String(templateConfig.termsInternalTemplateId);
 
-    if (templateConfig.termsDocGenTemplateId) {
+    if (usesNomiaDocGen) {
       if (!templateConfig.termsDocGenWorkspaceId) {
         throw new AppError(AppErrorCode.INVALID_REQUEST, {
           message:
@@ -195,7 +209,7 @@ export const sendResellerTerms = async ({
 
       try {
         const docGenResult = await generateResellerTermsDocument({
-          templateId: templateConfig.termsDocGenTemplateId,
+          templateId: templateConfig.termsDocGenTemplateId!,
           workspaceId: templateConfig.termsDocGenWorkspaceId,
           documentName,
           variableValues,
@@ -246,13 +260,11 @@ export const sendResellerTerms = async ({
           message: error instanceof Error ? error.message : 'Nomia DocGen request failed.',
         });
       }
-    }
-
-    if (!termsEnvelopeId && templateConfig.termsInternalTemplateId) {
+    } else {
       const template = await prisma.envelope.findFirst({
         where: {
           type: 'TEMPLATE',
-          secondaryId: mapTemplateIdToSecondaryId(templateConfig.termsInternalTemplateId),
+          secondaryId: mapTemplateIdToSecondaryId(templateConfig.termsInternalTemplateId!),
         },
         include: {
           recipients: true,
@@ -272,7 +284,7 @@ export const sendResellerTerms = async ({
       const envelope = await createDocumentFromTemplate({
         id: {
           type: 'templateId',
-          id: templateConfig.termsInternalTemplateId,
+          id: templateConfig.termsInternalTemplateId!,
         },
         userId: application.applicantUserId,
         teamId: team.id,
@@ -304,14 +316,14 @@ export const sendResellerTerms = async ({
       });
     }
 
-    if (!termsEnvelopeId && !externalDocGenRequestId && !templateConfig.termsDocGenTemplateId) {
+    if (!termsEnvelopeId && !externalDocGenRequestId) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message:
           'Failed to create reseller T&Cs document. Check API credentials and template configuration.',
       });
     }
 
-    if (templateConfig.termsDocGenTemplateId && !externalDocGenRequestId) {
+    if (usesNomiaDocGen && !externalDocGenRequestId) {
       externalDocGenRequestId = application.id;
     }
 
