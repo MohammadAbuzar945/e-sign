@@ -3,10 +3,11 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import {
+  createDefaultResellerTermsSignatories,
   createDefaultResellerTermsVariableValues,
   formatResellerTermsVariableLabel,
   type ResellerTermsVariableValues,
@@ -53,6 +54,16 @@ type SendResellerTermsDialogProps = {
 
 const ZResellerTermsFormSchema = z.object({
   variableValues: z.record(z.string(), z.string()),
+  signatories: z
+    .array(
+      z.object({
+        signatoryIndex: z.number().int().positive(),
+        fullName: z.string().min(1),
+        email: z.string().email(),
+        role: z.literal('SIGNER'),
+      }),
+    )
+    .min(1),
   showInNomia: z.boolean(),
   buildForEsign: z.boolean(),
   sendForEsign: z.boolean(),
@@ -80,6 +91,11 @@ const createDefaultFormValues = ({
     applicantEmail,
     templateVariables,
     storedVariableValues,
+  }),
+  signatories: createDefaultResellerTermsSignatories({
+    applicantName,
+    applicantEmail,
+    templateVariables,
   }),
   showInNomia: true,
   buildForEsign: true,
@@ -120,6 +136,7 @@ export const SendResellerTermsDialog = ({
   );
 
   const editableVariables = templateVariablesData?.editableVariables ?? [];
+  const allTemplateVariables = templateVariablesData?.variables ?? [];
 
   const organisationName =
     applicationDetails?.snapshotOrgName ?? application?.snapshotOrgName ?? '';
@@ -137,13 +154,13 @@ export const SendResellerTermsDialog = ({
         organisationName,
         applicantName,
         applicantEmail,
-        templateVariables: editableVariables,
+        templateVariables: allTemplateVariables,
         storedVariableValues,
       }),
     [
+      allTemplateVariables,
       applicantEmail,
       applicantName,
-      editableVariables,
       organisationName,
       storedVariableValues,
     ],
@@ -154,8 +171,13 @@ export const SendResellerTermsDialog = ({
     defaultValues,
   });
 
+  const { fields: signatoryFields } = useFieldArray({
+    control: form.control,
+    name: 'signatories',
+  });
+
   useEffect(() => {
-    if (!open || !application || editableVariables.length === 0 || isLoadingPrefillData) {
+    if (!open || !application || allTemplateVariables.length === 0 || isLoadingPrefillData) {
       return;
     }
 
@@ -164,15 +186,15 @@ export const SendResellerTermsDialog = ({
         organisationName,
         applicantName,
         applicantEmail,
-        templateVariables: editableVariables,
+        templateVariables: allTemplateVariables,
         storedVariableValues,
       }),
     );
   }, [
+    allTemplateVariables,
     applicantEmail,
     applicantName,
     application,
-    editableVariables,
     form,
     isLoadingPrefillData,
     open,
@@ -208,13 +230,15 @@ export const SendResellerTermsDialog = ({
       return;
     }
 
-    const { variableValues, showInNomia, buildForEsign, sendForEsign, esignApiKey } = values;
+    const { variableValues, signatories, showInNomia, buildForEsign, sendForEsign, esignApiKey } =
+      values;
 
     await sendTerms({
       applications: [
         {
           applicationId: application.id,
           variableValues,
+          signatories,
           docGenOptions: {
             showInNomia,
             buildForEsign,
@@ -380,6 +404,86 @@ export const SendResellerTermsDialog = ({
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="space-y-3 rounded-md border p-4">
+                <div>
+                  <p className="text-sm font-medium">
+                    <Trans>Signatories</Trans>
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    <Trans>
+                      Detected from the DocGen template. Signatory 1 defaults to Nomia; other
+                      signatories use the reseller applicant.
+                    </Trans>
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {signatoryFields.map((signatoryField, index) => (
+                    <div
+                      key={signatoryField.id}
+                      className="grid gap-3 rounded-md border bg-muted/20 p-3 sm:grid-cols-2"
+                    >
+                      <div className="sm:col-span-2">
+                        <p className="text-sm font-medium">
+                          <Trans>Signatory {form.watch(`signatories.${index}.signatoryIndex`)}</Trans>
+                          <span className="text-muted-foreground ml-2 text-xs font-normal">
+                            {form.watch(`signatories.${index}.signatoryIndex`) === 1 ? (
+                              <Trans>Company</Trans>
+                            ) : (
+                              <Trans>Reseller / Party</Trans>
+                            )}
+                          </span>
+                        </p>
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name={`signatories.${index}.fullName`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <Trans>Full name</Trans>
+                            </FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`signatories.${index}.email`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <Trans>Email</Trans>
+                            </FormLabel>
+                            <FormControl>
+                              <Input {...field} type="email" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <input
+                        type="hidden"
+                        {...form.register(`signatories.${index}.signatoryIndex`, {
+                          valueAsNumber: true,
+                        })}
+                      />
+                      <input
+                        type="hidden"
+                        {...form.register(`signatories.${index}.role`)}
+                        value="SIGNER"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">

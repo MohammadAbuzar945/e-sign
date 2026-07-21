@@ -1,7 +1,24 @@
 import type { NomiaDocGenTemplateVariable } from '@documenso/lib/server-only/nomia-docgen/fetch-template-variables';
-import { getEditableTemplateVariables } from '@documenso/lib/server-only/nomia-docgen/fetch-template-variables';
+import {
+  getEditableTemplateVariables,
+  getTemplateSignatoryIndexes,
+} from '@documenso/lib/server-only/nomia-docgen/fetch-template-variables';
 
 export type ResellerTermsVariableValues = Record<string, string>;
+
+export type ResellerTermsSignatory = {
+  signatoryIndex: number;
+  fullName: string;
+  email: string;
+  role: 'SIGNER';
+};
+
+/** Default Nomia company signer for reseller T&Cs (template signatory index 1). */
+export const DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY = {
+  fullName: 'Abuzar',
+  email: 'awanabuzar945@gmail.com',
+  role: 'SIGNER' as const,
+};
 
 type ResellerTermsDefaultContext = {
   organisationName: string;
@@ -120,4 +137,55 @@ export const createDefaultResellerTermsVariableValues = ({
       ];
     }),
   );
+};
+
+/**
+ * Builds DocGen signatories from template variable `content_format.signatory` indexes.
+ * Index 1 defaults to the Nomia company signer; other indexes use the reseller applicant.
+ */
+export const createDefaultResellerTermsSignatories = ({
+  applicantName,
+  applicantEmail,
+  templateVariables = [],
+}: {
+  applicantName: string;
+  applicantEmail: string;
+  templateVariables?: NomiaDocGenTemplateVariable[];
+}): ResellerTermsSignatory[] => {
+  const signatoryIndexes = getTemplateSignatoryIndexes(templateVariables);
+
+  if (signatoryIndexes.length === 0) {
+    return [
+      {
+        signatoryIndex: 1,
+        fullName: DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY.fullName,
+        email: DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY.email,
+        role: 'SIGNER',
+      },
+      {
+        signatoryIndex: 2,
+        fullName: applicantName,
+        email: applicantEmail,
+        role: 'SIGNER',
+      },
+    ];
+  }
+
+  return signatoryIndexes.map((signatoryIndex) => {
+    if (signatoryIndex === 1) {
+      return {
+        signatoryIndex,
+        fullName: DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY.fullName,
+        email: DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY.email,
+        role: 'SIGNER' as const,
+      };
+    }
+
+    return {
+      signatoryIndex,
+      fullName: applicantName,
+      email: applicantEmail,
+      role: 'SIGNER' as const,
+    };
+  });
 };
