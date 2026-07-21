@@ -10,6 +10,7 @@ import PurchaseInvoiceEmailTemplate from '@documenso/email/templates/purchase-in
 
 import { getI18nInstance } from '../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
+import { isResellerFeatureAllowedEmail } from '../../constants/esign-credit-packages';
 import { env } from '../../utils/env';
 import { renderEmailWithI18N } from '../../utils/render-email-with-i18n';
 import {
@@ -53,6 +54,17 @@ export const sendPurchaseInvoiceEmail = async ({
 
   if (!toEmail) {
     return { sent: false as const, reason: 'NO_RECIPIENT' as const };
+  }
+
+  // Temporary: only send purchase invoices to the allowlisted emails.
+  if (!isResellerFeatureAllowedEmail(toEmail)) {
+    console.info('[INVOICE]: Skipping purchase invoice email for non-allowlisted recipient', {
+      invoiceId,
+      organisationId,
+      toEmail,
+    });
+
+    return { sent: false as const, reason: 'RECIPIENT_NOT_ALLOWLISTED' as const };
   }
 
   const logoUrl = await getInvoiceLogoDataUrl();

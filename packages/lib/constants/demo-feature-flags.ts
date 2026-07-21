@@ -7,6 +7,7 @@ export const DEMO_FEATURE_VISIBILITY = {
   ADMIN_RESELLERS: true,
   ADMIN_BULK_RATES: false,
   ADMIN_PAYSTACK_WEBHOOKS: false,
+  INVOICE_HISTORY: false,
 } as const;
 
 export type DemoFeatureFlag = keyof typeof DEMO_FEATURE_VISIBILITY;
