@@ -23,10 +23,11 @@ export const resolveOrganisationBillingPath = ({
     return defaultPath;
   }
 
+  // Affiliate-signup customers always use the reseller /r billing page when associated.
+  // Do not gate on stickyBillingActive (payout readiness) — /r handles unavailable resellers.
   const shouldUseAffiliateSignupBilling =
     !billingAttribution.isResellerOrganisation &&
     billingAttribution.associationSource === 'AFFILIATE_SIGNUP' &&
-    billingAttribution.stickyBillingActive &&
     Boolean(billingAttribution.affiliateSlug);
 
   if (shouldUseAffiliateSignupBilling && billingAttribution.affiliateSlug) {

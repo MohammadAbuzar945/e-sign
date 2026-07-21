@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveOrganisationBillingPath } from './organisation-billing-path';
 
 describe('resolveOrganisationBillingPath', () => {
-  it('returns affiliate signup billing when sticky billing is active', () => {
+  it('returns affiliate signup billing when associated with a reseller', () => {
     expect(
       resolveOrganisationBillingPath({
         organisationUrl: 'org_daehrocszuiiiftr',
@@ -15,6 +15,20 @@ describe('resolveOrganisationBillingPath', () => {
         },
       }),
     ).toBe('/r/devvv');
+  });
+
+  it('returns affiliate signup billing even when sticky billing is not active yet', () => {
+    expect(
+      resolveOrganisationBillingPath({
+        organisationUrl: 'org_oetkmdoeabdxciae',
+        billingAttribution: {
+          associationSource: 'AFFILIATE_SIGNUP',
+          stickyBillingActive: false,
+          affiliateSlug: 'acme-reseller',
+          isResellerOrganisation: false,
+        },
+      }),
+    ).toBe('/r/acme-reseller');
   });
 
   it('returns price-plan for affiliate visit', () => {
