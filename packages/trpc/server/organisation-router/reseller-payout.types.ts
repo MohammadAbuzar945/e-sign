@@ -1,6 +1,15 @@
 import { z } from 'zod';
 
-import { ZResellerBankAccountTypeSchema, ZResellerBankDocumentTypeSchema } from '@documenso/lib/constants/reseller-bank-verification';
+import {
+  ZResellerBankAccountTypeSchema,
+  ZResellerBankDocumentTypeSchema,
+} from '@documenso/lib/constants/reseller-bank-verification';
+import {
+  normalizeSaBankAccountNumber,
+  normalizeSaPhoneNumber,
+  refineResellerSaBankDetails,
+  stripNonDigits,
+} from '@documenso/lib/constants/reseller-sa-validation';
 
 export const ZUpdateResellerPayoutModeRequestSchema = z.object({
   organisationId: z.string(),
@@ -20,13 +29,13 @@ export const ZUpdateResellerBankDetailsRequestSchema = z.object({
     .object({
       bankCode: z.string().min(1),
       bankName: z.string().min(1),
-      bankAccountNumber: z.string().min(5),
+      bankAccountNumber: z.string().trim().min(1),
       bankAccountName: z.string().min(1),
       accountType: ZResellerBankAccountTypeSchema,
       documentType: ZResellerBankDocumentTypeSchema,
-      documentNumber: z.string().trim().min(5).max(64),
+      documentNumber: z.string().trim().min(1).max(64),
       physicalAddress: z.string().trim().min(5).max(500),
-      contactPhone: z.string().trim().min(7).max(32),
+      contactPhone: z.string().trim().min(1).max(32),
       contactEmail: z.string().trim().email().max(255),
       vatStatus: ZResellerVatStatusSchema,
       vatNumber: z.string().trim().max(64).optional(),
@@ -53,7 +62,7 @@ export const ZUpdateResellerBankDetailsRequestSchema = z.object({
       ) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Personal accounts require an ID card, CNIC, or passport number',
+          message: 'Personal accounts require a South African ID or passport number',
           path: ['documentType'],
         });
       }
@@ -65,6 +74,30 @@ export const ZUpdateResellerBankDetailsRequestSchema = z.object({
           path: ['vatNumber'],
         });
       }
+
+      refineResellerSaBankDetails(values, (issue) => {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: issue.message,
+          path: issue.path,
+        });
+      });
+    })
+    .transform((values) => {
+      const normalizedPhone = normalizeSaPhoneNumber(values.contactPhone);
+      const normalizedDocumentNumber =
+        values.documentType === 'identityNumber'
+          ? stripNonDigits(values.documentNumber)
+          : values.documentType === 'passportNumber'
+            ? values.documentNumber.trim().toUpperCase()
+            : values.documentNumber.trim().toUpperCase();
+
+      return {
+        ...values,
+        bankAccountNumber: normalizeSaBankAccountNumber(values.bankAccountNumber),
+        contactPhone: normalizedPhone ?? values.contactPhone,
+        documentNumber: normalizedDocumentNumber,
+      };
     }),
 });
 
