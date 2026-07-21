@@ -859,11 +859,13 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
           </div>
         )}
 
-        <OrganisationPurchaseHistoryDialog
-          orgUrl={orgUrl}
-          purchaseHistory={purchaseHistory}
-          getSubscriptionPlanDetails={getActiveSubscriptionDetails}
-        />
+        {isDemoFeatureVisible('INVOICE_HISTORY') ? (
+          <OrganisationPurchaseHistoryDialog
+            orgUrl={orgUrl}
+            purchaseHistory={purchaseHistory}
+            getSubscriptionPlanDetails={getActiveSubscriptionDetails}
+          />
+        ) : null}
 
         {currentSubscriptionData && (
           <div>

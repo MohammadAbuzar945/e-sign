@@ -44,7 +44,15 @@ const APPLICANT_VARIABLE_DEFAULT_GETTERS: Record<string, (ctx: ResellerTermsDefa
         .join('') || 'ON',
   };
 
+const RESELLER_TERMS_VARIABLE_LABELS: Record<string, string> = {
+  PartyFull: 'Organisation Name',
+  PartyRegNo: 'Reg No',
+  PartyAddress: 'Address',
+  PartySN: 'Organisation Short Name',
+};
+
 export const formatResellerTermsVariableLabel = (variableName: string) =>
+  RESELLER_TERMS_VARIABLE_LABELS[variableName] ??
   variableName
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/_/g, ' ')

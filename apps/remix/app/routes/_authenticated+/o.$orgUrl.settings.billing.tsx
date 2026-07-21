@@ -13,6 +13,7 @@ import { trpc } from '@documenso/trpc/react';
 import { BillingPlans } from '~/components/general/billing-plans';
 import { OrganisationBillingPortalButton } from '~/components/general/organisations/organisation-billing-portal-button';
 import { OrganisationBillingInvoicesTable } from '~/components/tables/organisation-billing-invoices-table';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import { appMetaTags } from '~/utils/meta';
 
 export function meta() {
@@ -154,10 +155,12 @@ export default function TeamsSettingBillingPage() {
         canManageBilling && <BillingPlans plans={plans} />}
 
       <section className="mt-6">
-        <OrganisationBillingInvoicesTable
-          organisationId={organisation.id}
-          subscriptionExists={Boolean(subscription)}
-        />
+        {isDemoFeatureVisible('INVOICE_HISTORY') ? (
+          <OrganisationBillingInvoicesTable
+            organisationId={organisation.id}
+            subscriptionExists={Boolean(subscription)}
+          />
+        ) : null}
       </section>
     </div>
   );
