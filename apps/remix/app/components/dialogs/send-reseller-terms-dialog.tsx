@@ -9,7 +9,6 @@ import { z } from 'zod';
 import {
   createDefaultResellerTermsVariableValues,
   formatResellerTermsVariableLabel,
-  parseResellerTermsVariableValues,
   type ResellerTermsVariableValues,
 } from '@documenso/lib/constants/reseller-terms-variables';
 import type { NomiaDocGenTemplateVariable } from '@documenso/lib/server-only/nomia-docgen/fetch-template-variables';
@@ -62,19 +61,36 @@ const ZResellerTermsFormSchema = z.object({
 
 type TResellerTermsFormSchema = z.infer<typeof ZResellerTermsFormSchema>;
 
+const hasStoredVariable = (
+  storedVariableValues: ResellerTermsVariableValues | null | undefined,
+  variableName: string,
+) => {
+  if (!storedVariableValues) {
+    return false;
+  }
+
+  return Object.keys(storedVariableValues).some(
+    (key) => key.toLowerCase() === variableName.toLowerCase(),
+  );
+};
+
 const createDefaultFormValues = ({
-  application,
+  organisationName,
+  applicantName,
+  applicantEmail,
   templateVariables,
   storedVariableValues,
 }: {
-  application: ResellerApplicationRow | null;
+  organisationName: string;
+  applicantName: string;
+  applicantEmail: string;
   templateVariables: NomiaDocGenTemplateVariable[];
   storedVariableValues?: ResellerTermsVariableValues | null;
 }): TResellerTermsFormSchema => ({
   variableValues: createDefaultResellerTermsVariableValues({
-    organisationName: application?.snapshotOrgName ?? '',
-    applicantName: application?.snapshotApplicantName ?? '',
-    applicantEmail: application?.snapshotApplicantEmail ?? '',
+    organisationName,
+    applicantName,
+    applicantEmail,
     templateVariables,
     storedVariableValues,
   }),
@@ -102,20 +118,48 @@ export const SendResellerTermsDialog = ({
     retry: false,
   });
 
-  const editableVariables = templateVariablesData?.editableVariables ?? [];
-  const storedVariableValues = useMemo(
-    () => parseResellerTermsVariableValues(application?.termsVariableValues),
-    [application?.termsVariableValues],
+  const {
+    data: applicationDetails,
+    isLoading: isLoadingApplicationDetails,
+    error: applicationDetailsError,
+  } = trpc.admin.resellerApplications.get.useQuery(
+    {
+      applicationId: application?.id ?? '',
+    },
+    {
+      enabled: open && !!application?.id,
+      retry: false,
+    },
   );
+
+  const editableVariables = templateVariablesData?.editableVariables ?? [];
+
+  const organisationName =
+    applicationDetails?.snapshotOrgName ?? application?.snapshotOrgName ?? '';
+  const applicantName =
+    applicationDetails?.snapshotApplicantName ?? application?.snapshotApplicantName ?? '';
+  const applicantEmail =
+    applicationDetails?.snapshotApplicantEmail ?? application?.snapshotApplicantEmail ?? '';
+  const storedVariableValues = applicationDetails?.termsVariableValues ?? null;
+
+  const isLoadingPrefillData = isLoadingTemplateVariables || isLoadingApplicationDetails;
 
   const defaultValues = useMemo(
     () =>
       createDefaultFormValues({
-        application,
+        organisationName,
+        applicantName,
+        applicantEmail,
         templateVariables: editableVariables,
         storedVariableValues,
       }),
-    [application, editableVariables, storedVariableValues],
+    [
+      applicantEmail,
+      applicantName,
+      editableVariables,
+      organisationName,
+      storedVariableValues,
+    ],
   );
 
   const form = useForm<TResellerTermsFormSchema>({
@@ -124,37 +168,53 @@ export const SendResellerTermsDialog = ({
   });
 
   useEffect(() => {
-    if (open && application && editableVariables.length > 0) {
-      form.reset(
-        createDefaultFormValues({
-          application,
-          templateVariables: editableVariables,
-          storedVariableValues,
-        }),
-      );
+    if (!open || !application || editableVariables.length === 0 || isLoadingPrefillData) {
+      return;
     }
-  }, [application, editableVariables, form, open, storedVariableValues]);
 
-  const { mutateAsync: sendTerms, isPending } = trpc.admin.resellerApplications.sendTerms.useMutation({
-    onSuccess: async () => {
-      toast({
-        title: _(msg`Terms sent`),
-        description: _(msg`Reseller T&Cs have been sent via Nomia DocGen.`),
-      });
+    form.reset(
+      createDefaultFormValues({
+        organisationName,
+        applicantName,
+        applicantEmail,
+        templateVariables: editableVariables,
+        storedVariableValues,
+      }),
+    );
+  }, [
+    applicantEmail,
+    applicantName,
+    application,
+    editableVariables,
+    form,
+    isLoadingPrefillData,
+    open,
+    organisationName,
+    storedVariableValues,
+  ]);
 
-      onOpenChange(false);
-      await onSuccess();
+  const { mutateAsync: sendTerms, isPending } = trpc.admin.resellerApplications.sendTerms.useMutation(
+    {
+      onSuccess: async () => {
+        toast({
+          title: _(msg`Terms sent`),
+          description: _(msg`Reseller T&Cs have been sent via Nomia DocGen.`),
+        });
+
+        onOpenChange(false);
+        await onSuccess();
+      },
+      onError: (error) => {
+        const parsed = AppError.parseError(error);
+
+        toast({
+          title: _(msg`Failed to send T&Cs`),
+          description: parsed.message,
+          variant: 'destructive',
+        });
+      },
     },
-    onError: (error) => {
-      const parsed = AppError.parseError(error);
-
-      toast({
-        title: _(msg`Failed to send T&Cs`),
-        description: parsed.message,
-        variant: 'destructive',
-      });
-    },
-  });
+  );
 
   const onSubmit = async (values: TResellerTermsFormSchema) => {
     if (!application) {
@@ -183,6 +243,10 @@ export const SendResellerTermsDialog = ({
     ? AppError.parseError(templateVariablesError).message
     : null;
 
+  const applicationDetailsErrorMessage = applicationDetailsError
+    ? AppError.parseError(applicationDetailsError).message
+    : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -193,14 +257,14 @@ export const SendResellerTermsDialog = ({
           <DialogDescription>
             <Trans>
               Values below are prefilled from what the reseller entered when applying. You can
-              override any field before sending T&Cs for {application?.snapshotOrgName}.
+              override any field before sending T&Cs for {organisationName || 'this organisation'}.
             </Trans>
           </DialogDescription>
         </DialogHeader>
 
-        {isLoadingTemplateVariables ? (
+        {isLoadingPrefillData ? (
           <p className="text-muted-foreground text-sm">
-            <Trans>Loading template variables from Nomia DocGen...</Trans>
+            <Trans>Loading applicant values and template variables...</Trans>
           </p>
         ) : null}
 
@@ -208,11 +272,24 @@ export const SendResellerTermsDialog = ({
           <p className="text-destructive text-sm">{templateVariablesErrorMessage}</p>
         ) : null}
 
+        {applicationDetailsErrorMessage ? (
+          <p className="text-destructive text-sm">{applicationDetailsErrorMessage}</p>
+        ) : null}
+
+        {!isLoadingPrefillData && !storedVariableValues ? (
+          <p className="text-muted-foreground rounded-md border border-amber-200 bg-amber-50/80 p-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+            <Trans>
+              No applicant-submitted variable values were found for this application. Showing
+              template defaults instead.
+            </Trans>
+          </p>
+        ) : null}
+
         <Form {...form}>
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <fieldset
               className="space-y-4"
-              disabled={isPending || isLoadingTemplateVariables || !!templateVariablesErrorMessage}
+              disabled={isPending || isLoadingPrefillData || !!templateVariablesErrorMessage}
             >
               <div className="rounded-md border p-4">
                 <p className="text-sm font-medium">
@@ -328,7 +405,7 @@ export const SendResellerTermsDialog = ({
                       <FormItem>
                         <FormLabel>
                           {formatResellerTermsVariableLabel(variable.variable_name)}
-                          {storedVariableValues?.[variable.variable_name] !== undefined ? (
+                          {hasStoredVariable(storedVariableValues, variable.variable_name) ? (
                             <span className="text-muted-foreground ml-1 text-xs font-normal">
                               <Trans>(from applicant)</Trans>
                             </span>
@@ -353,7 +430,7 @@ export const SendResellerTermsDialog = ({
                 type="submit"
                 loading={isPending}
                 disabled={
-                  isLoadingTemplateVariables ||
+                  isLoadingPrefillData ||
                   !!templateVariablesErrorMessage ||
                   editableVariables.length === 0
                 }
