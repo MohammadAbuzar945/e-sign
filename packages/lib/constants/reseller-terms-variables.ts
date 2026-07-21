@@ -32,15 +32,23 @@ export const parseResellerTermsVariableValues = (
     return null;
   }
 
-  const entries = Object.entries(value as Record<string, unknown>).filter(
-    ([key, entryValue]) => typeof key === 'string' && typeof entryValue === 'string',
-  );
+  const entries = Object.entries(value as Record<string, unknown>).flatMap(([key, entryValue]) => {
+    if (typeof entryValue === 'string') {
+      return [[key, entryValue] as const];
+    }
+
+    if (typeof entryValue === 'number' || typeof entryValue === 'boolean') {
+      return [[key, String(entryValue)] as const];
+    }
+
+    return [];
+  });
 
   if (entries.length === 0) {
     return null;
   }
 
-  return Object.fromEntries(entries) as ResellerTermsVariableValues;
+  return Object.fromEntries(entries);
 };
 
 export const createDefaultResellerTermsVariableValues = ({

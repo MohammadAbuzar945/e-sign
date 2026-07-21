@@ -38,6 +38,7 @@ export const ZFindResellerApplicationsResponseSchema = z.object({
       snapshotUniqueSignerCount: z.number(),
       snapshotOrgUserCount: z.number(),
       snapshotOrgSignupDate: z.date(),
+      termsVariableValues: ZResellerTermsVariableValuesSchema.nullable().optional(),
       liveCompletedDocCount: z.number(),
       liveUniqueSignerCount: z.number(),
       liveOrgUserCount: z.number(),
