@@ -9,6 +9,7 @@ import {
   parseResellerBankAccountType,
   parseResellerBankDocumentType,
 } from '@documenso/lib/constants/reseller-bank-verification';
+import { parseResellerTermsVariableValues } from '@documenso/lib/constants/reseller-terms-variables';
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
@@ -135,6 +136,7 @@ export const findResellerApplications = async ({
       if (!resellerProfile) {
         return {
           ...application,
+          termsVariableValues: parseResellerTermsVariableValues(application.termsVariableValues),
           resellerProfile: null,
           liveCompletedDocCount: metrics.completedDocumentCount,
           liveUniqueSignerCount: metrics.uniqueSignerCount,
@@ -153,6 +155,7 @@ export const findResellerApplications = async ({
 
       return {
         ...application,
+        termsVariableValues: parseResellerTermsVariableValues(application.termsVariableValues),
         resellerProfile: {
           id: resellerProfile.id,
           status: resellerProfile.status,

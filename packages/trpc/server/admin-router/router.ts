@@ -26,6 +26,7 @@ import {
   retryResellerApplicationActivationRoute,
   sendResellerTermsRoute,
 } from './reseller-applications';
+import { getResellerApplicationRoute } from './get-reseller-application';
 import { getResellerTermsTemplateVariablesRoute } from './get-reseller-terms-template-variables';
 import { reactivateResellerProfileRoute } from './reactivate-reseller-profile';
 import {
@@ -71,6 +72,7 @@ export const adminRouter = router({
   },
   resellerApplications: {
     find: findResellerApplicationsRoute,
+    get: getResellerApplicationRoute,
     getTermsTemplateVariables: getResellerTermsTemplateVariablesRoute,
     sendTerms: sendResellerTermsRoute,
     reject: rejectResellerApplicationRoute,

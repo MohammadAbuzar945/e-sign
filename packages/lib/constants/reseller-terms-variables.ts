@@ -17,6 +17,14 @@ const APPLICANT_VARIABLE_DEFAULT_GETTERS: Record<string, (ctx: ResellerTermsDefa
     Client1: (ctx) => ctx.applicantName,
     Project: (ctx) => ctx.organisationName || 'Nomia',
     Environment: () => 'Production',
+    PartyFull: (ctx) => ctx.organisationName,
+    PartySN: (ctx) =>
+      ctx.organisationName
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('') || 'ON',
   };
 
 export const formatResellerTermsVariableLabel = (variableName: string) =>
@@ -28,27 +36,62 @@ export const formatResellerTermsVariableLabel = (variableName: string) =>
 export const parseResellerTermsVariableValues = (
   value: unknown,
 ): ResellerTermsVariableValues | null => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+  if (!value) {
     return null;
   }
 
-  const entries = Object.entries(value as Record<string, unknown>).flatMap(([key, entryValue]) => {
-    if (typeof entryValue === 'string') {
-      return [[key, entryValue] as const];
-    }
+  let parsedValue: unknown = value;
 
-    if (typeof entryValue === 'number' || typeof entryValue === 'boolean') {
-      return [[key, String(entryValue)] as const];
+  if (typeof value === 'string') {
+    try {
+      parsedValue = JSON.parse(value);
+    } catch {
+      return null;
     }
+  }
 
-    return [];
-  });
+  if (!parsedValue || typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
+    return null;
+  }
+
+  const entries = Object.entries(parsedValue as Record<string, unknown>).flatMap(
+    ([key, entryValue]) => {
+      if (typeof entryValue === 'string') {
+        return [[key, entryValue] as const];
+      }
+
+      if (typeof entryValue === 'number' || typeof entryValue === 'boolean') {
+        return [[key, String(entryValue)] as const];
+      }
+
+      return [];
+    },
+  );
 
   if (entries.length === 0) {
     return null;
   }
 
   return Object.fromEntries(entries);
+};
+
+const getStoredVariableValue = (
+  storedVariableValues: ResellerTermsVariableValues | null | undefined,
+  variableName: string,
+) => {
+  if (!storedVariableValues) {
+    return undefined;
+  }
+
+  if (storedVariableValues[variableName] !== undefined) {
+    return storedVariableValues[variableName];
+  }
+
+  const matchedKey = Object.keys(storedVariableValues).find(
+    (key) => key.toLowerCase() === variableName.toLowerCase(),
+  );
+
+  return matchedKey ? storedVariableValues[matchedKey] : undefined;
 };
 
 export const createDefaultResellerTermsVariableValues = ({
@@ -66,7 +109,7 @@ export const createDefaultResellerTermsVariableValues = ({
 
   return Object.fromEntries(
     editableVariables.map((variable) => {
-      const storedValue = storedVariableValues?.[variable.variable_name];
+      const storedValue = getStoredVariableValue(storedVariableValues, variable.variable_name);
       const mappedValue = APPLICANT_VARIABLE_DEFAULT_GETTERS[variable.variable_name]?.(ctx);
 
       return [
