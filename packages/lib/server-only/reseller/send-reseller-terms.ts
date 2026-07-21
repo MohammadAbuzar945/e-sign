@@ -1,4 +1,5 @@
 import { ResellerApplicationStatus } from '@prisma/client';
+import { DateTime } from 'luxon';
 
 import { mailer } from '@documenso/email/mailer';
 import { DOCUMENSO_INTERNAL_EMAIL } from '@documenso/lib/constants/email';
@@ -183,7 +184,8 @@ export const sendResellerTerms = async ({
         });
       }
 
-      const documentName = `Nomia Reseller Agreement - ${application.snapshotOrgName}`;
+      const documentTimestamp = DateTime.now().toFormat('dd MMM yyyy HH:mm');
+      const documentName = `Nomia Reseller Agreement - ${application.snapshotOrgName} - ${documentTimestamp}`;
 
       try {
         const docGenResult = await generateResellerTermsDocument({
