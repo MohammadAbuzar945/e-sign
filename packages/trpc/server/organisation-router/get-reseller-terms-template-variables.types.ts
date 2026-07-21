@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ZResellerTermsProviderSchema } from '@documenso/lib/server-only/site-settings/schemas/reseller';
+
 export const ZGetOrganisationResellerTermsTemplateVariablesRequestSchema = z.object({
   organisationId: z.string().min(1),
 });
@@ -15,6 +17,7 @@ export const ZOrganisationResellerTermsTemplateVariableSchema = z.object({
 });
 
 export const ZGetOrganisationResellerTermsTemplateVariablesResponseSchema = z.object({
+  provider: ZResellerTermsProviderSchema,
   variables: z.array(ZOrganisationResellerTermsTemplateVariableSchema),
   editableVariables: z.array(ZOrganisationResellerTermsTemplateVariableSchema),
 });

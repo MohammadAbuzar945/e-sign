@@ -4,6 +4,10 @@ import {
   getEditableTemplateVariables,
 } from '@documenso/lib/server-only/nomia-docgen';
 import { getResellerSiteSettings } from '@documenso/lib/server-only/site-settings/get-reseller-site-settings';
+import {
+  RESELLER_TERMS_PROVIDER,
+  resolveResellerTermsProvider,
+} from '@documenso/lib/server-only/site-settings/schemas/reseller';
 import { assertResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 
 import { adminProcedure } from '../trpc';
@@ -19,6 +23,15 @@ export const getResellerTermsTemplateVariablesRoute = adminProcedure
     assertResellerFeatureAccess(ctx.user.email);
 
     const resellerSettings = await getResellerSiteSettings();
+    const provider = resolveResellerTermsProvider(resellerSettings?.termsProvider);
+
+    if (provider === RESELLER_TERMS_PROVIDER.INTERNAL) {
+      return {
+        provider,
+        variables: [],
+        editableVariables: [],
+      };
+    }
 
     if (!resellerSettings?.termsDocGenTemplateId) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -48,6 +61,7 @@ export const getResellerTermsTemplateVariablesRoute = adminProcedure
     });
 
     return {
+      provider,
       variables,
       editableVariables: getEditableTemplateVariables(variables),
     };
