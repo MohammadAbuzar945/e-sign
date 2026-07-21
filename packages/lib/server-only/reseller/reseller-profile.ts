@@ -12,7 +12,10 @@ import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
 
 import { getResellerPayoutReadiness } from './reseller-payout-readiness';
-import { encryptResellerSecret, maskBankAccountNumber, maskDocumentNumber } from './reseller-secrets';
+import {
+  decryptResellerSecret,
+  encryptResellerSecret,
+} from './reseller-secrets';
 import { syncResellerSubaccountStatus } from './update-reseller-payout';
 
 type ResellerProfileWithBankVerificationFields = {
@@ -91,8 +94,12 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
     bankAccountType: parseResellerBankAccountType(profileWithVerification.bankAccountType),
     bankDocumentType: parseResellerBankDocumentType(profileWithVerification.bankDocumentType),
     paystackSecretKey: undefined,
-    bankAccountNumber: maskBankAccountNumber(profile.bankAccountNumber),
-    bankDocumentNumber: maskDocumentNumber(profileWithVerification.bankDocumentNumber),
+    bankAccountNumber: profile.bankAccountNumber
+      ? decryptResellerSecret(profile.bankAccountNumber)
+      : null,
+    bankDocumentNumber: profileWithVerification.bankDocumentNumber
+      ? decryptResellerSecret(profileWithVerification.bankDocumentNumber)
+      : null,
     availableCredits,
     negativeCreditsUsed: getNegativeCreditsUsed(availableCredits),
     affiliateUrl: `${NEXT_PUBLIC_WEBAPP_URL()}/r/${profile.affiliateSlug}`,

@@ -15,7 +15,7 @@ import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
 
 import { getResellerPayoutReadiness } from './reseller-payout-readiness';
-import { maskBankAccountNumber } from './reseller-secrets';
+import { decryptResellerSecret } from './reseller-secrets';
 
 type ResellerProfileWithPayoutFields = ResellerProfile & {
   payoutMode: 'OWN_PAYSTACK' | 'NOMIA_SUBACCOUNT';
@@ -164,7 +164,9 @@ export const findResellerApplications = async ({
           payoutMode: resellerProfile.payoutMode,
           bankCode: resellerProfile.bankCode,
           bankName: resellerProfile.bankName,
-          bankAccountNumber: maskBankAccountNumber(resellerProfile.bankAccountNumber),
+          bankAccountNumber: resellerProfile.bankAccountNumber
+            ? decryptResellerSecret(resellerProfile.bankAccountNumber)
+            : null,
           bankAccountName: resellerProfile.bankAccountName,
           bankAccountType: parseResellerBankAccountType(resellerProfile.bankAccountType),
           bankDocumentType: parseResellerBankDocumentType(resellerProfile.bankDocumentType),
