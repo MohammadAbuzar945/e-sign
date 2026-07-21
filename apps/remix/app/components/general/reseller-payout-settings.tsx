@@ -13,7 +13,6 @@ import {
   getResellerBankAccountTypeLabel,
   getResellerBankDocumentTypeLabel,
   getResellerBankDocumentTypesForAccountType,
-  PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR,
   RESELLER_BANK_ACCOUNT_TYPES,
 } from '@documenso/lib/constants/reseller-bank-verification';
 import {
@@ -253,7 +252,7 @@ export const ResellerPayoutSettings = ({
         toast({
           title: _(msg`Bank details submitted`),
           description: _(
-            msg`Your Paystack subaccount has been registered. Nomia will verify your account before affiliate sales begin.`,
+            msg`Your Paystack subaccount has been registered. Nomia will manually verify your account in Paystack before affiliate sales begin.`,
           ),
         });
       },
@@ -301,10 +300,6 @@ export const ResellerPayoutSettings = ({
   const selectedAccountType = bankForm.watch('accountType');
   const selectedDocumentType = bankForm.watch('documentType');
   const selectedVatStatus = bankForm.watch('vatStatus');
-  const selectedBank = useMemo(
-    () => banks.find((bank) => bank.code === selectedBankCode),
-    [banks, selectedBankCode],
-  );
   const bankOptions = useMemo(
     () =>
       banks.map((bank) => ({
@@ -440,9 +435,8 @@ export const ResellerPayoutSettings = ({
               <p className="text-xs text-muted-foreground">
                 <Trans>
                   Enter your South African bank account and identity details. A Paystack subaccount
-                  is created when you submit. Nomia verifies your account with Paystack only when
-                  your bank supports validation (ZAR {PAYSTACK_SA_BANK_VALIDATION_FEE_ZAR} fee per
-                  attempt, paid by Nomia).
+                  is created when you submit. Nomia will verify your account manually in Paystack
+                  before affiliate sales begin.
                 </Trans>
               </p>
             </div>
@@ -663,14 +657,6 @@ export const ResellerPayoutSettings = ({
                           </Trans>
                         </p>
                       ) : null}
-                      {selectedBank && !selectedBank.supportsVerification ? (
-                        <p className="text-xs text-muted-foreground">
-                          <Trans>
-                            This bank does not support Paystack account validation. Nomia will
-                            register your subaccount without running validation.
-                          </Trans>
-                        </p>
-                      ) : null}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -772,8 +758,7 @@ export const ResellerPayoutSettings = ({
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
                         <Trans>
-                          Required for Paystack bank validation. Nomia uses this only for
-                          verification.
+                          Required for payout compliance. Nomia uses this only for verification.
                         </Trans>
                       </p>
                       <FormMessage />

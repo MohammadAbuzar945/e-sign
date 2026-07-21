@@ -96,12 +96,6 @@ export {
   listPaystackBanks,
   resolvePaystackBankAccount,
   updatePaystackSubaccount,
-  validatePaystackBankAccount,
-} from './reseller-paystack';
-
-export type {
-  ValidatePaystackBankAccountOptions,
-  ValidatePaystackBankAccountResult,
 } from './reseller-paystack';
 
 export type { ListPaystackBanksOptions, PaystackBankListItem } from './reseller-paystack';
