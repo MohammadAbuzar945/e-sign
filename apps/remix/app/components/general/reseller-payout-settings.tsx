@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { AppError } from '@documenso/lib/errors/app-error';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import {
   getDefaultResellerBankDocumentType,
   getResellerBankAccountTypeLabel,
@@ -147,6 +148,7 @@ export const ResellerPayoutSettings = ({
   const { _ } = useLingui();
   const { toast } = useToast();
   const [selectedMode, setSelectedMode] = useState(payoutMode);
+  const isOwnPaystackPayoutVisible = isDemoFeatureVisible('OWN_PAYSTACK_PAYOUT');
   const hasSavedBankDetails = Boolean(
     bankName || bankAccountNumber || bankAccountName || physicalAddress,
   );
@@ -156,6 +158,12 @@ export const ResellerPayoutSettings = ({
   useEffect(() => {
     setSelectedMode(payoutMode);
   }, [payoutMode]);
+
+  useEffect(() => {
+    if (!isOwnPaystackPayoutVisible && selectedMode === 'OWN_PAYSTACK') {
+      setSelectedMode('NOMIA_SUBACCOUNT');
+    }
+  }, [isOwnPaystackPayoutVisible, selectedMode]);
 
   useEffect(() => {
     if (!hasSavedBankDetails) {
@@ -323,9 +331,13 @@ export const ResellerPayoutSettings = ({
           <Trans>How do you want to get paid?</Trans>
         </h2>
         <p className="text-sm text-muted-foreground">
-          <Trans>
-            Choose your own Paystack account, or enter bank details and let Nomia settle payouts.
-          </Trans>
+          {isOwnPaystackPayoutVisible ? (
+            <Trans>
+              Choose your own Paystack account, or enter bank details and let Nomia settle payouts.
+            </Trans>
+          ) : (
+            <Trans>Enter bank details and let Nomia settle payouts to your account.</Trans>
+          )}
         </p>
       </div>
 
@@ -338,23 +350,25 @@ export const ResellerPayoutSettings = ({
         </Alert>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          className={`rounded-lg border p-4 text-left transition-colors ${
-            selectedMode === 'OWN_PAYSTACK'
-              ? 'border-primary bg-primary/5'
-              : 'hover:bg-muted/40'
-          }`}
-          onClick={() => setSelectedMode('OWN_PAYSTACK')}
-        >
-          <p className="text-sm font-medium">
-            <Trans>My own Paystack account</Trans>
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            <Trans>Clients pay into your Paystack merchant account directly.</Trans>
-          </p>
-        </button>
+      <div className={isOwnPaystackPayoutVisible ? 'grid gap-3 sm:grid-cols-2' : 'grid gap-3'}>
+        {isOwnPaystackPayoutVisible ? (
+          <button
+            type="button"
+            className={`rounded-lg border p-4 text-left transition-colors ${
+              selectedMode === 'OWN_PAYSTACK'
+                ? 'border-primary bg-primary/5'
+                : 'hover:bg-muted/40'
+            }`}
+            onClick={() => setSelectedMode('OWN_PAYSTACK')}
+          >
+            <p className="text-sm font-medium">
+              <Trans>My own Paystack account</Trans>
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              <Trans>Clients pay into your Paystack merchant account directly.</Trans>
+            </p>
+          </button>
+        ) : null}
 
         <button
           type="button"
