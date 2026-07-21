@@ -215,11 +215,11 @@ export const ResellerPayoutSettings = ({
     values: {
       bankCode: bankCode ?? '',
       bankName: bankName ?? '',
-      bankAccountNumber: '',
+      bankAccountNumber: bankAccountNumber ?? '',
       bankAccountName: bankAccountName ?? '',
       accountType: defaultAccountType,
       documentType: bankDocumentType ?? getDefaultResellerBankDocumentType(defaultAccountType),
-      documentNumber: '',
+      documentNumber: bankDocumentNumber ?? '',
       physicalAddress: physicalAddress ?? '',
       contactPhone: contactPhone ?? '',
       contactEmail: contactEmail ?? '',
@@ -248,8 +248,6 @@ export const ResellerPayoutSettings = ({
     trpc.organisation.reseller.updateBankDetails.useMutation({
       onSuccess: async () => {
         await onUpdated();
-        bankForm.resetField('bankAccountNumber');
-        bankForm.resetField('documentNumber');
         bankForm.resetField('confirmDetailsAccurate');
         setIsEditingBankDetails(false);
         toast({
@@ -636,11 +634,7 @@ export const ResellerPayoutSettings = ({
                           {...field}
                           inputMode="numeric"
                           autoComplete="off"
-                          placeholder={
-                            bankAccountNumber
-                              ? _(msg`Enter a new account number to replace ${bankAccountNumber}`)
-                              : _(msg`Enter account number`)
-                          }
+                          placeholder={_(msg`Enter account number`)}
                         />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
@@ -768,13 +762,11 @@ export const ResellerPayoutSettings = ({
                           }
                           autoComplete="off"
                           placeholder={
-                            bankDocumentNumber
-                              ? _(msg`Enter a new number to replace ${bankDocumentNumber}`)
-                              : selectedDocumentType === 'identityNumber'
-                                ? _(msg`13-digit South African ID number`)
-                                : selectedDocumentType === 'passportNumber'
-                                  ? _(msg`e.g. A12345678`)
-                                  : _(msg`e.g. 2020/123456/07`)
+                            selectedDocumentType === 'identityNumber'
+                              ? _(msg`13-digit South African ID number`)
+                              : selectedDocumentType === 'passportNumber'
+                                ? _(msg`e.g. A12345678`)
+                                : _(msg`e.g. 2020/123456/07`)
                           }
                         />
                       </FormControl>

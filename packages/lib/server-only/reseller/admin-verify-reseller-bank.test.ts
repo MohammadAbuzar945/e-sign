@@ -26,7 +26,6 @@ vi.mock('./paystack-bank-verification-support', () => ({
 
 vi.mock('./reseller-secrets', () => ({
   decryptResellerSecret: (value: string) => value,
-  maskBankAccountNumber: (value: string | null) => (value ? `****${value.slice(-4)}` : null),
 }));
 
 vi.mock('@documenso/prisma', () => ({

@@ -16,7 +16,7 @@ import { prisma } from '@documenso/prisma';
 
 import { bankSupportsPaystackAccountValidation } from './paystack-bank-verification-support';
 import { registerResellerPaystackSubaccount } from './register-reseller-paystack-subaccount';
-import { decryptResellerSecret, maskBankAccountNumber } from './reseller-secrets';
+import { decryptResellerSecret } from './reseller-secrets';
 import { syncResellerSubaccountStatus } from './update-reseller-payout';
 
 const getResellerProfileForBankVerification = async (applicationId: string) => {
@@ -170,7 +170,9 @@ export const adminVerifyResellerBankAccount = async ({
       accountHolderMatch: null,
       subaccountStatus: updatedProfile.subaccountStatus,
       paystackSubaccountCode: updatedProfile.paystackSubaccountCode,
-      bankAccountNumber: maskBankAccountNumber(updatedProfile.bankAccountNumber),
+      bankAccountNumber: updatedProfile.bankAccountNumber
+        ? decryptResellerSecret(updatedProfile.bankAccountNumber)
+        : null,
       bankAccountName: updatedProfile.bankAccountName,
       bankName: updatedProfile.bankName,
       bankCode: updatedProfile.bankCode,
@@ -234,7 +236,9 @@ export const adminVerifyResellerBankAccount = async ({
     accountHolderMatch: validation.accountHolderMatch ?? null,
     subaccountStatus: updatedProfile.subaccountStatus,
     paystackSubaccountCode: updatedProfile.paystackSubaccountCode,
-    bankAccountNumber: maskBankAccountNumber(updatedProfile.bankAccountNumber),
+    bankAccountNumber: updatedProfile.bankAccountNumber
+        ? decryptResellerSecret(updatedProfile.bankAccountNumber)
+        : null,
     bankAccountName: updatedProfile.bankAccountName,
     bankName: updatedProfile.bankName,
     bankCode: updatedProfile.bankCode,
@@ -279,7 +283,9 @@ export const adminRefreshResellerBankAccountStatus = async ({
     return {
       subaccountStatus: updatedProfile.subaccountStatus,
       paystackSubaccountCode: updatedProfile.paystackSubaccountCode,
-      bankAccountNumber: maskBankAccountNumber(updatedProfile.bankAccountNumber),
+      bankAccountNumber: updatedProfile.bankAccountNumber
+        ? decryptResellerSecret(updatedProfile.bankAccountNumber)
+        : null,
       bankAccountName: updatedProfile.bankAccountName,
       bankName: updatedProfile.bankName,
       bankCode: updatedProfile.bankCode,
@@ -335,7 +341,9 @@ export const adminRetryResellerSubaccount = async ({
     return {
       subaccountStatus: refreshed.subaccountStatus,
       paystackSubaccountCode: refreshed.paystackSubaccountCode,
-      bankAccountNumber: maskBankAccountNumber(refreshed.bankAccountNumber),
+      bankAccountNumber: refreshed.bankAccountNumber
+        ? decryptResellerSecret(refreshed.bankAccountNumber)
+        : null,
       bankAccountName: refreshed.bankAccountName,
       bankName: refreshed.bankName,
       bankCode: refreshed.bankCode,
