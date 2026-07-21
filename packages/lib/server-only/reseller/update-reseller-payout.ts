@@ -11,7 +11,7 @@ import { getPaystackSubaccount } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 
 import { ZResellerBankVerificationFieldsSchema } from '@documenso/lib/constants/reseller-bank-verification';
-import { encryptResellerSecret } from './reseller-secrets';
+import { encryptResellerSecret, decryptResellerSecret } from './reseller-secrets';
 import { registerResellerPaystackSubaccount } from './register-reseller-paystack-subaccount';
 
 const getSubaccountStatusFromPaystack = (subaccount: {
@@ -194,12 +194,28 @@ export const updateResellerBankDetails = async ({
 
   const encryptedAccountNumber = encryptResellerSecret(trimmedAccountNumber);
   const encryptedDocumentNumber = encryptResellerSecret(trimmedDocumentNumber);
+  const trimmedBankName = bankName.trim();
+
+  const previousAccountNumber = profile.bankAccountNumber
+    ? decryptResellerSecret(profile.bankAccountNumber)
+    : null;
+  const previousBankCode = (profile.bankCode ?? '').trim();
+  const previousBankName = (profile.bankName ?? '').trim();
+  const previousAccountName = (profile.bankAccountName ?? '').trim();
+
+  // Paystack settlement fields only — skip API when contact/VAT/ID-only updates.
+  const shouldSyncPaystackSubaccount =
+    !profile.paystackSubaccountCode ||
+    previousAccountNumber !== trimmedAccountNumber ||
+    previousBankCode !== trimmedBankCode ||
+    previousBankName !== trimmedBankName ||
+    previousAccountName !== trimmedAccountName;
 
   const savedProfile = await prisma.resellerProfile.update({
     where: { organisationId },
     data: {
       bankCode: trimmedBankCode,
-      bankName: bankName.trim(),
+      bankName: trimmedBankName,
       bankAccountNumber: encryptedAccountNumber,
       bankAccountName: trimmedAccountName,
       bankAccountType: accountType,
@@ -212,9 +228,13 @@ export const updateResellerBankDetails = async ({
       vatNumber:
         vatStatus === ResellerVatStatus.REGISTERED ? trimmedVatNumber : null,
       bankDetailsConfirmedAt: new Date(),
-      subaccountFailureReason: null,
+      ...(shouldSyncPaystackSubaccount ? { subaccountFailureReason: null } : {}),
     },
   });
+
+  if (!shouldSyncPaystackSubaccount) {
+    return savedProfile;
+  }
 
   try {
     const { subaccount, subaccountStatus, subaccountVerifiedAt } =
