@@ -110,7 +110,8 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
         docGenApiUrl: reseller?.data?.docGenApiUrl ?? '',
         docGenAuthToken: reseller?.data?.docGenAuthToken ?? '',
         docGenApiKey: reseller?.data?.docGenApiKey ?? '',
-        docGenApiEndpoint: reseller?.data?.docGenApiEndpoint ?? 'pdf_link',
+        // Always use pdf_link; not exposed in the UI.
+        docGenApiEndpoint: 'pdf_link',
         docGenEsignApiKey: reseller?.data?.docGenEsignApiKey ?? '',
       },
     },
@@ -379,24 +380,6 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
                     </FormControl>
                     <FormDescription>
                       <Trans>Workspace API key sent in the request body as api_key.</Trans>
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={resellerForm.control}
-                name="data.docGenApiEndpoint"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <Trans>DocGen API Endpoint</Trans>
-                    </FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ''} placeholder="pdf_link" />
-                    </FormControl>
-                    <FormDescription>
-                      <Trans>Nomia DocGen endpoint name. Defaults to pdf_link.</Trans>
                     </FormDescription>
                   </FormItem>
                 )}

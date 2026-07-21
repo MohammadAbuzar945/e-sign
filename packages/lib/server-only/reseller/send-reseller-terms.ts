@@ -39,7 +39,7 @@ const getResellerTermsTemplateConfig = async () => {
     docGenApiUrl: resellerSettings?.docGenApiUrl,
     docGenAuthToken: resellerSettings?.docGenAuthToken,
     docGenApiKey: resellerSettings?.docGenApiKey,
-    docGenApiEndpoint: resellerSettings?.docGenApiEndpoint,
+    docGenApiEndpoint: 'pdf_link',
     docGenEsignApiKey: resellerSettings?.docGenEsignApiKey,
   };
 };
