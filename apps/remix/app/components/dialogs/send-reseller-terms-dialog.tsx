@@ -61,19 +61,6 @@ const ZResellerTermsFormSchema = z.object({
 
 type TResellerTermsFormSchema = z.infer<typeof ZResellerTermsFormSchema>;
 
-const hasStoredVariable = (
-  storedVariableValues: ResellerTermsVariableValues | null | undefined,
-  variableName: string,
-) => {
-  if (!storedVariableValues) {
-    return false;
-  }
-
-  return Object.keys(storedVariableValues).some(
-    (key) => key.toLowerCase() === variableName.toLowerCase(),
-  );
-};
-
 const createDefaultFormValues = ({
   organisationName,
   applicantName,
@@ -95,8 +82,8 @@ const createDefaultFormValues = ({
     storedVariableValues,
   }),
   showInNomia: true,
-  buildForEsign: false,
-  sendForEsign: false,
+  buildForEsign: true,
+  sendForEsign: true,
   esignApiKey: '',
 });
 
@@ -405,11 +392,6 @@ export const SendResellerTermsDialog = ({
                       <FormItem>
                         <FormLabel>
                           {formatResellerTermsVariableLabel(variable.variable_name)}
-                          {hasStoredVariable(storedVariableValues, variable.variable_name) ? (
-                            <span className="text-muted-foreground ml-1 text-xs font-normal">
-                              <Trans>(from applicant)</Trans>
-                            </span>
-                          ) : null}
                         </FormLabel>
                         <FormControl>
                           <Input {...field} value={field.value ?? ''} />
