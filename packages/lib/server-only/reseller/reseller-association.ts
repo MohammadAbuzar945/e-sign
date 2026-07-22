@@ -17,6 +17,43 @@ export type AssociateOrganisationWithResellerOptions = {
   customerConsent?: boolean;
 };
 
+const ASSOCIATION_SOURCE_PRIORITY: Record<ResellerAssociationSource, number> = {
+  AFFILIATE_VISIT: 1,
+  CUSTOMER_CONSENT: 2,
+  AFFILIATE_PURCHASE: 3,
+  AFFILIATE_SIGNUP: 4,
+};
+
+const shouldUpgradeAssociationSource = (
+  current: ResellerAssociationSource | null | undefined,
+  next: ResellerAssociationSource,
+) => {
+  if (!current) {
+    return true;
+  }
+
+  // Affiliate signup is permanent for that org↔reseller link — never overwrite it.
+  if (current === 'AFFILIATE_SIGNUP') {
+    return false;
+  }
+
+  return ASSOCIATION_SOURCE_PRIORITY[next] > ASSOCIATION_SOURCE_PRIORITY[current];
+};
+
+const resolvePersistedAssociationSource = ({
+  current,
+  next,
+}: {
+  current: ResellerAssociationSource | null | undefined;
+  next: ResellerAssociationSource;
+}) => {
+  if (current === 'AFFILIATE_SIGNUP') {
+    return 'AFFILIATE_SIGNUP' as const;
+  }
+
+  return next;
+};
+
 /**
  * Sticky customer↔reseller attribution (agreement §8.2).
  * Does not overwrite an existing different association unless customerConsent is set
@@ -35,6 +72,7 @@ export const associateOrganisationWithReseller = async ({
         id: true,
         associatedResellerProfileId: true,
         resellerRequiresReconsent: true,
+        resellerAssociationSource: true,
         resellerProfile: { select: { id: true } },
       },
     }),
@@ -98,6 +136,22 @@ export const associateOrganisationWithReseller = async ({
     organisation.associatedResellerProfileId === resellerProfileId &&
     !organisation.resellerRequiresReconsent
   ) {
+    // Never replace AFFILIATE_SIGNUP with purchase/visit/consent sources.
+    if (organisation.resellerAssociationSource === 'AFFILIATE_SIGNUP') {
+      return { associated: true as const, reason: 'ALREADY_SET' as const };
+    }
+
+    if (shouldUpgradeAssociationSource(organisation.resellerAssociationSource, source)) {
+      await prisma.organisation.update({
+        where: { id: organisationId },
+        data: {
+          resellerAssociationSource: source,
+        },
+      });
+
+      return { associated: true as const, reason: 'SOURCE_UPGRADED' as const };
+    }
+
     return { associated: true as const, reason: 'ALREADY_SET' as const };
   }
 
@@ -106,7 +160,10 @@ export const associateOrganisationWithReseller = async ({
     data: {
       associatedResellerProfileId: resellerProfileId,
       resellerAssociatedAt: new Date(),
-      resellerAssociationSource: source,
+      resellerAssociationSource: resolvePersistedAssociationSource({
+        current: organisation.resellerAssociationSource,
+        next: source,
+      }),
       resellerRequiresReconsent: false,
     },
   });
