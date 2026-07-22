@@ -19,14 +19,12 @@ export const NOMIA_VAT_ADDRESS_LINES = [
   '5A Tessa Road',
   'Riverclub, 2191',
   'South Africa',
-
+  `Registration: ${NOMIA_COMPANY_REGISTRATION}`,
+  `Directors: ${NOMIA_DIRECTORS}`,
 ] as const;
 
 /** Human-readable VAT address block for invoices. */
 export const NOMIA_VAT_ADDRESS = NOMIA_VAT_ADDRESS_LINES.join('\n');
-
-/** Prefix for Nomia tax-invoice sequence display (full sequence can be appended later). */
-export const NOMIA_TAX_INVOICE_SEQUENCE_PREFIX = 'NOM';
 
 /**
  * How amounts on invoices are interpreted relative to VAT.
