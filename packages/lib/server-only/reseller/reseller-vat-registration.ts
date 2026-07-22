@@ -1,4 +1,6 @@
-import type { Prisma, ResellerVatStatus } from '@prisma/client';
+import type { Prisma, ResellerVatRegistration, ResellerVatStatus } from '@prisma/client';
+
+import { prisma } from '@documenso/prisma';
 
 type TxClient = Prisma.TransactionClient;
 
@@ -11,35 +13,16 @@ export type RecordResellerVatRegistrationOptions = {
   tx?: TxClient;
 };
 
-/**
- * Closes the open VAT registration period (if any) and opens a new one when
- * status/number change. Used so invoices can resolve seller VAT as-of date.
- */
-export const recordResellerVatRegistrationChange = async ({
-  resellerProfileId,
-  status,
-  vatNumber,
-  validFrom = new Date(),
-  verifiedAt = status === 'REGISTERED' ? validFrom : null,
-  tx,
-}: RecordResellerVatRegistrationOptions) => {
-  const client = tx;
-
-  if (!client) {
-    const { prisma } = await import('@documenso/prisma');
-
-    return prisma.$transaction((transaction) =>
-      recordResellerVatRegistrationChange({
-        resellerProfileId,
-        status,
-        vatNumber,
-        validFrom,
-        verifiedAt,
-        tx: transaction,
-      }),
-    );
-  }
-
+const writeResellerVatRegistrationChange = async (
+  client: TxClient,
+  {
+    resellerProfileId,
+    status,
+    vatNumber,
+    validFrom = new Date(),
+    verifiedAt = status === 'REGISTERED' ? validFrom : null,
+  }: Omit<RecordResellerVatRegistrationOptions, 'tx'>,
+): Promise<ResellerVatRegistration> => {
   const trimmedVatNumber = vatNumber?.trim() || null;
   const current = await client.resellerVatRegistration.findFirst({
     where: {
@@ -80,16 +63,31 @@ export const recordResellerVatRegistrationChange = async ({
   });
 };
 
+/**
+ * Closes the open VAT registration period (if any) and opens a new one when
+ * status/number change. Used so invoices can resolve seller VAT as-of date.
+ */
+export const recordResellerVatRegistrationChange = async ({
+  tx,
+  ...options
+}: RecordResellerVatRegistrationOptions): Promise<ResellerVatRegistration> => {
+  if (tx) {
+    return writeResellerVatRegistrationChange(tx, options);
+  }
+
+  return prisma.$transaction((transaction) =>
+    writeResellerVatRegistrationChange(transaction, options),
+  );
+};
+
 export const resolveResellerVatRegistrationAsOf = async ({
   resellerProfileId,
   asOf = new Date(),
 }: {
   resellerProfileId: string;
   asOf?: Date;
-}) => {
-  const { prisma } = await import('@documenso/prisma');
-
-  const registration = await prisma.resellerVatRegistration.findFirst({
+}): Promise<ResellerVatRegistration | null> => {
+  return prisma.resellerVatRegistration.findFirst({
     where: {
       resellerProfileId,
       validFrom: { lte: asOf },
@@ -99,6 +97,4 @@ export const resolveResellerVatRegistrationAsOf = async ({
       validFrom: 'desc',
     },
   });
-
-  return registration;
 };
