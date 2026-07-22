@@ -40,13 +40,17 @@ export const exportResellerTransactionsRoute = authenticatedProcedure
     return {
       resellerOrganisationName: result.resellerOrganisationName,
       resellerVatNumber: result.resellerVatNumber,
+      resellerVatStatus: result.resellerVatStatus,
       truncated: result.truncated,
       count: result.count,
       data: result.data.map((transaction) => {
+        const sellerVatStatus = transaction.sellerVatStatus ?? result.resellerVatStatus;
+        const sellerVatNumber = transaction.sellerVatNumber ?? result.resellerVatNumber;
         const vatAmount = resolveResellerVatAmountInCents(
           transaction.grossAmount,
           transaction.vatAmount,
-          result.resellerVatNumber,
+          sellerVatNumber,
+          sellerVatStatus,
         );
 
         return {
@@ -63,6 +67,8 @@ export const exportResellerTransactionsRoute = authenticatedProcedure
           purchaserEmail: transaction.purchaserEmail,
           purchaserOrganisationName: transaction.purchaserOrganisationName,
           paystackReference: transaction.paystackReference,
+          sellerVatStatus,
+          sellerVatNumber,
         };
       }),
     };

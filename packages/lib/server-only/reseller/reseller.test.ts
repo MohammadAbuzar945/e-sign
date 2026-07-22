@@ -63,13 +63,14 @@ describe('reseller VAT calculations', () => {
     expect(calculateResellerNetAmountInCents(45000, 5870)).toBe(39130);
   });
 
-  it('returns zero VAT when status is not registered', () => {
+  it('returns zero VAT when status is not registered even if stored VAT exists', () => {
     expect(calculateResellerVatAmountInCents(45000, '4123456789', 'NOT_REGISTERED')).toBe(0);
+    expect(resolveResellerVatAmountInCents(45000, 5870, '4123456789', 'NOT_REGISTERED')).toBe(0);
   });
 
-  it('prefers stored VAT values when already recorded', () => {
-    expect(resolveResellerVatAmountInCents(45000, 5869, '4123456789')).toBe(5869);
-    expect(resolveResellerVatAmountInCents(45000, 0, '4123456789')).toBe(5870);
+  it('prefers stored VAT values when already recorded for registered sellers', () => {
+    expect(resolveResellerVatAmountInCents(45000, 5869, '4123456789', 'REGISTERED')).toBe(5869);
+    expect(resolveResellerVatAmountInCents(45000, 0, '4123456789', 'REGISTERED')).toBe(5870);
   });
 });
 
@@ -78,6 +79,7 @@ describe('reseller transaction CSV export', () => {
     const csv = buildResellerTransactionsCsv({
       resellerOrganisationName: 'Nomia Creator',
       resellerVatNumber: '4123456789',
+      resellerVatStatus: 'REGISTERED',
       rows: [
         {
           createdAt: new Date('2026-07-03T10:00:00.000Z'),
@@ -91,6 +93,7 @@ describe('reseller transaction CSV export', () => {
           currency: 'ZAR',
           paystackReference: 'ref_123',
           status: 'COMPLETED',
+          sellerVatStatus: 'REGISTERED',
         },
       ],
     });
@@ -101,6 +104,33 @@ describe('reseller transaction CSV export', () => {
     expect(csv).toContain('58.70');
     expect(csv).toContain('391.30');
     expect(csv).toContain('ref_123');
+  });
+
+  it('zeros VAT in CSV when reseller is not VAT registered', () => {
+    const csv = buildResellerTransactionsCsv({
+      resellerOrganisationName: 'Nomia Creator',
+      resellerVatNumber: null,
+      resellerVatStatus: 'NOT_REGISTERED',
+      rows: [
+        {
+          createdAt: new Date('2026-07-03T10:00:00.000Z'),
+          completedAt: new Date('2026-07-03T10:05:00.000Z'),
+          purchaserName: 'Jane Buyer',
+          purchaserEmail: 'jane@example.com',
+          purchaserOrganisationName: 'Buyer Org',
+          credits: 50,
+          grossAmount: 45000,
+          vatAmount: 5870,
+          currency: 'ZAR',
+          paystackReference: 'ref_123',
+          status: 'COMPLETED',
+          sellerVatStatus: 'NOT_REGISTERED',
+        },
+      ],
+    });
+
+    expect(csv).toContain('450.00');
+    expect(csv).toContain(',0.00,450.00,');
   });
 });
 

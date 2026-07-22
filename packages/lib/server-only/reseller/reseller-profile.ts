@@ -391,6 +391,8 @@ export const findResellerTransactions = async ({
       credits: transaction.credits,
       grossAmount: transaction.grossAmount,
       vatAmount: transaction.vatAmount,
+      sellerVatStatus: transaction.sellerVatStatus,
+      sellerVatNumber: transaction.sellerVatNumber,
       currency: transaction.currency,
       status: transaction.status,
       purchaserName: transaction.purchaserName,
@@ -430,6 +432,7 @@ export const exportResellerTransactions = async ({
     return {
       resellerOrganisationName: '',
       resellerVatNumber: null,
+      resellerVatStatus: null,
       data: [],
       count: 0,
       truncated: false,
@@ -458,6 +461,7 @@ export const exportResellerTransactions = async ({
   return {
     resellerOrganisationName: profile.organisation.name,
     resellerVatNumber: profile.vatNumber,
+    resellerVatStatus: profile.vatStatus,
     data,
     count,
     truncated: count > RESELLER_TRANSACTION_EXPORT_LIMIT,
