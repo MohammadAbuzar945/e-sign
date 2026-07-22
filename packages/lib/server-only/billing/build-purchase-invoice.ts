@@ -144,10 +144,6 @@ export const buildPurchaseInvoiceHtml = ({
     ? `<p class="note">${escapeHtml(policy.requiredNote)}</p>`
     : '';
 
-  const sequenceHtml = policy.sequencePrefix
-    ? `<div><strong>Sequence</strong> ${escapeHtml(policy.sequencePrefix)}-${escapeHtml(invoice.invoiceId)}</div>`
-    : '';
-
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -335,7 +331,6 @@ export const buildPurchaseInvoiceHtml = ({
         </div>
         <div class="right">
           <div><strong>Invoice #</strong> ${escapeHtml(invoice.invoiceId)}</div>
-          ${sequenceHtml}
           <div><strong>Date</strong> ${escapeHtml(issuedAt)}</div>
           <div><strong>Status</strong> ${escapeHtml(invoice.status)}</div>
           <div><strong>Type</strong> ${escapeHtml(invoice.kind)}</div>

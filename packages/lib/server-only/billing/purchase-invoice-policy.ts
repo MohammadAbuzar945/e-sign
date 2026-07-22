@@ -1,6 +1,5 @@
 import {
   NOMIA_LEGAL_NAME,
-  NOMIA_TAX_INVOICE_SEQUENCE_PREFIX,
   NOMIA_VAT_ADDRESS,
   NOMIA_VAT_NUMBER,
   NOMIA_VAT_PRICING_MODE,
@@ -54,7 +53,6 @@ export type PurchaseInvoicePolicy = {
   supplier: PurchaseInvoiceSupplier;
   buyerVatNumber: string | null;
   issuedBySubtitle: string;
-  sequencePrefix: string | null;
 };
 
 export const resolvePurchaseInvoicePolicy = ({
@@ -94,7 +92,6 @@ export const resolvePurchaseInvoicePolicy = ({
       },
       buyerVatNumber: buyerVatNumber?.trim() || null,
       issuedBySubtitle: 'Issued by Nomia',
-      sequencePrefix: NOMIA_TAX_INVOICE_SEQUENCE_PREFIX,
     };
   }
 
@@ -132,7 +129,6 @@ export const resolvePurchaseInvoicePolicy = ({
       },
       buyerVatNumber: null,
       issuedBySubtitle: `Issued via Nomia on behalf of ${supplierName}`,
-      sequencePrefix: null,
     };
   }
 
@@ -154,6 +150,5 @@ export const resolvePurchaseInvoicePolicy = ({
     },
     buyerVatNumber: null,
     issuedBySubtitle: `Issued via Nomia on behalf of ${supplierName}`,
-    sequencePrefix: null,
   };
 };
