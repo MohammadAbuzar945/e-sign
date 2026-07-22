@@ -184,7 +184,7 @@ export const clearOrganisationResellerAssociation = async ({
       associatedResellerProfileId: null,
       resellerAssociatedAt: null,
       resellerAssociationSource: null,
-      ...(requireReconsent ? { resellerRequiresReconsent: true } : {}),
+      resellerRequiresReconsent: requireReconsent,
     },
   });
 };

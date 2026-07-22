@@ -44,6 +44,7 @@ import {
 } from './reseller-bulk-purchase';
 import {
   associateOrganisationWithResellerRoute,
+  clearOrganisationResellerAssociationRoute,
   getOrganisationBillingAttributionRoute,
   initializeAttributedPaygPurchaseRoute,
   resolveOrganisationPaygBillingRoute,
@@ -114,6 +115,7 @@ export const organisationRouter = router({
     getBillingAttribution: getOrganisationBillingAttributionRoute,
     resolvePaygBilling: resolveOrganisationPaygBillingRoute,
     associateReseller: associateOrganisationWithResellerRoute,
+    clearResellerAssociation: clearOrganisationResellerAssociationRoute,
     initializeAttributedPayg: initializeAttributedPaygPurchaseRoute,
     getEffectiveBulkRates: getEffectiveResellerBulkRatesRoute,
     initializeBulkPurchase: initializeResellerBulkPurchaseRoute,
