@@ -140,12 +140,13 @@ export const RESELLER_FEATURE_ALLOWED_EMAILS = [
   'nomiadeveloper@gmail.com',
   'awanabuzar945@gmail.com',
   'cstatus280@gmail.com',
+  'abuzarofficial945@gmail.com',
 ] as const;
 
 /** @deprecated Use RESELLER_FEATURE_ALLOWED_EMAILS */
 export const RESELLER_ELIGIBILITY_BYPASS_EMAILS = RESELLER_FEATURE_ALLOWED_EMAILS;
 
-const RESELLER_E2E_TEST_EMAIL_DOMAIN = 'test.documenso.com';
+const RESELLER_E2E_TEST_EMAIL_DOMAIN = 'test.nomiadocs.com';
 
 export const isResellerFeatureAllowedEmail = (email: string) => {
   const normalizedEmail = email.toLowerCase();

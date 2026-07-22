@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import { canAccessInvoiceHistory } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import {
   buildPurchaseInvoiceHtml,
@@ -51,6 +52,12 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
   if (organisation.ownerUserId !== user.id) {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {
       message: 'Only organisation owners can download purchase invoices',
+    });
+  }
+
+  if (!canAccessInvoiceHistory(user.email)) {
+    throw new AppError(AppErrorCode.UNAUTHORIZED, {
+      message: 'Invoice history is not available for this account',
     });
   }
 
