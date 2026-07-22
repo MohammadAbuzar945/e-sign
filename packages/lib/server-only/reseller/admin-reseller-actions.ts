@@ -7,6 +7,10 @@ import {
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
 
+import {
+  applyResellerDelinquency,
+  clearResellerDelinquency,
+} from './reseller-delinquency';
 import { sendResellerRejectionEmail } from './send-reseller-rejection-email';
 
 const IN_PROGRESS_APPLICATION_STATUSES: ResellerApplicationStatus[] = [
@@ -162,6 +166,92 @@ export const reactivateResellerProfile = async ({
     data: {
       status: ResellerProfileStatus.ACTIVE,
     },
+  });
+};
+
+export const markResellerProfileDelinquent = async ({
+  applicationId,
+}: {
+  applicationId: string;
+}) => {
+  const application = await getResellerApplicationOrThrow(applicationId);
+
+  if (application.status !== ResellerApplicationStatus.APPROVED) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Only approved reseller applications can be marked delinquent.',
+    });
+  }
+
+  const profile = await prisma.resellerProfile.findUnique({
+    where: { organisationId: application.organisationId },
+  });
+
+  if (!profile) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'Reseller profile not found.',
+    });
+  }
+
+  if (profile.status !== ResellerProfileStatus.ACTIVE) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Only active reseller profiles can be marked delinquent.',
+    });
+  }
+
+  if (profile.isDelinquent) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'This reseller is already delinquent.',
+    });
+  }
+
+  await applyResellerDelinquency({
+    resellerProfileId: profile.id,
+    // Keep the flag stable for testing even when the reseller still has inventory.
+    stampZeroBalanceSince: false,
+  });
+
+  return prisma.resellerProfile.findUniqueOrThrow({
+    where: { id: profile.id },
+  });
+};
+
+export const clearResellerProfileDelinquency = async ({
+  applicationId,
+}: {
+  applicationId: string;
+}) => {
+  const application = await getResellerApplicationOrThrow(applicationId);
+
+  if (application.status !== ResellerApplicationStatus.APPROVED) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Only approved reseller applications can clear delinquency.',
+    });
+  }
+
+  const profile = await prisma.resellerProfile.findUnique({
+    where: { organisationId: application.organisationId },
+  });
+
+  if (!profile) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'Reseller profile not found.',
+    });
+  }
+
+  if (!profile.isDelinquent) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'This reseller is not delinquent.',
+    });
+  }
+
+  await clearResellerDelinquency({
+    resellerProfileId: profile.id,
+    // Admin reset also clears buyer reconsent so the delinquency flow can be retested end-to-end.
+    clearBuyerReconsent: true,
+  });
+
+  return prisma.resellerProfile.findUniqueOrThrow({
+    where: { id: profile.id },
   });
 };
 

@@ -18,6 +18,7 @@ import { getPaystackWebhookEventRoute } from './get-paystack-webhook-event';
 import { getUserRoute } from './get-user';
 import { promoteMemberToOwnerRoute } from './promote-member-to-owner';
 import { cancelResellerApplicationRoute } from './cancel-reseller-application';
+import { clearResellerDelinquencyRoute } from './clear-reseller-delinquency';
 import { deactivateResellerProfileRoute } from './deactivate-reseller-profile';
 import { deleteResellerRoute } from './delete-reseller';
 import {
@@ -28,6 +29,7 @@ import {
 } from './reseller-applications';
 import { getResellerApplicationRoute } from './get-reseller-application';
 import { getResellerTermsTemplateVariablesRoute } from './get-reseller-terms-template-variables';
+import { markResellerDelinquentRoute } from './mark-reseller-delinquent';
 import { reactivateResellerProfileRoute } from './reactivate-reseller-profile';
 import {
   getResellerBulkRatesRoute,
@@ -79,6 +81,8 @@ export const adminRouter = router({
     retryActivation: retryResellerApplicationActivationRoute,
     deactivate: deactivateResellerProfileRoute,
     reactivate: reactivateResellerProfileRoute,
+    markDelinquent: markResellerDelinquentRoute,
+    clearDelinquency: clearResellerDelinquencyRoute,
     updateAllowNegativeCredits: updateResellerAllowNegativeCreditsRoute,
     refreshBankAccountStatus: refreshResellerBankAccountStatusRoute,
     retrySubaccount: retryResellerSubaccountRoute,

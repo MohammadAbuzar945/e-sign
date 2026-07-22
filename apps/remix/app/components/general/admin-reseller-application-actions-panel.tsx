@@ -38,6 +38,9 @@ type ResellerApplicationRow = {
     id?: string;
     status: string;
     allowNegativeCredits?: boolean;
+    isDelinquent?: boolean;
+    delinquentAt?: Date | string | null;
+    zeroBalanceSince?: Date | string | null;
     availableCredits?: number;
     negativeCreditsUsed?: number;
     payoutMode?: 'OWN_PAYSTACK' | 'NOMIA_SUBACCOUNT';
@@ -84,6 +87,8 @@ type AdminResellerApplicationActionsPanelProps = {
   onDeactivate: () => void;
   onReactivate: () => void;
   onDelete: () => void;
+  onMarkDelinquent: () => void;
+  onClearDelinquency: () => void;
   onAllowNegativeCreditsChange: (allowNegativeCredits: boolean) => void;
   onRefreshBankStatus: () => void;
   onRetrySubaccount: () => void;
@@ -103,6 +108,8 @@ export const AdminResellerApplicationActionsPanel = ({
   onDeactivate,
   onReactivate,
   onDelete,
+  onMarkDelinquent,
+  onClearDelinquency,
   onAllowNegativeCreditsChange,
   onRefreshBankStatus,
   onRetrySubaccount,
@@ -128,6 +135,8 @@ export const AdminResellerApplicationActionsPanel = ({
     (profile?.status === 'INACTIVE' || profile?.status === 'SUSPENDED');
   const canDelete = application.status === 'APPROVED' && Boolean(profile);
   const canConfigureNegativeCredits = canDeactivate;
+  const canMarkDelinquent = canDeactivate && !profile?.isDelinquent;
+  const canClearDelinquency = canDeactivate && Boolean(profile?.isDelinquent);
 
   const hasBankDetails = Boolean(
     profile?.bankCode && profile.bankAccountNumber && profile.bankAccountName,
@@ -172,6 +181,11 @@ export const AdminResellerApplicationActionsPanel = ({
                 {applicationStatusLabel}
               </Badge>
             )}
+            {isAccounts && profile?.isDelinquent ? (
+              <Badge variant="destructive">
+                <Trans>Delinquent</Trans>
+              </Badge>
+            ) : null}
           </div>
 
           {application.status === 'REJECTED' && application.rejectionReason ? (
@@ -457,6 +471,35 @@ export const AdminResellerApplicationActionsPanel = ({
                   <Trans>Reactivate</Trans>
                 </Button>
               ) : null}
+
+              {(canMarkDelinquent || canClearDelinquency) && (
+                <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+                  <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
+                    <Trans>Delinquency testing</Trans>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    <Trans>
+                      Simulate the 90-day zero-balance lock. Associated buyers will need to reconfirm
+                      sticky billing.
+                    </Trans>
+                  </p>
+                  {canMarkDelinquent ? (
+                    <Button className="w-full" variant="outline" size="sm" onClick={onMarkDelinquent}>
+                      <Trans>Mark delinquent</Trans>
+                    </Button>
+                  ) : null}
+                  {canClearDelinquency ? (
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      size="sm"
+                      onClick={onClearDelinquency}
+                    >
+                      <Trans>Clear delinquency</Trans>
+                    </Button>
+                  ) : null}
+                </div>
+              )}
 
               {(canDeactivate || canDelete) && (
                 <div className="space-y-2 rounded-md border border-destructive/20 bg-destructive/5 p-3">
