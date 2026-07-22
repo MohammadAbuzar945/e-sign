@@ -1,7 +1,7 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
@@ -49,6 +49,8 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
   const [isReconsentOpen, setIsReconsentOpen] = useState(false);
   const [isSubmittingConsent, setIsSubmittingConsent] = useState(false);
+  const [isSwitchingToNomia, setIsSwitchingToNomia] = useState(false);
+  const isSwitchingToNomiaRef = useRef(false);
   const { sessionData } = useOptionalSession();
 
   const isAuthenticated = Boolean(sessionData);
@@ -97,6 +99,9 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const { mutateAsync: associateReseller } =
     trpc.organisation.reseller.associateReseller.useMutation();
 
+  const { mutateAsync: clearResellerAssociation } =
+    trpc.organisation.reseller.clearResellerAssociation.useMutation();
+
   const { mutateAsync: initializePurchase } =
     trpc.organisation.reseller.initializePurchase.useMutation({
       onSuccess: (result) => {
@@ -124,7 +129,13 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   // If the reseller went delinquent, the org is flagged for reconsent (§12.3 / §12.5): sticky
   // billing is paused until the customer explicitly reconfirms, so we surface a modal here.
   useEffect(() => {
-    if (!isAuthenticated || !isEmailVerified || !purchaserOrganisation || !affiliate) {
+    if (
+      !isAuthenticated ||
+      !isEmailVerified ||
+      !purchaserOrganisation ||
+      !affiliate ||
+      isSwitchingToNomia
+    ) {
       return;
     }
 
@@ -134,6 +145,10 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       source: 'AFFILIATE_VISIT',
     })
       .then((result) => {
+        if (isSwitchingToNomiaRef.current) {
+          return;
+        }
+
         const needsReconsent =
           Boolean(result?.requiresReconsent) ||
           result?.reason === 'NEEDS_RECONSENT' ||
@@ -152,6 +167,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     associateReseller,
     isAuthenticated,
     isEmailVerified,
+    isSwitchingToNomia,
     purchaserOrganisation,
   ]);
 
@@ -200,11 +216,35 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     }
   };
 
-  const handleUseNomiaBilling = () => {
-    setIsReconsentOpen(false);
+  const handleUseNomiaBilling = async () => {
+    if (!purchaserOrganisation?.url) {
+      return;
+    }
 
-    if (purchaserOrganisation?.url) {
-      navigate(`/o/${purchaserOrganisation.url}/price-plan`);
+    isSwitchingToNomiaRef.current = true;
+    setIsSwitchingToNomia(true);
+    setIsReconsentOpen(false);
+    setIsSubmittingConsent(true);
+
+    try {
+      // Opt out of sticky reseller attribution so Billing/price-plan stay on Nomia.
+      await clearResellerAssociation({
+        organisationId: purchaserOrganisation.id,
+      });
+
+      navigate(`/o/${purchaserOrganisation.url}/price-plan?resellerUnavailable=1`);
+    } catch (error) {
+      isSwitchingToNomiaRef.current = false;
+      setIsSwitchingToNomia(false);
+      setIsReconsentOpen(true);
+
+      toast({
+        title: _(msg`Could not switch to Nomia`),
+        description: AppError.parseError(error).message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingConsent(false);
     }
   };
 
@@ -344,10 +384,19 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
           </DialogHeader>
 
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={handleUseNomiaBilling} disabled={isSubmittingConsent}>
+            <Button
+              variant="outline"
+              onClick={handleUseNomiaBilling}
+              disabled={isSubmittingConsent || isSwitchingToNomia}
+              loading={isSwitchingToNomia}
+            >
               <Trans>Use Nomia billing instead</Trans>
             </Button>
-            <Button onClick={handleConfirmReconsent} loading={isSubmittingConsent}>
+            <Button
+              onClick={handleConfirmReconsent}
+              loading={isSubmittingConsent && !isSwitchingToNomia}
+              disabled={isSwitchingToNomia}
+            >
               <Trans>Yes, continue with {affiliate.resellerDisplayName}</Trans>
             </Button>
           </div>

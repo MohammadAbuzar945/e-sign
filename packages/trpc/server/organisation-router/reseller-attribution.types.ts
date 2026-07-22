@@ -86,6 +86,14 @@ export const ZAssociateResellerResponseSchema = z.object({
   requiresReconsent: z.boolean().optional(),
 });
 
+export const ZClearResellerAssociationRequestSchema = z.object({
+  organisationId: z.string(),
+});
+
+export const ZClearResellerAssociationResponseSchema = z.object({
+  cleared: z.literal(true),
+});
+
 export const ZInitializeAttributedPaygRequestSchema = z.object({
   organisationId: z.string(),
   catalogPackageId: z.string(),

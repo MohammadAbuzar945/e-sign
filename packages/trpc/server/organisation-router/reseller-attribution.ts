@@ -4,6 +4,7 @@ import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { createPendingOrganisationCreditPurchase } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
 import {
   associateOrganisationWithReseller,
+  clearOrganisationResellerAssociation,
 } from '@documenso/lib/server-only/reseller/reseller-association';
 import { calculateHybridCheckoutAmounts } from '@documenso/lib/server-only/reseller/hybrid-single-checkout';
 import { initializeResellerPurchase } from '@documenso/lib/server-only/reseller/initialize-reseller-purchase';
@@ -21,6 +22,8 @@ import { authenticatedProcedure } from '../trpc';
 import {
   ZAssociateResellerRequestSchema,
   ZAssociateResellerResponseSchema,
+  ZClearResellerAssociationRequestSchema,
+  ZClearResellerAssociationResponseSchema,
   ZGetOrganisationBillingAttributionRequestSchema,
   ZGetOrganisationBillingAttributionResponseSchema,
   ZInitializeAttributedPaygRequestSchema,
@@ -102,6 +105,27 @@ export const associateOrganisationWithResellerRoute = authenticatedProcedure
       ...result,
       requiresReconsent: organisation.resellerRequiresReconsent && !result.associated,
     };
+  });
+
+export const clearOrganisationResellerAssociationRoute = authenticatedProcedure
+  .input(ZClearResellerAssociationRequestSchema)
+  .output(ZClearResellerAssociationResponseSchema)
+  .mutation(async ({ input, ctx }) => {
+    const { organisationId } = input;
+
+    await prisma.organisation.findFirstOrThrow({
+      where: buildOrganisationWhereQuery({
+        organisationId,
+        userId: ctx.user.id,
+      }),
+    });
+
+    await clearOrganisationResellerAssociation({
+      organisationId,
+      requireReconsent: false,
+    });
+
+    return { cleared: true as const };
   });
 
 export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure
