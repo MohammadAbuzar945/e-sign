@@ -1404,10 +1404,30 @@ model ResellerProfile {
   transactions ResellerCreditTransaction[] @relation("ResellerTransactions")
   associatedBuyerOrganisations Organisation[] @relation("AssociatedBuyerOrganisations")
   bulkRateTiers ResellerProfileBulkRateTier[]
+  vatRegistrations ResellerVatRegistration[]
 
   @@index([affiliateSlug])
   @@index([status])
   @@index([isDelinquent])
+}
+
+/// Historical VAT registration periods for reseller invoicing (as-of purchase date).
+model ResellerVatRegistration {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resellerProfileId String
+  resellerProfile   ResellerProfile @relation(fields: [resellerProfileId], references: [id], onDelete: Cascade)
+
+  status     ResellerVatStatus
+  vatNumber  String?
+  validFrom  DateTime
+  verifiedAt DateTime?
+  endedAt    DateTime?
+
+  @@index([resellerProfileId, validFrom])
+  @@index([resellerProfileId, endedAt])
 }
 
 model ResellerBulkRateTier {
@@ -1480,6 +1500,9 @@ model ResellerCreditTransaction {
   credits      Int
   grossAmount  Int
   vatAmount    Int     @default(0)
+  /// Snapshot of seller VAT at purchase time (do not re-derive from live profile).
+  sellerVatStatus ResellerVatStatus?
+  sellerVatNumber String?
   currency     String  @default("ZAR")
   status       ResellerCreditTransactionStatus @default(PENDING)
 

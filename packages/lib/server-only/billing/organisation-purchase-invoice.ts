@@ -43,7 +43,11 @@ export const getOrganisationPurchaseInvoice = async ({
   invoiceId: string;
 }) => {
   const history = await getOrganisationPurchaseHistory({ organisationId });
-  const invoice = history.find((item) => item.invoiceId === invoiceId);
+  const invoice =
+    history.find((item) => item.invoiceId === invoiceId) ??
+    // Legacy hybrid emails used purchaseGroupId as the invoice id.
+    history.find((item) => item.purchaseGroupId === invoiceId && item.issuer === 'RESELLER') ??
+    history.find((item) => item.purchaseGroupId === invoiceId);
 
   if (!invoice) {
     throw new AppError(AppErrorCode.NOT_FOUND, {

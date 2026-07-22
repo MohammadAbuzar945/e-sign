@@ -14,6 +14,9 @@ const prismaMock = vi.hoisted(() => ({
   resellerCreditTransaction: {
     findMany: vi.fn(),
   },
+  resellerProfile: {
+    findUnique: vi.fn(),
+  },
 }));
 
 vi.mock('@documenso/prisma', () => ({
@@ -100,6 +103,7 @@ describe('record-organisation-credit-purchase', () => {
 describe('get-organisation-purchase-history pay-as-you-go', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
   });
 
   it('includes pay-as-you-go purchases in billing history', async () => {
@@ -108,6 +112,8 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
     prismaMock.organisationCreditPurchase.findMany.mockResolvedValue([
       {
         id: 'purchase_1',
+        purchaseGroupId: null,
+        purchaseType: 'PAYG',
         completedAt: new Date('2026-07-12T10:00:00.000Z'),
         createdAt: new Date('2026-07-12T09:55:00.000Z'),
         credits: 50,
@@ -124,6 +130,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
     expect(history).toHaveLength(1);
     expect(history[0]).toMatchObject({
       kind: 'pay_as_you_go',
+      issuer: 'NOMIA',
       totalCredits: 50,
       totalGrossAmount: 45000,
       invoiceId: 'nomia_purchase_1',
@@ -138,13 +145,14 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
     });
   });
 
-  it('keeps a grouped Nomia-only purchase labeled as Nomia', async () => {
+  it('keeps a grouped Nomia-only purchase as a Nomia invoice id', async () => {
     const { getOrganisationPurchaseHistory } = await import('./get-organisation-purchase-history');
 
     prismaMock.organisationCreditPurchase.findMany.mockResolvedValue([
       {
         id: 'purchase_grouped',
         purchaseGroupId: 'pur_nomia_only',
+        purchaseType: 'PAYG',
         completedAt: new Date('2026-07-15T10:00:00.000Z'),
         createdAt: new Date('2026-07-15T09:55:00.000Z'),
         credits: 1000,
@@ -160,11 +168,72 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
 
     expect(history).toHaveLength(1);
     expect(history[0]).toMatchObject({
-      invoiceId: 'pur_nomia_only',
+      invoiceId: 'nomia_purchase_grouped',
+      purchaseGroupId: 'pur_nomia_only',
       kind: 'pay_as_you_go',
-      title: 'Pay as you go top-up (Nomia)',
+      issuer: 'NOMIA',
+      title: 'Pay as you go top-up',
       totalCredits: 1000,
     });
+  });
+
+  it('emits separate invoices for split-funded purchases', async () => {
+    const { getOrganisationPurchaseHistory } = await import('./get-organisation-purchase-history');
+
+    prismaMock.organisationCreditPurchase.findMany.mockResolvedValue([
+      {
+        id: 'purchase_split',
+        purchaseGroupId: 'pur_hybrid',
+        purchaseType: 'PAYG',
+        completedAt: new Date('2026-07-15T10:00:00.000Z'),
+        createdAt: new Date('2026-07-15T09:55:00.000Z'),
+        credits: 20,
+        grossAmount: 18000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        paystackReference: 'ref_nomia_split',
+      },
+    ]);
+    prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([
+      {
+        id: 'reseller_tx_split',
+        purchaseGroupId: 'pur_hybrid',
+        completedAt: new Date('2026-07-15T10:00:00.000Z'),
+        createdAt: new Date('2026-07-15T09:55:00.000Z'),
+        credits: 30,
+        grossAmount: 21000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        paystackReference: 'ref_reseller_split',
+        sellerVatStatus: 'NOT_REGISTERED',
+        sellerVatNumber: null,
+        package: {
+          creditAmount: 50,
+          catalogPackageId: 'payg-50',
+        },
+        resellerProfile: {
+          affiliateSlug: 'acme',
+          brandingEnabled: false,
+          brandingLogo: null,
+          brandingCompanyDetails: 'Acme Trading',
+          physicalAddress: null,
+          vatStatus: 'NOT_REGISTERED',
+          vatNumber: null,
+          organisation: {
+            name: 'Acme Org',
+          },
+        },
+      },
+    ]);
+
+    const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
+
+    expect(history).toHaveLength(2);
+    expect(history.map((item) => item.invoiceId).sort()).toEqual([
+      'nomia_purchase_split',
+      'reseller_reseller_tx_split',
+    ]);
+    expect(history.every((item) => item.purchaseGroupId === 'pur_hybrid')).toBe(true);
   });
 
   it('includes standalone reseller purchases in billing history', async () => {
@@ -182,6 +251,8 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         currency: 'ZAR',
         status: 'COMPLETED',
         paystackReference: 'ref_reseller_1',
+        sellerVatStatus: null,
+        sellerVatNumber: null,
         package: {
           creditAmount: 50,
           catalogPackageId: 'payg-50',
@@ -206,6 +277,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
     expect(history).toHaveLength(1);
     expect(history[0]).toMatchObject({
       kind: 'reseller',
+      issuer: 'RESELLER',
       invoiceId: 'reseller_reseller_tx_1',
       totalCredits: 50,
       totalGrossAmount: 35000,
@@ -218,36 +290,44 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
 });
 
 describe('build-purchase-invoice', () => {
-  it('includes the Nomia logo and A4 page styles', async () => {
-    const { buildPurchaseInvoiceHtml } = await import('./build-purchase-invoice');
+  it(
+    'includes the Nomia logo and A4 page styles',
+    async () => {
+      const { buildPurchaseInvoiceHtml } = await import('./build-purchase-invoice');
 
-    const html = buildPurchaseInvoiceHtml({
-      invoice: {
-        invoiceId: 'invoice_1',
-        purchaseGroupId: null,
-        date: new Date('2026-07-15T10:00:00.000Z'),
-        kind: 'pay_as_you_go',
-        title: 'Pay as you go top-up',
-        totalCredits: 100,
-        totalGrossAmount: 10000,
-        currency: 'ZAR',
-        status: 'COMPLETED',
-        lineItems: [],
-      },
-      organisationName: 'Buyer Org',
-      customerName: 'Buyer',
-      customerEmail: 'buyer@example.com',
-      logoUrl: 'https://sign.nomiadocs.com/android-chrome-512x512.png',
-    });
+      const html = buildPurchaseInvoiceHtml({
+        invoice: {
+          invoiceId: 'invoice_1',
+          purchaseGroupId: null,
+          date: new Date('2026-07-15T10:00:00.000Z'),
+          kind: 'pay_as_you_go',
+          issuer: 'NOMIA',
+          title: 'Pay as you go top-up',
+          totalCredits: 100,
+          totalGrossAmount: 10000,
+          currency: 'ZAR',
+          status: 'COMPLETED',
+          lineItems: [],
+        },
+        organisationName: 'Buyer Org',
+        customerName: 'Buyer',
+        customerEmail: 'buyer@example.com',
+        logoUrl: 'https://sign.nomiadocs.com/android-chrome-512x512.png',
+      });
 
-    expect(html).toContain(
-      'src="https://sign.nomiadocs.com/android-chrome-512x512.png" alt="Nomia"',
-    );
-    expect(html).toContain('@page');
-    expect(html).toContain('size: A4');
-  });
+      expect(html).toContain(
+        'src="https://sign.nomiadocs.com/android-chrome-512x512.png" alt="Nomia"',
+      );
+      expect(html).toContain('@page');
+      expect(html).toContain('size: A4');
+      expect(html).toContain('<h1>Tax Invoice</h1>');
+    },
+    15_000,
+  );
 
-  it('includes reseller VAT and physical address on reseller invoices', async () => {
+  it(
+    'includes reseller VAT and physical address on reseller invoices',
+    async () => {
     const { buildPurchaseInvoiceHtml } = await import('./build-purchase-invoice');
 
     const html = buildPurchaseInvoiceHtml({
@@ -256,6 +336,7 @@ describe('build-purchase-invoice', () => {
         purchaseGroupId: null,
         date: new Date('2026-07-15T10:00:00.000Z'),
         kind: 'reseller',
+        issuer: 'RESELLER',
         title: 'Credits from Acme Trading',
         totalCredits: 50,
         totalGrossAmount: 35000,
@@ -287,12 +368,64 @@ describe('build-purchase-invoice', () => {
       resellerLogoUrl: 'data:image/png;base64,resellerlogo',
     });
 
-    expect(html).toContain('Reseller (seller)');
+    expect(html).toContain('Supplier');
     expect(html).toContain('Acme Trading');
     expect(html).toContain('1 Main Street');
-    expect(html).toContain('VAT registered — 4123456789');
+    expect(html).toContain('VAT number — 4123456789');
     expect(html).toContain('Issued via Nomia on behalf of Acme Trading');
+    expect(html).toContain('<h1>Tax Invoice</h1>');
     expect(html).toContain('data:image/png;base64,resellerlogo');
     expect(html).toContain('seller-logo');
-  });
+  },
+  15_000,
+  );
+
+  it(
+    'uses Invoice title and non-VAT note for non-VAT resellers',
+    async () => {
+    const { buildPurchaseInvoiceHtml } = await import('./build-purchase-invoice');
+
+    const html = buildPurchaseInvoiceHtml({
+      invoice: {
+        invoiceId: 'reseller_2',
+        purchaseGroupId: null,
+        date: new Date('2026-07-15T10:00:00.000Z'),
+        kind: 'reseller',
+        issuer: 'RESELLER',
+        title: 'Credits from Acme Trading',
+        totalCredits: 50,
+        totalGrossAmount: 35000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        resellerSeller: {
+          name: 'Acme Trading',
+          physicalAddress: null,
+          vatStatus: 'NOT_REGISTERED',
+          vatNumber: null,
+          affiliateSlug: 'acme',
+          hasLogo: false,
+        },
+        lineItems: [
+          {
+            provider: 'reseller',
+            description: 'Credits from Acme Trading',
+            credits: 50,
+            grossAmount: 35000,
+            currency: 'ZAR',
+            status: 'COMPLETED',
+            reference: 'ref_2',
+          },
+        ],
+      },
+      organisationName: 'Buyer Org',
+      customerName: 'Buyer',
+      customerEmail: 'buyer@example.com',
+    });
+
+    expect(html).toContain('<h1>Invoice</h1>');
+    expect(html).toContain('Supplier is not registered for VAT. VAT has not been charged.');
+    expect(html).not.toContain('<th class="num">VAT</th>');
+  },
+  15_000,
+  );
 });

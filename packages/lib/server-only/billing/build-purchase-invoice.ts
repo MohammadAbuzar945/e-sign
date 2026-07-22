@@ -7,6 +7,7 @@ import {
   formatAmount,
   type OrganisationPurchaseHistoryItem,
 } from './get-organisation-purchase-history';
+import { resolvePurchaseInvoicePolicy } from './purchase-invoice-policy';
 
 export { getOrganisationPurchaseInvoice, resolveResellerInvoiceLogoDataUrl } from './organisation-purchase-invoice';
 
@@ -16,6 +17,9 @@ const escapeHtml = (value: string) =>
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;');
+
+const formatAddressHtml = (address: string | null | undefined) =>
+  address ? escapeHtml(address).replaceAll('\n', '<br />') : null;
 
 export const buildPurchaseInvoiceHtml = ({
   invoice,
@@ -40,73 +44,115 @@ export const buildPurchaseInvoiceHtml = ({
     minute: '2-digit',
   });
 
+  const issuer =
+    invoice.issuer ??
+    (invoice.lineItems.some((line) => line.provider === 'reseller') &&
+    !invoice.lineItems.some((line) => line.provider === 'nomia')
+      ? 'RESELLER'
+      : 'NOMIA');
+
+  const policy = resolvePurchaseInvoicePolicy({
+    issuer,
+    amountInCents: invoice.totalGrossAmount,
+    sellerVatStatus: invoice.resellerSeller?.vatStatus,
+    sellerVatNumber: invoice.resellerSeller?.vatNumber,
+    buyerVatNumber: invoice.buyerVatNumber,
+    resellerDisplayName: invoice.resellerSeller?.name,
+    resellerPhysicalAddress: invoice.resellerSeller?.physicalAddress,
+  });
+
+  const showVatColumns = policy.showVatColumns;
+  const vatRatePercent = `${(policy.vatRate * 100).toFixed(0)}%`;
+
   const lineRows = invoice.lineItems
-    .map(
-      (line) => `
+    .map((line) => {
+      const linePolicy = resolvePurchaseInvoicePolicy({
+        issuer: line.provider === 'reseller' ? 'RESELLER' : 'NOMIA',
+        amountInCents: line.grossAmount,
+        sellerVatStatus:
+          line.provider === 'reseller' ? invoice.resellerSeller?.vatStatus : 'REGISTERED',
+        sellerVatNumber:
+          line.provider === 'reseller' ? invoice.resellerSeller?.vatNumber : undefined,
+        resellerDisplayName: invoice.resellerSeller?.name,
+        resellerPhysicalAddress: invoice.resellerSeller?.physicalAddress,
+      });
+
+      return `
         <tr>
           <td>${escapeHtml(line.provider === 'reseller' ? 'Reseller' : 'Nomia')}</td>
           <td>${escapeHtml(line.description)}</td>
           <td class="num">${line.credits}</td>
-          <td class="num">${escapeHtml(formatAmount(line.currency, line.grossAmount))}</td>
+          ${
+            showVatColumns
+              ? `<td class="num">${escapeHtml(formatAmount(line.currency, linePolicy.netAmountInCents))}</td>
+                 <td class="num">${escapeHtml(formatAmount(line.currency, linePolicy.vatAmountInCents))}</td>`
+              : ''
+          }
+          <td class="num">${escapeHtml(formatAmount(line.currency, linePolicy.grossAmountInCents))}</td>
           <td>${escapeHtml(line.status)}</td>
           <td class="ref">${escapeHtml(line.reference ?? '—')}</td>
         </tr>
-      `,
-    )
+      `;
+    })
     .join('');
 
-  const resellerSeller = invoice.resellerSeller;
-  const resellerVatLabel = (() => {
-    if (!resellerSeller) {
-      return null;
-    }
+  const supplierAddressHtml = formatAddressHtml(policy.supplier.address);
+  const supplierVatLabel =
+    policy.supplier.vatStatus === 'REGISTERED' && policy.supplier.vatNumber
+      ? `VAT number — ${policy.supplier.vatNumber}`
+      : policy.supplier.vatStatus === 'REGISTERED'
+        ? 'VAT registered'
+        : policy.supplier.vatStatus === 'NOT_REGISTERED'
+          ? 'Not VAT registered'
+          : null;
 
-    if (resellerSeller.vatStatus === 'REGISTERED' && resellerSeller.vatNumber) {
-      return `VAT registered — ${resellerSeller.vatNumber}`;
-    }
+  const showResellerLogo = issuer === 'RESELLER' && Boolean(resellerLogoUrl);
 
-    if (resellerSeller.vatStatus === 'REGISTERED') {
-      return 'VAT registered';
-    }
-
-    if (resellerSeller.vatStatus === 'NOT_REGISTERED') {
-      return 'Not VAT registered';
-    }
-
-    if (resellerSeller.vatNumber) {
-      return `VAT number — ${resellerSeller.vatNumber}`;
-    }
-
-    return null;
-  })();
-
-  const resellerAddressHtml = resellerSeller?.physicalAddress
-    ? escapeHtml(resellerSeller.physicalAddress).replaceAll('\n', '<br />')
-    : null;
-
-  const resellerSellerBlock = resellerSeller
-    ? `
+  const supplierBlock = `
       <div class="seller">
         ${
-          resellerLogoUrl
-            ? `<img class="seller-logo" src="${escapeHtml(resellerLogoUrl)}" alt="${escapeHtml(
-                resellerSeller.name,
+          showResellerLogo
+            ? `<img class="seller-logo" src="${escapeHtml(resellerLogoUrl!)}" alt="${escapeHtml(
+                policy.supplier.name,
               )}" />`
             : ''
         }
-        <strong>Reseller (seller)</strong><br />
-        ${escapeHtml(resellerSeller.name)}
-        ${resellerAddressHtml ? `<br /><span class="muted">${resellerAddressHtml}</span>` : ''}
-        ${resellerVatLabel ? `<br /><span class="muted">${escapeHtml(resellerVatLabel)}</span>` : ''}
+        <strong>Supplier</strong><br />
+        ${escapeHtml(policy.supplier.name)}
+        ${supplierAddressHtml ? `<br /><span class="muted">${supplierAddressHtml}</span>` : ''}
+        ${supplierVatLabel ? `<br /><span class="muted">${escapeHtml(supplierVatLabel)}</span>` : ''}
       </div>
-    `
+    `;
+
+  const buyerVatBlock =
+    policy.issuer === 'NOMIA' && policy.buyerVatNumber
+      ? `<br /><span class="muted">Buyer VAT number — ${escapeHtml(policy.buyerVatNumber)}</span>`
+      : '';
+
+  const totalsVatBlock = showVatColumns
+    ? `
+        <div><span>Net (${policy.pricingMode === 'INCLUSIVE' ? 'ex VAT' : 'exclusive'})</span><span>${escapeHtml(
+          formatAmount(invoice.currency, policy.netAmountInCents),
+        )}</span></div>
+        <div><span>VAT (${vatRatePercent})</span><span>${escapeHtml(
+          formatAmount(invoice.currency, policy.vatAmountInCents),
+        )}</span></div>
+      `
+    : '';
+
+  const requiredNoteHtml = policy.requiredNote
+    ? `<p class="note">${escapeHtml(policy.requiredNote)}</p>`
+    : '';
+
+  const sequenceHtml = policy.sequencePrefix
+    ? `<div><strong>Sequence</strong> ${escapeHtml(policy.sequencePrefix)}-${escapeHtml(invoice.invoiceId)}</div>`
     : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Invoice ${escapeHtml(invoice.invoiceId)}</title>
+    <title>${escapeHtml(policy.documentTitle)} ${escapeHtml(invoice.invoiceId)}</title>
     <style>
       @page {
         size: A4;
@@ -171,6 +217,15 @@ export const buildPurchaseInvoiceHtml = ({
         margin: 0;
       }
 
+      .note {
+        margin-top: 16px;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #f9fafb;
+        color: #374151;
+      }
+
       .meta-row {
         display: flex;
         justify-content: space-between;
@@ -229,7 +284,7 @@ export const buildPurchaseInvoiceHtml = ({
 
       .totals {
         margin-top: 24px;
-        width: 280px;
+        width: 300px;
         margin-left: auto;
       }
 
@@ -259,19 +314,16 @@ export const buildPurchaseInvoiceHtml = ({
       <div class="logo-row">
         <img class="brand-logo" src="${escapeHtml(logoUrl)}" alt="Nomia" />
         ${
-          resellerLogoUrl
-            ? `<img class="brand-logo" src="${escapeHtml(resellerLogoUrl)}" alt="${escapeHtml(
-                resellerSeller?.name ?? 'Reseller',
+          showResellerLogo
+            ? `<img class="brand-logo" src="${escapeHtml(resellerLogoUrl!)}" alt="${escapeHtml(
+                policy.supplier.name,
               )}" />`
             : ''
         }
       </div>
-      <h1>Tax Invoice</h1>
-      <p class="muted">${
-        resellerSeller
-          ? `Issued via Nomia on behalf of ${escapeHtml(resellerSeller.name)}`
-          : 'Issued by Nomia'
-      }</p>
+      <h1>${escapeHtml(policy.documentTitle)}</h1>
+      <p class="muted">${escapeHtml(policy.issuedBySubtitle)}</p>
+      <p class="muted">VAT pricing: ${escapeHtml(policy.pricingMode.toLowerCase())}</p>
 
       <div class="meta-row">
         <div>
@@ -279,16 +331,18 @@ export const buildPurchaseInvoiceHtml = ({
           ${escapeHtml(organisationName)}<br />
           ${escapeHtml(customerName ?? customerEmail)}<br />
           ${escapeHtml(customerEmail)}
+          ${buyerVatBlock}
         </div>
         <div class="right">
           <div><strong>Invoice #</strong> ${escapeHtml(invoice.invoiceId)}</div>
+          ${sequenceHtml}
           <div><strong>Date</strong> ${escapeHtml(issuedAt)}</div>
           <div><strong>Status</strong> ${escapeHtml(invoice.status)}</div>
           <div><strong>Type</strong> ${escapeHtml(invoice.kind)}</div>
         </div>
       </div>
 
-      ${resellerSellerBlock}
+      ${supplierBlock}
 
       <p class="title">${escapeHtml(invoice.title)}</p>
 
@@ -298,7 +352,12 @@ export const buildPurchaseInvoiceHtml = ({
             <th>Provider</th>
             <th>Description</th>
             <th class="num">Credits</th>
-            <th class="num">Amount</th>
+            ${
+              showVatColumns
+                ? `<th class="num">Net</th><th class="num">VAT</th>`
+                : ''
+            }
+            <th class="num">${showVatColumns ? 'Gross' : 'Amount'}</th>
             <th>Status</th>
             <th>Reference</th>
           </tr>
@@ -310,15 +369,18 @@ export const buildPurchaseInvoiceHtml = ({
 
       <div class="totals">
         <div><span>Total credits</span><span>${invoice.totalCredits}</span></div>
+        ${totalsVatBlock}
         <div class="grand">
-          <span>Total paid</span>
-          <span>${escapeHtml(formatAmount(invoice.currency, invoice.totalGrossAmount))}</span>
+          <span>Total ${showVatColumns ? 'gross' : 'paid'}</span>
+          <span>${escapeHtml(formatAmount(invoice.currency, policy.grossAmountInCents))}</span>
         </div>
       </div>
 
+      ${requiredNoteHtml}
+
       <p class="footer">
-        This invoice summarises your e-sign credit purchase. For split purchases, credits may be
-        fulfilled by both a reseller and Nomia.
+        This document summarises your e-sign credit purchase. Split orders may produce separate
+        Nomia and reseller invoices.
       </p>
     </div>
   </body>

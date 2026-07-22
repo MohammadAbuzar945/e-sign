@@ -115,7 +115,7 @@ export const sendPurchaseInvoiceEmail = async ({
     text,
     attachments: [
       {
-        filename: `nomia-invoice-${invoice.invoiceId}.pdf`,
+        filename: `${invoice.issuer === 'RESELLER' ? 'reseller' : 'nomia'}-invoice-${invoice.invoiceId}.pdf`,
         content: Buffer.from(pdf),
         contentType: 'application/pdf',
       },

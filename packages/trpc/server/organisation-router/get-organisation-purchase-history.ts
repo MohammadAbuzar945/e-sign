@@ -1,4 +1,5 @@
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { canAccessInvoiceHistory } from '@documenso/lib/constants/demo-feature-flags';
 import { getOrganisationPurchaseHistory } from '@documenso/lib/server-only/billing/get-organisation-purchase-history';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
@@ -14,6 +15,12 @@ export const getOrganisationPurchaseHistoryRoute = authenticatedProcedure
   .output(ZGetOrganisationPurchaseHistoryResponseSchema)
   .query(async ({ input, ctx }) => {
     const { organisationId } = input;
+
+    if (!canAccessInvoiceHistory(ctx.user.email)) {
+      throw new AppError(AppErrorCode.UNAUTHORIZED, {
+        message: 'Invoice history is not available for this account',
+      });
+    }
 
     const organisation = await prisma.organisation.findFirst({
       where: buildOrganisationWhereQuery({

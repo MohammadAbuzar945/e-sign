@@ -59,7 +59,12 @@ describe('reseller VAT calculations', () => {
 
   it('calculates inclusive VAT for registered resellers', () => {
     expect(calculateResellerVatAmountInCents(45000, '4123456789')).toBe(5870);
+    expect(calculateResellerVatAmountInCents(45000, null, 'REGISTERED')).toBe(5870);
     expect(calculateResellerNetAmountInCents(45000, 5870)).toBe(39130);
+  });
+
+  it('returns zero VAT when status is not registered', () => {
+    expect(calculateResellerVatAmountInCents(45000, '4123456789', 'NOT_REGISTERED')).toBe(0);
   });
 
   it('prefers stored VAT values when already recorded', () => {

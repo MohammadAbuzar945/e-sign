@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
-import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
+import { canAccessInvoiceHistory } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { cn } from '@documenso/ui/lib/utils';
 import { trpc } from '@documenso/trpc/react';
@@ -60,7 +60,8 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const canViewPurchaseHistory =
     Boolean(purchaserOrganisation) &&
     Boolean(currentUserId) &&
-    purchaserOrganisation?.ownerUserId === currentUserId;
+    purchaserOrganisation?.ownerUserId === currentUserId &&
+    canAccessInvoiceHistory(sessionData?.user?.email);
 
   const { data: affiliate, isLoading } = trpc.organisation.reseller.getAffiliate.useQuery({
     affiliateSlug,
@@ -435,9 +436,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
         </Alert>
       )}
 
-      {canViewPurchaseHistory &&
-        isDemoFeatureVisible('INVOICE_HISTORY') &&
-        purchaserOrganisation && (
+      {canViewPurchaseHistory && purchaserOrganisation && (
         <div className="flex justify-end">
           <OrganisationPurchaseHistoryDialog
             orgUrl={purchaserOrganisation.url}

@@ -153,16 +153,16 @@ export const completeOrganisationCreditPurchase = async ({
 
 export const resolveNomiaPurchaseInvoiceId = ({
   purchaseId,
-  purchaseGroupId,
 }: {
   purchaseId: string;
+  /** @deprecated Ignored — Nomia and reseller legs always get separate invoice IDs. */
   purchaseGroupId?: string | null;
-}) => purchaseGroupId || `nomia_${purchaseId}`;
+}) => `nomia_${purchaseId}`;
 
 export const resolveResellerPurchaseInvoiceId = ({
   transactionId,
-  purchaseGroupId,
 }: {
   transactionId: string;
+  /** @deprecated Ignored — Nomia and reseller legs always get separate invoice IDs. */
   purchaseGroupId?: string | null;
-}) => purchaseGroupId || `reseller_${transactionId}`;
+}) => `reseller_${transactionId}`;

@@ -17,12 +17,23 @@ vi.mock('./reseller-secrets', () => ({
     value.startsWith('encrypted:') ? value.slice('encrypted:'.length) : value,
 }));
 
+vi.mock('./reseller-vat-registration', () => ({
+  recordResellerVatRegistrationChange: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock('@documenso/prisma', () => ({
   prisma: {
     resellerProfile: {
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    $transaction: vi.fn(async (callback: (tx: unknown) => unknown) =>
+      callback({
+        resellerProfile: {
+          update: (...args: unknown[]) => prisma.resellerProfile.update(...(args as [never])),
+        },
+      }),
+    ),
   },
 }));
 

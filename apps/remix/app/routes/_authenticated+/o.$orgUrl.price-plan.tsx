@@ -21,8 +21,7 @@ import {
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
-import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
+import { canAccessInvoiceHistory, isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import { OrganisationPurchaseHistoryDialog } from '~/components/general/organisation-purchase-history-dialog';
 import { ResellerBulkInventoryPurchase } from '~/components/general/reseller-bulk-inventory-purchase';
 import { appMetaTags } from '~/utils/meta';
@@ -58,9 +57,13 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     });
   }
 
+  const canViewInvoiceHistory = canAccessInvoiceHistory(user.email);
+
   const [subscriptions, purchaseHistory, resellerProfile] = await Promise.all([
     getSubscriptionsByUserId({ organisationId: organisation.id }),
-    getOrganisationPurchaseHistory({ organisationId: organisation.id }),
+    canViewInvoiceHistory
+      ? getOrganisationPurchaseHistory({ organisationId: organisation.id })
+      : Promise.resolve([]),
     prisma.resellerProfile.findUnique({
       where: { organisationId: organisation.id },
       select: { id: true, status: true },
@@ -73,6 +76,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     user,
     organisation,
     isActiveReseller: resellerProfile?.status === 'ACTIVE',
+    canViewInvoiceHistory,
   });
 };
 
@@ -420,7 +424,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
   const revalidator = useRevalidator();
 
   const { orgUrl } = params;
-  const { subscriptions, purchaseHistory, organisation, isActiveReseller } =
+  const { subscriptions, purchaseHistory, organisation, isActiveReseller, canViewInvoiceHistory } =
     useSuperLoaderData<typeof loader>();
   const currentSubscriptionData: any = subscriptions?.find((data: any) => data.status === 'ACTIVE');
   const activeSubscriptionPlanId = currentSubscriptionData?.priceId;
@@ -859,7 +863,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
           </div>
         )}
 
-        {isDemoFeatureVisible('INVOICE_HISTORY') ? (
+        {canViewInvoiceHistory ? (
           <OrganisationPurchaseHistoryDialog
             orgUrl={orgUrl}
             purchaseHistory={purchaseHistory}
