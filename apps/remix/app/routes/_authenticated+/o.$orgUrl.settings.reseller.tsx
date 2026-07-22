@@ -280,6 +280,7 @@ export default function OrganisationSettingsResellerPage() {
       const csv = buildResellerTransactionsCsv({
         resellerOrganisationName: exportData.resellerOrganisationName,
         resellerVatNumber: exportData.resellerVatNumber,
+        resellerVatStatus: exportData.resellerVatStatus,
         rows: exportData.data,
       });
 
@@ -997,7 +998,8 @@ export default function OrganisationSettingsResellerPage() {
                   const vatAmount = resolveResellerVatAmountInCents(
                     transaction.grossAmount,
                     transaction.vatAmount,
-                    profile.vatNumber,
+                    transaction.sellerVatNumber ?? profile.vatNumber,
+                    transaction.sellerVatStatus ?? profile.vatStatus,
                   );
                   const netAmount = calculateResellerNetAmountInCents(
                     transaction.grossAmount,

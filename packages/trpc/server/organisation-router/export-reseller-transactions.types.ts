@@ -10,6 +10,7 @@ export const ZExportResellerTransactionsRequestSchema = z.object({
 export const ZExportResellerTransactionsResponseSchema = z.object({
   resellerOrganisationName: z.string(),
   resellerVatNumber: z.string().nullable(),
+  resellerVatStatus: z.enum(['NOT_REGISTERED', 'REGISTERED']).nullable(),
   truncated: z.boolean(),
   count: z.number(),
   data: z.array(
@@ -27,6 +28,8 @@ export const ZExportResellerTransactionsResponseSchema = z.object({
       purchaserEmail: z.string(),
       purchaserOrganisationName: z.string(),
       paystackReference: z.string().nullable(),
+      sellerVatStatus: z.enum(['NOT_REGISTERED', 'REGISTERED']).nullable(),
+      sellerVatNumber: z.string().nullable(),
     }),
   ),
 });

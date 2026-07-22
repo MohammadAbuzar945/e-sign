@@ -16,6 +16,8 @@ export type ResellerTransactionCsvRow = {
   currency: string;
   paystackReference: string | null;
   status: string;
+  sellerVatStatus?: 'NOT_REGISTERED' | 'REGISTERED' | null;
+  sellerVatNumber?: string | null;
 };
 
 const escapeCsvValue = (value: string) => {
@@ -25,10 +27,12 @@ const escapeCsvValue = (value: string) => {
 export const buildResellerTransactionsCsv = ({
   resellerOrganisationName,
   resellerVatNumber,
+  resellerVatStatus,
   rows,
 }: {
   resellerOrganisationName: string;
   resellerVatNumber?: string | null;
+  resellerVatStatus?: 'NOT_REGISTERED' | 'REGISTERED' | null;
   rows: ResellerTransactionCsvRow[];
 }) => {
   const header = [
@@ -55,7 +59,8 @@ export const buildResellerTransactionsCsv = ({
     const vatAmount = resolveResellerVatAmountInCents(
       row.grossAmount,
       row.vatAmount,
-      resellerVatNumber,
+      row.sellerVatNumber ?? resellerVatNumber,
+      row.sellerVatStatus ?? resellerVatStatus,
     );
     const netAmount = calculateResellerNetAmountInCents(row.grossAmount, vatAmount);
     const transactionDate = row.completedAt ?? row.createdAt;

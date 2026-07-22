@@ -117,13 +117,17 @@ export const calculateResellerNetAmountInCents = (
   return grossAmountInCents - vatAmountInCents;
 };
 
-/** Uses stored VAT when present; otherwise derives from amount when seller is VAT registered. */
+/** Uses stored VAT when present and seller is VAT registered; otherwise derives or returns 0. */
 export const resolveResellerVatAmountInCents = (
   grossAmountInCents: number,
   storedVatAmountInCents: number,
   vatNumber?: string | null,
   sellerVatStatus?: VatSellerStatus,
 ) => {
+  if (!isSellerVatRegistered({ sellerVatStatus, vatNumber })) {
+    return 0;
+  }
+
   if (storedVatAmountInCents > 0) {
     return storedVatAmountInCents;
   }
