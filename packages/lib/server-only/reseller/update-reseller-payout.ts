@@ -13,6 +13,7 @@ import { prisma } from '@documenso/prisma';
 import { ZResellerBankVerificationFieldsSchema } from '@documenso/lib/constants/reseller-bank-verification';
 import { encryptResellerSecret, decryptResellerSecret } from './reseller-secrets';
 import { registerResellerPaystackSubaccount } from './register-reseller-paystack-subaccount';
+import { recordResellerVatRegistrationChange } from './reseller-vat-registration';
 
 const getSubaccountStatusFromPaystack = (subaccount: {
   is_verified?: boolean;
@@ -195,6 +196,8 @@ export const updateResellerBankDetails = async ({
   const encryptedAccountNumber = encryptResellerSecret(trimmedAccountNumber);
   const encryptedDocumentNumber = encryptResellerSecret(trimmedDocumentNumber);
   const trimmedBankName = bankName.trim();
+  const nextVatNumber =
+    vatStatus === ResellerVatStatus.REGISTERED ? trimmedVatNumber : null;
 
   const previousAccountNumber = profile.bankAccountNumber
     ? decryptResellerSecret(profile.bankAccountNumber)
@@ -211,25 +214,35 @@ export const updateResellerBankDetails = async ({
     previousBankName !== trimmedBankName ||
     previousAccountName !== trimmedAccountName;
 
-  const savedProfile = await prisma.resellerProfile.update({
-    where: { organisationId },
-    data: {
-      bankCode: trimmedBankCode,
-      bankName: trimmedBankName,
-      bankAccountNumber: encryptedAccountNumber,
-      bankAccountName: trimmedAccountName,
-      bankAccountType: accountType,
-      bankDocumentType: documentType,
-      bankDocumentNumber: encryptedDocumentNumber,
-      physicalAddress: trimmedPhysicalAddress,
-      contactPhone: trimmedContactPhone,
-      contactEmail: trimmedContactEmail,
-      vatStatus,
-      vatNumber:
-        vatStatus === ResellerVatStatus.REGISTERED ? trimmedVatNumber : null,
-      bankDetailsConfirmedAt: new Date(),
-      ...(shouldSyncPaystackSubaccount ? { subaccountFailureReason: null } : {}),
-    },
+  const savedProfile = await prisma.$transaction(async (tx) => {
+    const updated = await tx.resellerProfile.update({
+      where: { organisationId },
+      data: {
+        bankCode: trimmedBankCode,
+        bankName: trimmedBankName,
+        bankAccountNumber: encryptedAccountNumber,
+        bankAccountName: trimmedAccountName,
+        bankAccountType: accountType,
+        bankDocumentType: documentType,
+        bankDocumentNumber: encryptedDocumentNumber,
+        physicalAddress: trimmedPhysicalAddress,
+        contactPhone: trimmedContactPhone,
+        contactEmail: trimmedContactEmail,
+        vatStatus,
+        vatNumber: nextVatNumber,
+        bankDetailsConfirmedAt: new Date(),
+        ...(shouldSyncPaystackSubaccount ? { subaccountFailureReason: null } : {}),
+      },
+    });
+
+    await recordResellerVatRegistrationChange({
+      resellerProfileId: updated.id,
+      status: vatStatus,
+      vatNumber: nextVatNumber,
+      tx,
+    });
+
+    return updated;
   });
 
   if (!shouldSyncPaystackSubaccount) {

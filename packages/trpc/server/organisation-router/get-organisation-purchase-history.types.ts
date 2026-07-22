@@ -18,13 +18,26 @@ export const ZOrganisationPurchaseHistoryItemSchema = z.object({
   invoiceId: z.string(),
   purchaseGroupId: z.string().nullable(),
   date: z.date(),
-  kind: z.enum(['subscription', 'pay_as_you_go', 'reseller', 'hybrid', 'bulk']),
+  kind: z.enum(['subscription', 'pay_as_you_go', 'reseller', 'bulk']),
+  issuer: z.enum(['NOMIA', 'RESELLER']),
   title: z.string(),
   totalCredits: z.number(),
   totalGrossAmount: z.number(),
   currency: z.string(),
   status: z.string(),
   lineItems: z.array(ZPurchaseHistoryLineItemSchema),
+  buyerVatNumber: z.string().nullable().optional(),
+  resellerSeller: z
+    .object({
+      name: z.string(),
+      physicalAddress: z.string().nullable(),
+      vatStatus: z.enum(['NOT_REGISTERED', 'REGISTERED']).nullable(),
+      vatNumber: z.string().nullable(),
+      affiliateSlug: z.string(),
+      hasLogo: z.boolean(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export const ZGetOrganisationPurchaseHistoryResponseSchema = z.array(

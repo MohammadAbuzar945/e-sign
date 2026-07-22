@@ -77,6 +77,8 @@ const buildTransactionRecordData = ({
   payoutMode,
   paystackSubaccountCode,
   purchaseGroupId,
+  sellerVatStatus,
+  sellerVatNumber,
 }: {
   profile: {
     id: string;
@@ -103,6 +105,8 @@ const buildTransactionRecordData = ({
   payoutMode: ResellerPayoutMode;
   paystackSubaccountCode?: string | null;
   purchaseGroupId?: string | null;
+  sellerVatStatus?: 'NOT_REGISTERED' | 'REGISTERED' | null;
+  sellerVatNumber?: string | null;
 }) => ({
   resellerProfileId: profile.id,
   resellerOrganisationId: profile.organisationId,
@@ -113,6 +117,8 @@ const buildTransactionRecordData = ({
   credits,
   grossAmount,
   vatAmount,
+  sellerVatStatus: sellerVatStatus ?? null,
+  sellerVatNumber: sellerVatNumber?.trim() || null,
   currency: pkg.currency,
   status: ResellerCreditTransactionStatus.PENDING,
   payoutMode,
@@ -256,7 +262,11 @@ export const processResellerPaystackWebhook = async ({
     ? hybridResellerCredits! + hybridNomiaCredits!
     : creditAmount;
   const resellerGrossAmount = isHybridSingleCheckout ? hybridResellerAmountInCents! : amountInCents;
-  const vatAmount = calculateResellerVatAmountInCents(resellerGrossAmount, profile.vatNumber);
+  const vatAmount = calculateResellerVatAmountInCents(
+    resellerGrossAmount,
+    profile.vatNumber,
+    profile.vatStatus,
+  );
   const payoutMode =
     metadata.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT
       ? ResellerPayoutMode.NOMIA_SUBACCOUNT
@@ -291,6 +301,8 @@ export const processResellerPaystackWebhook = async ({
           payoutMode,
           paystackSubaccountCode,
           purchaseGroupId,
+          sellerVatStatus: profile.vatStatus,
+          sellerVatNumber: profile.vatNumber,
         }),
       }));
 

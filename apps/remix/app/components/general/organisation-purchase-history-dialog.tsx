@@ -32,11 +32,7 @@ type OrganisationPurchaseHistoryDialogProps = {
 };
 
 const formatHistorySource = (item: OrganisationPurchaseHistoryItem) => {
-  if (item.kind === 'hybrid') {
-    return <Trans>Reseller + Nomia</Trans>;
-  }
-
-  if (item.kind === 'reseller') {
+  if (item.issuer === 'RESELLER' || item.kind === 'reseller') {
     return <Trans>Reseller</Trans>;
   }
 
@@ -59,12 +55,6 @@ const formatHistoryDescription = (
     }
 
     return item.title;
-  }
-
-  if (item.kind === 'hybrid') {
-    return item.lineItems
-      .map((line) => `${line.credits} credits (${line.provider === 'reseller' ? 'Reseller' : 'Nomia'})`)
-      .join(' + ');
   }
 
   return item.title;
