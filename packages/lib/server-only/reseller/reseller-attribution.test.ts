@@ -145,6 +145,37 @@ describe('reseller attribution helpers', () => {
     expect(result.associated).toBe(true);
     expect(prisma.organisation.update).toHaveBeenCalled();
   });
+
+  it('never overwrites AFFILIATE_SIGNUP when a purchase association is attempted', async () => {
+    vi.mocked(prisma.organisation.findUnique).mockResolvedValue({
+      id: 'org-1',
+      associatedResellerProfileId: 'rp-1',
+      resellerRequiresReconsent: false,
+      resellerAssociationSource: 'AFFILIATE_SIGNUP',
+      resellerProfile: null,
+    } as never);
+
+    vi.mocked(prisma.resellerProfile.findUnique).mockResolvedValue({
+      id: 'rp-1',
+      status: 'ACTIVE',
+      organisationId: 'reseller-org',
+      isDelinquent: false,
+      affiliateSlug: 'acme',
+    } as never);
+
+    vi.mocked(prisma.resellerProfile.findUniqueOrThrow).mockResolvedValue({
+      isDelinquent: false,
+    } as never);
+
+    const result = await associateOrganisationWithReseller({
+      organisationId: 'org-1',
+      resellerProfileId: 'rp-1',
+      source: 'AFFILIATE_PURCHASE',
+    });
+
+    expect(result).toEqual({ associated: true, reason: 'ALREADY_SET' });
+    expect(prisma.organisation.update).not.toHaveBeenCalled();
+  });
 });
 
 describe('resolveOrganisationPaygBilling', () => {

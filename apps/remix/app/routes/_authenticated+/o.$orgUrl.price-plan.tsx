@@ -4,12 +4,14 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { ChevronLeftIcon } from 'lucide-react';
-import { Link, useLocation, useRevalidator } from 'react-router';
+import { Link, redirect, useLocation, useRevalidator } from 'react-router';
 
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { canAccessInvoiceHistory, isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { getOrganisationBillingAttributionSummary } from '@documenso/lib/server-only/reseller/resolve-organisation-payg-billing';
+import { resolveOrganisationBillingPath } from '@documenso/lib/utils/organisation-billing-path';
 import { prisma } from '@documenso/prisma';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { getOrganisationPurchaseHistory } from '@documenso/lib/server-only/billing/get-organisation-purchase-history';
@@ -56,6 +58,25 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {
       message: 'Only organisation owners can access pricing plans',
     });
+  }
+
+  const url = new URL(request.url);
+  const isHybridNomiaRemainder = url.searchParams.get('hybrid') === 'nomia';
+  const isResellerUnavailableFallback = url.searchParams.get('resellerUnavailable') === '1';
+
+  // Affiliate signup / purchase customers should land on /r/{slug}, not Nomia price-plan.
+  // Keep explicit fallback/hybrid callbacks on this page to avoid redirect loops.
+  if (!isHybridNomiaRemainder && !isResellerUnavailableFallback) {
+    const billingAttribution = await getOrganisationBillingAttributionSummary(organisation.id);
+    const billingPath = resolveOrganisationBillingPath({
+      organisationUrl: organisation.url,
+      billingAttribution,
+    });
+    const defaultPricePlanPath = `/o/${organisation.url}/price-plan`;
+
+    if (billingPath !== defaultPricePlanPath) {
+      throw redirect(billingPath);
+    }
   }
 
   const canViewInvoiceHistory = canAccessInvoiceHistory(user.email);

@@ -31,6 +31,20 @@ describe('resolveOrganisationBillingPath', () => {
     ).toBe('/r/acme-reseller');
   });
 
+  it('returns price-plan for affiliate purchase (signup source must be preserved separately)', () => {
+    expect(
+      resolveOrganisationBillingPath({
+        organisationUrl: 'org_buyer',
+        billingAttribution: {
+          associationSource: 'AFFILIATE_PURCHASE',
+          stickyBillingActive: false,
+          affiliateSlug: 'devvv',
+          isResellerOrganisation: false,
+        },
+      }),
+    ).toBe('/o/org_buyer/price-plan');
+  });
+
   it('returns price-plan for affiliate visit', () => {
     expect(
       resolveOrganisationBillingPath({
