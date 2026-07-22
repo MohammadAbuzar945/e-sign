@@ -52,9 +52,9 @@ export const AdminResellerApplicationsTable = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [applicationAction, setApplicationAction] = useState<'reject' | 'cancel' | null>(null);
-  const [profileAction, setProfileAction] = useState<'deactivate' | 'reactivate' | 'delete' | null>(
-    null,
-  );
+  const [profileAction, setProfileAction] = useState<
+    'deactivate' | 'reactivate' | 'delete' | 'markDelinquent' | 'clearDelinquency' | null
+  >(null);
 
   const [searchParams] = useSearchParams();
   const updateSearchParams = useUpdateSearchParams();
@@ -163,6 +163,46 @@ export const AdminResellerApplicationsTable = () => {
       onError: (error) => {
         toast({
           title: t`Reactivation failed`,
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
+  const { mutateAsync: markDelinquent, isPending: isMarkingDelinquent } =
+    trpc.admin.resellerApplications.markDelinquent.useMutation({
+      onSuccess: async () => {
+        toast({
+          title: t`Reseller marked delinquent`,
+          description: t`Sticky billing is locked for associated buyers until they reconfirm.`,
+        });
+
+        setProfileAction(null);
+        await handleMutationSuccess();
+      },
+      onError: (error) => {
+        toast({
+          title: t`Could not mark delinquent`,
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
+  const { mutateAsync: clearDelinquency, isPending: isClearingDelinquency } =
+    trpc.admin.resellerApplications.clearDelinquency.useMutation({
+      onSuccess: async () => {
+        toast({
+          title: t`Delinquency cleared`,
+          description: t`Delinquency flags and buyer reconsent requirements were reset.`,
+        });
+
+        setProfileAction(null);
+        await handleMutationSuccess();
+      },
+      onError: (error) => {
+        toast({
+          title: t`Could not clear delinquency`,
           description: AppError.parseError(error).message,
           variant: 'destructive',
         });
@@ -514,6 +554,8 @@ export const AdminResellerApplicationsTable = () => {
             onDeactivate={() => setProfileAction('deactivate')}
             onReactivate={() => setProfileAction('reactivate')}
             onDelete={() => setProfileAction('delete')}
+            onMarkDelinquent={() => setProfileAction('markDelinquent')}
+            onClearDelinquency={() => setProfileAction('clearDelinquency')}
             onAllowNegativeCreditsChange={async (allowNegativeCredits) => {
               await updateAllowNegativeCredits({
                 applicationId: selectedApplication.id,
@@ -569,6 +611,10 @@ export const AdminResellerApplicationsTable = () => {
                 <Trans>Deactivate</Trans>
               ) : profileAction === 'delete' ? (
                 <Trans>Delete</Trans>
+              ) : profileAction === 'markDelinquent' ? (
+                <Trans>Mark delinquent</Trans>
+              ) : profileAction === 'clearDelinquency' ? (
+                <Trans>Clear delinquency</Trans>
               ) : (
                 <Trans>Reactivate</Trans>
               )}
@@ -585,6 +631,17 @@ export const AdminResellerApplicationsTable = () => {
                   removes their reseller profile, packages, transaction history, and application
                   record. The organisation can apply again later. This cannot be undone.
                 </Trans>
+              ) : profileAction === 'markDelinquent' ? (
+                <Trans>
+                  This simulates the 90-day zero-balance delinquency for{' '}
+                  {selectedApplication?.snapshotOrgName ?? 'this organisation'}. Associated buyers
+                  will need to reconfirm sticky billing on the reseller page.
+                </Trans>
+              ) : profileAction === 'clearDelinquency' ? (
+                <Trans>
+                  Clear delinquency for {selectedApplication?.snapshotOrgName ?? 'this organisation'}
+                  and reset buyer reconsent flags so you can retest the flow.
+                </Trans>
               ) : (
                 <Trans>
                   Reactivating {selectedApplication?.snapshotOrgName ?? 'this organisation'} will
@@ -594,12 +651,31 @@ export const AdminResellerApplicationsTable = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeactivating || isReactivating || isDeleting}>
+            <AlertDialogCancel
+              disabled={
+                isDeactivating ||
+                isReactivating ||
+                isDeleting ||
+                isMarkingDelinquent ||
+                isClearingDelinquency
+              }
+            >
               <Trans>Close</Trans>
             </AlertDialogCancel>
             <AlertDialogAction
-              className={profileAction === 'reactivate' ? undefined : 'bg-destructive hover:bg-destructive/90'}
-              disabled={!selectedApplication || isDeactivating || isReactivating || isDeleting}
+              className={
+                profileAction === 'reactivate' || profileAction === 'clearDelinquency'
+                  ? undefined
+                  : 'bg-destructive hover:bg-destructive/90'
+              }
+              disabled={
+                !selectedApplication ||
+                isDeactivating ||
+                isReactivating ||
+                isDeleting ||
+                isMarkingDelinquent ||
+                isClearingDelinquency
+              }
               onClick={async (event) => {
                 event.preventDefault();
 
@@ -624,12 +700,28 @@ export const AdminResellerApplicationsTable = () => {
                     applicationId: selectedApplication.id,
                   });
                 }
+
+                if (profileAction === 'markDelinquent') {
+                  await markDelinquent({
+                    applicationId: selectedApplication.id,
+                  });
+                }
+
+                if (profileAction === 'clearDelinquency') {
+                  await clearDelinquency({
+                    applicationId: selectedApplication.id,
+                  });
+                }
               }}
             >
               {profileAction === 'deactivate' ? (
                 <Trans>Deactivate</Trans>
               ) : profileAction === 'delete' ? (
                 <Trans>Delete</Trans>
+              ) : profileAction === 'markDelinquent' ? (
+                <Trans>Mark delinquent</Trans>
+              ) : profileAction === 'clearDelinquency' ? (
+                <Trans>Clear delinquency</Trans>
               ) : (
                 <Trans>Reactivate</Trans>
               )}
