@@ -74,7 +74,7 @@ export const AdminNavLinks = ({
       ? [
           {
             href: '/admin/reseller-bulk-rates',
-            label: <Trans>Bulk rates</Trans>,
+            label: <Trans>Bulk rates and purchases</Trans>,
             icon: LayersIcon,
             isActive: pathname?.startsWith('/admin/reseller-bulk-rates'),
           },

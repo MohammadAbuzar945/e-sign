@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
 import { MAX_RESELLER_BULK_RATE_TIERS } from '@documenso/lib/constants/reseller-bulk-rates';
+import { ZFindResultResponse, ZFindSearchParamsSchema } from '@documenso/lib/types/search-params';
+
+export const ZOrganisationCreditPurchaseStatusSchema = z.enum([
+  'PENDING',
+  'COMPLETED',
+  'FAILED',
+]);
 
 export const ZResellerBulkRateTierSchema = z.object({
   minCredits: z.number().int().positive(),
@@ -49,3 +56,38 @@ export const ZReplaceResellerBulkRatesRequestSchema = z.object({
 });
 
 export const ZReplaceResellerBulkRatesResponseSchema = ZGetResellerBulkRatesResponseSchema;
+
+export const ZFindResellerBulkPurchasesRequestSchema = ZFindSearchParamsSchema.extend({
+  status: ZOrganisationCreditPurchaseStatusSchema.optional(),
+});
+
+export const ZResellerBulkPurchaseSchema = z.object({
+  id: z.string(),
+  createdAt: z.date(),
+  completedAt: z.date().nullable(),
+  status: ZOrganisationCreditPurchaseStatusSchema,
+  credits: z.number(),
+  grossAmount: z.number(),
+  currency: z.string(),
+  paystackReference: z.string(),
+  pricePerCreditCents: z.number(),
+  organisation: z.object({
+    id: z.string(),
+    name: z.string(),
+    url: z.string(),
+  }),
+  user: z.object({
+    id: z.number(),
+    name: z.string().nullable(),
+    email: z.string(),
+  }),
+});
+
+export const ZFindResellerBulkPurchasesResponseSchema = ZFindResultResponse.extend({
+  data: ZResellerBulkPurchaseSchema.array(),
+});
+
+export type TFindResellerBulkPurchasesResponse = z.infer<
+  typeof ZFindResellerBulkPurchasesResponseSchema
+>;
+

@@ -393,14 +393,8 @@ export default function OrganisationSettingsResellerPage() {
                   <ol className="list-decimal space-y-3 pl-5">
                     <li>
                       <Trans>
-                        Choose how you get paid — your own Paystack account, or bank details via
-                        Nomia.
-                      </Trans>
-                    </li>
-                    <li>
-                      <Trans>
-                        If using your own Paystack, register the Nomia webhook URL in Paystack
-                        Dashboard → Settings → API Keys & Webhooks.
+                        Add your bank details so Nomia can settle payouts to your account via
+                        Paystack.
                       </Trans>
                     </li>
                     <li>
@@ -410,21 +404,6 @@ export default function OrganisationSettingsResellerPage() {
                       <Trans>Customize your affiliate page, then share your link with clients.</Trans>
                     </li>
                   </ol>
-                  {profile.payoutMode === 'OWN_PAYSTACK' &&
-                  isDemoFeatureVisible('OWN_PAYSTACK_PAYOUT') ? (
-                    <div className="rounded-md border bg-muted/40 p-3">
-                      <p className="mb-2 font-medium text-foreground">
-                        <Trans>Nomia webhook URL</Trans>
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 break-all text-xs">{profile.paystackWebhookUrl}</code>
-                        <CopyTextButton
-                          value={profile.paystackWebhookUrl}
-                          onCopySuccess={() => toast({ title: _(msg`Webhook URL copied`) })}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
               </DialogDescription>
             </DialogHeader>

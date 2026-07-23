@@ -1,3 +1,4 @@
+import { findResellerBulkPurchases } from '@documenso/lib/server-only/reseller/find-reseller-bulk-purchases';
 import {
   getGlobalResellerBulkRateTiers,
   getResellerProfileBulkRateTiers,
@@ -11,6 +12,8 @@ import { prisma } from '@documenso/prisma';
 
 import { adminProcedure } from '../trpc';
 import {
+  ZFindResellerBulkPurchasesRequestSchema,
+  ZFindResellerBulkPurchasesResponseSchema,
   ZGetResellerBulkRatesRequestSchema,
   ZGetResellerBulkRatesResponseSchema,
   ZListGlobalResellerBulkRatesResponseSchema,
@@ -106,4 +109,20 @@ export const replaceResellerBulkRatesRoute = adminProcedure
         isEnabled: tier.isEnabled,
       })),
     };
+  });
+
+export const findResellerBulkPurchasesRoute = adminProcedure
+  .input(ZFindResellerBulkPurchasesRequestSchema)
+  .output(ZFindResellerBulkPurchasesResponseSchema)
+  .query(async ({ input, ctx }) => {
+    assertResellerFeatureAccess(ctx.user.email);
+
+    const { query, page, perPage, status } = input;
+
+    return await findResellerBulkPurchases({
+      query,
+      page,
+      perPage,
+      status,
+    });
   });
