@@ -1,1 +1,1 @@
-export const MAX_RESELLER_BULK_RATE_TIERS = 6;
+export const MAX_RESELLER_BULK_RATE_TIERS = 20;

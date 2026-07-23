@@ -32,6 +32,7 @@ import { getResellerTermsTemplateVariablesRoute } from './get-reseller-terms-tem
 import { markResellerDelinquentRoute } from './mark-reseller-delinquent';
 import { reactivateResellerProfileRoute } from './reactivate-reseller-profile';
 import {
+  findResellerBulkPurchasesRoute,
   getResellerBulkRatesRoute,
   listGlobalResellerBulkRatesRoute,
   replaceGlobalResellerBulkRatesRoute,
@@ -93,6 +94,7 @@ export const adminRouter = router({
     replaceGlobal: replaceGlobalResellerBulkRatesRoute,
     getForReseller: getResellerBulkRatesRoute,
     replaceForReseller: replaceResellerBulkRatesRoute,
+    findPurchases: findResellerBulkPurchasesRoute,
   },
   stripe: {
     createCustomer: createStripeCustomerRoute,
