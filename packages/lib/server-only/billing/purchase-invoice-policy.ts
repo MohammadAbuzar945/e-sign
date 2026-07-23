@@ -1,6 +1,5 @@
 import {
   NOMIA_LEGAL_NAME,
-  NOMIA_VAT_ADDRESS,
   NOMIA_VAT_NUMBER,
   NOMIA_VAT_PRICING_MODE,
   NOMIA_VAT_RATE,
@@ -86,7 +85,7 @@ export const resolvePurchaseInvoicePolicy = ({
       requiredNote: null,
       supplier: {
         name: NOMIA_LEGAL_NAME,
-        address: NOMIA_VAT_ADDRESS,
+        address: null,
         vatNumber: NOMIA_VAT_NUMBER,
         vatStatus: 'REGISTERED',
       },
