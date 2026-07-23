@@ -219,19 +219,19 @@ export const ResellerBulkInventoryPurchase = ({
             </p>
           </div>
 
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>
+                <TableHead className="w-[28%]">
                   <Trans>Tier</Trans>
                 </TableHead>
-                <TableHead>
+                <TableHead className="w-[18%]">
                   <Trans>Min credits</Trans>
                 </TableHead>
-                <TableHead>
+                <TableHead className="w-[18%]">
                   <Trans>Rate / credit</Trans>
                 </TableHead>
-                <TableHead>
+                <TableHead className="w-[36%]">
                   <Trans>Your total</Trans>
                 </TableHead>
               </TableRow>
@@ -248,20 +248,24 @@ export const ResellerBulkInventoryPurchase = ({
                     className={cn(isMatched && 'bg-purple-50/80 hover:bg-purple-50/80')}
                   >
                     <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <span>
+                      <div className="flex min-h-6 items-center gap-2">
+                        <span className="shrink-0">
                           <Trans>Tier {index + 1}</Trans>
                         </span>
-                        {isMatched ? (
-                          <Badge variant="default" className="font-normal">
-                            <Trans>Matched</Trans>
-                          </Badge>
-                        ) : null}
+                        <span className="inline-flex min-w-[4.5rem]">
+                          {isMatched ? (
+                            <Badge variant="default" className="font-normal">
+                              <Trans>Matched</Trans>
+                            </Badge>
+                          ) : null}
+                        </span>
                       </div>
                     </TableCell>
-                    <TableCell>{tier.minCredits.toLocaleString()}+</TableCell>
-                    <TableCell>{formatZarFromCents(tier.pricePerCreditCents)}</TableCell>
-                    <TableCell>
+                    <TableCell className="tabular-nums">{tier.minCredits.toLocaleString()}+</TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatZarFromCents(tier.pricePerCreditCents)}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
                       {!hasValidCredits ? (
                         <span className="text-muted-foreground">—</span>
                       ) : isMatched && orderTotalCents !== null ? (

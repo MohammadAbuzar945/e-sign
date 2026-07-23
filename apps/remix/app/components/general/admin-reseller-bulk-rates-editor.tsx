@@ -360,24 +360,24 @@ export const AdminResellerBulkRatesEditor = ({
 
         {/* Desktop: table layout */}
         <div className="hidden overflow-x-auto md:block">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[160px]">
+              <TableHead className="w-[22%]">
                 <Trans>Min credits</Trans>
               </TableHead>
-              <TableHead className="min-w-[120px]">
+              <TableHead className="w-[22%]">
                 <Trans>Rate (ZAR)</Trans>
               </TableHead>
-              <TableHead className="min-w-[180px]">
+              <TableHead className="w-[34%]">
                 <Trans>Total at minimum</Trans>
               </TableHead>
               {showEnabledToggle ? (
-                <TableHead className="w-[72px] text-center">
+                <TableHead className="w-[12%] text-center">
                   <Trans>On</Trans>
                 </TableHead>
               ) : null}
-              <TableHead className="w-[48px]" />
+              <TableHead className="w-[10%]" />
             </TableRow>
           </TableHeader>
           <TableBody>
