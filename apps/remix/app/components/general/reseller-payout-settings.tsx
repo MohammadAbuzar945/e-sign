@@ -51,8 +51,14 @@ const ZBankDetailsFormSchema = z
   .object({
     bankCode: z.string().min(1),
     bankName: z.string().min(1),
-    bankAccountNumber: z.string().trim().min(1),
-    bankAccountName: z.string().min(1),
+    bankAccountNumber: z
+      .string()
+      .trim()
+      .min(1, { message: 'Enter a bank account number' })
+      .refine((value) => /^\d+$/.test(normalizeSaBankAccountNumber(value)), {
+        message: 'Account number must contain digits only',
+      }),
+    bankAccountName: z.string().min(1, { message: 'Enter the account holder name' }),
     accountType: z.enum(['personal', 'business']),
     documentType: z.enum(['identityNumber', 'passportNumber', 'businessRegistrationNumber']),
     documentNumber: z.string().trim().min(1).max(64),
@@ -628,11 +634,14 @@ export const ResellerPayoutSettings = ({
                           {...field}
                           inputMode="numeric"
                           autoComplete="off"
-                          placeholder={_(msg`Enter account number`)}
+                          placeholder={_(msg`Digits only`)}
+                          onChange={(event) => {
+                            field.onChange(normalizeSaBankAccountNumber(event.target.value));
+                          }}
                         />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
-                        <Trans>Enter the account number for the selected bank</Trans>
+                        <Trans>Digits only — no letters or spaces</Trans>
                       </p>
                       <FormMessage />
                     </FormItem>

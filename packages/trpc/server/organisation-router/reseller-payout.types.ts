@@ -29,8 +29,14 @@ export const ZUpdateResellerBankDetailsRequestSchema = z.object({
     .object({
       bankCode: z.string().min(1),
       bankName: z.string().min(1),
-      bankAccountNumber: z.string().trim().min(1),
-      bankAccountName: z.string().min(1),
+      bankAccountNumber: z
+        .string()
+        .trim()
+        .min(1, { message: 'Enter a bank account number' })
+        .refine((value) => /^\d+$/.test(normalizeSaBankAccountNumber(value)), {
+          message: 'Account number must contain digits only',
+        }),
+      bankAccountName: z.string().min(1, { message: 'Enter the account holder name' }),
       accountType: ZResellerBankAccountTypeSchema,
       documentType: ZResellerBankDocumentTypeSchema,
       documentNumber: z.string().trim().min(1).max(64),
@@ -123,7 +129,13 @@ export const ZListPaystackBanksResponseSchema = z.object({
 });
 
 export const ZResolvePaystackBankAccountRequestSchema = z.object({
-  accountNumber: z.string().min(5),
+  accountNumber: z
+    .string()
+    .trim()
+    .min(1, { message: 'Enter a bank account number' })
+    .refine((value) => /^\d+$/.test(normalizeSaBankAccountNumber(value)), {
+      message: 'Account number must contain digits only',
+    }),
   bankCode: z.string().min(1),
   currency: z.string().optional(),
 });

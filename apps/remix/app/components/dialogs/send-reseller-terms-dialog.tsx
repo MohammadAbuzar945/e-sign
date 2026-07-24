@@ -6,6 +6,7 @@ import { useEffect, useMemo } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import {
   createDefaultResellerTermsSignatories,
   createDefaultResellerTermsVariableValues,
@@ -77,12 +78,16 @@ const createDefaultFormValues = ({
   organisationName,
   applicantName,
   applicantEmail,
+  senderName,
+  senderEmail,
   templateVariables,
   storedVariableValues,
 }: {
   organisationName: string;
   applicantName: string;
   applicantEmail: string;
+  senderName?: string | null;
+  senderEmail?: string | null;
   templateVariables: NomiaDocGenTemplateVariable[];
   storedVariableValues?: ResellerTermsVariableValues | null;
 }): TResellerTermsFormSchema => ({
@@ -96,6 +101,8 @@ const createDefaultFormValues = ({
   signatories: createDefaultResellerTermsSignatories({
     applicantName,
     applicantEmail,
+    senderName,
+    senderEmail,
     templateVariables,
   }),
   showInNomia: true,
@@ -112,6 +119,9 @@ export const SendResellerTermsDialog = ({
 }: SendResellerTermsDialogProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
+  const { user } = useSession();
+  const senderName = user.name ?? user.email;
+  const senderEmail = user.email;
 
   const {
     data: templateVariablesData,
@@ -158,6 +168,8 @@ export const SendResellerTermsDialog = ({
         organisationName,
         applicantName,
         applicantEmail,
+        senderName,
+        senderEmail,
         templateVariables: allTemplateVariables,
         storedVariableValues,
       }),
@@ -166,6 +178,8 @@ export const SendResellerTermsDialog = ({
       applicantEmail,
       applicantName,
       organisationName,
+      senderEmail,
+      senderName,
       storedVariableValues,
     ],
   );
@@ -194,6 +208,8 @@ export const SendResellerTermsDialog = ({
         organisationName,
         applicantName,
         applicantEmail,
+        senderName,
+        senderEmail,
         templateVariables: allTemplateVariables,
         storedVariableValues,
       }),
@@ -207,6 +223,8 @@ export const SendResellerTermsDialog = ({
     isLoadingPrefillData,
     open,
     organisationName,
+    senderEmail,
+    senderName,
     storedVariableValues,
     usesNomiaDocGen,
   ]);
@@ -435,8 +453,8 @@ export const SendResellerTermsDialog = ({
                   </p>
                   <p className="text-muted-foreground mt-1 text-sm">
                     <Trans>
-                      Detected from the DocGen template. Signatory 1 defaults to Nomia; other
-                      signatories use the reseller applicant.
+                      Detected from the DocGen template. Signatory 1 defaults to you (the sender);
+                      other signatories use the reseller applicant.
                     </Trans>
                   </p>
                 </div>
