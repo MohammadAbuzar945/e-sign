@@ -7,9 +7,11 @@ import { Link, redirect, useLocation, useSearchParams } from 'react-router';
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
-import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
+import {
+  canAccessResellerDemoExtras,
+  isDemoFeatureVisible,
+} from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
-import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { trpc } from '@documenso/trpc/react';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Input } from '@documenso/ui/primitives/input';
@@ -51,7 +53,7 @@ export function meta() {
 export async function loader({ request }: Route.LoaderArgs) {
   const { user } = await getSession(request);
 
-  if (!user?.email || !isResellerFeatureAllowedEmail(user.email)) {
+  if (!canAccessResellerDemoExtras(user?.email)) {
     throw redirect('/admin');
   }
 

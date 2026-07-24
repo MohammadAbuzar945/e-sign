@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import {
+  canAccessResellerCheckout,
+  RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+} from '@documenso/lib/constants/demo-feature-flags';
 import { createPendingOrganisationCreditPurchase } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
 import { createTransaction } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
@@ -29,6 +34,18 @@ type CreateTransactionResponse = {
 
 export async function action({ request }: { request: Request }) {
   try {
+    const { user } = await getSession(request);
+
+    if (!canAccessResellerCheckout(user?.email)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+        } satisfies CreateTransactionResponse),
+        { status: 403 },
+      );
+    }
+
     const body = await request.json();
     const validatedData = createTransactionSchema.parse(body);
 

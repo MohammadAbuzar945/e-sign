@@ -49,7 +49,9 @@ test('[RESELLER]: active reseller can manage settings and enable packages', asyn
   await expect(packageLabel.getByRole('checkbox')).toBeChecked();
 });
 
-test('[RESELLER]: redirects non-allowlisted users away from reseller settings', async ({ page }) => {
+test('[RESELLER]: non-reseller org without profile sees reseller settings unavailable state', async ({
+  page,
+}) => {
   const { user, organisation } = await seedUser({
     isPersonalOrganisation: false,
   });
@@ -60,5 +62,5 @@ test('[RESELLER]: redirects non-allowlisted users away from reseller settings', 
     redirectPath: `/o/${organisation.url}/settings/reseller`,
   });
 
-  await expect(page).toHaveURL(new RegExp(`/o/${organisation.url}/settings/general`));
+  await expect(page).toHaveURL(new RegExp(`/o/${organisation.url}/settings/reseller`));
 });

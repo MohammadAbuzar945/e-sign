@@ -19,7 +19,6 @@ import {
   ZSiteSettingsResellerSchema,
   resolveResellerTermsProvider,
 } from '@documenso/lib/server-only/site-settings/schemas/reseller';
-import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { trpc as trpcReact } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
 import { ColorPicker } from '@documenso/ui/primitives/color-picker';
@@ -76,15 +75,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   const banner = settings.find((setting) => setting.id === SITE_SETTINGS_BANNER_ID);
   const reseller = settings.find((setting) => setting.id === SITE_SETTINGS_RESELLER_ID);
 
-  const isResellerFeatureAllowed = user?.email
-    ? isResellerFeatureAllowedEmail(user.email)
-    : false;
-
-  return { banner, reseller, isResellerFeatureAllowed };
+  return { banner, reseller };
 }
 
 export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
-  const { banner, reseller, isResellerFeatureAllowed } = loaderData;
+  const { banner, reseller } = loaderData;
 
   const { toast } = useToast();
   const { _ } = useLingui();
@@ -316,7 +311,6 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
           </Form>
         </div>
 
-        {isResellerFeatureAllowed && (
         <div className="mt-12">
           <h2 className="font-semibold">
             <Trans>Reseller T&Cs</Trans>
@@ -594,7 +588,6 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
             </form>
           </Form>
         </div>
-        )}
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import { seedUser } from '@documenso/prisma/seed/users';
 import { apiSignin } from '../fixtures/authentication';
 import { expectTextToBeVisible, expectToastTextToBeVisible } from '../fixtures/generic';
 
-test('[RESELLER]: hides reseller programme for non-allowlisted users', async ({ page }) => {
+test('[RESELLER]: shows reseller programme for any signed-in org owner', async ({ page }) => {
   const { user, organisation } = await seedUser();
 
   await apiSignin({
@@ -15,7 +15,7 @@ test('[RESELLER]: hides reseller programme for non-allowlisted users', async ({ 
     redirectPath: `/o/${organisation.url}/settings/general`,
   });
 
-  await expect(page.getByText('Reseller programme')).not.toBeVisible();
+  await expect(page.getByText('Reseller programme')).toBeVisible();
 });
 
 test('[RESELLER]: allowlisted user can submit a reseller application', async ({ page }) => {

@@ -134,20 +134,21 @@ export const getEsignCreditPackageById = (catalogPackageId: string) => {
 export const RESELLER_MIN_CREDITS_USED = 50;
 export const RESELLER_MIN_SUBSCRIPTION_MONTHS = 2;
 
-/** Temporary allowlist while reseller functionality is in limited release. */
+/** Emails that can access restricted reseller demo extras (checkout, bulk, admin tools, invoices). */
 export const RESELLER_FEATURE_ALLOWED_EMAILS = [
-  'nomiacreator@gmail.com',
-  'nomiadeveloper@gmail.com',
   'awanabuzar945@gmail.com',
-  'cstatus280@gmail.com',
   'abuzarofficial945@gmail.com',
 ] as const;
 
-/** @deprecated Use RESELLER_FEATURE_ALLOWED_EMAILS */
+/** @deprecated Use RESELLER_FEATURE_ALLOWED_EMAILS / canAccessResellerDemoExtras */
 export const RESELLER_ELIGIBILITY_BYPASS_EMAILS = RESELLER_FEATURE_ALLOWED_EMAILS;
 
 const RESELLER_E2E_TEST_EMAIL_DOMAIN = 'test.nomiadocs.com';
 
+/**
+ * Whether the email may use restricted reseller demo extras
+ * (not a gate for seeing/applying to the reseller programme).
+ */
 export const isResellerFeatureAllowedEmail = (email: string) => {
   const normalizedEmail = email.toLowerCase();
 
@@ -162,4 +163,5 @@ export const isResellerFeatureAllowedEmail = (email: string) => {
   return false;
 };
 
+/** Allowlisted emails bypass credits/tenure eligibility requirements. */
 export const isResellerEligibilityBypassEmail = isResellerFeatureAllowedEmail;

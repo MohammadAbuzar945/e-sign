@@ -1,11 +1,11 @@
 import { DocumentStatus, EnvelopeType, ResellerApplicationStatus, SubscriptionStatus } from '@prisma/client';
 
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import {
   isResellerFeatureAllowedEmail,
   RESELLER_MIN_CREDITS_USED,
   RESELLER_MIN_SUBSCRIPTION_MONTHS,
 } from '@documenso/lib/constants/esign-credit-packages';
-import { RESELLER_FEATURE_ACCESS_DENIED_MESSAGE } from '@documenso/lib/utils/reseller-feature-access';
 import { prisma } from '@documenso/prisma';
 
 export type OrganisationResellerMetrics = {
@@ -89,7 +89,7 @@ export const getResellerEligibility = async ({
   organisationId: string;
   userEmail?: string;
 }): Promise<ResellerEligibility> => {
-  if (!userEmail || !isResellerFeatureAllowedEmail(userEmail)) {
+  if (!userEmail) {
     return {
       isEligible: false,
       creditsUsed: 0,
@@ -100,10 +100,11 @@ export const getResellerEligibility = async ({
       hasActiveApplication: false,
       hasActiveResellerProfile: false,
       application: null,
-      reasons: [RESELLER_FEATURE_ACCESS_DENIED_MESSAGE],
+      reasons: ['You must be signed in to apply to the reseller programme.'],
     };
   }
 
+  // Metrics still collected for UI; credits/tenure gates are bypassed when testing flag is on.
   const metrics = await getOrganisationResellerMetrics(organisationId);
 
   const subscription = await prisma.subscription.findFirst({
@@ -136,7 +137,10 @@ export const getResellerEligibility = async ({
     }),
   ]);
 
-  const hasEligibilityBypass = isResellerFeatureAllowedEmail(userEmail);
+  // Allowlisted emails always bypass; RESELLER_ELIGIBILITY_BYPASS opens this for all (testing).
+  const hasEligibilityBypass =
+    isDemoFeatureVisible('RESELLER_ELIGIBILITY_BYPASS') ||
+    isResellerFeatureAllowedEmail(userEmail);
 
   const reasons: string[] = [];
 

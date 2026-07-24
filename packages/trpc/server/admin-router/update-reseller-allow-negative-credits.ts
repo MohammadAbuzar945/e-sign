@@ -1,5 +1,5 @@
+import { assertResellerDemoExtrasAccess } from '@documenso/lib/constants/demo-feature-flags';
 import { updateResellerAllowNegativeCredits } from '@documenso/lib/server-only/reseller/admin-reseller-actions';
-import { assertResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 
 import { adminProcedure } from '../trpc';
 import {
@@ -11,7 +11,7 @@ export const updateResellerAllowNegativeCreditsRoute = adminProcedure
   .input(ZUpdateResellerAllowNegativeCreditsRequestSchema)
   .output(ZUpdateResellerAllowNegativeCreditsResponseSchema)
   .mutation(async ({ input, ctx }) => {
-    assertResellerFeatureAccess(ctx.user.email);
+    assertResellerDemoExtrasAccess(ctx.user.email);
 
     const { applicationId, allowNegativeCredits } = input;
 

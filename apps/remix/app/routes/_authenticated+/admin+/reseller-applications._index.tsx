@@ -5,14 +5,13 @@ import { useEffect, useState } from 'react';
 import { Link, redirect, useLocation, useSearchParams } from 'react-router';
 
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
-import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import {
   isResellerAdminView,
   RESELLER_ADMIN_VIEW,
 } from '@documenso/lib/constants/reseller-application-status';
-import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { Input } from '@documenso/ui/primitives/input';
 import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 
@@ -27,11 +26,7 @@ export function meta() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const { user } = await getSession(request);
-
-  if (!user?.email || !isResellerFeatureAllowedEmail(user.email)) {
-    throw redirect('/admin');
-  }
+  await getSession(request);
 
   if (!isDemoFeatureVisible('ADMIN_RESELLERS')) {
     throw redirect('/admin');
