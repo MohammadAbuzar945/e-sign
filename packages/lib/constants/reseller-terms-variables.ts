@@ -13,7 +13,7 @@ export type ResellerTermsSignatory = {
   role: 'SIGNER';
 };
 
-/** Default Nomia company signer for reseller T&Cs (template signatory index 1). */
+/** Fallback Nomia company signer if the sending admin session has no name/email. */
 export const DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY = {
   fullName: 'Abuzar',
   email: 'awanabuzar945@gmail.com',
@@ -149,25 +149,36 @@ export const createDefaultResellerTermsVariableValues = ({
 
 /**
  * Builds DocGen signatories from template variable `content_format.signatory` indexes.
- * Index 1 defaults to the Nomia company signer; other indexes use the reseller applicant.
+ * Index 1 defaults to the admin sending the T&Cs; other indexes use the reseller applicant.
  */
 export const createDefaultResellerTermsSignatories = ({
   applicantName,
   applicantEmail,
+  senderName,
+  senderEmail,
   templateVariables = [],
 }: {
   applicantName: string;
   applicantEmail: string;
+  /** Admin who is sending the terms (Signatory 1). */
+  senderName?: string | null;
+  senderEmail?: string | null;
   templateVariables?: NomiaDocGenTemplateVariable[];
 }): ResellerTermsSignatory[] => {
+  const companySigner = {
+    fullName: senderName?.trim() || DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY.fullName,
+    email: senderEmail?.trim() || DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY.email,
+    role: 'SIGNER' as const,
+  };
+
   const signatoryIndexes = getTemplateSignatoryIndexes(templateVariables);
 
   if (signatoryIndexes.length === 0) {
     return [
       {
         signatoryIndex: 1,
-        fullName: DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY.fullName,
-        email: DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY.email,
+        fullName: companySigner.fullName,
+        email: companySigner.email,
         role: 'SIGNER',
       },
       {
@@ -183,8 +194,8 @@ export const createDefaultResellerTermsSignatories = ({
     if (signatoryIndex === 1) {
       return {
         signatoryIndex,
-        fullName: DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY.fullName,
-        email: DEFAULT_RESELLER_TERMS_COMPANY_SIGNATORY.email,
+        fullName: companySigner.fullName,
+        email: companySigner.email,
         role: 'SIGNER' as const,
       };
     }
