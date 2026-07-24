@@ -12,8 +12,10 @@ import {
 import { Link, useLocation } from 'react-router';
 
 import { useSession } from '@documenso/lib/client-only/providers/session';
-import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
-import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
+import {
+  canAccessResellerDemoExtras,
+  isDemoFeatureVisible,
+} from '@documenso/lib/constants/demo-feature-flags';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 
@@ -31,9 +33,7 @@ export const AdminNavLinks = ({
   const { pathname } = useLocation();
   const { user } = useSession();
 
-  const isResellerFeatureAllowed = user.email
-    ? isResellerFeatureAllowedEmail(user.email)
-    : false;
+  const canAccessDemoExtras = canAccessResellerDemoExtras(user.email);
 
   const items = [
     {
@@ -60,7 +60,7 @@ export const AdminNavLinks = ({
       icon: Trophy,
       isActive: pathname?.startsWith('/admin/organisation-insights'),
     },
-    ...(isResellerFeatureAllowed && isDemoFeatureVisible('ADMIN_RESELLERS')
+    ...(isDemoFeatureVisible('ADMIN_RESELLERS')
       ? [
           {
             href: '/admin/reseller-applications',
@@ -70,7 +70,7 @@ export const AdminNavLinks = ({
           },
         ]
       : []),
-    ...(isResellerFeatureAllowed && isDemoFeatureVisible('ADMIN_BULK_RATES')
+    ...(canAccessDemoExtras && isDemoFeatureVisible('ADMIN_BULK_RATES')
       ? [
           {
             href: '/admin/reseller-bulk-rates',
@@ -80,7 +80,7 @@ export const AdminNavLinks = ({
           },
         ]
       : []),
-    ...(isDemoFeatureVisible('ADMIN_PAYSTACK_WEBHOOKS')
+    ...(canAccessDemoExtras && isDemoFeatureVisible('ADMIN_PAYSTACK_WEBHOOKS')
       ? [
           {
             href: '/admin/paystack-webhooks',

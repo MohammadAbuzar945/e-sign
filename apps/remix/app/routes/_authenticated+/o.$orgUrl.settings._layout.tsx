@@ -16,7 +16,6 @@ import { Link, NavLink, Outlet } from 'react-router';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
-import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import { resolveOrganisationBillingPath } from '@documenso/lib/utils/organisation-billing-path';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
@@ -38,18 +37,10 @@ export default function SettingsLayout() {
   const { user } = useSession();
 
   const isOrganisationOwner = organisation.ownerUserId === user.id;
-  const isResellerFeatureAllowed = user.email
-    ? isResellerFeatureAllowedEmail(user.email)
-    : false;
 
-  const { data: resellerProfile } = trpc.organisation.reseller.getProfile.useQuery(
-    {
-      organisationId: organisation.id,
-    },
-    {
-      enabled: isResellerFeatureAllowed,
-    },
-  );
+  const { data: resellerProfile } = trpc.organisation.reseller.getProfile.useQuery({
+    organisationId: organisation.id,
+  });
 
   const { data: billingAttribution, isFetched: isBillingAttributionFetched } =
     trpc.organisation.reseller.getBillingAttribution.useQuery(
@@ -119,7 +110,7 @@ export default function SettingsLayout() {
       label: t`SSO`,
       icon: ShieldCheckIcon,
     },
-    ...(isResellerFeatureAllowed && resellerProfile
+    ...(resellerProfile
       ? [
           {
             path: `/o/${organisation.url}/settings/reseller`,

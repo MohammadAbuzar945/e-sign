@@ -1,3 +1,4 @@
+import { assertResellerCheckoutAccess } from '@documenso/lib/constants/demo-feature-flags';
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
 import { RESELLER_BILLING_DISCLOSURE_PREFIX } from '@documenso/lib/constants/reseller-attribution';
 import { initializeAffiliatePackagePurchase } from '@documenso/lib/server-only/reseller/initialize-affiliate-package-purchase';
@@ -87,6 +88,8 @@ export const initializeResellerPurchaseRoute = authenticatedProcedure
   .input(ZInitializeResellerPurchaseRequestSchema)
   .output(ZInitializeResellerPurchaseResponseSchema)
   .mutation(async ({ input, ctx }) => {
+    assertResellerCheckoutAccess(ctx.user.email);
+
     const { affiliateSlug, packageId, organisationId } = input;
 
     await prisma.organisation.findFirstOrThrow({

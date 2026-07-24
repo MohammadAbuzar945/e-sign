@@ -1,3 +1,4 @@
+import { assertResellerCheckoutAccess } from '@documenso/lib/constants/demo-feature-flags';
 import { initializeResellerBulkPurchase } from '@documenso/lib/server-only/reseller/initialize-reseller-bulk-purchase';
 import { getEffectiveResellerBulkRatesForOrganisation } from '@documenso/lib/server-only/reseller/resolve-reseller-bulk-rate';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
@@ -15,6 +16,8 @@ export const getEffectiveResellerBulkRatesRoute = authenticatedProcedure
   .input(ZGetEffectiveResellerBulkRatesRequestSchema)
   .output(ZGetEffectiveResellerBulkRatesResponseSchema)
   .query(async ({ input, ctx }) => {
+    assertResellerCheckoutAccess(ctx.user.email);
+
     const { organisationId } = input;
 
     await prisma.organisation.findFirstOrThrow({
@@ -31,6 +34,8 @@ export const initializeResellerBulkPurchaseRoute = authenticatedProcedure
   .input(ZInitializeResellerBulkPurchaseRequestSchema)
   .output(ZInitializeResellerBulkPurchaseResponseSchema)
   .mutation(async ({ input, ctx }) => {
+    assertResellerCheckoutAccess(ctx.user.email);
+
     const { organisationId, credits } = input;
 
     await prisma.organisation.findFirstOrThrow({

@@ -2,6 +2,8 @@ import { useLingui } from '@lingui/react/macro';
 import { Trans } from '@lingui/react/macro';
 import { InfoIcon } from 'lucide-react';
 
+import { useSession } from '@documenso/lib/client-only/providers/session';
+import { canAccessResellerDemoExtras } from '@documenso/lib/constants/demo-feature-flags';
 import {
   getResellerBankAccountTypeLabel,
   getResellerBankDocumentTypeLabel,
@@ -115,6 +117,8 @@ export const AdminResellerApplicationActionsPanel = ({
   onRetrySubaccount,
 }: AdminResellerApplicationActionsPanelProps) => {
   const { t } = useLingui();
+  const { user } = useSession();
+  const canAccessDemoExtras = canAccessResellerDemoExtras(user.email);
 
   const profile = application.resellerProfile;
   const isQueue = view === RESELLER_ADMIN_VIEW.QUEUE;
@@ -289,7 +293,7 @@ export const AdminResellerApplicationActionsPanel = ({
               </div>
             </section>
 
-            {canConfigureNegativeCredits && (
+            {canAccessDemoExtras && canConfigureNegativeCredits && (
               <section className="space-y-3">
                 <p className="text-xs font-medium text-muted-foreground">
                   <Trans>Credit policy</Trans>
@@ -316,7 +320,7 @@ export const AdminResellerApplicationActionsPanel = ({
               </section>
             )}
 
-            {profile.id ? (
+            {canAccessDemoExtras && profile.id ? (
               <>
                 <Separator />
                 <AdminResellerCustomBulkRatesPanel resellerProfileId={profile.id} />
@@ -472,7 +476,7 @@ export const AdminResellerApplicationActionsPanel = ({
                 </Button>
               ) : null}
 
-              {(canMarkDelinquent || canClearDelinquency) && (
+              {canAccessDemoExtras && (canMarkDelinquent || canClearDelinquency) && (
                 <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
                   <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
                     <Trans>Delinquency testing</Trans>

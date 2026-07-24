@@ -4,16 +4,15 @@ import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { redirect } from 'react-router';
 import { z } from 'zod';
-
-import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
-import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
-import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
+import {
+  canAccessInvoiceHistory,
+  isDemoFeatureVisible,
+} from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { putFile } from '@documenso/lib/universal/upload/put-file';
 import { buildResellerTransactionsCsv } from '@documenso/lib/utils/build-reseller-transactions-csv';
@@ -65,7 +64,7 @@ import {
   type TResellerAffiliatePageFormSchema,
 } from '~/components/forms/reseller-affiliate-page-form';
 import { ResellerAffiliateSlugForm } from '~/components/forms/reseller-affiliate-slug-form';
-import { GenericErrorLayout } from '~/components/general/generic-error-layout';
+import { ComingSoonDialog } from '~/components/general/coming-soon-dialog';
 import { ComingSoonPlaceholder } from '~/components/general/coming-soon-placeholder';
 import {
   ResellerOnboardingChecklist,
@@ -90,13 +89,7 @@ export function meta() {
   return appMetaTags('Reseller Settings');
 }
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-  const { user } = await getSession(request);
-
-  if (!user?.email || !isResellerFeatureAllowedEmail(user.email)) {
-    throw redirect(`/o/${params.orgUrl}/settings/general`);
-  }
-
+export async function loader(_args: Route.LoaderArgs) {
   return null;
 }
 
@@ -105,6 +98,7 @@ export default function OrganisationSettingsResellerPage() {
   const { toast } = useToast();
   const { user } = useSession();
   const organisation = useCurrentOrganisation();
+  const canViewSalesHistory = canAccessInvoiceHistory(user.email);
   const [activeTab, setActiveTab] = useState('branding');
   const [transactionQuery, setTransactionQuery] = useState('');
   const [transactionFromDate, setTransactionFromDate] = useState('');
@@ -123,18 +117,9 @@ export default function OrganisationSettingsResellerPage() {
     ? new Date(`${transactionToDate}T23:59:59`)
     : undefined;
 
-  const isResellerFeatureAllowed = user.email
-    ? isResellerFeatureAllowedEmail(user.email)
-    : false;
-
-  const { data: profile, isLoading, refetch } = trpc.organisation.reseller.getProfile.useQuery(
-    {
-      organisationId: organisation.id,
-    },
-    {
-      enabled: isResellerFeatureAllowed,
-    },
-  );
+  const { data: profile, isLoading, refetch } = trpc.organisation.reseller.getProfile.useQuery({
+    organisationId: organisation.id,
+  });
 
   const { data: transactions, isLoading: isTransactionsLoading } =
     trpc.organisation.reseller.findTransactions.useQuery(
@@ -145,9 +130,6 @@ export default function OrganisationSettingsResellerPage() {
         toDate: transactionToDateValue,
         page: transactionPage,
         perPage: 20,
-      },
-      {
-        enabled: isResellerFeatureAllowed,
       },
     );
 
@@ -216,23 +198,6 @@ export default function OrganisationSettingsResellerPage() {
       transactionId,
     });
   };
-
-  if (!isResellerFeatureAllowed) {
-    return (
-      <GenericErrorLayout
-        errorCode={401}
-        errorCodeMap={{
-          401: {
-            heading: msg`Unauthorized`,
-            subHeading: msg`401 Unauthorized`,
-            message: msg`The reseller program is not available for your account.`,
-          },
-        }}
-        primaryButton={null}
-        secondaryButton={null}
-      />
-    );
-  }
 
   if (!isDemoFeatureVisible('RESELLER_USER_FACING')) {
     return (
@@ -884,9 +849,23 @@ export default function OrganisationSettingsResellerPage() {
                 </Trans>
               </p>
             </div>
-            <Button variant="outline" loading={isExportingCsv} onClick={downloadTransactionsCsv}>
-              <Trans>Download CSV</Trans>
-            </Button>
+            {canViewSalesHistory ? (
+              <Button variant="outline" loading={isExportingCsv} onClick={downloadTransactionsCsv}>
+                <Trans>Download CSV</Trans>
+              </Button>
+            ) : (
+              <ComingSoonDialog
+                trigger={
+                  <Button variant="outline" type="button">
+                    <Trans>Download CSV</Trans>
+                  </Button>
+                }
+                title={<Trans>Coming soon</Trans>}
+                description={
+                  <Trans>Sales export is not available for your account yet.</Trans>
+                }
+              />
+            )}
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">

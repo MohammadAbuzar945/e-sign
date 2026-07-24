@@ -1,5 +1,5 @@
+import { assertResellerDemoExtrasAccess } from '@documenso/lib/constants/demo-feature-flags';
 import { clearResellerProfileDelinquency } from '@documenso/lib/server-only/reseller/admin-reseller-actions';
-import { assertResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 
 import { adminProcedure } from '../trpc';
 import {
@@ -11,7 +11,7 @@ export const clearResellerDelinquencyRoute = adminProcedure
   .input(ZClearResellerDelinquencyRequestSchema)
   .output(ZClearResellerDelinquencyResponseSchema)
   .mutation(async ({ input, ctx }) => {
-    assertResellerFeatureAccess(ctx.user.email);
+    assertResellerDemoExtrasAccess(ctx.user.email);
 
     const { applicationId } = input;
 

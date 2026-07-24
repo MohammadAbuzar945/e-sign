@@ -8,7 +8,13 @@ import { Link, redirect, useLocation, useRevalidator } from 'react-router';
 
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-import { canAccessInvoiceHistory, isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
+import {
+  canAccessInvoiceHistory,
+  canAccessResellerCheckout,
+  canAccessResellerDemoExtras,
+  isDemoFeatureVisible,
+  RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+} from '@documenso/lib/constants/demo-feature-flags';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getOrganisationBillingAttributionSummary } from '@documenso/lib/server-only/reseller/resolve-organisation-payg-billing';
 import { resolveOrganisationBillingPath } from '@documenso/lib/utils/organisation-billing-path';
@@ -630,6 +636,14 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
     reference: null | string = '',
     callback_url: null | string = `${NEXT_PUBLIC_WEBAPP_URL()}/o/${orgUrl}/price-plan`,
   ) {
+    if (!canAccessResellerCheckout(user.email)) {
+      toast({
+        title: _(msg`Coming soon`),
+        description: RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+      });
+      return;
+    }
+
     if (isOneTime) {
       handleApiPaystackOneTimeTransaction(email, amount, metadata);
       return;
@@ -885,13 +899,12 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
           </div>
         )}
 
-        {canViewInvoiceHistory ? (
-          <OrganisationPurchaseHistoryDialog
-            orgUrl={orgUrl}
-            purchaseHistory={purchaseHistory}
-            getSubscriptionPlanDetails={getActiveSubscriptionDetails}
-          />
-        ) : null}
+        <OrganisationPurchaseHistoryDialog
+          orgUrl={orgUrl}
+          purchaseHistory={purchaseHistory}
+          isComingSoon={!canViewInvoiceHistory}
+          getSubscriptionPlanDetails={getActiveSubscriptionDetails}
+        />
 
         {currentSubscriptionData && (
           <div>
@@ -961,7 +974,9 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
           ))}
         </div>
 
-        {isActiveReseller && isDemoFeatureVisible('RESELLER_USER_FACING') ? (
+        {isActiveReseller &&
+        isDemoFeatureVisible('RESELLER_USER_FACING') &&
+        canAccessResellerDemoExtras(user.email) ? (
           <div className="mt-8">
             <ResellerBulkInventoryPurchase organisationId={organisation.id} />
           </div>

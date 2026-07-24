@@ -24,6 +24,8 @@ import {
 type OrganisationPurchaseHistoryDialogProps = {
   orgUrl: string;
   purchaseHistory: OrganisationPurchaseHistoryItem[];
+  /** When true, show the View History link but open a Coming soon dialog instead. */
+  isComingSoon?: boolean;
   getSubscriptionPlanDetails?: (planCode: string) => {
     label?: string;
     amount?: string;
@@ -93,8 +95,31 @@ const formatHistoryCredits = (
 export const OrganisationPurchaseHistoryDialog = ({
   orgUrl,
   purchaseHistory,
+  isComingSoon = false,
   getSubscriptionPlanDetails,
 }: OrganisationPurchaseHistoryDialogProps) => {
+  if (isComingSoon) {
+    return (
+      <Dialog>
+        <DialogTrigger asChild className="flex w-full items-end justify-end">
+          <button className="text-md cursor-pointer pb-6 text-blue-500 underline">
+            <Trans>View History</Trans>
+          </button>
+        </DialogTrigger>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              <Trans>Coming soon</Trans>
+            </DialogTitle>
+            <DialogDescription>
+              <Trans>Purchase history is not available for your account yet.</Trans>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog>
       <DialogTrigger asChild className="flex w-full items-end justify-end">

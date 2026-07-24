@@ -11,9 +11,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import {
-  assertResellerFeatureAccess,
-  RESELLER_FEATURE_ACCESS_DENIED_MESSAGE,
-} from '@documenso/lib/utils/reseller-feature-access';
+  assertResellerDemoExtrasAccess,
+  RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+} from '@documenso/lib/constants/demo-feature-flags';
 import { formatCentsAsDecimal } from '@documenso/lib/utils/reseller-vat';
 
 const prismaMock = vi.hoisted(() => ({
@@ -189,40 +189,49 @@ beforeEach(() => {
   });
 });
 
-describe('reseller feature access', () => {
+describe('reseller demo extras access', () => {
   it('allows allowlisted emails', () => {
-    expect(() => assertResellerFeatureAccess(ALLOWED_EMAIL)).not.toThrow();
+    expect(() => assertResellerDemoExtrasAccess(ALLOWED_EMAIL)).not.toThrow();
   });
 
   it('rejects non-allowlisted emails', () => {
-    expect(() => assertResellerFeatureAccess('other@example.com')).toThrow(AppError);
+    expect(() => assertResellerDemoExtrasAccess('other@example.com')).toThrow(AppError);
 
     try {
-      assertResellerFeatureAccess('other@example.com');
+      assertResellerDemoExtrasAccess('other@example.com');
     } catch (error) {
       const appError = error as AppError;
       expect(appError.code).toBe(AppErrorCode.UNAUTHORIZED);
-      expect(appError.message).toBe(RESELLER_FEATURE_ACCESS_DENIED_MESSAGE);
+      expect(appError.message).toBe(RESELLER_DEMO_EXTRAS_DENIED_MESSAGE);
     }
   });
 
   it('rejects missing email', () => {
-    expect(() => assertResellerFeatureAccess(null)).toThrow(AppError);
+    expect(() => assertResellerDemoExtrasAccess(null)).toThrow(AppError);
   });
 });
 
 describe('getResellerEligibility flow', () => {
-  it('denies non-allowlisted users before checking organisation metrics', async () => {
+  it('bypasses credits/tenure for all users when RESELLER_ELIGIBILITY_BYPASS is on', async () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
+
+    setupOrganisationMetrics({
+      completedDocumentCount: 0,
+      uniqueSignerCount: 0,
+      orgUserCount: 1,
+      creditsConsumed: 0,
+    });
+    setupSubscription(0);
+    setupNoActiveApplicationOrProfile();
 
     const eligibility = await getResellerEligibility({
       organisationId: 'org_1',
       userEmail: 'other@example.com',
     });
 
-    expect(eligibility.isEligible).toBe(false);
-    expect(eligibility.reasons).toContain(RESELLER_FEATURE_ACCESS_DENIED_MESSAGE);
-    expect(prismaMock.envelope.count).not.toHaveBeenCalled();
+    expect(eligibility.isEligible).toBe(true);
+    expect(eligibility.reasons).toHaveLength(0);
+    expect(prismaMock.envelope.count).toHaveBeenCalled();
   });
 
   it('returns eligible for allowlisted org without active application or profile', async () => {

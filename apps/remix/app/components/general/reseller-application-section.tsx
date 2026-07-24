@@ -10,7 +10,6 @@ import { z } from 'zod';
 
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
-import { isResellerFeatureAllowedEmail } from '@documenso/lib/constants/esign-credit-packages';
 import {
   createDefaultResellerTermsVariableValues,
   formatResellerTermsVariableLabel,
@@ -111,18 +110,9 @@ export const ResellerApplicationSection = () => {
   const organisation = useCurrentOrganisation();
   const [isOpen, setIsOpen] = useState(false);
 
-  const isResellerFeatureAllowed = user.email
-    ? isResellerFeatureAllowedEmail(user.email)
-    : false;
-
-  const { data: eligibility, isLoading } = trpc.organisation.reseller.getEligibility.useQuery(
-    {
-      organisationId: organisation.id,
-    },
-    {
-      enabled: isResellerFeatureAllowed,
-    },
-  );
+  const { data: eligibility, isLoading } = trpc.organisation.reseller.getEligibility.useQuery({
+    organisationId: organisation.id,
+  });
 
   const {
     data: templateVariablesData,
@@ -133,7 +123,7 @@ export const ResellerApplicationSection = () => {
       organisationId: organisation.id,
     },
     {
-      enabled: isResellerFeatureAllowed && isOpen,
+      enabled: isOpen,
       retry: false,
     },
   );
@@ -198,10 +188,6 @@ export const ResellerApplicationSection = () => {
       });
     },
   });
-
-  if (!isResellerFeatureAllowed) {
-    return null;
-  }
 
   const creditsProgress = eligibility
     ? Math.round((eligibility.creditsUsed / eligibility.requiredCredits) * 100)

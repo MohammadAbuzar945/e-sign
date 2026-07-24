@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import {
+  canAccessResellerCheckout,
+  RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+} from '@documenso/lib/constants/demo-feature-flags';
 import { initializeTransaction } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 // import { SubscriptionStatus } from '@documenso/prisma/generated/zod/inputTypeSchemas/SubscriptionStatusSchema';
@@ -14,6 +19,17 @@ const initializeTransactionSchema = z.object({
 
 export async function action({ request }: { request: Request }) {
   try {
+    const { user } = await getSession(request);
+
+    if (!canAccessResellerCheckout(user?.email)) {
+      return new Response(
+        JSON.stringify({
+          error: RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+        }),
+        { status: 403 },
+      );
+    }
+
     const body = await request.json();
     const validatedData = initializeTransactionSchema.parse(body);
 

@@ -47,7 +47,7 @@ describe('reseller constants', () => {
   });
 
   it('allows seeded E2E test emails outside production', () => {
-    expect(isResellerFeatureAllowedEmail('reseller-e2e@test.documenso.com')).toBe(true);
+    expect(isResellerFeatureAllowedEmail('reseller-e2e@test.nomiadocs.com')).toBe(true);
   });
 });
 

@@ -5,7 +5,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
-import { canAccessInvoiceHistory } from '@documenso/lib/constants/demo-feature-flags';
+import {
+  canAccessInvoiceHistory,
+  canAccessResellerCheckout,
+  RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+} from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { cn } from '@documenso/ui/lib/utils';
 import { trpc } from '@documenso/trpc/react';
@@ -59,11 +63,12 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const currentUserId = sessionData?.user?.id;
 
   const purchaserOrganisation = organisations.find((org) => org.ownerUserId === currentUserId);
-  const canViewPurchaseHistory =
+  const isPurchaseHistoryOwner =
     Boolean(purchaserOrganisation) &&
     Boolean(currentUserId) &&
-    purchaserOrganisation?.ownerUserId === currentUserId &&
-    canAccessInvoiceHistory(sessionData?.user?.email);
+    purchaserOrganisation?.ownerUserId === currentUserId;
+  const canViewPurchaseHistory =
+    isPurchaseHistoryOwner && canAccessInvoiceHistory(sessionData?.user?.email);
 
   const { data: affiliate, isLoading } = trpc.organisation.reseller.getAffiliate.useQuery({
     affiliateSlug,
@@ -267,6 +272,14 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const handleBuyNow = async (packageId: string) => {
     if (!isAuthenticated) {
       navigate(`/signin?returnTo=${encodeURIComponent(returnTo)}`);
+      return;
+    }
+
+    if (!canAccessResellerCheckout(sessionData?.user?.email)) {
+      toast({
+        title: _(msg`Coming soon`),
+        description: RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+      });
       return;
     }
 
@@ -485,11 +498,12 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
         </Alert>
       )}
 
-      {canViewPurchaseHistory && purchaserOrganisation && (
+      {isPurchaseHistoryOwner && purchaserOrganisation && (
         <div className="flex justify-end">
           <OrganisationPurchaseHistoryDialog
             orgUrl={purchaserOrganisation.url}
             purchaseHistory={purchaseHistory}
+            isComingSoon={!canViewPurchaseHistory}
           />
         </div>
       )}
