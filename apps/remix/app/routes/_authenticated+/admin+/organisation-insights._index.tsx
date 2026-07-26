@@ -47,7 +47,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     signingVolume: item.signingVolume || 0,
     createdAt: item.createdAt || new Date(),
     customerId: item.customerId || '',
-    subscriptionStatus: item.subscriptionStatus,
+    subscriptionStatus: item.subscriptionStatus ?? undefined,
     teamCount: item.teamCount || 0,
     memberCount: item.memberCount || 0,
   }));
