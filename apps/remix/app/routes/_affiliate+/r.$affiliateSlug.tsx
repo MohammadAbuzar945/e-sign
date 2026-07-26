@@ -31,6 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
+import { Switch } from '@documenso/ui/primitives/switch';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { appMetaTags } from '~/utils/meta';
@@ -54,6 +55,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const [isReconsentOpen, setIsReconsentOpen] = useState(false);
   const [isSubmittingConsent, setIsSubmittingConsent] = useState(false);
   const [isSwitchingToNomia, setIsSwitchingToNomia] = useState(false);
+  const [stickyBillingOptIn, setStickyBillingOptIn] = useState<boolean | null>(null);
   const isSwitchingToNomiaRef = useRef(false);
   const { sessionData } = useOptionalSession();
 
@@ -69,10 +71,22 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     purchaserOrganisation?.ownerUserId === currentUserId;
   const canViewPurchaseHistory =
     isPurchaseHistoryOwner && canAccessInvoiceHistory(sessionData?.user?.email);
+  const canManageStickyBilling =
+    isAuthenticated && isEmailVerified && Boolean(purchaserOrganisation);
 
   const { data: affiliate, isLoading } = trpc.organisation.reseller.getAffiliate.useQuery({
     affiliateSlug,
   });
+
+  const { data: billingAttribution, refetch: refetchBillingAttribution } =
+    trpc.organisation.reseller.getBillingAttribution.useQuery(
+      {
+        organisationId: purchaserOrganisation?.id ?? '',
+      },
+      {
+        enabled: Boolean(canManageStickyBilling && purchaserOrganisation?.id),
+      },
+    );
 
   const { data: purchaseHistory = [], refetch: refetchPurchaseHistory } =
     trpc.organisation.getPurchaseHistory.useQuery(
@@ -83,6 +97,14 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       enabled: Boolean(canViewPurchaseHistory && purchaserOrganisation?.id),
     },
   );
+
+  useEffect(() => {
+    if (!billingAttribution) {
+      return;
+    }
+
+    setStickyBillingOptIn(billingAttribution.stickyBillingOptIn);
+  }, [billingAttribution]);
 
   useEffect(() => {
     if (searchParams.get('purchase') !== 'success' || !canViewPurchaseHistory) {
@@ -106,6 +128,9 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
 
   const { mutateAsync: clearResellerAssociation } =
     trpc.organisation.reseller.clearResellerAssociation.useMutation();
+
+  const { mutateAsync: setStickyBillingOptInMutation, isPending: isUpdatingStickyBilling } =
+    trpc.organisation.reseller.setStickyBillingOptIn.useMutation();
 
   const { mutateAsync: initializePurchase } =
     trpc.organisation.reseller.initializePurchase.useMutation({
@@ -162,6 +187,8 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
         if (needsReconsent) {
           setIsReconsentOpen(true);
         }
+
+        void refetchBillingAttribution();
       })
       .catch(() => {
         // Non-blocking.
@@ -174,7 +201,48 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     isEmailVerified,
     isSwitchingToNomia,
     purchaserOrganisation,
+    refetchBillingAttribution,
   ]);
+
+  const handleStickyBillingOptInChange = async (optIn: boolean) => {
+    if (!purchaserOrganisation || stickyBillingOptIn === optIn) {
+      return;
+    }
+
+    const previous = stickyBillingOptIn;
+    setStickyBillingOptIn(optIn);
+
+    try {
+      const result = await setStickyBillingOptInMutation({
+        organisationId: purchaserOrganisation.id,
+        affiliateSlug,
+        optIn,
+      });
+
+      if (!result.success) {
+        setStickyBillingOptIn(previous);
+
+        toast({
+          title: _(msg`Could not update preference`),
+          description: _(msg`Please try again.`),
+          variant: 'destructive',
+        });
+
+        return;
+      }
+
+      setStickyBillingOptIn(result.stickyBillingOptIn ?? optIn);
+      void refetchBillingAttribution();
+    } catch (error) {
+      setStickyBillingOptIn(previous);
+
+      toast({
+        title: _(msg`Could not update preference`),
+        description: AppError.parseError(error).message,
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleConfirmReconsent = async () => {
     if (!purchaserOrganisation) {
@@ -192,6 +260,8 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       });
 
       if (result?.associated) {
+        setStickyBillingOptIn(true);
+
         toast({
           title: _(msg`Reseller confirmed`),
           description: _(
@@ -202,6 +272,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
 
         setIsReconsentOpen(false);
         void refetchPurchaseHistory();
+        void refetchBillingAttribution();
         return;
       }
 
@@ -230,6 +301,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     setIsSwitchingToNomia(true);
     setIsReconsentOpen(false);
     setIsSubmittingConsent(true);
+    setStickyBillingOptIn(false);
 
     try {
       // Opt out of sticky reseller attribution so Billing/price-plan stay on Nomia.
@@ -471,10 +543,34 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       </header>
 
       <Alert>
-        <AlertTitle>
-          <Trans>Reseller purchase</Trans>
-        </AlertTitle>
-        <AlertDescription>{affiliate.disclosure}</AlertDescription>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <AlertTitle>
+              <Trans>Reseller purchase</Trans>
+            </AlertTitle>
+            <AlertDescription>{affiliate.disclosure}</AlertDescription>
+          </div>
+
+          {canManageStickyBilling && (
+            <label
+              className={cn(
+                'flex shrink-0 items-center gap-3 self-start sm:pt-0.5',
+                stickyBillingOptIn === true && 'opacity-40',
+              )}
+            >
+              <span className="text-sm font-medium leading-none">
+                <Trans>Always buy from this reseller</Trans>
+              </span>
+              <Switch
+                checked={stickyBillingOptIn === true}
+                disabled={isUpdatingStickyBilling || stickyBillingOptIn === null}
+                onCheckedChange={(checked) => {
+                  void handleStickyBillingOptInChange(checked);
+                }}
+              />
+            </label>
+          )}
+        </div>
       </Alert>
 
       {!affiliate.allowNegativeCredits && (

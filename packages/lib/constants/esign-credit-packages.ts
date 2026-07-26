@@ -132,7 +132,10 @@ export const getEsignCreditPackageById = (catalogPackageId: string) => {
 };
 
 export const RESELLER_MIN_CREDITS_USED = 50;
-export const RESELLER_MIN_SUBSCRIPTION_MONTHS = 2;
+/** Organisation must be at least this many months old (from signup) to apply. */
+export const RESELLER_MIN_SIGNUP_MONTHS = 2;
+/** @deprecated Use RESELLER_MIN_SIGNUP_MONTHS */
+export const RESELLER_MIN_SUBSCRIPTION_MONTHS = RESELLER_MIN_SIGNUP_MONTHS;
 
 /** Emails that can access restricted reseller demo extras (checkout, bulk, admin tools, invoices). */
 export const RESELLER_FEATURE_ALLOWED_EMAILS = [

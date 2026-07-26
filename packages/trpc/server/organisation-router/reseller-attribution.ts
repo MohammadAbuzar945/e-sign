@@ -5,6 +5,7 @@ import { createPendingOrganisationCreditPurchase } from '@documenso/lib/server-o
 import {
   associateOrganisationWithReseller,
   clearOrganisationResellerAssociation,
+  setOrganisationStickyBillingOptIn,
 } from '@documenso/lib/server-only/reseller/reseller-association';
 import { calculateHybridCheckoutAmounts } from '@documenso/lib/server-only/reseller/hybrid-single-checkout';
 import { initializeResellerPurchase } from '@documenso/lib/server-only/reseller/initialize-reseller-purchase';
@@ -30,6 +31,8 @@ import {
   ZInitializeAttributedPaygResponseSchema,
   ZResolvePaygBillingRequestSchema,
   ZResolvePaygBillingResponseSchema,
+  ZSetStickyBillingOptInRequestSchema,
+  ZSetStickyBillingOptInResponseSchema,
 } from './reseller-attribution.types';
 
 const getCatalogPackage = (catalogPackageId: string) =>
@@ -126,6 +129,26 @@ export const clearOrganisationResellerAssociationRoute = authenticatedProcedure
     });
 
     return { cleared: true as const };
+  });
+
+export const setOrganisationStickyBillingOptInRoute = authenticatedProcedure
+  .input(ZSetStickyBillingOptInRequestSchema)
+  .output(ZSetStickyBillingOptInResponseSchema)
+  .mutation(async ({ input, ctx }) => {
+    const { organisationId, affiliateSlug, optIn } = input;
+
+    await prisma.organisation.findFirstOrThrow({
+      where: buildOrganisationWhereQuery({
+        organisationId,
+        userId: ctx.user.id,
+      }),
+    });
+
+    return setOrganisationStickyBillingOptIn({
+      organisationId,
+      affiliateSlug,
+      optIn,
+    });
   });
 
 export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure

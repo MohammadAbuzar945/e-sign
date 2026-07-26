@@ -255,6 +255,7 @@ export const getOrganisationBillingAttributionSummary = async (organisationId: s
       resellerRequiresReconsent: true,
       resellerAssociatedAt: true,
       resellerAssociationSource: true,
+      resellerStickyBillingOptIn: true,
       associatedResellerProfile: {
         select: {
           id: true,
@@ -341,6 +342,7 @@ export const getOrganisationBillingAttributionSummary = async (organisationId: s
     requiresReconsent: organisation.resellerRequiresReconsent && Boolean(profile),
     associatedAt: organisation.resellerAssociatedAt,
     associationSource: organisation.resellerAssociationSource,
+    stickyBillingOptIn: organisation.resellerStickyBillingOptIn,
     stickyBillingActive,
     availableCredits,
     canAcceptPayments: payout?.canAcceptPayments ?? false,
@@ -350,7 +352,7 @@ export const getOrganisationBillingAttributionSummary = async (organisationId: s
     resellerProfileId: profile?.id ?? null,
     isResellerOrganisation: Boolean(ownResellerProfile),
     disclosure:
-      stickyBillingActive && displayName
+      stickyBillingActive && organisation.resellerStickyBillingOptIn && displayName
         ? `${RESELLER_BILLING_DISCLOSURE_PREFIX} ${displayName}`
         : null,
     isDelinquent: profile?.isDelinquent ?? false,

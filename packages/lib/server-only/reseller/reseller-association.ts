@@ -146,6 +146,9 @@ export const associateOrganisationWithReseller = async ({
         where: { id: organisationId },
         data: {
           resellerAssociationSource: source,
+          ...(source === 'AFFILIATE_SIGNUP' || source === 'CUSTOMER_CONSENT'
+            ? { resellerStickyBillingOptIn: true }
+            : {}),
         },
       });
 
@@ -155,16 +158,22 @@ export const associateOrganisationWithReseller = async ({
     return { associated: true as const, reason: 'ALREADY_SET' as const };
   }
 
+  const persistedSource = resolvePersistedAssociationSource({
+    current: organisation.resellerAssociationSource,
+    next: source,
+  });
+
   await prisma.organisation.update({
     where: { id: organisationId },
     data: {
       associatedResellerProfileId: resellerProfileId,
       resellerAssociatedAt: new Date(),
-      resellerAssociationSource: resolvePersistedAssociationSource({
-        current: organisation.resellerAssociationSource,
-        next: source,
-      }),
+      resellerAssociationSource: persistedSource,
       resellerRequiresReconsent: false,
+      // Signup / explicit reconsent turn sticky billing ON; visits stay OFF by default.
+      ...(persistedSource === 'AFFILIATE_SIGNUP' || source === 'CUSTOMER_CONSENT'
+        ? { resellerStickyBillingOptIn: true }
+        : {}),
     },
   });
 
@@ -185,6 +194,7 @@ export const clearOrganisationResellerAssociation = async ({
       resellerAssociatedAt: null,
       resellerAssociationSource: null,
       resellerRequiresReconsent: requireReconsent,
+      resellerStickyBillingOptIn: false,
     },
   });
 };
@@ -297,6 +307,68 @@ export const associateAffiliateSignupOnEmailVerification = async ({
     resellerProfileId: profile.id,
     source: 'AFFILIATE_SIGNUP',
   });
+};
+
+export const setOrganisationStickyBillingOptIn = async ({
+  organisationId,
+  affiliateSlug,
+  optIn,
+}: {
+  organisationId: string;
+  affiliateSlug: string;
+  optIn: boolean;
+}) => {
+  const profile = await prisma.resellerProfile.findUnique({
+    where: { affiliateSlug },
+    select: { id: true, status: true, organisationId: true },
+  });
+
+  if (!profile || profile.status !== ProfileStatus.ACTIVE) {
+    return { success: false as const, reason: 'RESELLER_INACTIVE' as const };
+  }
+
+  if (profile.organisationId === organisationId) {
+    return { success: false as const, reason: 'SELF' as const };
+  }
+
+  const organisation = await prisma.organisation.findUnique({
+    where: { id: organisationId },
+    select: {
+      associatedResellerProfileId: true,
+      resellerProfile: { select: { id: true } },
+    },
+  });
+
+  if (!organisation || organisation.resellerProfile) {
+    return { success: false as const, reason: 'IS_RESELLER' as const };
+  }
+
+  if (optIn) {
+    const associateResult = await associateOrganisationWithReseller({
+      organisationId,
+      resellerProfileId: profile.id,
+      source: 'CUSTOMER_CONSENT',
+      customerConsent: true,
+    });
+
+    if (!associateResult.associated) {
+      return { success: false as const, reason: associateResult.reason };
+    }
+
+    await prisma.organisation.update({
+      where: { id: organisationId },
+      data: { resellerStickyBillingOptIn: true },
+    });
+
+    return { success: true as const, stickyBillingOptIn: true as const };
+  }
+
+  await prisma.organisation.update({
+    where: { id: organisationId },
+    data: { resellerStickyBillingOptIn: false },
+  });
+
+  return { success: true as const, stickyBillingOptIn: false as const };
 };
 
 export const resolveResellerDisplayName = (profile: {

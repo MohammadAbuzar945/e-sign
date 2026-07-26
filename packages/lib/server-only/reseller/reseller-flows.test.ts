@@ -4,7 +4,6 @@ import {
   ResellerApplicationStatus,
   ResellerCreditTransactionStatus,
   ResellerProfileStatus,
-  SubscriptionStatus,
 } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -166,13 +165,12 @@ const setupOrganisationMetrics = ({
   prismaMock.team.findMany.mockResolvedValue([{ creditConsumed: creditsConsumed }]);
 };
 
-const setupSubscription = (monthsAgo = 3) => {
+const setupOrganisationSignup = (monthsAgo = 3) => {
   const createdAt = new Date();
   createdAt.setMonth(createdAt.getMonth() - monthsAgo);
 
-  prismaMock.subscription.findFirst.mockResolvedValue({
+  prismaMock.organisation.findUnique.mockResolvedValue({
     createdAt,
-    status: SubscriptionStatus.ACTIVE,
   });
 };
 
@@ -221,7 +219,7 @@ describe('getResellerEligibility flow', () => {
       orgUserCount: 1,
       creditsConsumed: 0,
     });
-    setupSubscription(0);
+    setupOrganisationSignup(0);
     setupNoActiveApplicationOrProfile();
 
     const eligibility = await getResellerEligibility({
@@ -238,7 +236,7 @@ describe('getResellerEligibility flow', () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     setupOrganisationMetrics();
-    setupSubscription();
+    setupOrganisationSignup();
     setupNoActiveApplicationOrProfile();
 
     const eligibility = await getResellerEligibility({
@@ -257,7 +255,7 @@ describe('getResellerEligibility flow', () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     setupOrganisationMetrics();
-    setupSubscription();
+    setupOrganisationSignup();
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
       status: ResellerApplicationStatus.PENDING,
       appliedAt: new Date('2026-01-01'),
@@ -286,7 +284,7 @@ describe('getResellerEligibility flow', () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     setupOrganisationMetrics();
-    setupSubscription();
+    setupOrganisationSignup();
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
       status: ResellerApplicationStatus.REJECTED,
       appliedAt: new Date('2026-01-01'),
@@ -312,7 +310,7 @@ describe('getResellerEligibility flow', () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     setupOrganisationMetrics();
-    setupSubscription();
+    setupOrganisationSignup();
     prismaMock.resellerApplication.findUnique.mockResolvedValue(null);
     prismaMock.resellerProfile.findUnique.mockResolvedValue({ id: 'profile_1' });
 
@@ -330,7 +328,7 @@ describe('getResellerEligibility flow', () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     setupOrganisationMetrics();
-    setupSubscription();
+    setupOrganisationSignup();
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
       status: ResellerApplicationStatus.APPROVED,
       appliedAt: new Date('2026-01-01'),
@@ -365,7 +363,7 @@ describe('createResellerApplication flow', () => {
       uniqueSignerCount: 12,
       orgUserCount: 4,
     });
-    setupSubscription();
+    setupOrganisationSignup();
     setupNoActiveApplicationOrProfile();
 
     const orgCreatedAt = new Date('2025-01-01T00:00:00.000Z');
@@ -438,7 +436,7 @@ describe('createResellerApplication flow', () => {
       uniqueSignerCount: 15,
       orgUserCount: 5,
     });
-    setupSubscription();
+    setupOrganisationSignup();
 
     const orgCreatedAt = new Date('2025-01-01T00:00:00.000Z');
 
@@ -506,7 +504,7 @@ describe('createResellerApplication flow', () => {
     const { createResellerApplication } = await import('./create-reseller-application');
 
     setupOrganisationMetrics();
-    setupSubscription();
+    setupOrganisationSignup();
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
       status: ResellerApplicationStatus.TERMS_SENT,
     });

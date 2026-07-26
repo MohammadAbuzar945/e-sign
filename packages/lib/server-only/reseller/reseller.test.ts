@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isResellerFeatureAllowedEmail,
   RESELLER_MIN_CREDITS_USED,
-  RESELLER_MIN_SUBSCRIPTION_MONTHS,
+  RESELLER_MIN_SIGNUP_MONTHS,
 } from '@documenso/lib/constants/esign-credit-packages';
 import {
   buildAffiliateUrl,
@@ -37,7 +37,7 @@ describe('reseller credits helpers', () => {
 describe('reseller constants', () => {
   it('defines qualification thresholds', () => {
     expect(RESELLER_MIN_CREDITS_USED).toBe(50);
-    expect(RESELLER_MIN_SUBSCRIPTION_MONTHS).toBe(2);
+    expect(RESELLER_MIN_SIGNUP_MONTHS).toBe(2);
   });
 
   it('matches reseller feature allowed emails case-insensitively', () => {

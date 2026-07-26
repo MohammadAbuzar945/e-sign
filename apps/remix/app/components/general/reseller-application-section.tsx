@@ -197,7 +197,7 @@ export const ResellerApplicationSection = () => {
     eligibility !== undefined &&
     eligibility.creditsUsed >= eligibility.requiredCredits;
 
-  const hasMetSubscription = eligibility?.hasSubscriptionTenure ?? false;
+  const hasMetSignupTenure = eligibility?.hasSignupTenure ?? false;
 
   const isActiveReseller = eligibility?.hasActiveResellerProfile ?? false;
   const hasActiveApplication = eligibility?.hasActiveApplication ?? false;
@@ -348,22 +348,22 @@ export const ResellerApplicationSection = () => {
                   />
 
                   <EligibilityRequirement
-                    isMet={hasMetSubscription}
-                    title={<Trans>Subscription tenure</Trans>}
+                    isMet={hasMetSignupTenure}
+                    title={<Trans>Account age</Trans>}
                     description={
                       <Trans>
-                        Stay subscribed for at least {eligibility?.requiredSubscriptionMonths ?? 2}{' '}
-                        months.
+                        Your organisation must have been signed up for at least{' '}
+                        {eligibility?.requiredSignupMonths ?? 2} months.
                       </Trans>
                     }
                     progressLabel={
-                      hasMetSubscription ? (
+                      hasMetSignupTenure ? (
                         <Trans>Requirement met</Trans>
                       ) : (
-                        <Trans>Keep your subscription active</Trans>
+                        <Trans>Keep using your account</Trans>
                       )
                     }
-                    progressValue={hasMetSubscription ? 100 : 25}
+                    progressValue={hasMetSignupTenure ? 100 : 25}
                   />
                 </div>
               )}
@@ -435,8 +435,8 @@ export const ResellerApplicationSection = () => {
                     </li>
                     <li>
                       <Trans>
-                        Subscription requirement:{' '}
-                        {hasMetSubscription ? (
+                        Account age requirement:{' '}
+                        {hasMetSignupTenure ? (
                           <span className="text-foreground">
                             <Trans>Met</Trans>
                           </span>
