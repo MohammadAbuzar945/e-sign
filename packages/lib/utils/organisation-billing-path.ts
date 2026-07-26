@@ -28,6 +28,7 @@ export const resolveOrganisationBillingPath = ({
 
   // Affiliate-linked billing follows the /r sticky opt-in toggle.
   // Signup defaults ON; visit/purchase default OFF until the buyer opts in.
+  // Reseller organisations always use Nomia price-plan (never another reseller's /r).
   const isStickyOptIn =
     billingAttribution.stickyBillingOptIn ??
     billingAttribution.associationSource === 'AFFILIATE_SIGNUP';

@@ -11,6 +11,10 @@ import { getPaystackSubaccount } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 
 import { ZResellerBankVerificationFieldsSchema } from '@documenso/lib/constants/reseller-bank-verification';
+import {
+  normalizeSaVatNumber,
+  validateSaVatNumber,
+} from '@documenso/lib/constants/reseller-sa-validation';
 import { encryptResellerSecret, decryptResellerSecret } from './reseller-secrets';
 import { registerResellerPaystackSubaccount } from './register-reseller-paystack-subaccount';
 import { recordResellerVatRegistrationChange } from './reseller-vat-registration';
@@ -187,17 +191,24 @@ export const updateResellerBankDetails = async ({
     });
   }
 
-  if (vatStatus === ResellerVatStatus.REGISTERED && !trimmedVatNumber) {
-    throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'VAT registration number is required when VAT registered',
-    });
+  const normalizedVatNumber =
+    vatStatus === ResellerVatStatus.REGISTERED ? normalizeSaVatNumber(trimmedVatNumber) : '';
+
+  if (vatStatus === ResellerVatStatus.REGISTERED) {
+    const vatError = validateSaVatNumber(trimmedVatNumber);
+
+    if (vatError) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: vatError,
+      });
+    }
   }
 
   const encryptedAccountNumber = encryptResellerSecret(trimmedAccountNumber);
   const encryptedDocumentNumber = encryptResellerSecret(trimmedDocumentNumber);
   const trimmedBankName = bankName.trim();
   const nextVatNumber =
-    vatStatus === ResellerVatStatus.REGISTERED ? trimmedVatNumber : null;
+    vatStatus === ResellerVatStatus.REGISTERED ? normalizedVatNumber : null;
 
   const previousAccountNumber = profile.bankAccountNumber
     ? decryptResellerSecret(profile.bankAccountNumber)

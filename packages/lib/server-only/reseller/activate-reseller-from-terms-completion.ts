@@ -1,6 +1,5 @@
 import {
   ResellerApplicationStatus,
-  ResellerAssociationSource,
   ResellerPayoutMode,
   ResellerProfileStatus,
 } from '@prisma/client';
@@ -102,6 +101,19 @@ export const activateResellerFromTermsCompletion = async ({
       });
     }
 
+    // Ensure sticky customer attribution is cleared even if the profile already existed
+    // (e.g. re-run of completion / older activation path).
+    await prisma.organisation.update({
+      where: { id: application.organisationId },
+      data: {
+        associatedResellerProfileId: null,
+        resellerAssociatedAt: null,
+        resellerAssociationSource: null,
+        resellerRequiresReconsent: false,
+        resellerStickyBillingOptIn: false,
+      },
+    });
+
     return existingProfile;
   }
 
@@ -130,17 +142,16 @@ export const activateResellerFromTermsCompletion = async ({
       },
     });
 
-    // A newly-activated reseller shouldn't carry a sticky affiliate "signup" attribution to
-    // another reseller. Downgrade any existing signup relation to a plain visit, keeping the
-    // association but removing its sticky-signup status (§8 attribution).
-    await tx.organisation.updateMany({
-      where: {
-        id: application.organisationId,
-        associatedResellerProfileId: { not: null },
-        resellerAssociationSource: ResellerAssociationSource.AFFILIATE_SIGNUP,
-      },
+    // New resellers buy from Nomia (price-plan), not another reseller's /r sticky link.
+    // Clear any prior customer↔reseller sticky attribution on this organisation.
+    await tx.organisation.update({
+      where: { id: application.organisationId },
       data: {
-        resellerAssociationSource: ResellerAssociationSource.AFFILIATE_VISIT,
+        associatedResellerProfileId: null,
+        resellerAssociatedAt: null,
+        resellerAssociationSource: null,
+        resellerRequiresReconsent: false,
+        resellerStickyBillingOptIn: false,
       },
     });
 
