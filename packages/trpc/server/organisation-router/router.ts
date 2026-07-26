@@ -46,6 +46,7 @@ import {
   associateOrganisationWithResellerRoute,
   clearOrganisationResellerAssociationRoute,
   getOrganisationBillingAttributionRoute,
+  setOrganisationStickyBillingOptInRoute,
   initializeAttributedPaygPurchaseRoute,
   resolveOrganisationPaygBillingRoute,
 } from './reseller-attribution';
@@ -116,6 +117,7 @@ export const organisationRouter = router({
     resolvePaygBilling: resolveOrganisationPaygBillingRoute,
     associateReseller: associateOrganisationWithResellerRoute,
     clearResellerAssociation: clearOrganisationResellerAssociationRoute,
+    setStickyBillingOptIn: setOrganisationStickyBillingOptInRoute,
     initializeAttributedPayg: initializeAttributedPaygPurchaseRoute,
     getEffectiveBulkRates: getEffectiveResellerBulkRatesRoute,
     initializeBulkPurchase: initializeResellerBulkPurchaseRoute,

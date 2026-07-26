@@ -1,10 +1,10 @@
-import { DocumentStatus, EnvelopeType, ResellerApplicationStatus, SubscriptionStatus } from '@prisma/client';
+import { DocumentStatus, EnvelopeType, ResellerApplicationStatus } from '@prisma/client';
 
 import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import {
   isResellerFeatureAllowedEmail,
   RESELLER_MIN_CREDITS_USED,
-  RESELLER_MIN_SUBSCRIPTION_MONTHS,
+  RESELLER_MIN_SIGNUP_MONTHS,
 } from '@documenso/lib/constants/esign-credit-packages';
 import { prisma } from '@documenso/prisma';
 
@@ -73,8 +73,14 @@ export type ResellerEligibility = {
   isEligible: boolean;
   creditsUsed: number;
   requiredCredits: number;
+  hasSignupTenure: boolean;
+  requiredSignupMonths: number;
+  accountCreatedAt: Date | null;
+  /** @deprecated Use hasSignupTenure */
   hasSubscriptionTenure: boolean;
+  /** @deprecated Use requiredSignupMonths */
   requiredSubscriptionMonths: number;
+  /** @deprecated Use accountCreatedAt */
   subscriptionStartDate: Date | null;
   hasActiveApplication: boolean;
   hasActiveResellerProfile: boolean;
@@ -94,8 +100,11 @@ export const getResellerEligibility = async ({
       isEligible: false,
       creditsUsed: 0,
       requiredCredits: RESELLER_MIN_CREDITS_USED,
+      hasSignupTenure: false,
+      requiredSignupMonths: RESELLER_MIN_SIGNUP_MONTHS,
+      accountCreatedAt: null,
       hasSubscriptionTenure: false,
-      requiredSubscriptionMonths: RESELLER_MIN_SUBSCRIPTION_MONTHS,
+      requiredSubscriptionMonths: RESELLER_MIN_SIGNUP_MONTHS,
       subscriptionStartDate: null,
       hasActiveApplication: false,
       hasActiveResellerProfile: false,
@@ -107,26 +116,19 @@ export const getResellerEligibility = async ({
   // Metrics still collected for UI; credits/tenure gates are bypassed when testing flag is on.
   const metrics = await getOrganisationResellerMetrics(organisationId);
 
-  const subscription = await prisma.subscription.findFirst({
-    where: {
-      organisationId,
-      status: {
-        in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.INACTIVE, SubscriptionStatus.PAST_DUE],
-      },
-    },
-    orderBy: {
-      createdAt: 'asc',
-    },
+  const organisation = await prisma.organisation.findUnique({
+    where: { id: organisationId },
+    select: { createdAt: true },
   });
 
-  const subscriptionStartDate = subscription?.createdAt ?? null;
-  const monthsSinceSubscription = subscriptionStartDate
-    ? (Date.now() - subscriptionStartDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+  const accountCreatedAt = organisation?.createdAt ?? null;
+  const monthsSinceSignup = accountCreatedAt
+    ? (Date.now() - accountCreatedAt.getTime()) / (1000 * 60 * 60 * 24 * 30)
     : 0;
 
   const creditsUsed = Math.max(metrics.creditsConsumed, metrics.completedDocumentCount);
   const hasCreditsRequirement = creditsUsed >= RESELLER_MIN_CREDITS_USED;
-  const hasSubscriptionTenure = monthsSinceSubscription >= RESELLER_MIN_SUBSCRIPTION_MONTHS;
+  const hasSignupTenure = monthsSinceSignup >= RESELLER_MIN_SIGNUP_MONTHS;
 
   const [existingApplication, existingProfile] = await Promise.all([
     prisma.resellerApplication.findUnique({
@@ -150,9 +152,9 @@ export const getResellerEligibility = async ({
     );
   }
 
-  if (!hasSubscriptionTenure && !hasEligibilityBypass) {
+  if (!hasSignupTenure && !hasEligibilityBypass) {
     reasons.push(
-      `You must have been a subscriber for at least ${RESELLER_MIN_SUBSCRIPTION_MONTHS} months.`,
+      `Your organisation must have been signed up for at least ${RESELLER_MIN_SIGNUP_MONTHS} months.`,
     );
   }
 
@@ -162,8 +164,7 @@ export const getResellerEligibility = async ({
     }
   }
 
-  const meetsRequirements =
-    hasEligibilityBypass || (hasCreditsRequirement && hasSubscriptionTenure);
+  const meetsRequirements = hasEligibilityBypass || (hasCreditsRequirement && hasSignupTenure);
 
   const applicationSummary: ResellerApplicationSummary | null = existingApplication
     ? {
@@ -181,9 +182,12 @@ export const getResellerEligibility = async ({
     isEligible: meetsRequirements && reasons.length === 0 && !existingProfile,
     creditsUsed,
     requiredCredits: RESELLER_MIN_CREDITS_USED,
-    hasSubscriptionTenure,
-    requiredSubscriptionMonths: RESELLER_MIN_SUBSCRIPTION_MONTHS,
-    subscriptionStartDate,
+    hasSignupTenure,
+    requiredSignupMonths: RESELLER_MIN_SIGNUP_MONTHS,
+    accountCreatedAt,
+    hasSubscriptionTenure: hasSignupTenure,
+    requiredSubscriptionMonths: RESELLER_MIN_SIGNUP_MONTHS,
+    subscriptionStartDate: accountCreatedAt,
     hasActiveApplication: Boolean(
       existingApplication && !['REJECTED', 'CANCELLED'].includes(existingApplication.status),
     ),

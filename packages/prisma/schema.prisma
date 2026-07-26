@@ -814,6 +814,8 @@ model Organisation {
   resellerAssociatedAt         DateTime?
   resellerAssociationSource    ResellerAssociationSource?
   resellerRequiresReconsent    Boolean   @default(false)
+  /// When true, Billing nav / price-plan redirect to /r/{slug}. Signup defaults ON; visits default OFF.
+  resellerStickyBillingOptIn   Boolean   @default(false)
 
   @@index([name])
   @@index([ownerUserId])

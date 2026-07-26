@@ -13,11 +13,9 @@ import {
   ZSiteSettingsBannerSchema,
 } from '@documenso/lib/server-only/site-settings/schemas/banner';
 import {
-  DEFAULT_RESELLER_TERMS_PROVIDER,
   RESELLER_TERMS_PROVIDER,
   SITE_SETTINGS_RESELLER_ID,
   ZSiteSettingsResellerSchema,
-  resolveResellerTermsProvider,
 } from '@documenso/lib/server-only/site-settings/schemas/reseller';
 import { trpc as trpcReact } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
@@ -32,13 +30,6 @@ import {
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@documenso/ui/primitives/select';
 import { Switch } from '@documenso/ui/primitives/switch';
 import { Textarea } from '@documenso/ui/primitives/textarea';
 import { useToast } from '@documenso/ui/primitives/use-toast';
@@ -106,7 +97,8 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
       id: SITE_SETTINGS_RESELLER_ID,
       enabled: reseller?.enabled ?? true,
       data: {
-        termsProvider: resolveResellerTermsProvider(reseller?.data?.termsProvider),
+        // Internal e-sign provider is hidden; always persist Nomia DocGen.
+        termsProvider: RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN,
         termsDocGenTemplateId: toOptionalSiteSettingId(reseller?.data?.termsDocGenTemplateId),
         termsDocGenOrganizationId: toOptionalSiteSettingId(
           reseller?.data?.termsDocGenOrganizationId,
@@ -122,10 +114,6 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
       },
     },
   });
-
-  const termsProvider =
-    resellerForm.watch('data.termsProvider') ?? DEFAULT_RESELLER_TERMS_PROVIDER;
-  const usesNomiaDocGen = termsProvider === RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN;
 
   const { mutateAsync: updateBannerSetting, isPending: isUpdatingBanner } =
     trpcReact.admin.updateSiteSetting.useMutation();
@@ -161,7 +149,14 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
 
   const onResellerUpdate = async (values: TResellerFormSchema) => {
     try {
-      await updateResellerSetting(values);
+      await updateResellerSetting({
+        ...values,
+        data: {
+          ...values.data,
+          termsProvider: RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN,
+          docGenApiEndpoint: 'pdf_link',
+        },
+      });
 
       toast({
         title: _(msg`Reseller settings updated`),
@@ -317,8 +312,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
           </h2>
           <p className="text-muted-foreground mt-2 text-sm">
             <Trans>
-              Choose whether reseller terms are sent via Nomia DocGen or an internal e-sign
-              template, then configure the matching settings.
+              Configure Nomia DocGen settings used when sending reseller terms and conditions.
             </Trans>
           </p>
 
@@ -327,42 +321,6 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
               className="mt-4 space-y-4"
               onSubmit={resellerForm.handleSubmit(onResellerUpdate)}
             >
-              <FormField
-                control={resellerForm.control}
-                name="data.termsProvider"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <Trans>T&Cs provider</Trans>
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select provider" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN}>
-                          <Trans>Nomia DocGen</Trans>
-                        </SelectItem>
-                        <SelectItem value={RESELLER_TERMS_PROVIDER.INTERNAL}>
-                          <Trans>Internal e-sign template</Trans>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      <Trans>
-                        Defaults to Nomia DocGen. Switch to Internal to send from a Documenso
-                        template instead.
-                      </Trans>
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {usesNomiaDocGen ? (
-                <>
               <FormField
                 control={resellerForm.control}
                 name="data.docGenApiUrl"
@@ -549,38 +507,6 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
                   </FormItem>
                 )}
               />
-                </>
-              ) : (
-              <FormField
-                control={resellerForm.control}
-                name="data.termsInternalTemplateId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <Trans>Internal E-sign Template ID</Trans>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="off"
-                        placeholder="Set internal template ID"
-                        value={field.value ?? ''}
-                        onChange={(event) => {
-                          field.onChange(parseOptionalSiteSettingIdInput(event.target.value));
-                        }}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      <Trans>
-                        Documenso template ID used when the T&Cs provider is set to Internal.
-                      </Trans>
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              )}
 
               <Button type="submit" loading={isUpdatingReseller}>
                 <Trans>Save reseller T&Cs settings</Trans>

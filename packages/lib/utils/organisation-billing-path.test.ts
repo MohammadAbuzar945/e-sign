@@ -3,13 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { resolveOrganisationBillingPath } from './organisation-billing-path';
 
 describe('resolveOrganisationBillingPath', () => {
-  it('returns affiliate signup billing when associated with a reseller', () => {
+  it('returns affiliate billing when sticky opt-in is on', () => {
     expect(
       resolveOrganisationBillingPath({
         organisationUrl: 'org_daehrocszuiiiftr',
         billingAttribution: {
           associationSource: 'AFFILIATE_SIGNUP',
           stickyBillingActive: true,
+          stickyBillingOptIn: true,
           affiliateSlug: 'devvv',
           isResellerOrganisation: false,
         },
@@ -17,7 +18,22 @@ describe('resolveOrganisationBillingPath', () => {
     ).toBe('/r/devvv');
   });
 
-  it('returns affiliate signup billing even when sticky billing is not active yet', () => {
+  it('returns price-plan when sticky opt-in is off for signup association', () => {
+    expect(
+      resolveOrganisationBillingPath({
+        organisationUrl: 'org_oetkmdoeabdxciae',
+        billingAttribution: {
+          associationSource: 'AFFILIATE_SIGNUP',
+          stickyBillingActive: true,
+          stickyBillingOptIn: false,
+          affiliateSlug: 'acme-reseller',
+          isResellerOrganisation: false,
+        },
+      }),
+    ).toBe('/o/org_oetkmdoeabdxciae/price-plan');
+  });
+
+  it('falls back to affiliate billing for signup when stickyBillingOptIn is omitted', () => {
     expect(
       resolveOrganisationBillingPath({
         organisationUrl: 'org_oetkmdoeabdxciae',
@@ -31,13 +47,29 @@ describe('resolveOrganisationBillingPath', () => {
     ).toBe('/r/acme-reseller');
   });
 
-  it('returns price-plan for affiliate purchase (signup source must be preserved separately)', () => {
+  it('returns affiliate billing when visit association opts in', () => {
+    expect(
+      resolveOrganisationBillingPath({
+        organisationUrl: 'org_buyer',
+        billingAttribution: {
+          associationSource: 'AFFILIATE_VISIT',
+          stickyBillingActive: true,
+          stickyBillingOptIn: true,
+          affiliateSlug: 'devvv',
+          isResellerOrganisation: false,
+        },
+      }),
+    ).toBe('/r/devvv');
+  });
+
+  it('returns price-plan for affiliate purchase without opt-in', () => {
     expect(
       resolveOrganisationBillingPath({
         organisationUrl: 'org_buyer',
         billingAttribution: {
           associationSource: 'AFFILIATE_PURCHASE',
           stickyBillingActive: false,
+          stickyBillingOptIn: false,
           affiliateSlug: 'devvv',
           isResellerOrganisation: false,
         },
@@ -45,13 +77,14 @@ describe('resolveOrganisationBillingPath', () => {
     ).toBe('/o/org_buyer/price-plan');
   });
 
-  it('returns price-plan for affiliate visit', () => {
+  it('returns price-plan for affiliate visit without opt-in', () => {
     expect(
       resolveOrganisationBillingPath({
         organisationUrl: 'org_daehrocszuiiiftr',
         billingAttribution: {
           associationSource: 'AFFILIATE_VISIT',
           stickyBillingActive: true,
+          stickyBillingOptIn: false,
           affiliateSlug: 'devvv',
           isResellerOrganisation: false,
         },
@@ -59,13 +92,14 @@ describe('resolveOrganisationBillingPath', () => {
     ).toBe('/o/org_daehrocszuiiiftr/price-plan');
   });
 
-  it('returns price-plan for reseller organisations', () => {
+  it('returns price-plan for reseller organisations even when opted in', () => {
     expect(
       resolveOrganisationBillingPath({
         organisationUrl: 'org_tlxruvlefzthnvwz',
         billingAttribution: {
           associationSource: 'AFFILIATE_SIGNUP',
           stickyBillingActive: true,
+          stickyBillingOptIn: true,
           affiliateSlug: 'devvv',
           isResellerOrganisation: true,
         },

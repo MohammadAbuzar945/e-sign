@@ -13,6 +13,7 @@ export const ZGetOrganisationBillingAttributionResponseSchema = z
       .enum(['AFFILIATE_VISIT', 'AFFILIATE_SIGNUP', 'AFFILIATE_PURCHASE', 'CUSTOMER_CONSENT'])
       .nullable(),
     stickyBillingActive: z.boolean(),
+    stickyBillingOptIn: z.boolean(),
     availableCredits: z.number(),
     canAcceptPayments: z.boolean(),
     payoutBlockingReason: z.string().nullable(),
@@ -92,6 +93,18 @@ export const ZClearResellerAssociationRequestSchema = z.object({
 
 export const ZClearResellerAssociationResponseSchema = z.object({
   cleared: z.literal(true),
+});
+
+export const ZSetStickyBillingOptInRequestSchema = z.object({
+  organisationId: z.string(),
+  affiliateSlug: z.string(),
+  optIn: z.boolean(),
+});
+
+export const ZSetStickyBillingOptInResponseSchema = z.object({
+  success: z.boolean(),
+  stickyBillingOptIn: z.boolean().optional(),
+  reason: z.string().optional(),
 });
 
 export const ZInitializeAttributedPaygRequestSchema = z.object({

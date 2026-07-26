@@ -8,6 +8,7 @@ export type OrganisationBillingAssociationSource =
 export type OrganisationBillingAttributionLike = {
   associationSource: OrganisationBillingAssociationSource;
   stickyBillingActive: boolean;
+  stickyBillingOptIn?: boolean;
   affiliateSlug: string | null;
   isResellerOrganisation: boolean;
 };
@@ -25,15 +26,18 @@ export const resolveOrganisationBillingPath = ({
     return defaultPath;
   }
 
-  // Only AFFILIATE_SIGNUP customers use the reseller /r billing page.
-  // Do not gate on stickyBillingActive — /r handles unavailable resellers.
-  // AFFILIATE_VISIT / PURCHASE / CONSENT stay on Nomia price-plan.
-  const shouldUseAffiliateSignupBilling =
+  // Affiliate-linked billing follows the /r sticky opt-in toggle.
+  // Signup defaults ON; visit/purchase default OFF until the buyer opts in.
+  const isStickyOptIn =
+    billingAttribution.stickyBillingOptIn ??
+    billingAttribution.associationSource === 'AFFILIATE_SIGNUP';
+
+  const shouldUseAffiliateBilling =
     !billingAttribution.isResellerOrganisation &&
-    billingAttribution.associationSource === 'AFFILIATE_SIGNUP' &&
+    isStickyOptIn &&
     Boolean(billingAttribution.affiliateSlug);
 
-  if (shouldUseAffiliateSignupBilling && billingAttribution.affiliateSlug) {
+  if (shouldUseAffiliateBilling && billingAttribution.affiliateSlug) {
     return `/r/${billingAttribution.affiliateSlug}`;
   }
 

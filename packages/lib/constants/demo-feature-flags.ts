@@ -28,7 +28,7 @@ export const DEMO_FEATURE_VISIBILITY = {
    */
   RESELLER_CHECKOUT: false,
   /**
-   * When true, credits-used and subscription-tenure eligibility checks are bypassed
+   * When true, credits-used and signup-tenure eligibility checks are bypassed
    * for every signed-in user (testing only). Active application / existing profile
    * still block re-apply.
    */
