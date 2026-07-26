@@ -31,7 +31,7 @@ import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 const ZResellerAffiliateSlugFormSchema = z.object({
-  affiliateSlug: z.string().min(1, 'Affiliate URL is required.'),
+  affiliateSlug: z.string().min(1, { message: msg`Affiliate URL is required.`.id }),
 });
 
 export type TResellerAffiliateSlugFormSchema = z.infer<typeof ZResellerAffiliateSlugFormSchema>;
@@ -90,14 +90,14 @@ export const ResellerAffiliateSlugForm = ({
 
     if (!availability.isValid) {
       form.setError('affiliateSlug', {
-        message: availability.message ?? 'Invalid affiliate URL.',
+        message: availability.message ?? msg`Invalid affiliate URL.`.id,
       });
       return;
     }
 
     if (!availability.isAvailable) {
       form.setError('affiliateSlug', {
-        message: availability.message ?? 'This affiliate URL is already in use.',
+        message: availability.message ?? msg`This affiliate URL is already in use.`.id,
       });
       return;
     }

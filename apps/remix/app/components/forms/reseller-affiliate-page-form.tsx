@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -28,11 +29,16 @@ const ZResellerAffiliatePageFormSchema = z.object({
   affiliatePageDescription: z.string().max(300).optional(),
   brandingPrimaryColor: z
     .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a valid hex color (e.g. #FF6600)')
+    .regex(/^#[0-9A-Fa-f]{6}$/, { message: msg`Must be a valid hex color (e.g. #FF6600)`.id })
     .optional()
     .or(z.literal('')),
   affiliateAboutText: z.string().max(1000).optional(),
-  affiliateSupportEmail: z.union([z.string().email(), z.literal('')]).optional(),
+  affiliateSupportEmail: z
+    .union([
+      z.string().email({ message: msg`Enter a valid email address`.id }),
+      z.literal(''),
+    ])
+    .optional(),
   highlightedCatalogPackageId: z.string().optional(),
 });
 

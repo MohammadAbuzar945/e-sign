@@ -50,34 +50,49 @@ import { useToast } from '@documenso/ui/primitives/use-toast';
 
 const ZBankDetailsFormSchema = z
   .object({
-    bankCode: z.string().min(1),
-    bankName: z.string().min(1),
+    bankCode: z.string().min(1, { message: msg`Select a bank`.id }),
+    bankName: z.string().min(1, { message: msg`Select a bank`.id }),
     bankAccountNumber: z
       .string()
       .trim()
-      .min(1, { message: 'Enter a bank account number' })
+      .min(1, { message: msg`Enter a bank account number`.id })
       .refine((value) => /^\d+$/.test(normalizeSaBankAccountNumber(value)), {
-        message: 'Account number must contain digits only',
+        message: msg`Account number must contain digits only`.id,
       }),
-    bankAccountName: z.string().min(1, { message: 'Enter the account holder name' }),
+    bankAccountName: z.string().min(1, { message: msg`Enter the account holder name`.id }),
     accountType: z.enum(['personal', 'business']),
     documentType: z.enum(['identityNumber', 'passportNumber', 'businessRegistrationNumber']),
-    documentNumber: z.string().trim().min(1).max(64),
-    physicalAddress: z.string().trim().min(5).max(500),
-    contactPhone: z.string().trim().min(1).max(32),
-    contactEmail: z.string().trim().email().max(255),
+    documentNumber: z
+      .string()
+      .trim()
+      .min(1, { message: msg`Enter a document number`.id })
+      .max(64),
+    physicalAddress: z
+      .string()
+      .trim()
+      .min(5, { message: msg`Enter a physical address`.id })
+      .max(500),
+    contactPhone: z
+      .string()
+      .trim()
+      .min(1, { message: msg`Enter a contact phone number`.id })
+      .max(32),
+    contactEmail: z
+      .string()
+      .trim()
+      .email({ message: msg`Enter a valid email address`.id })
+      .max(255),
     vatStatus: z.enum(['NOT_REGISTERED', 'REGISTERED']),
     vatNumber: z.string().trim().max(64).optional(),
     confirmDetailsAccurate: z.boolean().refine((value) => value === true, {
-      message:
-        'You must confirm that the submitted information is accurate, current, lawfully supplied, and belongs to the reseller',
+      message: msg`You must confirm that the submitted information is accurate, current, lawfully supplied, and belongs to the reseller`.id,
     }),
   })
   .superRefine((values, context) => {
     if (values.accountType === 'business' && values.documentType !== 'businessRegistrationNumber') {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Business accounts require a business registration number',
+        message: msg`Business accounts require a business registration number`.id,
         path: ['documentType'],
       });
     }
@@ -88,7 +103,7 @@ const ZBankDetailsFormSchema = z
     ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Personal accounts require a South African ID or passport number',
+        message: msg`Personal accounts require a South African ID or passport number`.id,
         path: ['documentType'],
       });
     }

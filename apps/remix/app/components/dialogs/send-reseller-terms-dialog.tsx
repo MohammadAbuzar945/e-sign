@@ -60,12 +60,12 @@ const ZResellerTermsFormSchema = z.object({
     .array(
       z.object({
         signatoryIndex: z.number().int().positive(),
-        fullName: z.string().min(1),
-        email: z.string().email(),
+        fullName: z.string().min(1, { message: msg`Enter the signatory full name`.id }),
+        email: z.string().email({ message: msg`Enter a valid email address`.id }),
         role: z.literal('SIGNER'),
       }),
     )
-    .min(1),
+    .min(1, { message: msg`Add at least one signatory`.id }),
   showInNomia: z.boolean(),
   buildForEsign: z.boolean(),
   sendForEsign: z.boolean(),
