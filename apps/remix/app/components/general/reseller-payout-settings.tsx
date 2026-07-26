@@ -18,6 +18,7 @@ import {
 import {
   normalizeSaBankAccountNumber,
   normalizeSaPhoneNumber,
+  normalizeSaVatNumber,
   refineResellerSaBankDetails,
   stripNonDigits,
 } from '@documenso/lib/constants/reseller-sa-validation';
@@ -92,14 +93,6 @@ const ZBankDetailsFormSchema = z
       });
     }
 
-    if (values.vatStatus === 'REGISTERED' && !values.vatNumber?.trim()) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'VAT registration number is required when VAT registered',
-        path: ['vatNumber'],
-      });
-    }
-
     refineResellerSaBankDetails(values, (issue) => {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -120,6 +113,10 @@ const ZBankDetailsFormSchema = z
       bankAccountNumber: normalizeSaBankAccountNumber(values.bankAccountNumber),
       contactPhone: normalizedPhone ?? values.contactPhone,
       documentNumber: normalizedDocumentNumber,
+      vatNumber:
+        values.vatStatus === 'REGISTERED'
+          ? normalizeSaVatNumber(values.vatNumber ?? '')
+          : values.vatNumber,
     };
   });
 
@@ -638,6 +635,10 @@ export const ResellerPayoutSettings = ({
                           onChange={(event) => {
                             field.onChange(normalizeSaBankAccountNumber(event.target.value));
                           }}
+                          onBlur={() => {
+                            field.onBlur();
+                            void bankForm.trigger('bankAccountNumber');
+                          }}
                         />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
@@ -885,7 +886,20 @@ export const ResellerPayoutSettings = ({
                           <Trans>VAT registration number</Trans>
                         </FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="4123456789" />
+                          <Input
+                            {...field}
+                            inputMode="numeric"
+                            autoComplete="off"
+                            placeholder="4123456789"
+                            maxLength={10}
+                            onChange={(event) => {
+                              field.onChange(normalizeSaVatNumber(event.target.value));
+                            }}
+                            onBlur={() => {
+                              field.onBlur();
+                              void bankForm.trigger('vatNumber');
+                            }}
+                          />
                         </FormControl>
                         <p className="text-xs text-muted-foreground">
                           <Trans>

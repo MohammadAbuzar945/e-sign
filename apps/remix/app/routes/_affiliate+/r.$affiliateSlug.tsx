@@ -71,7 +71,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     purchaserOrganisation?.ownerUserId === currentUserId;
   const canViewPurchaseHistory =
     isPurchaseHistoryOwner && canAccessInvoiceHistory(sessionData?.user?.email);
-  const canManageStickyBilling =
+  const canLoadBillingAttribution =
     isAuthenticated && isEmailVerified && Boolean(purchaserOrganisation);
 
   const { data: affiliate, isLoading } = trpc.organisation.reseller.getAffiliate.useQuery({
@@ -84,9 +84,12 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
         organisationId: purchaserOrganisation?.id ?? '',
       },
       {
-        enabled: Boolean(canManageStickyBilling && purchaserOrganisation?.id),
+        enabled: Boolean(canLoadBillingAttribution && purchaserOrganisation?.id),
       },
     );
+
+  const canManageStickyBilling =
+    canLoadBillingAttribution && billingAttribution?.isResellerOrganisation !== true;
 
   const { data: purchaseHistory = [], refetch: refetchPurchaseHistory } =
     trpc.organisation.getPurchaseHistory.useQuery(
@@ -204,6 +207,28 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     refetchBillingAttribution,
   ]);
 
+  const getStickyBillingOptInErrorMessage = (reason?: string) => {
+    switch (reason) {
+      case 'IS_RESELLER':
+        return _(
+          msg`Reseller organisations buy credits from Nomia directly and cannot opt into another reseller's billing link.`,
+        );
+      case 'SELF':
+        return _(msg`You cannot opt into your own reseller billing page.`);
+      case 'RESELLER_INACTIVE':
+        return _(msg`This reseller is not available for sticky billing right now.`);
+      case 'ALREADY_ASSOCIATED':
+        return _(
+          msg`Your organisation is already linked to a different reseller. Clear that link before opting in here.`,
+        );
+      case 'NEEDS_RECONSENT':
+      case 'DELINQUENT_NEEDS_CONSENT':
+        return _(msg`Please confirm this reseller first before turning sticky billing on.`);
+      default:
+        return _(msg`Please try again.`);
+    }
+  };
+
   const handleStickyBillingOptInChange = async (optIn: boolean) => {
     if (!purchaserOrganisation || stickyBillingOptIn === optIn) {
       return;
@@ -224,7 +249,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
 
         toast({
           title: _(msg`Could not update preference`),
-          description: _(msg`Please try again.`),
+          description: getStickyBillingOptInErrorMessage(result.reason),
           variant: 'destructive',
         });
 

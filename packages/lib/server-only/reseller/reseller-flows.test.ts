@@ -59,6 +59,8 @@ const prismaMock = vi.hoisted(() => ({
   organisation: {
     findUnique: vi.fn(),
     findUniqueOrThrow: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
   },
   user: {
     findUniqueOrThrow: vi.fn(),
@@ -606,6 +608,16 @@ describe('activateResellerFromTermsCompletion flow', () => {
       applicantEmail: ALLOWED_EMAIL,
       applicantName: 'Jane Applicant',
       affiliateSlug: 'acme-corp',
+    });
+    expect(prismaMock.organisation.update).toHaveBeenCalledWith({
+      where: { id: 'org_1' },
+      data: {
+        associatedResellerProfileId: null,
+        resellerAssociatedAt: null,
+        resellerAssociationSource: null,
+        resellerRequiresReconsent: false,
+        resellerStickyBillingOptIn: false,
+      },
     });
   });
 

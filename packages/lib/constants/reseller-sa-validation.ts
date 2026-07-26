@@ -1,3 +1,9 @@
+import {
+  getBankByCode,
+  SA_ACCOUNT_NUMBER_FALLBACK_LENGTH,
+  SA_BANKS,
+  saAccountNumberError,
+} from '../validation/sa-bank-account';
 import type { ResellerBankDocumentType } from './reseller-bank-verification';
 
 /** Digits-only length ranges for major SA banks (Paystack codes + name match fallback). */
@@ -10,72 +16,56 @@ type SaBankAccountLengthRule = {
 
 /**
  * Account number length expectations for common South African banks.
- * Unknown banks fall back to 8–13 digits.
+ * Built from SA_BANKS plus Paystack code aliases / name matches.
+ * Unknown banks fall back to 9–11 digits.
  */
 export const SA_BANK_ACCOUNT_LENGTH_RULES: SaBankAccountLengthRule[] = [
+  ...SA_BANKS.map((bank) => ({
+    codes: [bank.code],
+    nameIncludes: [bank.name.toLowerCase()],
+    min: bank.accountLengthMin,
+    max: bank.accountLengthMax,
+  })),
+  // Paystack / historical code aliases that map to the same length rules.
   {
-    codes: ['470010', '450105'],
+    codes: ['450105'],
     nameIncludes: ['capitec'],
     min: 10,
     max: 10,
   },
   {
-    codes: ['250655', '200355', '201419'],
-    nameIncludes: ['fnb', 'first national', 'first national bank'],
+    codes: ['200355', '201419'],
+    nameIncludes: ['first national', 'first national bank', 'fnb'],
     min: 11,
     max: 11,
   },
   {
-    codes: ['632005', '632018'],
+    codes: ['632018'],
     nameIncludes: ['absa'],
     min: 8,
     max: 11,
   },
   {
-    codes: ['051001', '730020'],
+    codes: ['730020'],
     nameIncludes: ['standard bank'],
     min: 9,
     max: 11,
   },
   {
-    codes: ['198765', '198251'],
+    codes: ['198251'],
     nameIncludes: ['nedbank'],
     min: 9,
-    max: 11,
+    max: 12,
   },
   {
-    codes: ['679000'],
-    nameIncludes: ['discovery'],
-    min: 11,
-    max: 11,
-  },
-  {
-    codes: ['678910', '678914'],
+    codes: ['678914'],
     nameIncludes: ['tyme'],
     min: 10,
     max: 12,
   },
-  {
-    codes: ['430000'],
-    nameIncludes: ['african bank'],
-    min: 10,
-    max: 11,
-  },
-  {
-    codes: ['462005'],
-    nameIncludes: ['investec'],
-    min: 11,
-    max: 11,
-  },
-  {
-    codes: ['410105'],
-    nameIncludes: ['bidvest'],
-    min: 10,
-    max: 11,
-  },
 ];
 
-export const SA_BANK_ACCOUNT_FALLBACK_LENGTH = { min: 8, max: 13 } as const;
+export const SA_BANK_ACCOUNT_FALLBACK_LENGTH = SA_ACCOUNT_NUMBER_FALLBACK_LENGTH;
 
 export const stripNonDigits = (value: string) => value.replace(/\D/g, '');
 
@@ -117,13 +107,18 @@ export const validateSaBankAccountNumber = ({
   bankName?: string | null;
   accountNumber: string;
 }): string | null => {
+  // Prefer SA_BANKS format rules when the selected code is a known universal branch code.
+  if (bankCode && getBankByCode(bankCode)) {
+    return saAccountNumberError(accountNumber, bankCode);
+  }
+
   const digits = normalizeSaBankAccountNumber(accountNumber);
 
   if (!digits) {
     return 'Enter a bank account number';
   }
 
-  if (!/^\d+$/.test(digits)) {
+  if (/[^0-9\s-]/.test(accountNumber)) {
     return 'Account number must contain digits only';
   }
 
@@ -298,6 +293,36 @@ export const validateSaBusinessRegistrationNumber = (value: string): string | nu
   return 'Enter a valid business registration number (e.g. 2020/123456/07)';
 };
 
+/**
+ * South African VAT registration numbers are 10 digits and start with 4.
+ * Format validation only — does not confirm SARS registration status.
+ */
+export const normalizeSaVatNumber = (value: string) => stripNonDigits(value.trim());
+
+export const validateSaVatNumber = (value: string): string | null => {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return 'Enter a VAT registration number';
+  }
+
+  if (/[^0-9\s-]/.test(trimmed)) {
+    return 'VAT number must contain digits only';
+  }
+
+  const digits = normalizeSaVatNumber(trimmed);
+
+  if (digits.length !== 10) {
+    return 'VAT number must be exactly 10 digits';
+  }
+
+  if (!digits.startsWith('4')) {
+    return 'VAT number must start with 4';
+  }
+
+  return null;
+};
+
 export const validateSaDocumentNumber = ({
   documentType,
   documentNumber,
@@ -325,6 +350,8 @@ export const refineResellerSaBankDetails = <
     documentType: ResellerBankDocumentType;
     documentNumber: string;
     contactPhone: string;
+    vatStatus?: 'NOT_REGISTERED' | 'REGISTERED';
+    vatNumber?: string;
   },
 >(
   values: T,
@@ -353,5 +380,13 @@ export const refineResellerSaBankDetails = <
 
   if (documentError) {
     addIssue({ message: documentError, path: ['documentNumber'] });
+  }
+
+  if (values.vatStatus === 'REGISTERED') {
+    const vatError = validateSaVatNumber(values.vatNumber ?? '');
+
+    if (vatError) {
+      addIssue({ message: vatError, path: ['vatNumber'] });
+    }
   }
 };

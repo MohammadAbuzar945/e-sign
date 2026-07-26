@@ -9,6 +9,7 @@ import {
   validateSaIdentityNumber,
   validateSaPassportNumber,
   validateSaPhoneNumber,
+  validateSaVatNumber,
 } from '@documenso/lib/constants/reseller-sa-validation';
 
 describe('SA identity number validation', () => {
@@ -100,12 +101,12 @@ describe('SA bank account number validation', () => {
     ).toMatch(/must be 11 digits/i);
   });
 
-  it('falls back to 8–13 digits for unknown banks', () => {
+  it('falls back to 9–11 digits for unknown banks', () => {
     expect(
       validateSaBankAccountNumber({
         bankCode: '999999',
         bankName: 'Some Community Bank',
-        accountNumber: '12345678',
+        accountNumber: '123456789',
       }),
     ).toBeNull();
 
@@ -115,7 +116,7 @@ describe('SA bank account number validation', () => {
         bankName: 'Some Community Bank',
         accountNumber: '1234567',
       }),
-    ).toMatch(/8–13 digits/i);
+    ).toMatch(/9–11 digits/i);
   });
 
   it('strips spaces and dashes before validating', () => {
@@ -136,5 +137,31 @@ describe('SA business registration number validation', () => {
 
   it('rejects overly short values', () => {
     expect(validateSaBusinessRegistrationNumber('12')).toMatch(/valid business registration/i);
+  });
+});
+
+describe('SA VAT number validation', () => {
+  it('accepts a valid 10-digit VAT number starting with 4', () => {
+    expect(validateSaVatNumber('4123456789')).toBeNull();
+    expect(validateSaVatNumber('4070274966')).toBeNull();
+  });
+
+  it('rejects non-numeric input', () => {
+    expect(validateSaVatNumber('412345678a')).toMatch(/digits only/i);
+    expect(validateSaVatNumber('4ABCDEFGHI')).toMatch(/digits only/i);
+  });
+
+  it('rejects wrong length', () => {
+    expect(validateSaVatNumber('412345678')).toMatch(/exactly 10 digits/i);
+    expect(validateSaVatNumber('41234567890')).toMatch(/exactly 10 digits/i);
+  });
+
+  it('rejects numbers that do not start with 4', () => {
+    expect(validateSaVatNumber('3123456789')).toMatch(/start with 4/i);
+    expect(validateSaVatNumber('0123456789')).toMatch(/start with 4/i);
+  });
+
+  it('rejects empty values', () => {
+    expect(validateSaVatNumber('')).toMatch(/Enter a VAT/i);
   });
 });
