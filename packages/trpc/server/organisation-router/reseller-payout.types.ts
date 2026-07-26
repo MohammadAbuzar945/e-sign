@@ -7,6 +7,7 @@ import {
 import {
   normalizeSaBankAccountNumber,
   normalizeSaPhoneNumber,
+  normalizeSaVatNumber,
   refineResellerSaBankDetails,
   stripNonDigits,
 } from '@documenso/lib/constants/reseller-sa-validation';
@@ -73,14 +74,6 @@ export const ZUpdateResellerBankDetailsRequestSchema = z.object({
         });
       }
 
-      if (values.vatStatus === 'REGISTERED' && !values.vatNumber?.trim()) {
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'VAT registration number is required when VAT registered',
-          path: ['vatNumber'],
-        });
-      }
-
       refineResellerSaBankDetails(values, (issue) => {
         context.addIssue({
           code: z.ZodIssueCode.custom,
@@ -103,6 +96,10 @@ export const ZUpdateResellerBankDetailsRequestSchema = z.object({
         bankAccountNumber: normalizeSaBankAccountNumber(values.bankAccountNumber),
         contactPhone: normalizedPhone ?? values.contactPhone,
         documentNumber: normalizedDocumentNumber,
+        vatNumber:
+          values.vatStatus === 'REGISTERED'
+            ? normalizeSaVatNumber(values.vatNumber ?? '')
+            : values.vatNumber,
       };
     }),
 });
