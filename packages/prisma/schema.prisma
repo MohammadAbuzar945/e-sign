@@ -1273,6 +1273,7 @@ enum ResellerProfileStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+  DELETED
 }
 
 enum ResellerAssociationSource {
@@ -1399,6 +1400,9 @@ model ResellerProfile {
   isDelinquent     Boolean   @default(false)
   delinquentAt     DateTime?
 
+  /// Soft-delete timestamp. Profile and purchase history are retained for audit.
+  deletedAt DateTime?
+
   // Bulk inventory pricing: when true, use ResellerProfileBulkRateTier instead of global
   bulkRatesUseCustom Boolean @default(false)
 
@@ -1489,7 +1493,7 @@ model ResellerCreditTransaction {
   updatedAt DateTime @updatedAt
 
   resellerProfileId String
-  resellerProfile   ResellerProfile @relation("ResellerTransactions", fields: [resellerProfileId], references: [id], onDelete: Cascade)
+  resellerProfile   ResellerProfile @relation("ResellerTransactions", fields: [resellerProfileId], references: [id], onDelete: Restrict)
 
   resellerOrganisationId   String
   purchaserOrganisationId  String

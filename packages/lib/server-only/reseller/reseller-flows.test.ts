@@ -45,6 +45,7 @@ const prismaMock = vi.hoisted(() => ({
     findUnique: vi.fn(),
     createMany: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
   },
   resellerCreditTransaction: {
     findUnique: vi.fn(),
@@ -601,12 +602,14 @@ describe('activateResellerFromTermsCompletion flow', () => {
     expect(prismaMock.organisation.update).toHaveBeenCalledWith({
       where: { id: 'org_1' },
       data: {
-        associatedResellerProfileId: null,
-        resellerAssociatedAt: null,
-        resellerAssociationSource: null,
-        resellerRequiresReconsent: false,
         resellerStickyBillingOptIn: false,
       },
+    });
+    expect(prismaMock.organisation.update).not.toHaveBeenCalledWith({
+      where: { id: 'org_1' },
+      data: expect.objectContaining({
+        associatedResellerProfileId: null,
+      }),
     });
   });
 
@@ -676,6 +679,12 @@ describe('activateResellerFromTermsCompletion flow', () => {
         status: ResellerApplicationStatus.APPROVED,
         termsEnvelopeId: 'envelope_abc',
       }),
+    });
+    expect(prismaMock.organisation.update).toHaveBeenCalledWith({
+      where: { id: 'org_1' },
+      data: {
+        resellerStickyBillingOptIn: false,
+      },
     });
     expect(sendResellerWelcomeEmailMock).not.toHaveBeenCalled();
   });
@@ -1079,7 +1088,7 @@ describe('admin reseller application actions', () => {
     await expect(organisationAllowsNegativeCredits('org_1')).resolves.toBe(false);
   });
 
-  it('deletes an approved reseller profile and application record', async () => {
+  it('soft-deletes an approved reseller and retains purchase history', async () => {
     const { deleteReseller } = await import('./admin-reseller-actions');
 
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
@@ -1091,22 +1100,48 @@ describe('admin reseller application actions', () => {
     prismaMock.resellerProfile.findUnique.mockResolvedValue({
       id: 'profile_1',
       organisationId: 'org_1',
+      status: ResellerProfileStatus.ACTIVE,
+      affiliateSlug: 'acme',
     });
 
     prismaMock.resellerCreditTransaction.count.mockResolvedValue(0);
-    prismaMock.resellerProfile.delete.mockResolvedValue({ id: 'profile_1' });
-    prismaMock.resellerApplication.delete.mockResolvedValue({ id: 'app_1' });
+    prismaMock.organisation.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.resellerPackage.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.resellerProfile.update.mockResolvedValue({
+      id: 'profile_1',
+      status: 'DELETED',
+    });
 
     const result = await deleteReseller({
       applicationId: 'app_1',
     });
 
     expect(result).toEqual({ success: true });
-    expect(prismaMock.resellerProfile.delete).toHaveBeenCalledWith({
+    expect(prismaMock.resellerProfile.delete).not.toHaveBeenCalled();
+    expect(prismaMock.resellerApplication.delete).not.toHaveBeenCalled();
+    expect(prismaMock.resellerProfile.update).toHaveBeenCalledWith({
       where: { id: 'profile_1' },
+      data: expect.objectContaining({
+        status: 'DELETED',
+        affiliateSlug: 'deleted.profile_1',
+        allowNegativeCredits: false,
+      }),
     });
-    expect(prismaMock.resellerApplication.delete).toHaveBeenCalledWith({
+    expect(prismaMock.resellerApplication.update).toHaveBeenCalledWith({
       where: { id: 'app_1' },
+      data: expect.objectContaining({
+        status: ResellerApplicationStatus.CANCELLED,
+        rejectionReason: 'Reseller account deleted by admin',
+      }),
+    });
+    expect(prismaMock.organisation.updateMany).toHaveBeenCalledWith({
+      where: { associatedResellerProfileId: 'profile_1' },
+      data: {
+        associatedResellerProfileId: null,
+        resellerAssociatedAt: null,
+        resellerAssociationSource: null,
+        resellerRequiresReconsent: false,
+      },
     });
   });
 
@@ -1122,6 +1157,7 @@ describe('admin reseller application actions', () => {
     prismaMock.resellerProfile.findUnique.mockResolvedValue({
       id: 'profile_1',
       organisationId: 'org_1',
+      status: ResellerProfileStatus.ACTIVE,
     });
 
     prismaMock.resellerCreditTransaction.count.mockResolvedValue(1);

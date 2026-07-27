@@ -59,6 +59,7 @@ export const getAffiliateResellerRoute = procedure
 
     return {
       affiliateSlug: profile.affiliateSlug,
+      organisationId: profile.organisationId,
       organisationName: profile.organisation.name,
       resellerDisplayName: displayName,
       disclosure: `${RESELLER_BILLING_DISCLOSURE_PREFIX} ${displayName}`,

@@ -157,7 +157,10 @@ export const reactivateResellerProfile = async ({
     profile.status !== ResellerProfileStatus.SUSPENDED
   ) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'This reseller profile is already active.',
+      message:
+        profile.status === ('DELETED' as ResellerProfileStatus)
+          ? 'Deleted resellers cannot be reactivated. Purchase history is retained for audit.'
+          : 'This reseller profile is already active.',
     });
   }
 
@@ -317,6 +320,12 @@ export const deleteReseller = async ({
     });
   }
 
+  if (profile.status === ResellerProfileStatus.DELETED) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'This reseller is already deleted.',
+    });
+  }
+
   const pendingTransactions = await prisma.resellerCreditTransaction.count({
     where: {
       resellerProfileId: profile.id,
@@ -330,13 +339,47 @@ export const deleteReseller = async ({
     });
   }
 
+  const deletedAt = new Date();
+  // Free the public slug while keeping the row for purchase-history joins.
+  const archivedAffiliateSlug = `deleted.${profile.id}`;
+
   await prisma.$transaction(async (tx) => {
-    await tx.resellerProfile.delete({
-      where: { id: profile.id },
+    await tx.organisation.updateMany({
+      where: { associatedResellerProfileId: profile.id },
+      data: {
+        associatedResellerProfileId: null,
+        resellerAssociatedAt: null,
+        resellerAssociationSource: null,
+        resellerRequiresReconsent: false,
+      },
     });
 
-    await tx.resellerApplication.delete({
+    await tx.resellerPackage.updateMany({
+      where: { resellerProfileId: profile.id },
+      data: { isEnabled: false },
+    });
+
+    await tx.resellerProfile.update({
+      where: { id: profile.id },
+      data: {
+        status: ResellerProfileStatus.DELETED,
+        deletedAt,
+        affiliateSlug: archivedAffiliateSlug,
+        allowNegativeCredits: false,
+        isDelinquent: false,
+        delinquentAt: null,
+        zeroBalanceSince: null,
+      },
+    });
+
+    // Allow the organisation to re-apply later while keeping sales history on the profile.
+    await tx.resellerApplication.update({
       where: { id: applicationId },
+      data: {
+        status: ResellerApplicationStatus.CANCELLED,
+        rejectionReason: 'Reseller account deleted by admin',
+        rejectedAt: deletedAt,
+      },
     });
   });
 

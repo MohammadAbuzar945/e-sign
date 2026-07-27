@@ -20,6 +20,7 @@ export const ZGetAffiliateResellerRequestSchema = z.object({
 export const ZGetAffiliateResellerResponseSchema = z
   .object({
     affiliateSlug: z.string(),
+    organisationId: z.string(),
     organisationName: z.string(),
     resellerDisplayName: z.string(),
     disclosure: z.string(),

@@ -31,7 +31,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
-import { Switch } from '@documenso/ui/primitives/switch';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { appMetaTags } from '~/utils/meta';
@@ -89,7 +88,9 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     );
 
   const canManageStickyBilling =
-    canLoadBillingAttribution && billingAttribution?.isResellerOrganisation !== true;
+    canLoadBillingAttribution &&
+    Boolean(affiliate) &&
+    affiliate?.organisationId !== purchaserOrganisation?.id;
 
   const { data: purchaseHistory = [], refetch: refetchPurchaseHistory } =
     trpc.organisation.getPurchaseHistory.useQuery(
@@ -211,7 +212,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     switch (reason) {
       case 'IS_RESELLER':
         return _(
-          msg`Reseller organisations buy credits from Nomia directly and cannot opt into another reseller's billing link.`,
+          msg`Could not update sticky billing for this organisation.`,
         );
       case 'SELF':
         return _(msg`You cannot opt into your own reseller billing page.`);
@@ -577,23 +578,34 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
           </div>
 
           {canManageStickyBilling && (
-            <label
-              className={cn(
-                'flex shrink-0 items-center gap-3 self-start sm:pt-0.5',
-                stickyBillingOptIn === true && 'opacity-40',
+            <div className="flex shrink-0 flex-col items-stretch gap-2 self-start sm:items-end sm:pt-0.5">
+              {stickyBillingOptIn === true ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={isUpdatingStickyBilling}
+                  disabled={isUpdatingStickyBilling || stickyBillingOptIn === null}
+                  onClick={() => {
+                    void handleStickyBillingOptInChange(false);
+                  }}
+                >
+                  <Trans>Stop always buying from this reseller</Trans>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  loading={isUpdatingStickyBilling}
+                  disabled={isUpdatingStickyBilling || stickyBillingOptIn === null}
+                  onClick={() => {
+                    void handleStickyBillingOptInChange(true);
+                  }}
+                >
+                  <Trans>Always buy from this reseller</Trans>
+                </Button>
               )}
-            >
-              <span className="text-sm font-medium leading-none">
-                <Trans>Always buy from this reseller</Trans>
-              </span>
-              <Switch
-                checked={stickyBillingOptIn === true}
-                disabled={isUpdatingStickyBilling || stickyBillingOptIn === null}
-                onCheckedChange={(checked) => {
-                  void handleStickyBillingOptInChange(checked);
-                }}
-              />
-            </label>
+            </div>
           )}
         </div>
       </Alert>

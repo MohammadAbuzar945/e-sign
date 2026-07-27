@@ -93,6 +93,78 @@ export const activateResellerFromTermsCompletion = async ({
     where: { organisationId: application.organisationId },
   });
 
+  if (existingProfile?.status === ResellerProfileStatus.DELETED) {
+    const reactivatedProfile = await prisma.$transaction(async (tx) => {
+      const affiliateSlug = await resolveInitialAffiliateSlug({
+        orgUrl: application.organisation.url,
+        client: tx,
+      });
+
+      await tx.resellerApplication.update({
+        where: { id: application.id },
+        data: {
+          status: ResellerApplicationStatus.APPROVED,
+          termsCompletedAt: new Date(),
+          approvedAt: new Date(),
+          rejectedAt: null,
+          rejectionReason: null,
+          termsEnvelopeId: envelopeId,
+        },
+      });
+
+      const updatedProfile = await tx.resellerProfile.update({
+        where: { id: existingProfile.id },
+        data: {
+          status: ResellerProfileStatus.ACTIVE,
+          deletedAt: null,
+          affiliateSlug,
+          allowNegativeCredits: false,
+          isDelinquent: false,
+          delinquentAt: null,
+          zeroBalanceSince: null,
+          payoutMode: ResellerPayoutMode.NOMIA_SUBACCOUNT,
+        },
+      });
+
+      await tx.organisation.update({
+        where: { id: application.organisationId },
+        data: {
+          resellerStickyBillingOptIn: false,
+        },
+      });
+
+      const existingPackageCount = await tx.resellerPackage.count({
+        where: { resellerProfileId: updatedProfile.id },
+      });
+
+      if (existingPackageCount === 0) {
+        await tx.resellerPackage.createMany({
+          data: ESIGN_CREDIT_PACKAGES.map((pkg) => ({
+            resellerProfileId: updatedProfile.id,
+            creditAmount: pkg.credits,
+            priceInCents: pkg.priceInCents,
+            currency: pkg.currency,
+            catalogPackageId: pkg.id,
+            isEnabled: false,
+            paystackPlanCode: pkg.paystackPlanCode,
+            paystackPaymentUrl: pkg.paystackPaymentUrl,
+          })),
+        });
+      }
+
+      return updatedProfile;
+    });
+
+    await sendResellerWelcomeEmail({
+      organisationName: application.organisation.name,
+      applicantEmail: application.snapshotApplicantEmail,
+      applicantName: application.snapshotApplicantName,
+      affiliateSlug: reactivatedProfile.affiliateSlug,
+    });
+
+    return reactivatedProfile;
+  }
+
   if (existingProfile) {
     if (application.status !== ResellerApplicationStatus.APPROVED) {
       await approveResellerApplication({
@@ -101,15 +173,11 @@ export const activateResellerFromTermsCompletion = async ({
       });
     }
 
-    // Ensure sticky customer attribution is cleared even if the profile already existed
-    // (e.g. re-run of completion / older activation path).
+    // Keep prior customer↔reseller affiliation. Sticky billing stays off until they
+    // explicitly choose "Always buy from this reseller" on /r.
     await prisma.organisation.update({
       where: { id: application.organisationId },
       data: {
-        associatedResellerProfileId: null,
-        resellerAssociatedAt: null,
-        resellerAssociationSource: null,
-        resellerRequiresReconsent: false,
         resellerStickyBillingOptIn: false,
       },
     });
@@ -142,15 +210,11 @@ export const activateResellerFromTermsCompletion = async ({
       },
     });
 
-    // New resellers buy from Nomia (price-plan), not another reseller's /r sticky link.
-    // Clear any prior customer↔reseller sticky attribution on this organisation.
+    // Keep associatedResellerProfileId / association source. Default sticky buy off so
+    // Settings Billing stays on Nomia until they opt in on the parent /r page.
     await tx.organisation.update({
       where: { id: application.organisationId },
       data: {
-        associatedResellerProfileId: null,
-        resellerAssociatedAt: null,
-        resellerAssociationSource: null,
-        resellerRequiresReconsent: false,
         resellerStickyBillingOptIn: false,
       },
     });

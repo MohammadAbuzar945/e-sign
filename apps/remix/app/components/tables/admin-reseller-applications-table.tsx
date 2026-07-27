@@ -214,7 +214,7 @@ export const AdminResellerApplicationsTable = () => {
       onSuccess: async () => {
         toast({
           title: t`Reseller deleted`,
-          description: t`The reseller profile and application record have been removed.`,
+          description: t`The reseller account is disabled and can re-apply later. Purchase and sales history are kept.`,
         });
 
         setProfileAction(null);
@@ -627,9 +627,8 @@ export const AdminResellerApplicationsTable = () => {
                 </Trans>
               ) : profileAction === 'delete' ? (
                 <Trans>
-                  Deleting {selectedApplication?.snapshotOrgName ?? 'this organisation'} permanently
-                  removes their reseller profile, packages, transaction history, and application
-                  record. The organisation can apply again later. This cannot be undone.
+                  Deleting {selectedApplication?.snapshotOrgName ?? 'this organisation'} will
+                  permanently disable their reseller account and free their affiliate slug.They can apply to the reseller programme again later.
                 </Trans>
               ) : profileAction === 'markDelinquent' ? (
                 <Trans>
