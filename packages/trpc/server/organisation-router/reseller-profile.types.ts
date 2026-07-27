@@ -124,6 +124,7 @@ export const ZFindResellerTransactionsResponseSchema = z.object({
   data: z.array(
     z.object({
       id: z.string(),
+      invoiceId: z.string(),
       createdAt: z.date(),
       completedAt: z.date().nullable(),
       credits: z.number(),

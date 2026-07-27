@@ -376,6 +376,8 @@ describe('build-purchase-invoice', () => {
     expect(html).toContain('<h1>Tax Invoice</h1>');
     expect(html).toContain('data:image/png;base64,resellerlogo');
     expect(html).toContain('seller-logo');
+    expect(html).toContain('Price per credit');
+    expect(html).toContain('ZAR 7.00');
   },
   15_000,
   );

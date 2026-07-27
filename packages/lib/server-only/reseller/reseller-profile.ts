@@ -11,6 +11,7 @@ import {
 import { getNegativeCreditsUsed } from '@documenso/lib/utils/reseller-credits';
 import { prisma } from '@documenso/prisma';
 
+import { resolveResellerPurchaseInvoiceId } from '../billing/record-organisation-credit-purchase';
 import { getResellerPayoutReadiness } from './reseller-payout-readiness';
 import {
   decryptResellerSecret,
@@ -386,6 +387,7 @@ export const findResellerTransactions = async ({
   return {
     data: data.map((transaction) => ({
       id: transaction.id,
+      invoiceId: resolveResellerPurchaseInvoiceId({ transactionId: transaction.id }),
       createdAt: transaction.createdAt,
       completedAt: transaction.completedAt,
       credits: transaction.credits,
