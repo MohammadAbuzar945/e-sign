@@ -10,8 +10,8 @@ import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import {
   canAccessInvoiceHistory,
+  canAccessResellerBulkTools,
   canAccessResellerCheckout,
-  canAccessResellerDemoExtras,
   isDemoFeatureVisible,
   RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
 } from '@documenso/lib/constants/demo-feature-flags';
@@ -976,7 +976,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
 
         {isActiveReseller &&
         isDemoFeatureVisible('RESELLER_USER_FACING') &&
-        canAccessResellerDemoExtras(user.email) ? (
+        canAccessResellerBulkTools() ? (
           <div className="mt-8">
             <ResellerBulkInventoryPurchase organisationId={organisation.id} />
           </div>

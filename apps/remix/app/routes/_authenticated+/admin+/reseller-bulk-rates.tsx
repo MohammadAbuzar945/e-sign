@@ -8,7 +8,7 @@ import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import {
-  canAccessResellerDemoExtras,
+  canAccessResellerBulkTools,
   isDemoFeatureVisible,
 } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
@@ -51,13 +51,9 @@ export function meta() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const { user } = await getSession(request);
+  await getSession(request);
 
-  if (!canAccessResellerDemoExtras(user?.email)) {
-    throw redirect('/admin');
-  }
-
-  if (!isDemoFeatureVisible('ADMIN_BULK_RATES')) {
+  if (!canAccessResellerBulkTools() || !isDemoFeatureVisible('ADMIN_BULK_RATES')) {
     throw redirect('/admin');
   }
 

@@ -11,9 +11,8 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 
-import { useSession } from '@documenso/lib/client-only/providers/session';
 import {
-  canAccessResellerDemoExtras,
+  canAccessResellerBulkTools,
   isDemoFeatureVisible,
 } from '@documenso/lib/constants/demo-feature-flags';
 import { cn } from '@documenso/ui/lib/utils';
@@ -31,9 +30,7 @@ export const AdminNavLinks = ({
   buttonClassName,
 }: AdminNavLinksProps) => {
   const { pathname } = useLocation();
-  const { user } = useSession();
-
-  const canAccessDemoExtras = canAccessResellerDemoExtras(user.email);
+  const canAccessBulkTools = canAccessResellerBulkTools();
 
   const items = [
     {
@@ -70,7 +67,7 @@ export const AdminNavLinks = ({
           },
         ]
       : []),
-    ...(canAccessDemoExtras && isDemoFeatureVisible('ADMIN_BULK_RATES')
+    ...(canAccessBulkTools && isDemoFeatureVisible('ADMIN_BULK_RATES')
       ? [
           {
             href: '/admin/reseller-bulk-rates',
@@ -80,7 +77,7 @@ export const AdminNavLinks = ({
           },
         ]
       : []),
-    ...(canAccessDemoExtras && isDemoFeatureVisible('ADMIN_PAYSTACK_WEBHOOKS')
+    ...(isDemoFeatureVisible('ADMIN_PAYSTACK_WEBHOOKS')
       ? [
           {
             href: '/admin/paystack-webhooks',

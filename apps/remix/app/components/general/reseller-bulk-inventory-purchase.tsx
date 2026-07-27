@@ -4,6 +4,7 @@ import { Trans } from '@lingui/react/macro';
 import { CheckCircle2Icon, PackageIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { canAccessResellerBulkTools } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { matchBulkRateTier } from '@documenso/lib/utils/reseller-bulk-rate';
 import { trpc } from '@documenso/trpc/react';
@@ -34,10 +35,17 @@ export const ResellerBulkInventoryPurchase = ({
   const { _ } = useLingui();
   const { toast } = useToast();
   const [creditsInput, setCreditsInput] = useState('');
+  const canAccessBulkTools = canAccessResellerBulkTools();
 
-  const { data: rates, isLoading } = trpc.organisation.reseller.getEffectiveBulkRates.useQuery({
-    organisationId,
-  });
+  const { data: rates, isLoading, isError, error } =
+    trpc.organisation.reseller.getEffectiveBulkRates.useQuery(
+      {
+        organisationId,
+      },
+      {
+        enabled: canAccessBulkTools,
+      },
+    );
 
   const { mutateAsync: initializeBulkPurchase, isPending } =
     trpc.organisation.reseller.initializeBulkPurchase.useMutation({
@@ -94,6 +102,10 @@ export const ResellerBulkInventoryPurchase = ({
     return sortedTiers.find((tier) => tier.minCredits > credits) ?? null;
   }, [credits, hasValidCredits, matchedTier, sortedTiers]);
 
+  if (!canAccessBulkTools) {
+    return null;
+  }
+
   if (isLoading) {
     return (
       <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
@@ -102,8 +114,32 @@ export const ResellerBulkInventoryPurchase = ({
     );
   }
 
+  if (isError) {
+    return (
+      <div className="rounded-xl border border-dashed border-red-200 bg-red-50 p-6 text-sm text-red-800">
+        <Trans>Unable to load bulk rates.</Trans>{' '}
+        {AppError.parseError(error).message}
+      </div>
+    );
+  }
+
   if (!rates || sortedTiers.length === 0) {
-    return null;
+    return (
+      <section className="space-y-3 rounded-xl border border-dashed p-6">
+        <div className="flex items-center gap-2">
+          <PackageIcon className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-xl font-semibold text-gray-700">
+            <Trans>Reseller bulk inventory</Trans>
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          <Trans>
+            No wholesale rate tiers are configured yet. Add global bulk rates in admin, then refresh
+            this page.
+          </Trans>
+        </p>
+      </section>
+    );
   }
 
   return (
