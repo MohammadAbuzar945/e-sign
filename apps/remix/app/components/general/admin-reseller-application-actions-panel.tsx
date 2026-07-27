@@ -134,7 +134,8 @@ export const AdminResellerApplicationActionsPanel = ({
   const canReactivate =
     application.status === 'APPROVED' &&
     (profile?.status === 'INACTIVE' || profile?.status === 'SUSPENDED');
-  const canDelete = application.status === 'APPROVED' && Boolean(profile);
+  const canDelete =
+    application.status === 'APPROVED' && Boolean(profile) && profile?.status !== 'DELETED';
   const canConfigureNegativeCredits = canDeactivate;
   const canMarkDelinquent = canDeactivate && !profile?.isDelinquent;
   const canClearDelinquency = canDeactivate && Boolean(profile?.isDelinquent);

@@ -1,4 +1,4 @@
-import { DocumentStatus, EnvelopeType, ResellerApplicationStatus } from '@prisma/client';
+import { DocumentStatus, EnvelopeType, ResellerApplicationStatus, ResellerProfileStatus } from '@prisma/client';
 
 import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import {
@@ -139,6 +139,9 @@ export const getResellerEligibility = async ({
     }),
   ]);
 
+  const hasBlockingResellerProfile =
+    Boolean(existingProfile) && existingProfile?.status !== ResellerProfileStatus.DELETED;
+
   // Allowlisted emails always bypass; RESELLER_ELIGIBILITY_BYPASS opens this for all (testing).
   const hasEligibilityBypass =
     isDemoFeatureVisible('RESELLER_ELIGIBILITY_BYPASS') ||
@@ -158,7 +161,7 @@ export const getResellerEligibility = async ({
     );
   }
 
-  if (!existingProfile) {
+  if (!hasBlockingResellerProfile) {
     if (existingApplication && !['REJECTED', 'CANCELLED'].includes(existingApplication.status)) {
       reasons.push('An application is already in progress for this organisation.');
     }
@@ -179,7 +182,7 @@ export const getResellerEligibility = async ({
     : null;
 
   return {
-    isEligible: meetsRequirements && reasons.length === 0 && !existingProfile,
+    isEligible: meetsRequirements && reasons.length === 0 && !hasBlockingResellerProfile,
     creditsUsed,
     requiredCredits: RESELLER_MIN_CREDITS_USED,
     hasSignupTenure,
@@ -191,7 +194,7 @@ export const getResellerEligibility = async ({
     hasActiveApplication: Boolean(
       existingApplication && !['REJECTED', 'CANCELLED'].includes(existingApplication.status),
     ),
-    hasActiveResellerProfile: Boolean(existingProfile),
+    hasActiveResellerProfile: hasBlockingResellerProfile,
     application: applicationSummary,
     reasons,
   };

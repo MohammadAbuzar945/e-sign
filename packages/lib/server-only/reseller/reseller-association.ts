@@ -73,7 +73,6 @@ export const associateOrganisationWithReseller = async ({
         associatedResellerProfileId: true,
         resellerRequiresReconsent: true,
         resellerAssociationSource: true,
-        resellerProfile: { select: { id: true } },
       },
     }),
     prisma.resellerProfile.findUnique({
@@ -100,9 +99,8 @@ export const associateOrganisationWithReseller = async ({
     return { associated: false as const, reason: 'SELF' as const };
   }
 
-  if (organisation.resellerProfile) {
-    return { associated: false as const, reason: 'IS_RESELLER' as const };
-  }
+  // Reseller organisations may remain affiliated with the reseller they signed up
+  // through (and can opt into sticky billing on that /r page).
 
   if (profile.status !== ProfileStatus.ACTIVE) {
     return { associated: false as const, reason: 'RESELLER_INACTIVE' as const };
@@ -335,13 +333,15 @@ export const setOrganisationStickyBillingOptIn = async ({
     where: { id: organisationId },
     select: {
       associatedResellerProfileId: true,
-      resellerProfile: { select: { id: true } },
     },
   });
 
-  if (!organisation || organisation.resellerProfile) {
-    return { success: false as const, reason: 'IS_RESELLER' as const };
+  if (!organisation) {
+    return { success: false as const, reason: 'NOT_FOUND' as const };
   }
+
+  // Reseller orgs may still affiliate with the reseller they signed up through.
+  // Only block opting into your own affiliate page (SELF above).
 
   if (optIn) {
     const associateResult = await associateOrganisationWithReseller({

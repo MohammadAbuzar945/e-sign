@@ -62,6 +62,8 @@ export const getResellerProfileStatusLabel = (status: string) => {
       return 'Inactive';
     case 'SUSPENDED':
       return 'Suspended';
+    case 'DELETED':
+      return 'Deleted';
     default:
       return status;
   }

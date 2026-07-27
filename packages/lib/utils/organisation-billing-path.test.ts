@@ -92,7 +92,22 @@ describe('resolveOrganisationBillingPath', () => {
     ).toBe('/o/org_daehrocszuiiiftr/price-plan');
   });
 
-  it('returns price-plan for reseller organisations even when opted in', () => {
+  it('returns price-plan for reseller organisations until they explicitly opt in', () => {
+    expect(
+      resolveOrganisationBillingPath({
+        organisationUrl: 'org_tlxruvlefzthnvwz',
+        billingAttribution: {
+          associationSource: 'AFFILIATE_SIGNUP',
+          stickyBillingActive: true,
+          stickyBillingOptIn: false,
+          affiliateSlug: 'devvv',
+          isResellerOrganisation: true,
+        },
+      }),
+    ).toBe('/o/org_tlxruvlefzthnvwz/price-plan');
+  });
+
+  it('returns affiliate billing when a reseller organisation explicitly opts in', () => {
     expect(
       resolveOrganisationBillingPath({
         organisationUrl: 'org_tlxruvlefzthnvwz',
@@ -104,6 +119,6 @@ describe('resolveOrganisationBillingPath', () => {
           isResellerOrganisation: true,
         },
       }),
-    ).toBe('/o/org_tlxruvlefzthnvwz/price-plan');
+    ).toBe('/r/devvv');
   });
 });
