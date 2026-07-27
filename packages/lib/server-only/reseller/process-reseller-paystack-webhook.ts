@@ -403,19 +403,28 @@ export const processResellerPaystackWebhook = async ({
   }
 
   if (fulfillmentResult.fulfilled) {
-    const invoiceId = resolveResellerPurchaseInvoiceId({
-      transactionId: fulfillmentResult.transaction.id,
-      purchaseGroupId: fulfillmentResult.transaction.purchaseGroupId,
-    });
+    const fulfilledPurchaseGroupId = fulfillmentResult.transaction.purchaseGroupId;
+    const isPartialTwoCheckoutLeg =
+      Boolean(fulfilledPurchaseGroupId) &&
+      !isHybridSingleCheckout &&
+      fulfillmentResult.transaction.credits < pkg.creditAmount;
 
-    await sendPurchaseInvoiceEmail({
-      organisationId: purchaserOrganisation.id,
-      invoiceId,
-      recipientEmail: purchaserEmail,
-      recipientName: resolvedPurchaserName,
-    }).catch((error) => {
-      console.error('[RESELLER]: Failed to send purchase invoice email', error);
-    });
+    // OWN_PAYSTACK hybrid: wait for the Nomia remainder before emailing so both
+    // invoices go out in a single mail. Hybrid single-checkout already created both.
+    if (!isPartialTwoCheckoutLeg) {
+      await sendPurchaseInvoiceEmail({
+        organisationId: purchaserOrganisation.id,
+        purchaseGroupId: fulfilledPurchaseGroupId,
+        invoiceId: resolveResellerPurchaseInvoiceId({
+          transactionId: fulfillmentResult.transaction.id,
+          purchaseGroupId: fulfilledPurchaseGroupId,
+        }),
+        recipientEmail: purchaserEmail,
+        recipientName: resolvedPurchaserName,
+      }).catch((error) => {
+        console.error('[RESELLER]: Failed to send purchase invoice email', error);
+      });
+    }
   }
 
   // Sticky attribution on purchase (§8.2) + delinquency balance sync (§12).
