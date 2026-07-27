@@ -4,10 +4,7 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans, useLingui as useLinguiMacro } from '@lingui/react/macro';
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
-import {
-  canAccessResellerDemoExtras,
-  isDemoFeatureVisible,
-} from '@documenso/lib/constants/demo-feature-flags';
+import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import {
   PAYSTACK_WEBHOOK_EVENT_STATUS,
   type PaystackWebhookEventStatus,
@@ -84,7 +81,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     throw redirect('/');
   }
 
-  if (!canAccessResellerDemoExtras(user.email) || !isDemoFeatureVisible('ADMIN_PAYSTACK_WEBHOOKS')) {
+  if (!isDemoFeatureVisible('ADMIN_PAYSTACK_WEBHOOKS')) {
     throw redirect('/admin');
   }
 

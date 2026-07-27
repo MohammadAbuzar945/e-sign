@@ -8,11 +8,8 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import {
-  assertResellerDemoExtrasAccess,
-  RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
-} from '@documenso/lib/constants/demo-feature-flags';
+import { AppError } from '@documenso/lib/errors/app-error';
+import { assertResellerDemoExtrasAccess } from '@documenso/lib/constants/demo-feature-flags';
 import { formatCentsAsDecimal } from '@documenso/lib/utils/reseller-vat';
 
 const prismaMock = vi.hoisted(() => ({
@@ -194,16 +191,8 @@ describe('reseller demo extras access', () => {
     expect(() => assertResellerDemoExtrasAccess(ALLOWED_EMAIL)).not.toThrow();
   });
 
-  it('rejects non-allowlisted emails', () => {
-    expect(() => assertResellerDemoExtrasAccess('other@example.com')).toThrow(AppError);
-
-    try {
-      assertResellerDemoExtrasAccess('other@example.com');
-    } catch (error) {
-      const appError = error as AppError;
-      expect(appError.code).toBe(AppErrorCode.UNAUTHORIZED);
-      expect(appError.message).toBe(RESELLER_DEMO_EXTRAS_DENIED_MESSAGE);
-    }
+  it('allows any signed-in email while RESELLER_DEMO_EXTRAS is enabled', () => {
+    expect(() => assertResellerDemoExtrasAccess('other@example.com')).not.toThrow();
   });
 
   it('rejects missing email', () => {

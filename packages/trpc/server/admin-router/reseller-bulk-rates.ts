@@ -1,4 +1,4 @@
-import { assertResellerDemoExtrasAccess } from '@documenso/lib/constants/demo-feature-flags';
+import { assertResellerBulkToolsAccess } from '@documenso/lib/constants/demo-feature-flags';
 import {
   getGlobalResellerBulkRateTiers,
   getResellerProfileBulkRateTiers,
@@ -25,8 +25,8 @@ import {
 
 export const listGlobalResellerBulkRatesRoute = adminProcedure
   .output(ZListGlobalResellerBulkRatesResponseSchema)
-  .query(async ({ ctx }) => {
-    assertResellerDemoExtrasAccess(ctx.user.email);
+  .query(async () => {
+    assertResellerBulkToolsAccess();
 
     const tiers = await getGlobalResellerBulkRateTiers();
 
@@ -43,8 +43,8 @@ export const listGlobalResellerBulkRatesRoute = adminProcedure
 export const replaceGlobalResellerBulkRatesRoute = adminProcedure
   .input(ZReplaceGlobalResellerBulkRatesRequestSchema)
   .output(ZReplaceGlobalResellerBulkRatesResponseSchema)
-  .mutation(async ({ input, ctx }) => {
-    assertResellerDemoExtrasAccess(ctx.user.email);
+  .mutation(async ({ input }) => {
+    assertResellerBulkToolsAccess();
 
     const { tiers: inputTiers } = input;
     const tiers = await replaceGlobalResellerBulkRateTiers(inputTiers);
@@ -62,8 +62,8 @@ export const replaceGlobalResellerBulkRatesRoute = adminProcedure
 export const getResellerBulkRatesRoute = adminProcedure
   .input(ZGetResellerBulkRatesRequestSchema)
   .output(ZGetResellerBulkRatesResponseSchema)
-  .query(async ({ input, ctx }) => {
-    assertResellerDemoExtrasAccess(ctx.user.email);
+  .query(async ({ input }) => {
+    assertResellerBulkToolsAccess();
 
     const { resellerProfileId } = input;
 
@@ -89,8 +89,8 @@ export const getResellerBulkRatesRoute = adminProcedure
 export const replaceResellerBulkRatesRoute = adminProcedure
   .input(ZReplaceResellerBulkRatesRequestSchema)
   .output(ZReplaceResellerBulkRatesResponseSchema)
-  .mutation(async ({ input, ctx }) => {
-    assertResellerDemoExtrasAccess(ctx.user.email);
+  .mutation(async ({ input }) => {
+    assertResellerBulkToolsAccess();
 
     const { resellerProfileId, bulkRatesUseCustom, tiers: inputTiers } = input;
 
@@ -114,8 +114,8 @@ export const replaceResellerBulkRatesRoute = adminProcedure
 export const findResellerBulkPurchasesRoute = adminProcedure
   .input(ZFindResellerBulkPurchasesRequestSchema)
   .output(ZFindResellerBulkPurchasesResponseSchema)
-  .query(async ({ input, ctx }) => {
-    assertResellerDemoExtrasAccess(ctx.user.email);
+  .query(async ({ input }) => {
+    assertResellerBulkToolsAccess();
 
     const { query, page, perPage, status } = input;
 
