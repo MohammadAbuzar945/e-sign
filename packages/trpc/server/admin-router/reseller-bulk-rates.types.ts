@@ -109,3 +109,32 @@ export type TFindResellerBulkPurchasesResponse = z.infer<
   typeof ZFindResellerBulkPurchasesResponseSchema
 >;
 
+export const ZExportResellerBulkPurchasesRequestSchema = z.object({
+  query: z.string().optional(),
+  kind: ZAdminPurchaseInvoiceKindSchema.optional(),
+});
+
+export const ZExportResellerBulkPurchasesResponseSchema = z.object({
+  truncated: z.boolean(),
+  count: z.number(),
+  data: z.array(
+    z.object({
+      id: z.string(),
+      invoiceId: z.string(),
+      kind: z.enum(['BULK', 'PAYG', 'SUBSCRIPTION']),
+      createdAt: z.date(),
+      completedAt: z.date().nullable(),
+      status: z.enum(['COMPLETED', 'ACTIVE']),
+      credits: z.number(),
+      grossAmount: z.number(),
+      currency: z.string(),
+      paystackReference: z.string().nullable(),
+      pricePerCreditCents: z.number(),
+      organisationName: z.string(),
+      organisationUrl: z.string(),
+      purchaserName: z.string().nullable(),
+      purchaserEmail: z.string(),
+    }),
+  ),
+});
+

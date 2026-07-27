@@ -12,8 +12,10 @@ import {
   isDemoFeatureVisible,
 } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
+import { buildAdminPurchaseInvoicesCsv } from '@documenso/lib/utils/build-admin-purchase-invoices-csv';
 import { trpc } from '@documenso/trpc/react';
 import { Badge } from '@documenso/ui/primitives/badge';
+import { Button } from '@documenso/ui/primitives/button';
 import { Input } from '@documenso/ui/primitives/input';
 import {
   Select,
@@ -68,6 +70,7 @@ export default function AdminResellerBulkRatesPage() {
   const updateSearchParams = useUpdateSearchParams();
   const [searchParams] = useSearchParams();
   const { pathname } = useLocation();
+  const utils = trpc.useUtils();
 
   const currentView = isBulkRatesView(searchParams.get('view'))
     ? searchParams.get('view')!
@@ -75,6 +78,7 @@ export default function AdminResellerBulkRatesPage() {
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get('query') ?? '');
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 500);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
 
   useEffect(() => {
     if (currentView !== BULK_RATES_VIEW.PURCHASES) {
@@ -105,7 +109,7 @@ export default function AdminResellerBulkRatesPage() {
 
   const onStatusFilterChange = (value: string) => {
     updateSearchParams({
-      status: value === 'all' ? null : value,
+      status: value,
       page: 1,
     });
   };
@@ -117,8 +121,56 @@ export default function AdminResellerBulkRatesPage() {
     });
   };
 
-  const statusFilter = searchParams.get('status') ?? 'all';
+  const statusFilter = searchParams.get('status') ?? 'COMPLETED';
   const kindFilter = searchParams.get('kind') ?? 'ALL';
+
+  const downloadCompletedPurchasesCsv = async () => {
+    setIsExportingCsv(true);
+
+    try {
+      const exportData = await utils.admin.resellerBulkRates.exportPurchases.fetch({
+        query: debouncedSearchQuery || undefined,
+        kind:
+          kindFilter === 'BULK' || kindFilter === 'PAYG' || kindFilter === 'SUBSCRIPTION'
+            ? kindFilter
+            : 'ALL',
+      });
+
+      const csv = buildAdminPurchaseInvoicesCsv({
+        rows: exportData.data,
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'admin-completed-purchases.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+
+      if (exportData.truncated) {
+        toast({
+          title: _(msg`Export limited`),
+          description: _(
+            msg`Only the most recent 10,000 completed purchases and active subscriptions were included in the export.`,
+          ),
+        });
+      } else {
+        toast({
+          title: _(msg`Export complete`),
+          description: `${exportData.count} ${_(msg`records downloaded`)}`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: _(msg`Export failed`),
+        description: AppError.parseError(error).message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExportingCsv(false);
+    }
+  };
 
   const { data, isLoading, refetch } = trpc.admin.resellerBulkRates.listGlobal.useQuery(undefined, {
     enabled: currentView === BULK_RATES_VIEW.RATES,
@@ -161,8 +213,8 @@ export default function AdminResellerBulkRatesPage() {
     >
       <SettingsHeader title={_(msg`Reseller bulk rates and purchases`)} subtitle={subtitle} />
 
-      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Tabs value={currentView} className="overflow-x-auto">
+      <div className="mt-6 space-y-4">
+        <Tabs value={currentView} className="w-fit max-w-full">
           <TabsList>
             <TabsTrigger value={BULK_RATES_VIEW.RATES} asChild>
               <Link to={getTabHref(BULK_RATES_VIEW.RATES)} preventScrollReset>
@@ -178,9 +230,9 @@ export default function AdminResellerBulkRatesPage() {
         </Tabs>
 
         {currentView === BULK_RATES_VIEW.PURCHASES ? (
-          <div className="flex w-full flex-col gap-3 sm:max-w-3xl sm:flex-row sm:items-center">
+          <div className="flex flex-wrap items-center gap-3">
             <Select value={kindFilter} onValueChange={onKindFilterChange}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder={_(msg`Type`)} />
               </SelectTrigger>
               <SelectContent>
@@ -200,7 +252,7 @@ export default function AdminResellerBulkRatesPage() {
             </Select>
 
             <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-              <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder={_(msg`Status`)} />
               </SelectTrigger>
               <SelectContent>
@@ -233,8 +285,8 @@ export default function AdminResellerBulkRatesPage() {
 
             <Input
               type="search"
-              className="w-full"
-              placeholder={_(msg`Search org, email, invoice, or Paystack ref`)}
+              className="w-[200px]"
+              placeholder={_(msg`Search…`)}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
             />
@@ -271,7 +323,22 @@ export default function AdminResellerBulkRatesPage() {
           </div>
         </>
       ) : (
-        <div className="mt-8">
+        <div className="mt-8 space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              <Trans>
+                CSV export includes completed pay-as-you-go and bulk purchases, plus active
+                subscriptions.
+              </Trans>
+            </p>
+            <Button
+              variant="outline"
+              loading={isExportingCsv}
+              onClick={downloadCompletedPurchasesCsv}
+            >
+              <Trans>Download CSV</Trans>
+            </Button>
+          </div>
           <AdminResellerBulkPurchasesTable />
         </div>
       )}

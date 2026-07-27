@@ -7,11 +7,16 @@ import {
   replaceGlobalResellerBulkRateTiers,
   replaceResellerProfileBulkRateTiers,
 } from '@documenso/lib/server-only/reseller/manage-reseller-bulk-rates';
-import { findResellerBulkPurchases } from '@documenso/lib/server-only/reseller/find-reseller-bulk-purchases';
+import {
+  exportCompletedAdminPurchaseInvoices,
+  findResellerBulkPurchases,
+} from '@documenso/lib/server-only/reseller/find-reseller-bulk-purchases';
 import { prisma } from '@documenso/prisma';
 
 import { adminProcedure } from '../trpc';
 import {
+  ZExportResellerBulkPurchasesRequestSchema,
+  ZExportResellerBulkPurchasesResponseSchema,
   ZFindResellerBulkPurchasesRequestSchema,
   ZFindResellerBulkPurchasesResponseSchema,
   ZGetResellerBulkRatesRequestSchema,
@@ -124,6 +129,20 @@ export const findResellerBulkPurchasesRoute = adminProcedure
       page,
       perPage,
       status,
+      kind,
+    });
+  });
+
+export const exportResellerBulkPurchasesRoute = adminProcedure
+  .input(ZExportResellerBulkPurchasesRequestSchema)
+  .output(ZExportResellerBulkPurchasesResponseSchema)
+  .query(async ({ input }) => {
+    assertResellerBulkToolsAccess();
+
+    const { query, kind } = input;
+
+    return await exportCompletedAdminPurchaseInvoices({
+      query,
       kind,
     });
   });

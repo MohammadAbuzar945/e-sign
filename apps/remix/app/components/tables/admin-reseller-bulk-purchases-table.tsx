@@ -78,7 +78,9 @@ export const AdminResellerBulkPurchasesTable = () => {
   const updateSearchParams = useUpdateSearchParams();
 
   const baseParams = ZUrlSearchParamsSchema.parse(Object.fromEntries(searchParams ?? []));
-  const status = parsePurchaseStatus(searchParams.get('status'));
+  const statusParam = searchParams.get('status');
+  const status =
+    statusParam === 'all' ? undefined : (parsePurchaseStatus(statusParam) ?? 'COMPLETED');
   const kind = parsePurchaseKind(searchParams.get('kind')) ?? 'ALL';
 
   const { data, isLoading, isLoadingError } = trpc.admin.resellerBulkRates.findPurchases.useQuery({
@@ -128,7 +130,6 @@ export const AdminResellerBulkPurchasesTable = () => {
         cell: ({ row }) => (
           <div className="space-y-1">
             <Badge variant="neutral">{kindLabel(row.original.kind)}</Badge>
-            <p className="text-xs text-muted-foreground">{row.original.issuer}</p>
             {row.original.title ? (
               <p className="max-w-[180px] truncate text-xs text-muted-foreground">
                 {row.original.title}
