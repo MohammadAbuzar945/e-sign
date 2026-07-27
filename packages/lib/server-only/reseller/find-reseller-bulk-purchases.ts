@@ -1,7 +1,6 @@
 import {
   OrganisationCreditPurchaseStatus,
   Prisma,
-  ResellerCreditTransactionStatus,
   SubscriptionStatus,
 } from '@prisma/client';
 
@@ -9,7 +8,7 @@ import { getNomiaSubscriptionPlanDetails } from '@documenso/lib/constants/nomia-
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { prisma } from '@documenso/prisma';
 
-export type AdminPurchaseInvoiceKind = 'BULK' | 'PAYG' | 'RESELLER' | 'SUBSCRIPTION';
+export type AdminPurchaseInvoiceKind = 'BULK' | 'PAYG' | 'SUBSCRIPTION';
 
 export type AdminPurchaseInvoiceStatus =
   | OrganisationCreditPurchaseStatus
@@ -24,24 +23,6 @@ export type FindAdminPurchaseInvoicesOptions = {
   perPage?: number;
   status?: AdminPurchaseInvoiceStatus;
   kind?: AdminPurchaseInvoiceKind | 'ALL';
-};
-
-const mapResellerStatus = (
-  status: ResellerCreditTransactionStatus,
-): AdminPurchaseInvoiceStatus => {
-  if (status === ResellerCreditTransactionStatus.REFUNDED) {
-    return 'REFUNDED';
-  }
-
-  if (status === ResellerCreditTransactionStatus.FAILED) {
-    return 'FAILED';
-  }
-
-  if (status === ResellerCreditTransactionStatus.COMPLETED) {
-    return 'COMPLETED';
-  }
-
-  return 'PENDING';
 };
 
 const mapSubscriptionLedgerStatus = (
@@ -59,8 +40,8 @@ const mapSubscriptionLedgerStatus = (
 };
 
 /**
- * Admin purchase/invoice ledger:
- * Nomia PAYG + bulk inventory + reseller client sales + subscriptions.
+ * Admin Nomia purchase/invoice ledger only:
+ * PAYG top-ups, bulk inventory, and subscriptions.
  */
 export const findResellerBulkPurchases = async ({
   query = '',
@@ -86,8 +67,6 @@ export const findResellerBulkPurchases = async ({
     (kind === 'ALL' || kind === 'BULK' || kind === 'PAYG') &&
     status !== 'REFUNDED' &&
     !isSubscriptionOnlyStatus;
-  const includeReseller =
-    (kind === 'ALL' || kind === 'RESELLER') && !isSubscriptionOnlyStatus;
   const includeSubscriptions =
     (kind === 'ALL' || kind === 'SUBSCRIPTION') &&
     status !== 'REFUNDED' &&
@@ -101,21 +80,6 @@ export const findResellerBulkPurchases = async ({
     ...(status && status !== 'REFUNDED' && !isSubscriptionOnlyStatus
       ? { status: status as OrganisationCreditPurchaseStatus }
       : {}),
-  };
-
-  const resellerStatusFilter =
-    status === 'COMPLETED'
-      ? ResellerCreditTransactionStatus.COMPLETED
-      : status === 'PENDING'
-        ? ResellerCreditTransactionStatus.PENDING
-        : status === 'FAILED'
-          ? ResellerCreditTransactionStatus.FAILED
-          : status === 'REFUNDED'
-            ? ResellerCreditTransactionStatus.REFUNDED
-            : undefined;
-
-  const resellerWhere: Prisma.ResellerCreditTransactionWhereInput = {
-    ...(resellerStatusFilter ? { status: resellerStatusFilter } : {}),
   };
 
   const subscriptionWhere: Prisma.SubscriptionWhereInput = {
@@ -146,31 +110,6 @@ export const findResellerBulkPurchases = async ({
       {
         user: {
           name: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive },
-        },
-      },
-    ];
-
-    resellerWhere.OR = [
-      { paystackReference: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive } },
-      { id: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive } },
-      { purchaserName: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive } },
-      { purchaserEmail: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive } },
-      {
-        purchaserOrganisationName: {
-          contains: trimmedQuery,
-          mode: Prisma.QueryMode.insensitive,
-        },
-      },
-      {
-        resellerProfile: {
-          organisation: {
-            name: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive },
-          },
-        },
-      },
-      {
-        resellerProfile: {
-          affiliateSlug: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive },
         },
       },
     ];
@@ -206,113 +145,75 @@ export const findResellerBulkPurchases = async ({
     ];
   }
 
-  const [nomiaRows, resellerRows, subscriptionRows, nomiaCount, resellerCount, subscriptionCount] =
-    await Promise.all([
-      includeNomia
-        ? prisma.organisationCreditPurchase.findMany({
-            where: nomiaWhere,
-            take: windowSize,
-            orderBy: { createdAt: 'desc' },
-            select: {
-              id: true,
-              createdAt: true,
-              completedAt: true,
-              status: true,
-              credits: true,
-              grossAmount: true,
-              currency: true,
-              paystackReference: true,
-              purchaseType: true,
-              organisation: {
-                select: {
-                  id: true,
-                  name: true,
-                  url: true,
-                },
-              },
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
+  const [nomiaRows, subscriptionRows, nomiaCount, subscriptionCount] = await Promise.all([
+    includeNomia
+      ? prisma.organisationCreditPurchase.findMany({
+          where: nomiaWhere,
+          take: windowSize,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            createdAt: true,
+            completedAt: true,
+            status: true,
+            credits: true,
+            grossAmount: true,
+            currency: true,
+            paystackReference: true,
+            purchaseType: true,
+            organisation: {
+              select: {
+                id: true,
+                name: true,
+                url: true,
               },
             },
-          })
-        : Promise.resolve([]),
-      includeReseller
-        ? prisma.resellerCreditTransaction.findMany({
-            where: resellerWhere,
-            take: windowSize,
-            orderBy: { createdAt: 'desc' },
-            select: {
-              id: true,
-              createdAt: true,
-              completedAt: true,
-              status: true,
-              credits: true,
-              grossAmount: true,
-              currency: true,
-              paystackReference: true,
-              purchaserName: true,
-              purchaserEmail: true,
-              purchaserOrganisationId: true,
-              purchaserOrganisationName: true,
-              purchaserUserId: true,
-              resellerProfile: {
-                select: {
-                  affiliateSlug: true,
-                  organisation: {
-                    select: {
-                      id: true,
-                      name: true,
-                      url: true,
-                    },
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        })
+      : Promise.resolve([]),
+    includeSubscriptions
+      ? prisma.subscription.findMany({
+          where: subscriptionWhere,
+          take: windowSize,
+          orderBy: { updatedAt: 'desc' },
+          select: {
+            id: true,
+            createdAt: true,
+            updatedAt: true,
+            status: true,
+            planId: true,
+            priceId: true,
+            organisation: {
+              select: {
+                id: true,
+                name: true,
+                url: true,
+                owner: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
                   },
                 },
               },
             },
-          })
-        : Promise.resolve([]),
-      includeSubscriptions
-        ? prisma.subscription.findMany({
-            where: subscriptionWhere,
-            take: windowSize,
-            orderBy: { updatedAt: 'desc' },
-            select: {
-              id: true,
-              createdAt: true,
-              updatedAt: true,
-              status: true,
-              planId: true,
-              priceId: true,
-              organisation: {
-                select: {
-                  id: true,
-                  name: true,
-                  url: true,
-                  owner: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                    },
-                  },
-                },
-              },
-            },
-          })
-        : Promise.resolve([]),
-      includeNomia
-        ? prisma.organisationCreditPurchase.count({ where: nomiaWhere })
-        : Promise.resolve(0),
-      includeReseller
-        ? prisma.resellerCreditTransaction.count({ where: resellerWhere })
-        : Promise.resolve(0),
-      includeSubscriptions
-        ? prisma.subscription.count({ where: subscriptionWhere })
-        : Promise.resolve(0),
-    ]);
+          },
+        })
+      : Promise.resolve([]),
+    includeNomia
+      ? prisma.organisationCreditPurchase.count({ where: nomiaWhere })
+      : Promise.resolve(0),
+    includeSubscriptions
+      ? prisma.subscription.count({ where: subscriptionWhere })
+      : Promise.resolve(0),
+  ]);
 
   const nomiaMapped = nomiaRows.map((row) => ({
     id: row.id,
@@ -331,34 +232,6 @@ export const findResellerBulkPurchases = async ({
     user: row.user,
     resellerName: null as string | null,
     resellerAffiliateSlug: null as string | null,
-    title: null as string | null,
-  }));
-
-  const resellerMapped = resellerRows.map((row) => ({
-    id: row.id,
-    invoiceId: `reseller_${row.id}`,
-    kind: 'RESELLER' as const,
-    issuer: 'RESELLER' as const,
-    createdAt: row.createdAt,
-    completedAt: row.completedAt,
-    status: mapResellerStatus(row.status),
-    credits: row.credits,
-    grossAmount: row.grossAmount,
-    currency: row.currency,
-    paystackReference: row.paystackReference,
-    pricePerCreditCents: row.credits > 0 ? Math.round(row.grossAmount / row.credits) : 0,
-    organisation: {
-      id: row.purchaserOrganisationId,
-      name: row.purchaserOrganisationName,
-      url: '',
-    },
-    user: {
-      id: row.purchaserUserId,
-      name: row.purchaserName,
-      email: row.purchaserEmail,
-    },
-    resellerName: row.resellerProfile.organisation.name,
-    resellerAffiliateSlug: row.resellerProfile.affiliateSlug,
     title: null as string | null,
   }));
 
@@ -398,7 +271,7 @@ export const findResellerBulkPurchases = async ({
     };
   });
 
-  const merged = [...nomiaMapped, ...resellerMapped, ...subscriptionMapped].sort((a, b) => {
+  const merged = [...nomiaMapped, ...subscriptionMapped].sort((a, b) => {
     const aTime = (a.completedAt ?? a.createdAt).getTime();
     const bTime = (b.completedAt ?? b.createdAt).getTime();
 
@@ -407,7 +280,7 @@ export const findResellerBulkPurchases = async ({
 
   const skip = (safePage - 1) * safePerPage;
   const data = merged.slice(skip, skip + safePerPage);
-  const count = nomiaCount + resellerCount + subscriptionCount;
+  const count = nomiaCount + subscriptionCount;
 
   return {
     data,

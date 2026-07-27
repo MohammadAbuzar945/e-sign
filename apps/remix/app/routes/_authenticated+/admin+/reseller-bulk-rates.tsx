@@ -150,9 +150,7 @@ export default function AdminResellerBulkRatesPage() {
 
   const subtitle =
     currentView === BULK_RATES_VIEW.PURCHASES
-      ? _(
-          msg`All credit invoices: pay-as-you-go, bulk inventory, reseller sales, and subscriptions.`,
-        )
+      ? _(msg`Nomia invoices only: pay-as-you-go, bulk inventory, and subscriptions.`)
       : _(
           msg`Default volume sliding-scale rates for all resellers. Individual resellers can override these from the Accounts view.`,
         );
@@ -194,9 +192,6 @@ export default function AdminResellerBulkRatesPage() {
                 </SelectItem>
                 <SelectItem value="BULK">
                   <Trans>Bulk inventory</Trans>
-                </SelectItem>
-                <SelectItem value="RESELLER">
-                  <Trans>Reseller sales</Trans>
                 </SelectItem>
                 <SelectItem value="SUBSCRIPTION">
                   <Trans>Subscriptions</Trans>

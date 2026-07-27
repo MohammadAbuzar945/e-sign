@@ -41,13 +41,7 @@ const parsePurchaseStatus = (value: string | null): PurchaseStatus | undefined =
 };
 
 const parsePurchaseKind = (value: string | null): PurchaseKind | 'ALL' | undefined => {
-  if (
-    value === 'BULK' ||
-    value === 'PAYG' ||
-    value === 'RESELLER' ||
-    value === 'SUBSCRIPTION' ||
-    value === 'ALL'
-  ) {
+  if (value === 'BULK' || value === 'PAYG' || value === 'SUBSCRIPTION' || value === 'ALL') {
     return value;
   }
 
@@ -75,11 +69,7 @@ const kindLabel = (kind: PurchaseKind) => {
     return 'Pay as you go';
   }
 
-  if (kind === 'SUBSCRIPTION') {
-    return 'Subscription';
-  }
-
-  return 'Reseller sale';
+  return 'Subscription';
 };
 
 export const AdminResellerBulkPurchasesTable = () => {
@@ -174,14 +164,6 @@ export const AdminResellerBulkPurchasesTable = () => {
             {row.original.organisation.url ? (
               <p className="truncate text-xs text-muted-foreground">
                 /o/{row.original.organisation.url}
-              </p>
-            ) : null}
-            {row.original.resellerName ? (
-              <p className="truncate text-xs text-muted-foreground">
-                via {row.original.resellerName}
-                {row.original.resellerAffiliateSlug
-                  ? ` (/r/${row.original.resellerAffiliateSlug})`
-                  : ''}
               </p>
             ) : null}
           </div>

@@ -16,7 +16,6 @@ export const ZOrganisationCreditPurchaseStatusSchema = z.enum([
 export const ZAdminPurchaseInvoiceKindSchema = z.enum([
   'BULK',
   'PAYG',
-  'RESELLER',
   'SUBSCRIPTION',
   'ALL',
 ]);
@@ -77,8 +76,8 @@ export const ZFindResellerBulkPurchasesRequestSchema = ZFindSearchParamsSchema.e
 export const ZResellerBulkPurchaseSchema = z.object({
   id: z.string(),
   invoiceId: z.string(),
-  kind: z.enum(['BULK', 'PAYG', 'RESELLER', 'SUBSCRIPTION']),
-  issuer: z.enum(['NOMIA', 'RESELLER']),
+  kind: z.enum(['BULK', 'PAYG', 'SUBSCRIPTION']),
+  issuer: z.enum(['NOMIA']),
   createdAt: z.date(),
   completedAt: z.date().nullable(),
   status: ZOrganisationCreditPurchaseStatusSchema,
