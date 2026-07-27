@@ -652,6 +652,19 @@ const processPaystackWebhookEvent = async (event: {
 
       console.log('subscription and credits updated successfully');
 
+      const { sendPurchaseInvoiceEmail } = await import(
+        '@documenso/lib/server-only/billing/send-purchase-invoice-email'
+      );
+
+      await sendPurchaseInvoiceEmail({
+        organisationId,
+        invoiceId: `subscription_${subscription.id}`,
+        recipientEmail: user.email,
+        recipientName: user.name,
+      }).catch((invoiceError) => {
+        console.error('[NOMIA]: Failed to send subscription invoice email', invoiceError);
+      });
+
       return {
         status: PaystackWebhookEventStatus.SUCCESS,
         result: {
@@ -663,6 +676,7 @@ const processPaystackWebhookEvent = async (event: {
           creditsAdded: newPlanCredits,
           creditsAfter,
           reference: reference ?? null,
+          invoiceEmailSent: true,
         },
         response: jsonResponse({ success: true }),
       };
