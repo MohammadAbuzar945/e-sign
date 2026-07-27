@@ -75,13 +75,17 @@ export const getResellerBulkRatesRoute = adminProcedure
     const [profile, tiers] = await Promise.all([
       prisma.resellerProfile.findUniqueOrThrow({
         where: { id: resellerProfileId },
-        select: { bulkRatesUseCustom: true },
+        select: {
+          bulkRatesUseCustom: true,
+          bulkRatesIncludeGlobal: true,
+        },
       }),
       getResellerProfileBulkRateTiers(resellerProfileId),
     ]);
 
     return {
       bulkRatesUseCustom: profile.bulkRatesUseCustom,
+      bulkRatesIncludeGlobal: profile.bulkRatesIncludeGlobal,
       tiers: tiers.map((tier) => ({
         id: tier.id,
         minCredits: tier.minCredits,
@@ -97,16 +101,19 @@ export const replaceResellerBulkRatesRoute = adminProcedure
   .mutation(async ({ input }) => {
     assertResellerBulkToolsAccess();
 
-    const { resellerProfileId, bulkRatesUseCustom, tiers: inputTiers } = input;
+    const { resellerProfileId, bulkRatesUseCustom, bulkRatesIncludeGlobal, tiers: inputTiers } =
+      input;
 
     const result = await replaceResellerProfileBulkRateTiers({
       resellerProfileId,
       bulkRatesUseCustom,
+      bulkRatesIncludeGlobal,
       tiers: inputTiers,
     });
 
     return {
       bulkRatesUseCustom: result.bulkRatesUseCustom,
+      bulkRatesIncludeGlobal: result.bulkRatesIncludeGlobal,
       tiers: result.tiers.map((tier) => ({
         id: tier.id,
         minCredits: tier.minCredits,

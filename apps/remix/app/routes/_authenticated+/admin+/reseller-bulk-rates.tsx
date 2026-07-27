@@ -9,7 +9,6 @@ import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounce
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import {
   canAccessResellerBulkTools,
-  isDemoFeatureVisible,
 } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { buildAdminPurchaseInvoicesCsv } from '@documenso/lib/utils/build-admin-purchase-invoices-csv';
@@ -55,7 +54,7 @@ export function meta() {
 export async function loader({ request }: Route.LoaderArgs) {
   await getSession(request);
 
-  if (!canAccessResellerBulkTools() || !isDemoFeatureVisible('ADMIN_BULK_RATES')) {
+  if (!canAccessResellerBulkTools()) {
     throw redirect('/admin');
   }
 

@@ -2,10 +2,11 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { LayersIcon, PencilIcon } from 'lucide-react';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 
 import { AppError } from '@documenso/lib/errors/app-error';
+import { mergeBulkRateTiers } from '@documenso/lib/utils/reseller-bulk-rate';
 import { trpc } from '@documenso/trpc/react';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
@@ -74,6 +75,7 @@ export const AdminResellerCustomBulkRatesPanel = ({
   const { _ } = useLingui();
   const { toast } = useToast();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [includeGlobalRates, setIncludeGlobalRates] = useState(false);
   const editorFormId = useId();
 
   const { data, isLoading, refetch } = trpc.admin.resellerBulkRates.getForReseller.useQuery({
@@ -98,6 +100,12 @@ export const AdminResellerCustomBulkRatesPanel = ({
       },
     });
 
+  useEffect(() => {
+    if (data) {
+      setIncludeGlobalRates(data.bulkRatesIncludeGlobal);
+    }
+  }, [data]);
+
   const initialTiers: BulkRateTierDraft[] = useMemo(() => {
     if (!data) {
       return [];
@@ -120,23 +128,34 @@ export const AdminResellerCustomBulkRatesPanel = ({
     ];
   }, [data]);
 
+  const globalTierDraft: BulkRateTierDraft[] = useMemo(
+    () =>
+      globalRates?.tiers.map((tier) => ({
+        minCredits: tier.minCredits,
+        pricePerCreditCents: tier.pricePerCreditCents,
+        isEnabled: tier.isEnabled,
+      })) ?? [],
+    [globalRates?.tiers],
+  );
+
   const effectiveTiers = useMemo(() => {
     if (!data) {
       return [];
     }
 
-    if (data.bulkRatesUseCustom) {
-      return initialTiers;
+    if (!data.bulkRatesUseCustom) {
+      return globalTierDraft;
     }
 
-    return (
-      globalRates?.tiers.map((tier) => ({
-        minCredits: tier.minCredits,
-        pricePerCreditCents: tier.pricePerCreditCents,
-        isEnabled: tier.isEnabled,
-      })) ?? []
-    );
-  }, [data, globalRates?.tiers, initialTiers]);
+    if (data.bulkRatesIncludeGlobal) {
+      return mergeBulkRateTiers({
+        customTiers: initialTiers,
+        globalTiers: globalTierDraft,
+      });
+    }
+
+    return initialTiers;
+  }, [data, globalTierDraft, initialTiers]);
 
   if (isLoading || !data) {
     return (
@@ -169,7 +188,11 @@ export const AdminResellerCustomBulkRatesPanel = ({
               </Label>
               <p className="text-xs text-muted-foreground">
                 {data.bulkRatesUseCustom ? (
-                  <Trans>This reseller uses an override rate table.</Trans>
+                  data.bulkRatesIncludeGlobal ? (
+                    <Trans>Custom tiers are merged with the global Nomia rate table.</Trans>
+                  ) : (
+                    <Trans>This reseller uses an override rate table.</Trans>
+                  )
                 ) : (
                   <Trans>This reseller uses the global Nomia bulk rate table.</Trans>
                 )}
@@ -183,6 +206,7 @@ export const AdminResellerCustomBulkRatesPanel = ({
                 await replaceForReseller({
                   resellerProfileId,
                   bulkRatesUseCustom: checked,
+                  bulkRatesIncludeGlobal: checked ? data.bulkRatesIncludeGlobal : false,
                   tiers: checked
                     ? initialTiers
                     : data.tiers.map((tier) => ({
@@ -199,7 +223,15 @@ export const AdminResellerCustomBulkRatesPanel = ({
 
           <div className="flex flex-wrap gap-2">
             {data.bulkRatesUseCustom ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => setIsEditorOpen(true)}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIncludeGlobalRates(data.bulkRatesIncludeGlobal);
+                  setIsEditorOpen(true);
+                }}
+              >
                 <PencilIcon className="mr-2 h-4 w-4" />
                 <Trans>Edit custom rates</Trans>
               </Button>
@@ -228,22 +260,48 @@ export const AdminResellerCustomBulkRatesPanel = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
-            <AdminResellerBulkRatesEditor
-              formId={editorFormId}
-              initialTiers={initialTiers}
-              isSaving={isPending}
-              showFooter={false}
-              showAddTier={true}
-              showHelperText={false}
-              onSave={async (tiers) => {
-                await replaceForReseller({
-                  resellerProfileId,
-                  bulkRatesUseCustom: true,
-                  tiers,
-                });
-              }}
-            />
+          <div className="space-y-5 px-6 py-5">
+            <div className="flex items-start justify-between gap-3 rounded-md border bg-muted/20 p-3">
+              <div className="space-y-1">
+                <Label
+                  htmlFor={`include-global-rates-${resellerProfileId}`}
+                  className="text-sm font-medium"
+                >
+                  <Trans>Also use global rates</Trans>
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  <Trans>
+                    Merge the global Nomia tiers with these custom tiers. Custom prices override the
+                    same credit thresholds.
+                  </Trans>
+                </p>
+              </div>
+              <Switch
+                id={`include-global-rates-${resellerProfileId}`}
+                checked={includeGlobalRates}
+                disabled={isPending}
+                onCheckedChange={setIncludeGlobalRates}
+              />
+            </div>
+
+            <div className="max-h-[50vh] overflow-y-auto">
+              <AdminResellerBulkRatesEditor
+                formId={editorFormId}
+                initialTiers={initialTiers}
+                isSaving={isPending}
+                showFooter={false}
+                showAddTier={true}
+                showHelperText={false}
+                onSave={async (tiers) => {
+                  await replaceForReseller({
+                    resellerProfileId,
+                    bulkRatesUseCustom: true,
+                    bulkRatesIncludeGlobal: includeGlobalRates,
+                    tiers,
+                  });
+                }}
+              />
+            </div>
           </div>
 
           <DialogFooter className="gap-2 border-t px-6 py-4 sm:justify-end">

@@ -1,19 +1,22 @@
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import {
   matchBulkRateTier,
+  mergeBulkRateTiers,
   type ResellerBulkRateTierLike,
 } from '@documenso/lib/utils/reseller-bulk-rate';
 import { prisma } from '@documenso/prisma';
 
 export type { ResellerBulkRateTierLike };
-export { matchBulkRateTier };
+export { matchBulkRateTier, mergeBulkRateTiers };
+
+export type ResellerBulkRateSource = 'CUSTOM' | 'GLOBAL' | 'MERGED';
 
 export type ResolvedResellerBulkRate = {
   credits: number;
   ratePerCreditCents: number;
   amountInCents: number;
   minCreditsMatched: number;
-  source: 'CUSTOM' | 'GLOBAL';
+  source: ResellerBulkRateSource;
   tiers: Array<{
     minCredits: number;
     pricePerCreditCents: number;
@@ -32,6 +35,14 @@ export const getResellerProfileBulkRateTiers = async (resellerProfileId: string)
     orderBy: { minCredits: 'asc' },
   });
 };
+
+const toTierForDisplay = (tiers: ResellerBulkRateTierLike[]) =>
+  tiers
+    .filter((tier) => tier.isEnabled)
+    .map((tier) => ({
+      minCredits: tier.minCredits,
+      pricePerCreditCents: tier.pricePerCreditCents,
+    }));
 
 export const resolveResellerBulkRate = async ({
   organisationId,
@@ -52,6 +63,7 @@ export const resolveResellerBulkRate = async ({
       id: true,
       status: true,
       bulkRatesUseCustom: true,
+      bulkRatesIncludeGlobal: true,
       bulkRateTiers: {
         orderBy: { minCredits: 'asc' },
       },
@@ -67,9 +79,22 @@ export const resolveResellerBulkRate = async ({
   const customEnabled =
     profile.bulkRatesUseCustom && profile.bulkRateTiers.some((tier) => tier.isEnabled);
 
-  const sourceTiers = customEnabled
-    ? profile.bulkRateTiers
-    : await getGlobalResellerBulkRateTiers();
+  let source: ResellerBulkRateSource = 'GLOBAL';
+  let sourceTiers: ResellerBulkRateTierLike[];
+
+  if (!customEnabled) {
+    sourceTiers = await getGlobalResellerBulkRateTiers();
+  } else if (profile.bulkRatesIncludeGlobal) {
+    const globalTiers = await getGlobalResellerBulkRateTiers();
+    sourceTiers = mergeBulkRateTiers({
+      customTiers: profile.bulkRateTiers,
+      globalTiers,
+    });
+    source = 'MERGED';
+  } else {
+    sourceTiers = profile.bulkRateTiers;
+    source = 'CUSTOM';
+  }
 
   const matched = matchBulkRateTier({ credits, tiers: sourceTiers });
 
@@ -90,13 +115,8 @@ export const resolveResellerBulkRate = async ({
     ratePerCreditCents: matched.pricePerCreditCents,
     amountInCents: credits * matched.pricePerCreditCents,
     minCreditsMatched: matched.minCredits,
-    source: customEnabled ? 'CUSTOM' : 'GLOBAL',
-    tiers: sourceTiers
-      .filter((tier) => tier.isEnabled)
-      .map((tier) => ({
-        minCredits: tier.minCredits,
-        pricePerCreditCents: tier.pricePerCreditCents,
-      })),
+    source,
+    tiers: toTierForDisplay(sourceTiers),
   };
 };
 
@@ -107,12 +127,14 @@ export const getEffectiveResellerBulkRatesForOrganisation = async (organisationI
       id: true,
       status: true,
       bulkRatesUseCustom: true,
+      bulkRatesIncludeGlobal: true,
       bulkRateTiers: {
         where: { isEnabled: true },
         orderBy: { minCredits: 'asc' },
         select: {
           minCredits: true,
           pricePerCreditCents: true,
+          isEnabled: true,
         },
       },
     },
@@ -123,23 +145,40 @@ export const getEffectiveResellerBulkRatesForOrganisation = async (organisationI
   }
 
   const useCustom = profile.bulkRatesUseCustom && profile.bulkRateTiers.length > 0;
+  const globalTiers = await prisma.resellerBulkRateTier.findMany({
+    where: { isEnabled: true },
+    orderBy: { minCredits: 'asc' },
+    select: {
+      minCredits: true,
+      pricePerCreditCents: true,
+      isEnabled: true,
+    },
+  });
 
-  const tiers = useCustom
-    ? profile.bulkRateTiers
-    : (
-        await prisma.resellerBulkRateTier.findMany({
-          where: { isEnabled: true },
-          orderBy: { minCredits: 'asc' },
-          select: {
-            minCredits: true,
-            pricePerCreditCents: true,
-          },
-        })
-      );
+  if (!useCustom) {
+    return {
+      resellerProfileId: profile.id,
+      source: 'GLOBAL' as const,
+      tiers: toTierForDisplay(globalTiers),
+    };
+  }
+
+  if (profile.bulkRatesIncludeGlobal) {
+    const merged = mergeBulkRateTiers({
+      customTiers: profile.bulkRateTiers,
+      globalTiers,
+    });
+
+    return {
+      resellerProfileId: profile.id,
+      source: 'MERGED' as const,
+      tiers: toTierForDisplay(merged),
+    };
+  }
 
   return {
     resellerProfileId: profile.id,
-    source: useCustom ? ('CUSTOM' as const) : ('GLOBAL' as const),
-    tiers,
+    source: 'CUSTOM' as const,
+    tiers: toTierForDisplay(profile.bulkRateTiers),
   };
 };

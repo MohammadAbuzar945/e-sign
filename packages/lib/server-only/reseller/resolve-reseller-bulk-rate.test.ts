@@ -59,6 +59,7 @@ describe('resolveResellerBulkRate', () => {
       id: 'rp_1',
       status: 'ACTIVE',
       bulkRatesUseCustom: true,
+      bulkRatesIncludeGlobal: false,
       bulkRateTiers: [
         { minCredits: 1000, pricePerCreditCents: 450, isEnabled: true },
       ],
@@ -79,6 +80,7 @@ describe('resolveResellerBulkRate', () => {
       id: 'rp_1',
       status: 'ACTIVE',
       bulkRatesUseCustom: false,
+      bulkRatesIncludeGlobal: false,
       bulkRateTiers: [],
     } as never);
 
@@ -93,5 +95,32 @@ describe('resolveResellerBulkRate', () => {
 
     expect(result.source).toBe('GLOBAL');
     expect(result.amountInCents).toBe(300000);
+  });
+
+  it('merges custom and global tiers when include-global is on', async () => {
+    vi.mocked(prisma.resellerProfile.findUnique).mockResolvedValue({
+      id: 'rp_1',
+      status: 'ACTIVE',
+      bulkRatesUseCustom: true,
+      bulkRatesIncludeGlobal: true,
+      bulkRateTiers: [{ minCredits: 1000, pricePerCreditCents: 450, isEnabled: true }],
+    } as never);
+
+    vi.mocked(prisma.resellerBulkRateTier.findMany).mockResolvedValue([
+      { minCredits: 500, pricePerCreditCents: 600, isEnabled: true },
+      { minCredits: 1000, pricePerCreditCents: 550, isEnabled: true },
+    ] as never);
+
+    const result = await resolveResellerBulkRate({
+      organisationId: 'org_1',
+      credits: 500,
+    });
+
+    expect(result.source).toBe('MERGED');
+    expect(result.ratePerCreditCents).toBe(600);
+    expect(result.tiers).toEqual([
+      { minCredits: 500, pricePerCreditCents: 600 },
+      { minCredits: 1000, pricePerCreditCents: 450 },
+    ]);
   });
 });

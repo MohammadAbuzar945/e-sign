@@ -18,7 +18,7 @@ test('[RESELLER]: shows reseller programme for any signed-in org owner', async (
   await expect(page.getByText('Reseller programme')).toBeVisible();
 });
 
-test('[RESELLER]: allowlisted user can submit a reseller application', async ({ page }) => {
+test('[RESELLER]: user can submit a reseller application', async ({ page }) => {
   const resellerEmail = seedTestEmail();
   const { user, organisation } = await seedUser({
     email: resellerEmail,
