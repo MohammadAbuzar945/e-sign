@@ -560,6 +560,7 @@ const processPaystackWebhookEvent = async (event: {
 
           await sendPurchaseInvoiceEmail({
             organisationId: organisation.id,
+            purchaseGroupId: purchase.purchaseGroupId,
             invoiceId: resolveNomiaPurchaseInvoiceId({
               purchaseId: purchase.id,
               purchaseGroupId: purchase.purchaseGroupId,

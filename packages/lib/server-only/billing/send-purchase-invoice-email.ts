@@ -15,13 +15,21 @@ import { renderEmailWithI18N } from '../../utils/render-email-with-i18n';
 import {
   buildPurchaseInvoiceHtml,
   buildPurchaseInvoicePdf,
-  getOrganisationPurchaseInvoice,
 } from './build-purchase-invoice';
 import { formatAmount } from './get-organisation-purchase-history';
+import { getOrganisationPurchaseInvoicesForEmail } from './organisation-purchase-invoice';
 
 export type SendPurchaseInvoiceEmailOptions = {
   organisationId: string;
-  invoiceId: string;
+  /** Single invoice (non-split purchases). */
+  invoiceId?: string;
+  /** Explicit invoice IDs when known. */
+  invoiceIds?: string[];
+  /**
+   * Hybrid / split purchases: attach every invoice in the group in one email.
+   * Preferred over a single `invoiceId` when set.
+   */
+  purchaseGroupId?: string | null;
   recipientEmail?: string;
   recipientName?: string | null;
 };
@@ -40,13 +48,22 @@ const getInvoiceLogoDataUrl = async () => {
 export const sendPurchaseInvoiceEmail = async ({
   organisationId,
   invoiceId,
+  invoiceIds,
+  purchaseGroupId,
   recipientEmail,
   recipientName,
 }: SendPurchaseInvoiceEmailOptions) => {
-  const { invoice, organisation, resellerLogoUrl } = await getOrganisationPurchaseInvoice({
-    organisationId,
-    invoiceId,
-  });
+  if (!invoiceId && !invoiceIds?.length && !purchaseGroupId) {
+    return { sent: false as const, reason: 'NO_INVOICE' as const };
+  }
+
+  const { invoices, organisation, resellerLogoUrls } =
+    await getOrganisationPurchaseInvoicesForEmail({
+      organisationId,
+      invoiceId,
+      invoiceIds,
+      purchaseGroupId,
+    });
 
   const toEmail = recipientEmail ?? organisation.owner.email;
   const toName = recipientName ?? organisation.owner.name ?? toEmail;
@@ -56,27 +73,46 @@ export const sendPurchaseInvoiceEmail = async ({
   }
 
   const logoUrl = await getInvoiceLogoDataUrl();
-  const htmlDocument = buildPurchaseInvoiceHtml({
-    invoice,
-    organisationName: organisation.name,
-    customerName: toName,
-    customerEmail: toEmail,
-    logoUrl,
-    resellerLogoUrl,
-  });
-  const pdf = await buildPurchaseInvoicePdf({ html: htmlDocument });
+  const isSplitPurchase = invoices.length > 1;
 
+  const attachments = await Promise.all(
+    invoices.map(async (invoice, index) => {
+      const htmlDocument = buildPurchaseInvoiceHtml({
+        invoice,
+        organisationName: organisation.name,
+        customerName: toName,
+        customerEmail: toEmail,
+        logoUrl,
+        resellerLogoUrl: resellerLogoUrls[index],
+      });
+      const pdf = await buildPurchaseInvoicePdf({ html: htmlDocument });
+
+      return {
+        filename: `${invoice.issuer === 'RESELLER' ? 'reseller' : 'nomia'}-invoice-${invoice.invoiceId}.pdf`,
+        content: Buffer.from(pdf),
+        contentType: 'application/pdf',
+      };
+    }),
+  );
+
+  const totalCredits = invoices.reduce((sum, invoice) => sum + invoice.totalCredits, 0);
+  const totalGrossAmount = invoices.reduce((sum, invoice) => sum + invoice.totalGrossAmount, 0);
+  const currency = invoices[0]?.currency ?? 'ZAR';
+  const totalAmountLabel = formatAmount(currency, totalGrossAmount);
   const purchaseHistoryUrl = `${NEXT_PUBLIC_WEBAPP_URL()}/o/${organisation.url}/price-plan`;
-  const amountLabel = formatAmount(invoice.currency, invoice.totalGrossAmount);
 
   const emailContent = createElement(PurchaseInvoiceEmailTemplate, {
     assetBaseUrl: NEXT_PUBLIC_WEBAPP_URL(),
     customerName: toName,
     organisationName: organisation.name,
-    invoiceTitle: invoice.title,
-    invoiceId: invoice.invoiceId,
-    credits: invoice.totalCredits,
-    amountLabel,
+    invoices: invoices.map((invoice) => ({
+      invoiceTitle: invoice.title,
+      invoiceId: invoice.invoiceId,
+      credits: invoice.totalCredits,
+      amountLabel: formatAmount(invoice.currency, invoice.totalGrossAmount),
+    })),
+    totalCredits,
+    totalAmountLabel,
     purchaseHistoryUrl,
   });
 
@@ -86,6 +122,9 @@ export const sendPurchaseInvoiceEmail = async ({
   ]);
 
   const i18n = await getI18nInstance('en');
+  const subject = isSplitPurchase
+    ? i18n._(msg`Your Nomia invoices for ${totalCredits} credits total`)
+    : i18n._(msg`Your Nomia invoice for ${totalCredits} credits`);
 
   await mailer.sendMail({
     to: [
@@ -98,17 +137,14 @@ export const sendPurchaseInvoiceEmail = async ({
       name: env('NEXT_PRIVATE_SMTP_FROM_NAME') || 'Nomia',
       address: env('NEXT_PRIVATE_SMTP_FROM_ADDRESS') || 'noreply@nomiadocs.com',
     },
-    subject: i18n._(msg`Your Nomia invoice for ${invoice.totalCredits} credits`),
+    subject,
     html,
     text,
-    attachments: [
-      {
-        filename: `${invoice.issuer === 'RESELLER' ? 'reseller' : 'nomia'}-invoice-${invoice.invoiceId}.pdf`,
-        content: Buffer.from(pdf),
-        contentType: 'application/pdf',
-      },
-    ],
+    attachments,
   });
 
-  return { sent: true as const, invoiceId: invoice.invoiceId };
+  return {
+    sent: true as const,
+    invoiceIds: invoices.map((invoice) => invoice.invoiceId),
+  };
 };

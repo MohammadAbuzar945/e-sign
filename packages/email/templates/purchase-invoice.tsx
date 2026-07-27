@@ -7,14 +7,20 @@ import { useBranding } from '../providers/branding';
 import { TemplateFooter } from '../template-components/template-footer';
 import TemplateImage from '../template-components/template-image';
 
-export type PurchaseInvoiceEmailProps = {
-  assetBaseUrl: string;
-  customerName: string;
-  organisationName: string;
+export type PurchaseInvoiceEmailLine = {
   invoiceTitle: string;
   invoiceId: string;
   credits: number;
   amountLabel: string;
+};
+
+export type PurchaseInvoiceEmailProps = {
+  assetBaseUrl: string;
+  customerName: string;
+  organisationName: string;
+  invoices: PurchaseInvoiceEmailLine[];
+  totalCredits: number;
+  totalAmountLabel: string;
   purchaseHistoryUrl: string;
 };
 
@@ -22,19 +28,30 @@ export const PurchaseInvoiceEmailTemplate = ({
   assetBaseUrl = 'http://localhost:3000',
   customerName = 'Customer',
   organisationName = 'Organisation',
-  invoiceTitle = 'Credit purchase',
-  invoiceId = 'invoice_1',
-  credits = 0,
-  amountLabel = 'ZAR 0.00',
+  invoices = [
+    {
+      invoiceTitle: 'Credit purchase',
+      invoiceId: 'invoice_1',
+      credits: 0,
+      amountLabel: 'ZAR 0.00',
+    },
+  ],
+  totalCredits = 0,
+  totalAmountLabel = 'ZAR 0.00',
   purchaseHistoryUrl = 'http://localhost:3000',
 }: PurchaseInvoiceEmailProps) => {
   const { _ } = useLingui();
   const branding = useBranding();
+  const isSplitPurchase = invoices.length > 1;
 
   return (
     <Html>
       <Head />
-      <Preview>{_(msg`Your Nomia purchase invoice is ready`)}</Preview>
+      <Preview>
+        {isSplitPurchase
+          ? _(msg`Your Nomia purchase invoices are ready`)
+          : _(msg`Your Nomia purchase invoice is ready`)}
+      </Preview>
 
       <Body className="mx-auto my-auto font-sans">
         <Section className="bg-white text-slate-500">
@@ -50,27 +67,49 @@ export const PurchaseInvoiceEmailTemplate = ({
             )}
 
             <Text className="text-center text-lg font-medium text-black">
-              <Trans>Your purchase invoice</Trans>
+              {isSplitPurchase ? (
+                <Trans>Your purchase invoices</Trans>
+              ) : (
+                <Trans>Your purchase invoice</Trans>
+              )}
             </Text>
 
             <Text className="mt-4 text-sm">
-              <Trans>
-                Hi {customerName}, your e-sign credits for {organisationName} have been added
-                successfully. Your invoice is attached to this email.
-              </Trans>
+              {isSplitPurchase ? (
+                <Trans>
+                  Hi {customerName}, your e-sign credits for {organisationName} have been added
+                  successfully. Both invoices for this purchase are attached to this email.
+                </Trans>
+              ) : (
+                <Trans>
+                  Hi {customerName}, your e-sign credits for {organisationName} have been added
+                  successfully. Your invoice is attached to this email.
+                </Trans>
+              )}
             </Text>
 
-            <Text className="mt-4 text-sm">
-              <Trans>Invoice:</Trans> {invoiceTitle}
+            {invoices.map((invoice) => (
+              <Section key={invoice.invoiceId} className="mt-4">
+                <Text className="text-sm">
+                  <Trans>Invoice:</Trans> {invoice.invoiceTitle}
+                </Text>
+                <Text className="text-sm">
+                  <Trans>Invoice #:</Trans> {invoice.invoiceId}
+                </Text>
+                <Text className="text-sm">
+                  <Trans>Credits:</Trans> {invoice.credits}
+                </Text>
+                <Text className="text-sm">
+                  <Trans>Amount:</Trans> {invoice.amountLabel}
+                </Text>
+              </Section>
+            ))}
+
+            <Text className="mt-4 text-sm font-medium text-black">
+              <Trans>Total credits:</Trans> {totalCredits}
             </Text>
-            <Text className="text-sm">
-              <Trans>Invoice #:</Trans> {invoiceId}
-            </Text>
-            <Text className="text-sm">
-              <Trans>Credits:</Trans> {credits}
-            </Text>
-            <Text className="text-sm">
-              <Trans>Amount:</Trans> {amountLabel}
+            <Text className="text-sm font-medium text-black">
+              <Trans>Total amount:</Trans> {totalAmountLabel}
             </Text>
 
             <Text className="mt-4 text-sm">
