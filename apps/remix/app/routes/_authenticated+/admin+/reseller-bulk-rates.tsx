@@ -95,6 +95,7 @@ export default function AdminResellerBulkRatesPage() {
     if (view !== BULK_RATES_VIEW.PURCHASES) {
       params.delete('query');
       params.delete('status');
+      params.delete('kind');
     }
 
     const query = params.toString();
@@ -108,6 +109,16 @@ export default function AdminResellerBulkRatesPage() {
       page: 1,
     });
   };
+
+  const onKindFilterChange = (value: string) => {
+    updateSearchParams({
+      kind: value === 'ALL' ? null : value,
+      page: 1,
+    });
+  };
+
+  const statusFilter = searchParams.get('status') ?? 'all';
+  const kindFilter = searchParams.get('kind') ?? 'ALL';
 
   const { data, isLoading, refetch } = trpc.admin.resellerBulkRates.listGlobal.useQuery(undefined, {
     enabled: currentView === BULK_RATES_VIEW.RATES,
@@ -139,12 +150,12 @@ export default function AdminResellerBulkRatesPage() {
 
   const subtitle =
     currentView === BULK_RATES_VIEW.PURCHASES
-      ? _(msg`History of reseller inventory bulk top-ups from Nomia.`)
+      ? _(
+          msg`All credit invoices: pay-as-you-go, bulk inventory, reseller sales, and subscriptions.`,
+        )
       : _(
           msg`Default volume sliding-scale rates for all resellers. Individual resellers can override these from the Accounts view.`,
         );
-
-  const statusFilter = searchParams.get('status') ?? 'all';
 
   return (
     <div
@@ -169,7 +180,30 @@ export default function AdminResellerBulkRatesPage() {
         </Tabs>
 
         {currentView === BULK_RATES_VIEW.PURCHASES ? (
-          <div className="flex w-full flex-col gap-3 sm:max-w-xl sm:flex-row sm:items-center">
+          <div className="flex w-full flex-col gap-3 sm:max-w-3xl sm:flex-row sm:items-center">
+            <Select value={kindFilter} onValueChange={onKindFilterChange}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder={_(msg`Type`)} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">
+                  <Trans>All types</Trans>
+                </SelectItem>
+                <SelectItem value="PAYG">
+                  <Trans>Pay as you go</Trans>
+                </SelectItem>
+                <SelectItem value="BULK">
+                  <Trans>Bulk inventory</Trans>
+                </SelectItem>
+                <SelectItem value="RESELLER">
+                  <Trans>Reseller sales</Trans>
+                </SelectItem>
+                <SelectItem value="SUBSCRIPTION">
+                  <Trans>Subscriptions</Trans>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
             <Select value={statusFilter} onValueChange={onStatusFilterChange}>
               <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder={_(msg`Status`)} />
@@ -187,13 +221,25 @@ export default function AdminResellerBulkRatesPage() {
                 <SelectItem value="FAILED">
                   <Trans>Failed</Trans>
                 </SelectItem>
+                <SelectItem value="REFUNDED">
+                  <Trans>Refunded</Trans>
+                </SelectItem>
+                <SelectItem value="ACTIVE">
+                  <Trans>Active</Trans>
+                </SelectItem>
+                <SelectItem value="PAST_DUE">
+                  <Trans>Past due</Trans>
+                </SelectItem>
+                <SelectItem value="INACTIVE">
+                  <Trans>Inactive</Trans>
+                </SelectItem>
               </SelectContent>
             </Select>
 
             <Input
               type="search"
               className="w-full"
-              placeholder={_(msg`Search org, email, or Paystack ref`)}
+              placeholder={_(msg`Search org, email, invoice, or Paystack ref`)}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
             />

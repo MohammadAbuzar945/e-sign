@@ -7,6 +7,18 @@ export const ZOrganisationCreditPurchaseStatusSchema = z.enum([
   'PENDING',
   'COMPLETED',
   'FAILED',
+  'REFUNDED',
+  'ACTIVE',
+  'INACTIVE',
+  'PAST_DUE',
+]);
+
+export const ZAdminPurchaseInvoiceKindSchema = z.enum([
+  'BULK',
+  'PAYG',
+  'RESELLER',
+  'SUBSCRIPTION',
+  'ALL',
 ]);
 
 export const ZResellerBulkRateTierSchema = z.object({
@@ -59,17 +71,21 @@ export const ZReplaceResellerBulkRatesResponseSchema = ZGetResellerBulkRatesResp
 
 export const ZFindResellerBulkPurchasesRequestSchema = ZFindSearchParamsSchema.extend({
   status: ZOrganisationCreditPurchaseStatusSchema.optional(),
+  kind: ZAdminPurchaseInvoiceKindSchema.optional(),
 });
 
 export const ZResellerBulkPurchaseSchema = z.object({
   id: z.string(),
+  invoiceId: z.string(),
+  kind: z.enum(['BULK', 'PAYG', 'RESELLER', 'SUBSCRIPTION']),
+  issuer: z.enum(['NOMIA', 'RESELLER']),
   createdAt: z.date(),
   completedAt: z.date().nullable(),
   status: ZOrganisationCreditPurchaseStatusSchema,
   credits: z.number(),
   grossAmount: z.number(),
   currency: z.string(),
-  paystackReference: z.string(),
+  paystackReference: z.string().nullable(),
   pricePerCreditCents: z.number(),
   organisation: z.object({
     id: z.string(),
@@ -81,6 +97,9 @@ export const ZResellerBulkPurchaseSchema = z.object({
     name: z.string().nullable(),
     email: z.string(),
   }),
+  resellerName: z.string().nullable(),
+  resellerAffiliateSlug: z.string().nullable(),
+  title: z.string().nullable(),
 });
 
 export const ZFindResellerBulkPurchasesResponseSchema = ZFindResultResponse.extend({

@@ -117,12 +117,13 @@ export const findResellerBulkPurchasesRoute = adminProcedure
   .query(async ({ input }) => {
     assertResellerBulkToolsAccess();
 
-    const { query, page, perPage, status } = input;
+    const { query, page, perPage, status, kind } = input;
 
     return await findResellerBulkPurchases({
       query,
       page,
       perPage,
       status,
+      kind,
     });
   });
