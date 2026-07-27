@@ -31,6 +31,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
+import { Label } from '@documenso/ui/primitives/label';
+import { Switch } from '@documenso/ui/primitives/switch';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { appMetaTags } from '~/utils/meta';
@@ -578,33 +580,21 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
           </div>
 
           {canManageStickyBilling && (
-            <div className="flex shrink-0 flex-col items-stretch gap-2 self-start sm:items-end sm:pt-0.5">
-              {stickyBillingOptIn === true ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  loading={isUpdatingStickyBilling}
-                  disabled={isUpdatingStickyBilling || stickyBillingOptIn === null}
-                  onClick={() => {
-                    void handleStickyBillingOptInChange(false);
-                  }}
-                >
-                  <Trans>Stop always buying from this reseller</Trans>
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  loading={isUpdatingStickyBilling}
-                  disabled={isUpdatingStickyBilling || stickyBillingOptIn === null}
-                  onClick={() => {
-                    void handleStickyBillingOptInChange(true);
-                  }}
-                >
-                  <Trans>Always buy from this reseller</Trans>
-                </Button>
-              )}
+            <div className="flex shrink-0 items-center gap-3 self-start sm:pt-0.5">
+              <Label
+                htmlFor="sticky-billing-opt-in"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                <Trans>Always buy from this reseller</Trans>
+              </Label>
+              <Switch
+                id="sticky-billing-opt-in"
+                checked={stickyBillingOptIn === true}
+                disabled={isUpdatingStickyBilling || stickyBillingOptIn === null}
+                onCheckedChange={(checked) => {
+                  void handleStickyBillingOptInChange(checked);
+                }}
+              />
             </div>
           )}
         </div>
