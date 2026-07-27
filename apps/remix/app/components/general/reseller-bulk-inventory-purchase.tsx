@@ -159,9 +159,15 @@ export const ResellerBulkInventoryPurchase = ({
             </Trans>
           </p>
         </div>
-        <Badge variant={rates.source === 'CUSTOM' ? 'default' : 'neutral'}>
+        <Badge
+          variant={
+            rates.source === 'CUSTOM' || rates.source === 'MERGED' ? 'default' : 'neutral'
+          }
+        >
           {rates.source === 'CUSTOM' ? (
             <Trans>Custom wholesale rates</Trans>
+          ) : rates.source === 'MERGED' ? (
+            <Trans>Custom + global wholesale rates</Trans>
           ) : (
             <Trans>Standard wholesale rates</Trans>
           )}

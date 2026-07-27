@@ -50,6 +50,7 @@ export const ZGetResellerBulkRatesRequestSchema = z.object({
 
 export const ZGetResellerBulkRatesResponseSchema = z.object({
   bulkRatesUseCustom: z.boolean(),
+  bulkRatesIncludeGlobal: z.boolean(),
   tiers: z.array(
     z.object({
       id: z.string(),
@@ -63,6 +64,7 @@ export const ZGetResellerBulkRatesResponseSchema = z.object({
 export const ZReplaceResellerBulkRatesRequestSchema = z.object({
   resellerProfileId: z.string(),
   bulkRatesUseCustom: z.boolean(),
+  bulkRatesIncludeGlobal: z.boolean().optional().default(false),
   tiers: z.array(ZResellerBulkRateTierSchema).max(MAX_RESELLER_BULK_RATE_TIERS),
 });
 

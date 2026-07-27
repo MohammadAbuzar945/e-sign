@@ -1403,8 +1403,10 @@ model ResellerProfile {
   /// Soft-delete timestamp. Profile and purchase history are retained for audit.
   deletedAt DateTime?
 
-  // Bulk inventory pricing: when true, use ResellerProfileBulkRateTier instead of global
+  // Bulk inventory pricing: when true, use ResellerProfileBulkRateTier (optionally merged with global)
   bulkRatesUseCustom Boolean @default(false)
+  /// When custom rates are on, also include global tiers (custom overrides same minCredits).
+  bulkRatesIncludeGlobal Boolean @default(false)
 
   packages     ResellerPackage[]
   transactions ResellerCreditTransaction[] @relation("ResellerTransactions")

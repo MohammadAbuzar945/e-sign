@@ -2,7 +2,6 @@ import { DocumentStatus, EnvelopeType, ResellerApplicationStatus, ResellerProfil
 
 import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import {
-  isResellerFeatureAllowedEmail,
   RESELLER_MIN_CREDITS_USED,
   RESELLER_MIN_SIGNUP_MONTHS,
 } from '@documenso/lib/constants/esign-credit-packages';
@@ -142,10 +141,8 @@ export const getResellerEligibility = async ({
   const hasBlockingResellerProfile =
     Boolean(existingProfile) && existingProfile?.status !== ResellerProfileStatus.DELETED;
 
-  // Allowlisted emails always bypass; RESELLER_ELIGIBILITY_BYPASS opens this for all (testing).
-  const hasEligibilityBypass =
-    isDemoFeatureVisible('RESELLER_ELIGIBILITY_BYPASS') ||
-    isResellerFeatureAllowedEmail(userEmail);
+  // RESELLER_ELIGIBILITY_BYPASS opens credits/tenure checks for all (testing).
+  const hasEligibilityBypass = isDemoFeatureVisible('RESELLER_ELIGIBILITY_BYPASS');
 
   const reasons: string[] = [];
 

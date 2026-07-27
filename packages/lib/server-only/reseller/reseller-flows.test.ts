@@ -146,7 +146,7 @@ vi.mock('@documenso/lib/server-only/template/create-document-from-template', () 
 
 import { sendResellerTerms } from './send-reseller-terms';
 
-const ALLOWED_EMAIL = 'nomiadeveloper@gmail.com';
+const TEST_EMAIL = 'nomiadeveloper@gmail.com';
 
 const setupOrganisationMetrics = ({
   completedDocumentCount = 60,
@@ -188,11 +188,8 @@ beforeEach(() => {
 });
 
 describe('reseller demo extras access', () => {
-  it('allows allowlisted emails', () => {
-    expect(() => assertResellerDemoExtrasAccess(ALLOWED_EMAIL)).not.toThrow();
-  });
-
-  it('allows any signed-in email while RESELLER_DEMO_EXTRAS is enabled', () => {
+  it('allows signed-in emails while RESELLER_DEMO_EXTRAS is enabled', () => {
+    expect(() => assertResellerDemoExtrasAccess(TEST_EMAIL)).not.toThrow();
     expect(() => assertResellerDemoExtrasAccess('other@example.com')).not.toThrow();
   });
 
@@ -224,7 +221,7 @@ describe('getResellerEligibility flow', () => {
     expect(prismaMock.envelope.count).toHaveBeenCalled();
   });
 
-  it('returns eligible for allowlisted org without active application or profile', async () => {
+  it('returns eligible for org without active application or profile', async () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     setupOrganisationMetrics();
@@ -233,7 +230,7 @@ describe('getResellerEligibility flow', () => {
 
     const eligibility = await getResellerEligibility({
       organisationId: 'org_1',
-      userEmail: ALLOWED_EMAIL,
+      userEmail: TEST_EMAIL,
     });
 
     expect(eligibility.isEligible).toBe(true);
@@ -243,7 +240,7 @@ describe('getResellerEligibility flow', () => {
     expect(eligibility.application).toBeNull();
   });
 
-  it('blocks allowlisted org with an active application in progress', async () => {
+  it('blocks org with an active application in progress', async () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     setupOrganisationMetrics();
@@ -261,7 +258,7 @@ describe('getResellerEligibility flow', () => {
 
     const eligibility = await getResellerEligibility({
       organisationId: 'org_1',
-      userEmail: ALLOWED_EMAIL,
+      userEmail: TEST_EMAIL,
     });
 
     expect(eligibility.isEligible).toBe(false);
@@ -290,7 +287,7 @@ describe('getResellerEligibility flow', () => {
 
     const eligibility = await getResellerEligibility({
       organisationId: 'org_1',
-      userEmail: ALLOWED_EMAIL,
+      userEmail: TEST_EMAIL,
     });
 
     expect(eligibility.isEligible).toBe(true);
@@ -298,7 +295,7 @@ describe('getResellerEligibility flow', () => {
     expect(eligibility.application?.status).toBe(ResellerApplicationStatus.REJECTED);
   });
 
-  it('blocks allowlisted org that already has a reseller profile', async () => {
+  it('blocks org that already has a reseller profile', async () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     setupOrganisationMetrics();
@@ -308,7 +305,7 @@ describe('getResellerEligibility flow', () => {
 
     const eligibility = await getResellerEligibility({
       organisationId: 'org_1',
-      userEmail: ALLOWED_EMAIL,
+      userEmail: TEST_EMAIL,
     });
 
     expect(eligibility.isEligible).toBe(false);
@@ -334,7 +331,7 @@ describe('getResellerEligibility flow', () => {
 
     const eligibility = await getResellerEligibility({
       organisationId: 'org_1',
-      userEmail: ALLOWED_EMAIL,
+      userEmail: TEST_EMAIL,
     });
 
     expect(eligibility.hasActiveResellerProfile).toBe(true);
@@ -369,7 +366,7 @@ describe('createResellerApplication flow', () => {
     prismaMock.user.findUniqueOrThrow.mockResolvedValue({
       id: 42,
       name: 'Jane Applicant',
-      email: ALLOWED_EMAIL,
+      email: TEST_EMAIL,
     });
 
     const createdApplication = {
@@ -377,7 +374,7 @@ describe('createResellerApplication flow', () => {
       status: ResellerApplicationStatus.PENDING,
       snapshotOrgName: 'Acme Corp',
       snapshotApplicantName: 'Jane Applicant',
-      snapshotApplicantEmail: ALLOWED_EMAIL,
+      snapshotApplicantEmail: TEST_EMAIL,
       snapshotCompletedDocCount: 75,
       snapshotUniqueSignerCount: 12,
       snapshotOrgUserCount: 4,
@@ -389,7 +386,7 @@ describe('createResellerApplication flow', () => {
     const result = await createResellerApplication({
       organisationId: 'org_1',
       applicantUserId: 42,
-      applicantUserEmail: ALLOWED_EMAIL,
+      applicantUserEmail: TEST_EMAIL,
     });
 
     expect(result).toEqual(createdApplication);
@@ -400,7 +397,7 @@ describe('createResellerApplication flow', () => {
         status: ResellerApplicationStatus.PENDING,
         snapshotOrgName: 'Acme Corp',
         snapshotApplicantName: 'Jane Applicant',
-        snapshotApplicantEmail: ALLOWED_EMAIL,
+        snapshotApplicantEmail: TEST_EMAIL,
         snapshotCompletedDocCount: 75,
         snapshotUniqueSignerCount: 12,
         snapshotOrgUserCount: 4,
@@ -411,7 +408,7 @@ describe('createResellerApplication flow', () => {
       applicationId: 'app_1',
       organisationName: 'Acme Corp',
       applicantName: 'Jane Applicant',
-      applicantEmail: ALLOWED_EMAIL,
+      applicantEmail: TEST_EMAIL,
       completedDocumentCount: 75,
       uniqueSignerCount: 12,
       organisationUserCount: 4,
@@ -453,7 +450,7 @@ describe('createResellerApplication flow', () => {
     prismaMock.user.findUniqueOrThrow.mockResolvedValue({
       id: 42,
       name: 'Jane Applicant',
-      email: ALLOWED_EMAIL,
+      email: TEST_EMAIL,
     });
 
     const resetApplication = {
@@ -461,7 +458,7 @@ describe('createResellerApplication flow', () => {
       status: ResellerApplicationStatus.PENDING,
       snapshotOrgName: 'Acme Corp',
       snapshotApplicantName: 'Jane Applicant',
-      snapshotApplicantEmail: ALLOWED_EMAIL,
+      snapshotApplicantEmail: TEST_EMAIL,
       snapshotCompletedDocCount: 80,
       snapshotUniqueSignerCount: 15,
       snapshotOrgUserCount: 5,
@@ -473,7 +470,7 @@ describe('createResellerApplication flow', () => {
     const result = await createResellerApplication({
       organisationId: 'org_1',
       applicantUserId: 42,
-      applicantUserEmail: ALLOWED_EMAIL,
+      applicantUserEmail: TEST_EMAIL,
     });
 
     expect(result).toEqual(resetApplication);
@@ -506,7 +503,7 @@ describe('createResellerApplication flow', () => {
       createResellerApplication({
         organisationId: 'org_1',
         applicantUserId: 42,
-        applicantUserEmail: ALLOWED_EMAIL,
+        applicantUserEmail: TEST_EMAIL,
       }),
     ).rejects.toThrow('An application is already in progress for this organisation.');
 
@@ -519,7 +516,7 @@ describe('activateResellerFromTermsCompletion flow', () => {
     id: 'app_1',
     organisationId: 'org_1',
     status: ResellerApplicationStatus.TERMS_SENT,
-    snapshotApplicantEmail: ALLOWED_EMAIL,
+    snapshotApplicantEmail: TEST_EMAIL,
     snapshotApplicantName: 'Jane Applicant',
     organisation: {
       id: 'org_1',
@@ -528,7 +525,7 @@ describe('activateResellerFromTermsCompletion flow', () => {
     },
     applicantUser: {
       id: 42,
-      email: ALLOWED_EMAIL,
+      email: TEST_EMAIL,
     },
   };
 
@@ -595,7 +592,7 @@ describe('activateResellerFromTermsCompletion flow', () => {
     );
     expect(sendResellerWelcomeEmailMock).toHaveBeenCalledWith({
       organisationName: 'Acme Corp',
-      applicantEmail: ALLOWED_EMAIL,
+      applicantEmail: TEST_EMAIL,
       applicantName: 'Jane Applicant',
       affiliateSlug: 'acme-corp',
     });
@@ -804,7 +801,7 @@ describe('retryResellerApplicationActivation flow', () => {
       id: 'app_1',
       organisationId: 'org_1',
       status: ResellerApplicationStatus.TERMS_SENT,
-      snapshotApplicantEmail: ALLOWED_EMAIL,
+      snapshotApplicantEmail: TEST_EMAIL,
       snapshotApplicantName: 'Jane Applicant',
       organisation: {
         id: 'org_1',
@@ -813,7 +810,7 @@ describe('retryResellerApplicationActivation flow', () => {
       },
       applicantUser: {
         id: 42,
-        email: ALLOWED_EMAIL,
+        email: TEST_EMAIL,
       },
     });
 

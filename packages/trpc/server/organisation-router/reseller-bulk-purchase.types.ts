@@ -7,7 +7,7 @@ export const ZGetEffectiveResellerBulkRatesRequestSchema = z.object({
 export const ZGetEffectiveResellerBulkRatesResponseSchema = z
   .object({
     resellerProfileId: z.string(),
-    source: z.enum(['CUSTOM', 'GLOBAL']),
+    source: z.enum(['CUSTOM', 'GLOBAL', 'MERGED']),
     tiers: z.array(
       z.object({
         minCredits: z.number(),
@@ -28,5 +28,5 @@ export const ZInitializeResellerBulkPurchaseResponseSchema = z.object({
   credits: z.number(),
   amountInCents: z.number(),
   ratePerCreditCents: z.number(),
-  source: z.enum(['CUSTOM', 'GLOBAL']),
+  source: z.enum(['CUSTOM', 'GLOBAL', 'MERGED']),
 });

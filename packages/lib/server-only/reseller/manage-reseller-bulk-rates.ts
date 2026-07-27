@@ -74,10 +74,12 @@ export const replaceGlobalResellerBulkRateTiers = async (tiers: BulkRateTierInpu
 export const replaceResellerProfileBulkRateTiers = async ({
   resellerProfileId,
   bulkRatesUseCustom,
+  bulkRatesIncludeGlobal = false,
   tiers,
 }: {
   resellerProfileId: string;
   bulkRatesUseCustom: boolean;
+  bulkRatesIncludeGlobal?: boolean;
   tiers: BulkRateTierInput[];
 }) => {
   const profile = await prisma.resellerProfile.findUnique({
@@ -93,10 +95,15 @@ export const replaceResellerProfileBulkRateTiers = async ({
     validateBulkRateTiers(tiers);
   }
 
+  const includeGlobal = bulkRatesUseCustom ? bulkRatesIncludeGlobal : false;
+
   await prisma.$transaction(async (tx) => {
     await tx.resellerProfile.update({
       where: { id: resellerProfileId },
-      data: { bulkRatesUseCustom },
+      data: {
+        bulkRatesUseCustom,
+        bulkRatesIncludeGlobal: includeGlobal,
+      },
     });
 
     await tx.resellerProfileBulkRateTier.deleteMany({
@@ -117,6 +124,7 @@ export const replaceResellerProfileBulkRateTiers = async ({
 
   return {
     bulkRatesUseCustom,
+    bulkRatesIncludeGlobal: includeGlobal,
     tiers: await prisma.resellerProfileBulkRateTier.findMany({
       where: { resellerProfileId },
       orderBy: { minCredits: 'asc' },
