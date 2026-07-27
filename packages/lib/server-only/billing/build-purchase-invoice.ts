@@ -140,6 +140,18 @@ export const buildPurchaseInvoiceHtml = ({
       `
     : '';
 
+  const pricePerCreditCents =
+    invoice.totalCredits > 0
+      ? Math.round(policy.grossAmountInCents / invoice.totalCredits)
+      : null;
+
+  const pricePerCreditBlock =
+    pricePerCreditCents !== null
+      ? `<div><span>Price per credit</span><span>${escapeHtml(
+          formatAmount(invoice.currency, pricePerCreditCents),
+        )}</span></div>`
+      : '';
+
   const requiredNoteHtml = policy.requiredNote
     ? `<p class="note">${escapeHtml(policy.requiredNote)}</p>`
     : '';
@@ -364,6 +376,7 @@ export const buildPurchaseInvoiceHtml = ({
 
       <div class="totals">
         <div><span>Total credits</span><span>${invoice.totalCredits}</span></div>
+        ${pricePerCreditBlock}
         ${totalsVatBlock}
         <div class="grand">
           <span>Total ${showVatColumns ? 'gross' : 'paid'}</span>

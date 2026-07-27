@@ -12,6 +12,7 @@ import { getI18nInstance } from '../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
 import { env } from '../../utils/env';
 import { renderEmailWithI18N } from '../../utils/render-email-with-i18n';
+import { getAdminNotificationRecipients } from '../user/get-admin-notification-recipients';
 import {
   buildPurchaseInvoiceHtml,
   buildPurchaseInvoicePdf,
@@ -122,9 +123,13 @@ export const sendPurchaseInvoiceEmail = async ({
   ]);
 
   const i18n = await getI18nInstance('en');
-  const subject = isSplitPurchase
+  const customerSubject = isSplitPurchase
     ? i18n._(msg`Your Nomia invoices for ${totalCredits} credits total`)
     : i18n._(msg`Your Nomia invoice for ${totalCredits} credits`);
+  const from = {
+    name: env('NEXT_PRIVATE_SMTP_FROM_NAME') || 'Nomia',
+    address: env('NEXT_PRIVATE_SMTP_FROM_ADDRESS') || 'noreply@nomiadocs.com',
+  };
 
   await mailer.sendMail({
     to: [
@@ -133,18 +138,44 @@ export const sendPurchaseInvoiceEmail = async ({
         address: toEmail,
       },
     ],
-    from: {
-      name: env('NEXT_PRIVATE_SMTP_FROM_NAME') || 'Nomia',
-      address: env('NEXT_PRIVATE_SMTP_FROM_ADDRESS') || 'noreply@nomiadocs.com',
-    },
-    subject,
+    from,
+    subject: customerSubject,
     html,
     text,
     attachments,
   });
 
+  const adminRecipients = (await getAdminNotificationRecipients()).filter(
+    (admin) => admin.email !== toEmail.trim().toLowerCase(),
+  );
+
+  if (adminRecipients.length > 0) {
+    const adminSubject = isSplitPurchase
+      ? i18n._(
+          msg`Admin copy: invoices for ${organisation.name} (${totalCredits} credits total)`,
+        )
+      : i18n._(msg`Admin copy: invoice for ${organisation.name} (${totalCredits} credits)`);
+
+    await mailer
+      .sendMail({
+        to: adminRecipients.map((admin) => ({
+          name: admin.name || 'Nomia Admin',
+          address: admin.email,
+        })),
+        from,
+        subject: adminSubject,
+        html,
+        text,
+        attachments,
+      })
+      .catch((error) => {
+        console.error('[INVOICE]: Failed to send admin invoice copy', error);
+      });
+  }
+
   return {
     sent: true as const,
     invoiceIds: invoices.map((invoice) => invoice.invoiceId),
+    adminCopiesSent: adminRecipients.length,
   };
 };

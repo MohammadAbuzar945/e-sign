@@ -5,6 +5,7 @@ import {
 } from './reseller-vat';
 
 export type ResellerTransactionCsvRow = {
+  id: string;
   createdAt: Date;
   completedAt: Date | null;
   purchaserName: string;
@@ -37,6 +38,7 @@ export const buildResellerTransactionsCsv = ({
 }) => {
   const header = [
     'Date',
+    'Invoice ID',
     'Client Name',
     'Client Email',
     'Client Organisation',
@@ -67,6 +69,7 @@ export const buildResellerTransactionsCsv = ({
 
     return [
       transactionDate.toISOString(),
+      `reseller_${row.id}`,
       escapeCsvValue(row.purchaserName),
       row.purchaserEmail,
       escapeCsvValue(row.purchaserOrganisationName),

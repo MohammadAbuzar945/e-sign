@@ -82,6 +82,7 @@ describe('reseller transaction CSV export', () => {
       resellerVatStatus: 'REGISTERED',
       rows: [
         {
+          id: 'txn_abc',
           createdAt: new Date('2026-07-03T10:00:00.000Z'),
           completedAt: new Date('2026-07-03T10:05:00.000Z'),
           purchaserName: 'Jane Buyer',
@@ -100,6 +101,8 @@ describe('reseller transaction CSV export', () => {
 
     expect(csv).toContain('Reseller,"Nomia Creator"');
     expect(csv).toContain('Reseller VAT Number,"4123456789"');
+    expect(csv).toContain('Invoice ID');
+    expect(csv).toContain('reseller_txn_abc');
     expect(csv).toContain('Jane Buyer');
     expect(csv).toContain('58.70');
     expect(csv).toContain('391.30');
@@ -113,6 +116,7 @@ describe('reseller transaction CSV export', () => {
       resellerVatStatus: 'NOT_REGISTERED',
       rows: [
         {
+          id: 'txn_abc',
           createdAt: new Date('2026-07-03T10:00:00.000Z'),
           completedAt: new Date('2026-07-03T10:05:00.000Z'),
           purchaserName: 'Jane Buyer',

@@ -2,6 +2,7 @@ import { useLingui } from '@lingui/react/macro';
 import { Trans } from '@lingui/react/macro';
 import { InfoIcon } from 'lucide-react';
 
+import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { canAccessResellerBulkTools } from '@documenso/lib/constants/demo-feature-flags';
 import {
   getResellerBankAccountTypeLabel,
@@ -14,6 +15,8 @@ import {
   RESELLER_ADMIN_VIEW,
   type ResellerAdminView,
 } from '@documenso/lib/constants/reseller-application-status';
+import { buildAffiliateUrl } from '@documenso/lib/utils/affiliate-slug';
+import { CopyTextButton } from '@documenso/ui/components/common/copy-text-button';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
@@ -38,6 +41,7 @@ type ResellerApplicationRow = {
   resellerProfile?: {
     id?: string;
     status: string;
+    affiliateSlug?: string;
     allowNegativeCredits?: boolean;
     isDelinquent?: boolean;
     delinquentAt?: Date | string | null;
@@ -159,6 +163,10 @@ export const AdminResellerApplicationActionsPanel = ({
   const payoutReadiness = profile?.payoutReadiness;
   const payoutModeLabel =
     profile?.payoutMode === 'NOMIA_SUBACCOUNT' ? t`Nomia subaccount` : t`Own Paystack`;
+  const affiliateSlug = profile?.affiliateSlug?.trim() || null;
+  const affiliateUrl = affiliateSlug
+    ? buildAffiliateUrl(affiliateSlug, NEXT_PUBLIC_WEBAPP_URL())
+    : null;
 
   return (
     <aside className="animate-in fade-in slide-in-from-right-2 w-full shrink-0 duration-200 lg:w-96">
@@ -189,6 +197,25 @@ export const AdminResellerApplicationActionsPanel = ({
               </Badge>
             ) : null}
           </div>
+
+          {isAccounts && affiliateUrl ? (
+            <div className="space-y-1 rounded-md border bg-muted/30 p-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                <Trans>Affiliate URL</Trans>
+              </p>
+              <div className="flex items-start gap-2">
+                <a
+                  href={affiliateUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="min-w-0 flex-1 break-all text-xs text-primary underline-offset-2 hover:underline"
+                >
+                  {affiliateUrl}
+                </a>
+                <CopyTextButton value={affiliateUrl} />
+              </div>
+            </div>
+          ) : null}
 
           {application.status === 'REJECTED' && application.rejectionReason ? (
             <p className="text-xs text-muted-foreground">{application.rejectionReason}</p>

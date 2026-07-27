@@ -845,7 +845,8 @@ export default function OrganisationSettingsResellerPage() {
               </h2>
               <p className="text-sm text-muted-foreground">
                 <Trans>
-                  Filter and export purchaser details, amounts, VAT, and Paystack references.
+                  Filter and export purchaser details, invoice IDs, amounts, VAT, and Paystack
+                  references.
                 </Trans>
               </p>
             </div>
@@ -916,6 +917,9 @@ export default function OrganisationSettingsResellerPage() {
                     <Trans>Date</Trans>
                   </TableHead>
                   <TableHead>
+                    <Trans>Invoice ID</Trans>
+                  </TableHead>
+                  <TableHead>
                     <Trans>Client</Trans>
                   </TableHead>
                   <TableHead>
@@ -938,7 +942,7 @@ export default function OrganisationSettingsResellerPage() {
               <TableBody>
                 {isTransactionsLoading && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
                       <Trans>Loading transactions...</Trans>
                     </TableCell>
                   </TableRow>
@@ -946,7 +950,7 @@ export default function OrganisationSettingsResellerPage() {
 
                 {!isTransactionsLoading && (transactions?.data ?? []).length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
                       <Trans>No transactions found for the selected filters.</Trans>
                     </TableCell>
                   </TableRow>
@@ -970,6 +974,9 @@ export default function OrganisationSettingsResellerPage() {
                         {new Date(
                           transaction.completedAt ?? transaction.createdAt,
                         ).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate font-mono text-xs">
+                        {transaction.invoiceId}
                       </TableCell>
                       <TableCell>
                         <div>

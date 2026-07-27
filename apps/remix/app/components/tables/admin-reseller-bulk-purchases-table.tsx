@@ -17,29 +17,59 @@ import { DataTablePagination } from '@documenso/ui/primitives/data-table-paginat
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 
-type BulkPurchaseStatus = TFindResellerBulkPurchasesResponse['data'][number]['status'];
+type PurchaseRow = TFindResellerBulkPurchasesResponse['data'][number];
+type PurchaseStatus = PurchaseRow['status'];
+type PurchaseKind = PurchaseRow['kind'];
 
 const formatZarFromCents = (cents: number, currency = 'ZAR') =>
   `${currency} ${(cents / 100).toFixed(2)}`;
 
-const parseBulkPurchaseStatus = (value: string | null): BulkPurchaseStatus | undefined => {
-  if (value === 'PENDING' || value === 'COMPLETED' || value === 'FAILED') {
+const parsePurchaseStatus = (value: string | null): PurchaseStatus | undefined => {
+  if (
+    value === 'PENDING' ||
+    value === 'COMPLETED' ||
+    value === 'FAILED' ||
+    value === 'REFUNDED' ||
+    value === 'ACTIVE' ||
+    value === 'INACTIVE' ||
+    value === 'PAST_DUE'
+  ) {
     return value;
   }
 
   return undefined;
 };
 
-const statusBadgeVariant = (status: BulkPurchaseStatus) => {
-  if (status === 'COMPLETED') {
+const parsePurchaseKind = (value: string | null): PurchaseKind | 'ALL' | undefined => {
+  if (value === 'BULK' || value === 'PAYG' || value === 'SUBSCRIPTION' || value === 'ALL') {
+    return value;
+  }
+
+  return undefined;
+};
+
+const statusBadgeVariant = (status: PurchaseStatus) => {
+  if (status === 'COMPLETED' || status === 'ACTIVE') {
     return 'default' as const;
   }
 
-  if (status === 'FAILED') {
+  if (status === 'FAILED' || status === 'REFUNDED' || status === 'INACTIVE') {
     return 'destructive' as const;
   }
 
   return 'neutral' as const;
+};
+
+const kindLabel = (kind: PurchaseKind) => {
+  if (kind === 'BULK') {
+    return 'Bulk inventory';
+  }
+
+  if (kind === 'PAYG') {
+    return 'Pay as you go';
+  }
+
+  return 'Subscription';
 };
 
 export const AdminResellerBulkPurchasesTable = () => {
@@ -48,13 +78,17 @@ export const AdminResellerBulkPurchasesTable = () => {
   const updateSearchParams = useUpdateSearchParams();
 
   const baseParams = ZUrlSearchParamsSchema.parse(Object.fromEntries(searchParams ?? []));
-  const status = parseBulkPurchaseStatus(searchParams.get('status'));
+  const statusParam = searchParams.get('status');
+  const status =
+    statusParam === 'all' ? undefined : (parsePurchaseStatus(statusParam) ?? 'COMPLETED');
+  const kind = parsePurchaseKind(searchParams.get('kind')) ?? 'ALL';
 
   const { data, isLoading, isLoadingError } = trpc.admin.resellerBulkRates.findPurchases.useQuery({
     query: baseParams.query,
     page: baseParams.page,
     perPage: baseParams.perPage,
     status,
+    kind,
   });
 
   const onPaginationChange = (page: number, perPage: number) => {
@@ -91,19 +125,48 @@ export const AdminResellerBulkPurchasesTable = () => {
         },
       },
       {
+        header: _(msg`Type`),
+        accessorKey: 'kind',
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <Badge variant="neutral">{kindLabel(row.original.kind)}</Badge>
+            {row.original.title ? (
+              <p className="max-w-[180px] truncate text-xs text-muted-foreground">
+                {row.original.title}
+              </p>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        header: _(msg`Invoice`),
+        accessorKey: 'invoiceId',
+        cell: ({ row }) => (
+          <p className="max-w-[160px] truncate font-mono text-xs text-muted-foreground">
+            {row.original.invoiceId}
+          </p>
+        ),
+      },
+      {
         header: _(msg`Organisation`),
         accessorKey: 'organisation',
         cell: ({ row }) => (
           <div className="min-w-0">
-            <Link
-              to={`/admin/organisations/${row.original.organisation.id}`}
-              className="text-sm font-medium text-foreground hover:underline"
-            >
-              {row.original.organisation.name}
-            </Link>
-            <p className="truncate text-xs text-muted-foreground">
-              /o/{row.original.organisation.url}
-            </p>
+            {row.original.organisation.url ? (
+              <Link
+                to={`/admin/organisations/${row.original.organisation.id}`}
+                className="text-sm font-medium text-foreground hover:underline"
+              >
+                {row.original.organisation.name}
+              </Link>
+            ) : (
+              <p className="text-sm font-medium">{row.original.organisation.name}</p>
+            )}
+            {row.original.organisation.url ? (
+              <p className="truncate text-xs text-muted-foreground">
+                /o/{row.original.organisation.url}
+              </p>
+            ) : null}
           </div>
         ),
       },
@@ -138,15 +201,6 @@ export const AdminResellerBulkPurchasesTable = () => {
         ),
       },
       {
-        header: _(msg`Rate / credit`),
-        accessorKey: 'pricePerCreditCents',
-        cell: ({ row }) => (
-          <p className="whitespace-nowrap tabular-nums text-sm">
-            {formatZarFromCents(row.original.pricePerCreditCents, row.original.currency)}
-          </p>
-        ),
-      },
-      {
         header: _(msg`Status`),
         accessorKey: 'status',
         cell: ({ row }) => (
@@ -158,11 +212,11 @@ export const AdminResellerBulkPurchasesTable = () => {
         accessorKey: 'paystackReference',
         cell: ({ row }) => (
           <p className="max-w-[140px] truncate font-mono text-xs text-muted-foreground">
-            {row.original.paystackReference}
+            {row.original.paystackReference ?? '—'}
           </p>
         ),
       },
-    ] satisfies DataTableColumnDef<(typeof results)['data'][number]>[];
+    ] satisfies DataTableColumnDef<PurchaseRow>[];
   }, [_, i18n]);
 
   return (
@@ -170,10 +224,10 @@ export const AdminResellerBulkPurchasesTable = () => {
       {isLoadingError ? (
         <Alert variant="destructive" className="mb-4">
           <AlertTitle>
-            <Trans>Unable to load bulk purchases</Trans>
+            <Trans>Unable to load purchases</Trans>
           </AlertTitle>
           <AlertDescription>
-            <Trans>Something went wrong while loading reseller bulk purchase history.</Trans>
+            <Trans>Something went wrong while loading purchase and invoice history.</Trans>
           </AlertDescription>
         </Alert>
       ) : null}
@@ -197,6 +251,12 @@ export const AdminResellerBulkPurchasesTable = () => {
                 <Skeleton className="h-4 w-28" />
               </TableCell>
               <TableCell>
+                <Skeleton className="h-4 w-24" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-28" />
+              </TableCell>
+              <TableCell>
                 <Skeleton className="h-4 w-36" />
               </TableCell>
               <TableCell>
@@ -204,9 +264,6 @@ export const AdminResellerBulkPurchasesTable = () => {
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-16" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-20" />
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-20" />
