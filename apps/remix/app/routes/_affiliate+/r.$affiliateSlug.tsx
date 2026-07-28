@@ -1,7 +1,7 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
@@ -32,6 +32,13 @@ import {
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
 import { Label } from '@documenso/ui/primitives/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@documenso/ui/primitives/select';
 import { Switch } from '@documenso/ui/primitives/switch';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
@@ -65,11 +72,31 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   const organisations = sessionData?.organisations ?? [];
   const currentUserId = sessionData?.user?.id;
 
-  const purchaserOrganisation = organisations.find((org) => org.ownerUserId === currentUserId);
-  const isPurchaseHistoryOwner =
-    Boolean(purchaserOrganisation) &&
-    Boolean(currentUserId) &&
-    purchaserOrganisation?.ownerUserId === currentUserId;
+  const ownedOrganisations = useMemo(
+    () => organisations.filter((org) => org.ownerUserId === currentUserId),
+    [organisations, currentUserId],
+  );
+
+  const [selectedOrganisationId, setSelectedOrganisationId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (ownedOrganisations.length === 0) {
+      setSelectedOrganisationId(null);
+      return;
+    }
+
+    const hasSelectedOrganisation = ownedOrganisations.some(
+      (org) => org.id === selectedOrganisationId,
+    );
+
+    if (!selectedOrganisationId || !hasSelectedOrganisation) {
+      setSelectedOrganisationId(ownedOrganisations[0].id);
+    }
+  }, [ownedOrganisations, selectedOrganisationId]);
+
+  const purchaserOrganisation =
+    ownedOrganisations.find((org) => org.id === selectedOrganisationId) ?? null;
+  const isPurchaseHistoryOwner = Boolean(purchaserOrganisation);
   const canViewPurchaseHistory =
     isPurchaseHistoryOwner && canAccessInvoiceHistory(sessionData?.user?.email);
   const canLoadBillingAttribution =
@@ -103,6 +130,10 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       enabled: Boolean(canViewPurchaseHistory && purchaserOrganisation?.id),
     },
   );
+
+  useEffect(() => {
+    setStickyBillingOptIn(null);
+  }, [purchaserOrganisation?.id]);
 
   useEffect(() => {
     if (!billingAttribution) {
@@ -553,13 +584,53 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-2 sm:items-end">
+        <div className="flex flex-col items-center gap-3 sm:items-end">
           {isAuthenticated ? (
-            <Button variant="outline" size="sm" asChild>
-              <Link to={purchaserOrganisation ? `/o/${purchaserOrganisation.url}` : '/'}>
-                <Trans>Go to dashboard</Trans>
-              </Link>
-            </Button>
+            <>
+              {ownedOrganisations.length > 0 ? (
+                <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:items-end">
+                  <Label
+                    htmlFor="affiliate-purchase-organisation"
+                    className="text-xs text-muted-foreground"
+                  >
+                    <Trans>Buying for</Trans>
+                  </Label>
+                  {ownedOrganisations.length > 1 ? (
+                    <Select
+                      value={selectedOrganisationId ?? undefined}
+                      onValueChange={setSelectedOrganisationId}
+                    >
+                      <SelectTrigger
+                        id="affiliate-purchase-organisation"
+                        className="w-full sm:w-[240px]"
+                      >
+                        <SelectValue placeholder={_(msg`Select organisation`)} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ownedOrganisations.map((organisation) => (
+                          <SelectItem key={organisation.id} value={organisation.id}>
+                            {organisation.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p
+                      id="affiliate-purchase-organisation"
+                      className="text-sm font-medium text-foreground"
+                    >
+                      {ownedOrganisations[0].name}
+                    </p>
+                  )}
+                </div>
+              ) : null}
+
+              <Button variant="outline" size="sm" asChild>
+                <Link to={purchaserOrganisation ? `/o/${purchaserOrganisation.url}` : '/'}>
+                  <Trans>Go to dashboard</Trans>
+                </Link>
+              </Button>
+            </>
           ) : (
             <Button variant="outline" size="sm" asChild>
               <Link to={`/signin?returnTo=${encodeURIComponent(returnTo)}`}>
