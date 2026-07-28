@@ -78,6 +78,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
   );
 
   const [selectedOrganisationId, setSelectedOrganisationId] = useState<string | null>(null);
+  const orgUrlFromQuery = searchParams.get('orgUrl');
 
   useEffect(() => {
     if (ownedOrganisations.length === 0) {
@@ -85,14 +86,28 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       return;
     }
 
+    const organisationFromBillingContext = orgUrlFromQuery
+      ? ownedOrganisations.find((org) => org.url === orgUrlFromQuery)
+      : null;
+
+    if (organisationFromBillingContext) {
+      if (selectedOrganisationId !== organisationFromBillingContext.id) {
+        setSelectedOrganisationId(organisationFromBillingContext.id);
+      }
+
+      return;
+    }
+
     const hasSelectedOrganisation = ownedOrganisations.some(
       (org) => org.id === selectedOrganisationId,
     );
 
-    if (!selectedOrganisationId || !hasSelectedOrganisation) {
-      setSelectedOrganisationId(ownedOrganisations[0].id);
+    if (selectedOrganisationId && hasSelectedOrganisation) {
+      return;
     }
-  }, [ownedOrganisations, selectedOrganisationId]);
+
+    setSelectedOrganisationId(ownedOrganisations[0].id);
+  }, [ownedOrganisations, orgUrlFromQuery, selectedOrganisationId]);
 
   const purchaserOrganisation =
     ownedOrganisations.find((org) => org.id === selectedOrganisationId) ?? null;
@@ -398,7 +413,9 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     };
   }, [navigate, nomiaPricePlanPath, shouldRedirectToNomia]);
 
-  const returnTo = `/r/${affiliateSlug}`;
+  const returnTo = orgUrlFromQuery
+    ? `/r/${affiliateSlug}?orgUrl=${encodeURIComponent(orgUrlFromQuery)}`
+    : `/r/${affiliateSlug}`;
 
   const handleBuyNow = async (packageId: string) => {
     if (!isAuthenticated) {
@@ -598,7 +615,21 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
                   {ownedOrganisations.length > 1 ? (
                     <Select
                       value={selectedOrganisationId ?? undefined}
-                      onValueChange={setSelectedOrganisationId}
+                      onValueChange={(organisationId) => {
+                        setSelectedOrganisationId(organisationId);
+
+                        const selectedOrganisation = ownedOrganisations.find(
+                          (org) => org.id === organisationId,
+                        );
+
+                        if (!selectedOrganisation) {
+                          return;
+                        }
+
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('orgUrl', selectedOrganisation.url);
+                        setSearchParams(nextParams, { replace: true });
+                      }}
                     >
                       <SelectTrigger
                         id="affiliate-purchase-organisation"
@@ -654,12 +685,20 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
             <div className="flex shrink-0 items-center gap-3 self-start sm:pt-0.5">
               <Label
                 htmlFor="sticky-billing-opt-in"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className={cn(
+                  'text-sm font-medium leading-none transition-colors',
+                  stickyBillingOptIn === true
+                    ? 'text-foreground opacity-100'
+                    : 'text-muted-foreground opacity-50',
+                )}
               >
                 <Trans>Always buy from this reseller</Trans>
               </Label>
               <Switch
                 id="sticky-billing-opt-in"
+                className={cn(
+                  stickyBillingOptIn === true && 'opacity-100 disabled:opacity-100',
+                )}
                 checked={stickyBillingOptIn === true}
                 disabled={isUpdatingStickyBilling || stickyBillingOptIn === null}
                 onCheckedChange={(checked) => {

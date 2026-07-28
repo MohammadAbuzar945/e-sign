@@ -4,7 +4,11 @@ import {
   SubscriptionStatus,
 } from '@prisma/client';
 
-import { getNomiaSubscriptionPlanDetails } from '@documenso/lib/constants/nomia-subscription-plans';
+import {
+  findNomiaSubscriptionPlanForChargeFromCatalog,
+  getNomiaSubscriptionPlanDetailsFromCatalog,
+} from '@documenso/lib/server-only/billing/nomia-price-catalog';
+import { formatNomiaSubscriptionPlanTitle } from '@documenso/lib/constants/nomia-subscription-plans';
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { prisma } from '@documenso/prisma';
 
@@ -48,6 +52,41 @@ const mapSubscriptionLedgerStatus = (
   return 'INACTIVE';
 };
 
+const mapNomiaPurchaseKind = (
+  purchaseType: 'PAYG' | 'BULK' | 'SUBSCRIPTION',
+): AdminPurchaseInvoiceKind => {
+  if (purchaseType === 'BULK') {
+    return 'BULK';
+  }
+
+  if (purchaseType === 'SUBSCRIPTION') {
+    return 'SUBSCRIPTION';
+  }
+
+  return 'PAYG';
+};
+
+const resolveNomiaPurchaseTitle = async ({
+  purchaseType,
+  credits,
+  grossAmount,
+}: {
+  purchaseType: 'PAYG' | 'BULK' | 'SUBSCRIPTION';
+  credits: number;
+  grossAmount: number;
+}) => {
+  if (purchaseType !== 'SUBSCRIPTION') {
+    return null;
+  }
+
+  return formatNomiaSubscriptionPlanTitle(
+    await findNomiaSubscriptionPlanForChargeFromCatalog({
+      credits,
+      priceInCents: grossAmount,
+    }),
+  );
+};
+
 const buildNomiaPurchaseSearchOr = (
   trimmedQuery: string,
 ): Prisma.OrganisationCreditPurchaseWhereInput['OR'] => {
@@ -83,7 +122,8 @@ const buildNomiaPurchaseSearchOr = (
 
 /**
  * Admin Nomia purchase/invoice ledger only:
- * PAYG top-ups, bulk inventory, and subscriptions.
+ * PAYG top-ups, bulk inventory, and per-charge subscriptions.
+ * ACTIVE / INACTIVE / PAST_DUE still surface live Subscription rows.
  */
 export const findResellerBulkPurchases = async ({
   query = '',
@@ -99,23 +139,23 @@ export const findResellerBulkPurchases = async ({
 
   const isSubscriptionOnlyStatus =
     status === 'ACTIVE' || status === 'INACTIVE' || status === 'PAST_DUE';
-  const isPurchaseOnlyStatus =
-    status === 'COMPLETED' ||
-    status === 'PENDING' ||
-    status === 'FAILED' ||
-    status === 'REFUNDED';
 
   const includeNomia =
-    (kind === 'ALL' || kind === 'BULK' || kind === 'PAYG') &&
+    (kind === 'ALL' || kind === 'BULK' || kind === 'PAYG' || kind === 'SUBSCRIPTION') &&
     status !== 'REFUNDED' &&
     !isSubscriptionOnlyStatus;
+  // Live subscription lifecycle rows only when filtering by ACTIVE/INACTIVE/PAST_DUE.
   const includeSubscriptions =
-    (kind === 'ALL' || kind === 'SUBSCRIPTION') &&
-    status !== 'REFUNDED' &&
-    !isPurchaseOnlyStatus;
+    isSubscriptionOnlyStatus && (kind === 'ALL' || kind === 'SUBSCRIPTION');
 
   const nomiaPurchaseType =
-    kind === 'BULK' ? ('BULK' as const) : kind === 'PAYG' ? ('PAYG' as const) : undefined;
+    kind === 'BULK'
+      ? ('BULK' as const)
+      : kind === 'PAYG'
+        ? ('PAYG' as const)
+        : kind === 'SUBSCRIPTION'
+          ? ('SUBSCRIPTION' as const)
+          : undefined;
 
   const nomiaWhere: Prisma.OrganisationCreditPurchaseWhereInput = {
     ...(nomiaPurchaseType ? { purchaseType: nomiaPurchaseType } : {}),
@@ -234,61 +274,69 @@ export const findResellerBulkPurchases = async ({
       : Promise.resolve(0),
   ]);
 
-  const nomiaMapped = nomiaRows.map((row) => ({
-    id: row.id,
-    invoiceId: resolveNomiaPurchaseInvoiceId({ purchaseId: row.id }),
-    kind: (row.purchaseType === 'BULK' ? 'BULK' : 'PAYG') as AdminPurchaseInvoiceKind,
-    issuer: 'NOMIA' as const,
-    createdAt: row.createdAt,
-    completedAt: row.completedAt,
-    status: row.status as AdminPurchaseInvoiceStatus,
-    credits: row.credits,
-    grossAmount: row.grossAmount,
-    currency: row.currency,
-    paystackReference: row.paystackReference,
-    pricePerCreditCents: row.credits > 0 ? Math.round(row.grossAmount / row.credits) : 0,
-    organisation: row.organisation,
-    user: row.user,
-    resellerName: null as string | null,
-    resellerAffiliateSlug: null as string | null,
-    title: null as string | null,
-  }));
-
-  const subscriptionMapped = subscriptionRows.map((row) => {
-    const planCode = row.priceId || row.planId;
-    const planDetails = getNomiaSubscriptionPlanDetails(planCode);
-    const credits = planDetails?.credits ?? 0;
-    const grossAmount = planDetails?.priceInCents ?? 0;
-    const title = planDetails ? `${planDetails.label} — ${planDetails.name}` : planCode;
-
-    return {
-      id: String(row.id),
-      invoiceId: `subscription_${row.id}`,
-      kind: 'SUBSCRIPTION' as const,
+  const nomiaMapped = await Promise.all(
+    nomiaRows.map(async (row) => ({
+      id: row.id,
+      invoiceId: resolveNomiaPurchaseInvoiceId({ purchaseId: row.id }),
+      kind: mapNomiaPurchaseKind(row.purchaseType),
       issuer: 'NOMIA' as const,
       createdAt: row.createdAt,
-      completedAt: row.updatedAt,
-      status: mapSubscriptionLedgerStatus(row.status),
-      credits,
-      grossAmount,
-      currency: 'ZAR',
-      paystackReference: planCode,
-      pricePerCreditCents: credits > 0 ? Math.round(grossAmount / credits) : 0,
-      organisation: {
-        id: row.organisation.id,
-        name: row.organisation.name,
-        url: row.organisation.url,
-      },
-      user: {
-        id: row.organisation.owner.id,
-        name: row.organisation.owner.name,
-        email: row.organisation.owner.email,
-      },
+      completedAt: row.completedAt,
+      status: row.status as AdminPurchaseInvoiceStatus,
+      credits: row.credits,
+      grossAmount: row.grossAmount,
+      currency: row.currency,
+      paystackReference: row.paystackReference,
+      pricePerCreditCents: row.credits > 0 ? Math.round(row.grossAmount / row.credits) : 0,
+      organisation: row.organisation,
+      user: row.user,
       resellerName: null as string | null,
       resellerAffiliateSlug: null as string | null,
-      title,
-    };
-  });
+      title: await resolveNomiaPurchaseTitle({
+        purchaseType: row.purchaseType,
+        credits: row.credits,
+        grossAmount: row.grossAmount,
+      }),
+    })),
+  );
+
+  const subscriptionMapped = await Promise.all(
+    subscriptionRows.map(async (row) => {
+      const planCode = row.priceId || row.planId;
+      const planDetails = await getNomiaSubscriptionPlanDetailsFromCatalog(planCode);
+      const credits = planDetails?.credits ?? 0;
+      const grossAmount = planDetails?.priceInCents ?? 0;
+      const title = formatNomiaSubscriptionPlanTitle(planDetails, planCode);
+
+      return {
+        id: String(row.id),
+        invoiceId: `subscription_${row.id}`,
+        kind: 'SUBSCRIPTION' as const,
+        issuer: 'NOMIA' as const,
+        createdAt: row.createdAt,
+        completedAt: row.updatedAt,
+        status: mapSubscriptionLedgerStatus(row.status),
+        credits,
+        grossAmount,
+        currency: 'ZAR',
+        paystackReference: planCode,
+        pricePerCreditCents: credits > 0 ? Math.round(grossAmount / credits) : 0,
+        organisation: {
+          id: row.organisation.id,
+          name: row.organisation.name,
+          url: row.organisation.url,
+        },
+        user: {
+          id: row.organisation.owner.id,
+          name: row.organisation.owner.name,
+          email: row.organisation.owner.email,
+        },
+        resellerName: null as string | null,
+        resellerAffiliateSlug: null as string | null,
+        title,
+      };
+    }),
+  );
 
   const merged = [...nomiaMapped, ...subscriptionMapped].sort((a, b) => {
     const aTime = (a.completedAt ?? a.createdAt).getTime();
@@ -311,18 +359,23 @@ export const findResellerBulkPurchases = async ({
 };
 
 /**
- * Export completed Nomia PAYG/bulk purchases and active subscriptions.
+ * Export completed Nomia PAYG/bulk/subscription charge invoices.
  */
 export const exportCompletedAdminPurchaseInvoices = async ({
   query = '',
   kind = 'ALL',
 }: ExportCompletedAdminPurchaseInvoicesOptions) => {
   const trimmedQuery = query.trim();
-  const includeNomia = kind === 'ALL' || kind === 'BULK' || kind === 'PAYG';
-  const includeSubscriptions = kind === 'ALL' || kind === 'SUBSCRIPTION';
+  const includeNomia = kind === 'ALL' || kind === 'BULK' || kind === 'PAYG' || kind === 'SUBSCRIPTION';
 
   const nomiaPurchaseType =
-    kind === 'BULK' ? ('BULK' as const) : kind === 'PAYG' ? ('PAYG' as const) : undefined;
+    kind === 'BULK'
+      ? ('BULK' as const)
+      : kind === 'PAYG'
+        ? ('PAYG' as const)
+        : kind === 'SUBSCRIPTION'
+          ? ('SUBSCRIPTION' as const)
+          : undefined;
 
   const nomiaWhere: Prisma.OrganisationCreditPurchaseWhereInput = {
     status: OrganisationCreditPurchaseStatus.COMPLETED,
@@ -330,49 +383,12 @@ export const exportCompletedAdminPurchaseInvoices = async ({
     ...(trimmedQuery ? { OR: buildNomiaPurchaseSearchOr(trimmedQuery) } : {}),
   };
 
-  const subscriptionWhere: Prisma.SubscriptionWhereInput = {
-    status: SubscriptionStatus.ACTIVE,
-    ...(trimmedQuery
-      ? {
-          OR: [
-            { planId: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive } },
-            { priceId: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive } },
-            { customerId: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive } },
-            {
-              organisation: {
-                name: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive },
-              },
-            },
-            {
-              organisation: {
-                url: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive },
-              },
-            },
-            {
-              organisation: {
-                owner: {
-                  email: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive },
-                },
-              },
-            },
-            {
-              organisation: {
-                owner: {
-                  name: { contains: trimmedQuery, mode: Prisma.QueryMode.insensitive },
-                },
-              },
-            },
-          ],
-        }
-      : {}),
-  };
-
-  const [nomiaRows, subscriptionRows, nomiaCount, subscriptionCount] = await Promise.all([
+  const [nomiaRows, nomiaCount] = await Promise.all([
     includeNomia
       ? prisma.organisationCreditPurchase.findMany({
           where: nomiaWhere,
           take: ADMIN_PURCHASE_INVOICE_EXPORT_LIMIT,
-          orderBy: { completedAt: 'desc' },
+          orderBy: { createdAt: 'desc' },
           select: {
             id: true,
             createdAt: true,
@@ -397,44 +413,15 @@ export const exportCompletedAdminPurchaseInvoices = async ({
           },
         })
       : Promise.resolve([]),
-    includeSubscriptions
-      ? prisma.subscription.findMany({
-          where: subscriptionWhere,
-          take: ADMIN_PURCHASE_INVOICE_EXPORT_LIMIT,
-          orderBy: { updatedAt: 'desc' },
-          select: {
-            id: true,
-            createdAt: true,
-            updatedAt: true,
-            planId: true,
-            priceId: true,
-            organisation: {
-              select: {
-                name: true,
-                url: true,
-                owner: {
-                  select: {
-                    name: true,
-                    email: true,
-                  },
-                },
-              },
-            },
-          },
-        })
-      : Promise.resolve([]),
     includeNomia
       ? prisma.organisationCreditPurchase.count({ where: nomiaWhere })
-      : Promise.resolve(0),
-    includeSubscriptions
-      ? prisma.subscription.count({ where: subscriptionWhere })
       : Promise.resolve(0),
   ]);
 
   const nomiaMapped = nomiaRows.map((row) => ({
     id: row.id,
     invoiceId: resolveNomiaPurchaseInvoiceId({ purchaseId: row.id }),
-    kind: (row.purchaseType === 'BULK' ? 'BULK' : 'PAYG') as AdminPurchaseInvoiceKind,
+    kind: mapNomiaPurchaseKind(row.purchaseType),
     createdAt: row.createdAt,
     completedAt: row.completedAt,
     status: 'COMPLETED' as const,
@@ -449,39 +436,14 @@ export const exportCompletedAdminPurchaseInvoices = async ({
     purchaserEmail: row.user.email,
   }));
 
-  const subscriptionMapped = subscriptionRows.map((row) => {
-    const planCode = row.priceId || row.planId;
-    const planDetails = getNomiaSubscriptionPlanDetails(planCode);
-    const credits = planDetails?.credits ?? 0;
-    const grossAmount = planDetails?.priceInCents ?? 0;
-
-    return {
-      id: String(row.id),
-      invoiceId: `subscription_${row.id}`,
-      kind: 'SUBSCRIPTION' as const,
-      createdAt: row.createdAt,
-      completedAt: row.updatedAt,
-      status: 'ACTIVE' as const,
-      credits,
-      grossAmount,
-      currency: 'ZAR',
-      paystackReference: planCode,
-      pricePerCreditCents: credits > 0 ? Math.round(grossAmount / credits) : 0,
-      organisationName: row.organisation.name,
-      organisationUrl: row.organisation.url,
-      purchaserName: row.organisation.owner.name,
-      purchaserEmail: row.organisation.owner.email,
-    };
-  });
-
-  const merged = [...nomiaMapped, ...subscriptionMapped].sort((a, b) => {
+  const merged = [...nomiaMapped].sort((a, b) => {
     const aTime = (a.completedAt ?? a.createdAt).getTime();
     const bTime = (b.completedAt ?? b.createdAt).getTime();
 
     return bTime - aTime;
   });
 
-  const count = nomiaCount + subscriptionCount;
+  const count = nomiaCount;
 
   return {
     data: merged.slice(0, ADMIN_PURCHASE_INVOICE_EXPORT_LIMIT),

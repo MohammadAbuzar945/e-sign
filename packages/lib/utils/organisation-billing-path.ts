@@ -39,7 +39,7 @@ export const resolveOrganisationBillingPath = ({
     isStickyOptIn && Boolean(billingAttribution.affiliateSlug);
 
   if (shouldUseAffiliateBilling && billingAttribution.affiliateSlug) {
-    return `/r/${billingAttribution.affiliateSlug}`;
+    return `/r/${billingAttribution.affiliateSlug}?orgUrl=${encodeURIComponent(organisationUrl)}`;
   }
 
   return defaultPath;

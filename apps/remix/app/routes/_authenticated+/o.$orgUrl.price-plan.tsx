@@ -20,6 +20,9 @@ import { getOrganisationBillingAttributionSummary } from '@documenso/lib/server-
 import { resolveOrganisationBillingPath } from '@documenso/lib/utils/organisation-billing-path';
 import { prisma } from '@documenso/prisma';
 import { useSession } from '@documenso/lib/client-only/providers/session';
+import {
+  getNomiaPricePlansUiCatalog,
+} from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import { getOrganisationPurchaseHistory } from '@documenso/lib/server-only/billing/get-organisation-purchase-history';
 import { getSubscriptionsByUserId } from '@documenso/lib/server-only/subscription/get-subscriptions-by-user-id';
 import { Button } from '@documenso/ui/primitives/button';
@@ -87,7 +90,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
   const canViewInvoiceHistory = canAccessInvoiceHistory(user.email);
 
-  const [subscriptions, purchaseHistory, resellerProfile] = await Promise.all([
+  const [subscriptions, purchaseHistory, resellerProfile, plansData] = await Promise.all([
     getSubscriptionsByUserId({ organisationId: organisation.id }),
     canViewInvoiceHistory
       ? getOrganisationPurchaseHistory({ organisationId: organisation.id })
@@ -96,6 +99,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
       where: { organisationId: organisation.id },
       select: { id: true, status: true },
     }),
+    getNomiaPricePlansUiCatalog(),
   ]);
 
   return superLoaderJson({
@@ -105,265 +109,9 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     organisation,
     isActiveReseller: resellerProfile?.status === 'ACTIVE',
     canViewInvoiceHistory,
+    plansData,
   });
 };
-
-const payAsYouGoRedirects = {
-  '20': 'https://paystack.shop/pay/testqoiw2m',
-  '50': 'https://paystack.shop/pay/guc0g9s57q',
-  '100': 'https://paystack.shop/pay/dfpu1arzjn',
-  '200': 'https://paystack.shop/pay/c4jdb6jsv7',
-  '500': 'https://paystack.shop/pay/bpbblrunck',
-  '1000': 'https://paystack.shop/pay/q2shmym9rjg',
-};
-
-const TEST_PLANS_DATA = {
-  'Pay-as-you-go / Top-up': [
-    {
-      name: '20 envelopes',
-      credits: 20,
-      amount: 'ZAR 190',
-      planCode: 'PLN_bit1oy0ayiqpkdu',
-      label: 'Pay as you go',
-      redirect_url: payAsYouGoRedirects[20],
-    },
-    {
-      name: '50 envelopes',
-      credits: 50,
-      amount: 'ZAR 450',
-      planCode: 'PLN_59961ig3ply5r3s',
-      label: 'Pay as you go',
-      redirect_url: payAsYouGoRedirects[50],
-    },
-    {
-      name: '100 envelopes',
-      credits: 100,
-      amount: 'ZAR 850',
-      planCode: 'PLN_ktbomtrjkiz73i1',
-      label: 'Pay as you go',
-      redirect_url: payAsYouGoRedirects[100],
-    },
-    {
-      name: '200 envelopes',
-      credits: 200,
-      amount: 'ZAR 1,600',
-      planCode: 'PLN_kxqcw02dow71g6c',
-      label: 'Pay as you go',
-      redirect_url: payAsYouGoRedirects[200],
-    },
-    {
-      name: '500 envelopes',
-      credits: 500,
-      amount: 'ZAR 3,750',
-      planCode: 'PLN_5nmok91ploz44u6',
-      label: 'Pay as you go',
-      redirect_url: payAsYouGoRedirects[500],
-    },
-    {
-      name: '1000 envelopes',
-      credits: 1000,
-      amount: 'ZAR 7,000',
-      planCode: 'PLN_f54sm9jv38v7r5m',
-      label: 'Pay as you go',
-      redirect_url: payAsYouGoRedirects[1000],
-    },
-  ],
-  Monthly: [
-    {
-      name: '20 envelopes',
-      credits: 20,
-      amount: 'ZAR 170',
-      planCode: 'PLN_1croxh14pyq4cj7',
-      label: 'Monthly',
-    },
-    {
-      name: '50 envelopes',
-      credits: 50,
-      amount: 'ZAR 400',
-      planCode: 'PLN_zel9llutx085dp9',
-      label: 'Monthly',
-    },
-    {
-      name: '100 envelopes',
-      credits: 100,
-      amount: 'ZAR 750',
-      planCode: 'PLN_yvo5ujkxt1diiak',
-      label: 'Monthly',
-    },
-    {
-      name: '200 envelopes',
-      credits: 200,
-      amount: 'ZAR 1,400',
-      planCode: 'PLN_0oqk4fljy5uais0',
-      label: 'Monthly',
-    },
-    {
-      name: '500 envelopes',
-      credits: 500,
-      amount: 'ZAR 3,250',
-      planCode: 'PLN_27yc6cxtga9huy7',
-      label: 'Monthly',
-    },
-    {
-      name: '1000 envelopes',
-      credits: 1000,
-      amount: 'ZAR 6,000',
-      planCode: 'PLN_q4qbiwreibc8qr5',
-      label: 'Monthly',
-    },
-  ],
-  Annual: [
-    {
-      name: '240 envelopes',
-      credits: 240,
-      amount: 'ZAR 1,700',
-      planCode: 'PLN_coac3n7m4jo59ct',
-      label: 'Annually',
-    },
-    {
-      name: '600 envelopes',
-      credits: 600,
-      amount: 'ZAR 4,000',
-      planCode: 'PLN_8kh731h1ojcx37d',
-      label: 'Annually',
-    },
-    {
-      name: '1200 envelopes',
-      credits: 1200,
-      amount: 'ZAR 7,500',
-      planCode: 'PLN_tzngz1lbhvxnufb',
-      label: 'Annually',
-    },
-    {
-      name: '2400 envelopes',
-      credits: 2400,
-      amount: 'ZAR 14,000',
-      planCode: 'PLN_kn6j6ur12pedilo',
-      label: 'Annually',
-    },
-    {
-      name: '6000 envelopes',
-      credits: 6000,
-      amount: 'ZAR 33,000',
-      planCode: 'PLN_moko1x694rvm5l8',
-      label: 'Annually',
-    },
-    {
-      name: '12000 envelopes',
-      credits: 12000,
-      amount: 'ZAR 60,000',
-      planCode: 'PLN_scnf05tt3vrui2i',
-      label: 'Annually',
-    },
-  ],
-} as const;
-
-const LIVE_PLANS_DATA = {
-  'Pay-as-you-go / Top-up': TEST_PLANS_DATA['Pay-as-you-go / Top-up'],
-  Monthly: [
-    {
-      name: '20 envelopes',
-      credits: 20,
-      amount: 'ZAR 170',
-      planCode: 'PLN_4yptquhayqxdx68',
-      label: 'Monthly',
-    },
-    {
-      name: '50 envelopes',
-      credits: 50,
-      amount: 'ZAR 400',
-      planCode: 'PLN_m0iv4x08zo10128',
-      label: 'Monthly',
-    },
-    {
-      name: '100 envelopes',
-      credits: 100,
-      amount: 'ZAR 750',
-      planCode: 'PLN_hhfxiemem179vbl',
-      label: 'Monthly',
-    },
-    {
-      name: '200 envelopes',
-      credits: 200,
-      amount: 'ZAR 1,400',
-      planCode: 'PLN_4lu7sf9rbtotr2n',
-      label: 'Monthly',
-    },
-    {
-      name: '500 envelopes',
-      credits: 500,
-      amount: 'ZAR 3,250',
-      planCode: 'PLN_b3xu6wzwym77ifa',
-      label: 'Monthly',
-    },
-    {
-      name: '1000 envelopes',
-      credits: 1000,
-      amount: 'ZAR 6,000',
-      planCode: 'PLN_sat4vs3qy4btmjj',
-      label: 'Monthly',
-    },
-  ],
-  Annual: [
-    {
-      name: '240 envelopes',
-      credits: 240,
-      amount: 'ZAR 1,700',
-      planCode: 'PLN_9xcixnz5a5kh14x',
-      label: 'Annually',
-    },
-    {
-      name: '600 envelopes',
-      credits: 600,
-      amount: 'ZAR 4,000',
-      planCode: 'PLN_aq2fdnx8jpzxnuf',
-      label: 'Annually',
-    },
-    {
-      name: '1200 envelopes',
-      credits: 1200,
-      amount: 'ZAR 7,500',
-      planCode: 'PLN_4od24fxbpa947cw',
-      label: 'Annually',
-    },
-    {
-      name: '2400 envelopes',
-      credits: 2400,
-      amount: 'ZAR 14,000',
-      planCode: 'PLN_lybvu4aaf5ry1jf',
-      label: 'Annually',
-    },
-    {
-      name: '6000 envelopes',
-      credits: 6000,
-      amount: 'ZAR 32,500',
-      planCode: 'PLN_tdlrkbcuxy1w91v',
-      label: 'Annually',
-    },
-    {
-      name: '12000 envelopes',
-      credits: 12000,
-      amount: 'ZAR 60,000',
-      planCode: 'PLN_60j0btaxtinfc7j',
-      label: 'Annually',
-    },
-  ],
-} as const;
-
-// Use test plans when web URL is sign.nomiadocs.com or localhost
-const isTestPaystackEnv = (() => {
-  const baseUrl = NEXT_PUBLIC_WEBAPP_URL();
-  try {
-    const url = new URL(baseUrl);
-    const hostname = url.hostname;
-    return hostname === 'sign.nomiadocs.com' || hostname.includes('localhost');
-  } catch {
-    // Fallback to includes check if URL parsing fails
-    return baseUrl.includes('sign.nomiadocs.com') || baseUrl.includes('localhost');
-  }
-})();
-
-const plansData = isTestPaystackEnv ? TEST_PLANS_DATA : LIVE_PLANS_DATA;
 
 function PlanCard({
   title,
@@ -452,8 +200,14 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
   const revalidator = useRevalidator();
 
   const { orgUrl } = params;
-  const { subscriptions, purchaseHistory, organisation, isActiveReseller, canViewInvoiceHistory } =
-    useSuperLoaderData<typeof loader>();
+  const {
+    subscriptions,
+    purchaseHistory,
+    organisation,
+    isActiveReseller,
+    canViewInvoiceHistory,
+    plansData,
+  } = useSuperLoaderData<typeof loader>();
   const currentSubscriptionData: any = subscriptions?.find((data: any) => data.status === 'ACTIVE');
   const activeSubscriptionPlanId = currentSubscriptionData?.priceId;
   const activeSubscriptionCode = currentSubscriptionData?.planId;

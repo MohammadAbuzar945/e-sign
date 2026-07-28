@@ -1231,6 +1231,7 @@ enum OrganisationCreditPurchaseStatus {
 enum OrganisationCreditPurchaseType {
   PAYG
   BULK
+  SUBSCRIPTION
 }
 
 model OrganisationCreditPurchase {
@@ -1436,6 +1437,39 @@ model ResellerVatRegistration {
 
   @@index([resellerProfileId, validFrom])
   @@index([resellerProfileId, endedAt])
+}
+
+enum NomiaPricePlanCategory {
+  PAYG
+  MONTHLY
+  ANNUAL
+}
+
+/// Admin-editable Nomia PAYG / monthly / annual catalog (credits, prices, Paystack codes).
+model NomiaPricePlan {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category NomiaPricePlanCategory
+  name     String
+  credits  Int
+  /// Amount charged in ZAR cents (display + PAYG charge amount).
+  priceInCents Int
+  currency     String @default("ZAR")
+
+  paystackPlanCodeTest String
+  paystackPlanCodeLive String
+  paystackPaymentUrlTest String?
+  paystackPaymentUrlLive String?
+
+  isEnabled Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  @@index([category, sortOrder])
+  @@index([isEnabled])
+  @@index([paystackPlanCodeTest])
+  @@index([paystackPlanCodeLive])
 }
 
 model ResellerBulkRateTier {

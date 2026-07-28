@@ -5,7 +5,7 @@ import {
 } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
-import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
+import { getActiveNomiaPaygPackages } from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import { prisma } from '@documenso/prisma';
 
 import { resolveInitialAffiliateSlug } from './affiliate-slug';
@@ -89,6 +89,8 @@ export const activateResellerFromTermsCompletion = async ({
     return null;
   }
 
+  const paygPackages = await getActiveNomiaPaygPackages();
+
   const existingProfile = await prisma.resellerProfile.findUnique({
     where: { organisationId: application.organisationId },
   });
@@ -139,7 +141,7 @@ export const activateResellerFromTermsCompletion = async ({
 
       if (existingPackageCount === 0) {
         await tx.resellerPackage.createMany({
-          data: ESIGN_CREDIT_PACKAGES.map((pkg) => ({
+          data: paygPackages.map((pkg) => ({
             resellerProfileId: updatedProfile.id,
             creditAmount: pkg.credits,
             priceInCents: pkg.priceInCents,
@@ -147,7 +149,7 @@ export const activateResellerFromTermsCompletion = async ({
             catalogPackageId: pkg.id,
             isEnabled: false,
             paystackPlanCode: pkg.paystackPlanCode,
-            paystackPaymentUrl: pkg.paystackPaymentUrl,
+            paystackPaymentUrl: null,
           })),
         });
       }
@@ -220,7 +222,7 @@ export const activateResellerFromTermsCompletion = async ({
     });
 
     await tx.resellerPackage.createMany({
-      data: ESIGN_CREDIT_PACKAGES.map((pkg) => ({
+      data: paygPackages.map((pkg) => ({
         resellerProfileId: createdProfile.id,
         creditAmount: pkg.credits,
         priceInCents: pkg.priceInCents,
@@ -228,7 +230,7 @@ export const activateResellerFromTermsCompletion = async ({
         catalogPackageId: pkg.id,
         isEnabled: false,
         paystackPlanCode: pkg.paystackPlanCode,
-        paystackPaymentUrl: pkg.paystackPaymentUrl,
+        paystackPaymentUrl: null,
       })),
     });
 

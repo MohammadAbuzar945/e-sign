@@ -1,8 +1,11 @@
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
-import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
 import {
   RESELLER_BILLING_DISCLOSURE_PREFIX,
 } from '@documenso/lib/constants/reseller-attribution';
+import {
+  findNomiaPriceInCentsForCredits,
+  getEsignCreditPackageByIdFromCatalog,
+} from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import { prisma } from '@documenso/prisma';
 
 import { getResellerPayoutReadiness } from './reseller-payout-readiness';
@@ -52,32 +55,6 @@ export type OrganisationPaygBillingResolution = {
   } | null;
 };
 
-const findCatalogPackage = (catalogPackageId: string) =>
-  ESIGN_CREDIT_PACKAGES.find((item) => item.id === catalogPackageId);
-
-const findNomiaPriceForCredits = (credits: number): number => {
-  const exact = ESIGN_CREDIT_PACKAGES.find(
-    (item) => item.category === 'pay-as-you-go' && item.credits === credits,
-  );
-
-  if (exact) {
-    return exact.priceInCents;
-  }
-
-  // Pro-rate from the nearest larger PAYG pack, else nearest smaller.
-  const payg = ESIGN_CREDIT_PACKAGES.filter((item) => item.category === 'pay-as-you-go').sort(
-    (a, b) => a.credits - b.credits,
-  );
-
-  const larger = payg.find((item) => item.credits >= credits);
-  const basis = larger ?? payg[payg.length - 1];
-
-  if (!basis) {
-    return 0;
-  }
-
-  return Math.round((basis.priceInCents * credits) / basis.credits);
-};
 
 /**
  * Resolves whether an attributed organisation's PAYG purchase should go through
@@ -168,7 +145,7 @@ export const resolveOrganisationPaygBilling = async ({
     (item) => item.catalogPackageId === catalogPackageId && item.isEnabled,
   );
 
-  const catalog = findCatalogPackage(catalogPackageId);
+  const catalog = await getEsignCreditPackageByIdFromCatalog(catalogPackageId);
 
   if (!resellerPkg || !catalog) {
     return {
@@ -226,7 +203,7 @@ export const resolveOrganisationPaygBilling = async ({
   const resellerAmountInCents = Math.round(
     (resellerPkg.priceInCents * resellerCredits) / requested,
   );
-  const nomiaAmountInCents = findNomiaPriceForCredits(nomiaCredits);
+  const nomiaAmountInCents = await findNomiaPriceInCentsForCredits(nomiaCredits);
 
   return {
     source: 'HYBRID',
@@ -356,22 +333,24 @@ export const getOrganisationBillingAttributionSummary = async (organisationId: s
         ? `${RESELLER_BILLING_DISCLOSURE_PREFIX} ${displayName}`
         : null,
     isDelinquent: profile?.isDelinquent ?? false,
-    packages: (profile?.packages ?? []).map((pkg) => {
-      const catalog = findCatalogPackage(pkg.catalogPackageId);
-      const hasEnough =
-        Boolean(profile?.allowNegativeCredits) || availableCredits >= pkg.creditAmount;
+    packages: await Promise.all(
+      (profile?.packages ?? []).map(async (pkg) => {
+        const catalog = await getEsignCreditPackageByIdFromCatalog(pkg.catalogPackageId);
+        const hasEnough =
+          Boolean(profile?.allowNegativeCredits) || availableCredits >= pkg.creditAmount;
 
-      return {
-        ...pkg,
-        name: catalog?.name ?? `${pkg.creditAmount} envelopes`,
-        displayPrice: catalog?.displayPrice ?? `ZAR ${(pkg.priceInCents / 100).toFixed(2)}`,
-        canFulfillFromReseller: hasEnough,
-        billingSource: hasEnough
-          ? ('RESELLER' as const)
-          : availableCredits > 0
-            ? ('HYBRID' as const)
-            : ('NOMIA' as const),
-      };
-    }),
+        return {
+          ...pkg,
+          name: catalog?.name ?? `${pkg.creditAmount} envelopes`,
+          displayPrice: catalog?.displayPrice ?? `ZAR ${(pkg.priceInCents / 100).toFixed(2)}`,
+          canFulfillFromReseller: hasEnough,
+          billingSource: hasEnough
+            ? ('RESELLER' as const)
+            : availableCredits > 0
+              ? ('HYBRID' as const)
+              : ('NOMIA' as const),
+        };
+      }),
+    ),
   };
 };

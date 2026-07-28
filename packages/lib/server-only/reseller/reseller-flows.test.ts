@@ -46,6 +46,7 @@ const prismaMock = vi.hoisted(() => ({
     createMany: vi.fn(),
     update: vi.fn(),
     updateMany: vi.fn(),
+    count: vi.fn().mockResolvedValue(0),
   },
   resellerCreditTransaction: {
     findUnique: vi.fn(),
@@ -73,6 +74,10 @@ const prismaMock = vi.hoisted(() => ({
   },
   organisationCreditPurchase: {
     upsert: vi.fn(),
+  },
+  nomiaPricePlan: {
+    findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
   },
   $transaction: vi.fn(),
 }));

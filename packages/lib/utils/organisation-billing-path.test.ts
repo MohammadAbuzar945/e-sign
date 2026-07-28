@@ -15,7 +15,7 @@ describe('resolveOrganisationBillingPath', () => {
           isResellerOrganisation: false,
         },
       }),
-    ).toBe('/r/devvv');
+    ).toBe('/r/devvv?orgUrl=org_daehrocszuiiiftr');
   });
 
   it('returns price-plan when sticky opt-in is off for signup association', () => {
@@ -44,7 +44,7 @@ describe('resolveOrganisationBillingPath', () => {
           isResellerOrganisation: false,
         },
       }),
-    ).toBe('/r/acme-reseller');
+    ).toBe('/r/acme-reseller?orgUrl=org_oetkmdoeabdxciae');
   });
 
   it('returns affiliate billing when visit association opts in', () => {
@@ -59,7 +59,7 @@ describe('resolveOrganisationBillingPath', () => {
           isResellerOrganisation: false,
         },
       }),
-    ).toBe('/r/devvv');
+    ).toBe('/r/devvv?orgUrl=org_buyer');
   });
 
   it('returns price-plan for affiliate purchase without opt-in', () => {
@@ -119,6 +119,6 @@ describe('resolveOrganisationBillingPath', () => {
           isResellerOrganisation: true,
         },
       }),
-    ).toBe('/r/devvv');
+    ).toBe('/r/devvv?orgUrl=org_tlxruvlefzthnvwz');
   });
 });

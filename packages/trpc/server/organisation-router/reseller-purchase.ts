@@ -1,6 +1,6 @@
 import { assertResellerCheckoutAccess } from '@documenso/lib/constants/demo-feature-flags';
-import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
 import { RESELLER_BILLING_DISCLOSURE_PREFIX } from '@documenso/lib/constants/reseller-attribution';
+import { getEsignCreditPackageByIdFromCatalog } from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import { initializeAffiliatePackagePurchase } from '@documenso/lib/server-only/reseller/initialize-affiliate-package-purchase';
 import { resolveResellerDisplayName } from '@documenso/lib/server-only/reseller/reseller-association';
 import { getResellerProfileByAffiliateSlug } from '@documenso/lib/server-only/reseller/reseller-profile';
@@ -30,32 +30,34 @@ export const getAffiliateResellerRoute = procedure
       brandingCompanyDetails: profile.brandingCompanyDetails,
     });
 
-    const packages = profile.packages.map((pkg) => {
-      const catalog = ESIGN_CREDIT_PACKAGES.find((item) => item.id === pkg.catalogPackageId);
-      const hasEnoughCredits =
-        profile.allowNegativeCredits || profile.availableCredits >= pkg.creditAmount;
-      const canPurchase = profile.canAcceptAffiliatePayments && hasEnoughCredits;
-      const canPartialFulfill =
-        profile.canAcceptAffiliatePayments &&
-        !profile.allowNegativeCredits &&
-        profile.availableCredits > 0 &&
-        profile.availableCredits < pkg.creditAmount;
+    const packages = await Promise.all(
+      profile.packages.map(async (pkg) => {
+        const catalog = await getEsignCreditPackageByIdFromCatalog(pkg.catalogPackageId);
+        const hasEnoughCredits =
+          profile.allowNegativeCredits || profile.availableCredits >= pkg.creditAmount;
+        const canPurchase = profile.canAcceptAffiliatePayments && hasEnoughCredits;
+        const canPartialFulfill =
+          profile.canAcceptAffiliatePayments &&
+          !profile.allowNegativeCredits &&
+          profile.availableCredits > 0 &&
+          profile.availableCredits < pkg.creditAmount;
 
-      return {
-        id: pkg.id,
-        catalogPackageId: pkg.catalogPackageId,
-        creditAmount: pkg.creditAmount,
-        priceInCents: pkg.priceInCents,
-        currency: pkg.currency,
-        displayPrice:
-          catalog?.displayPrice ?? `${pkg.currency} ${(pkg.priceInCents / 100).toFixed(2)}`,
-        name: catalog?.name ?? `${pkg.creditAmount} envelopes`,
-        isHighlighted: profile.highlightedCatalogPackageId === pkg.catalogPackageId,
-        canPurchase,
-        canPartialFulfill,
-        availableResellerCredits: profile.availableCredits,
-      };
-    });
+        return {
+          id: pkg.id,
+          catalogPackageId: pkg.catalogPackageId,
+          creditAmount: pkg.creditAmount,
+          priceInCents: pkg.priceInCents,
+          currency: pkg.currency,
+          displayPrice:
+            catalog?.displayPrice ?? `${pkg.currency} ${(pkg.priceInCents / 100).toFixed(2)}`,
+          name: catalog?.name ?? `${pkg.creditAmount} envelopes`,
+          isHighlighted: profile.highlightedCatalogPackageId === pkg.catalogPackageId,
+          canPurchase,
+          canPartialFulfill,
+          availableResellerCredits: profile.availableCredits,
+        };
+      }),
+    );
 
     return {
       affiliateSlug: profile.affiliateSlug,

@@ -38,7 +38,12 @@ vi.mock('@documenso/prisma', () => ({
       findUnique: vi.fn(),
     },
     organisation: {
+      findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
+    },
+    nomiaPricePlan: {
+      findMany: vi.fn().mockResolvedValue([]),
+      count: vi.fn().mockResolvedValue(0),
     },
   },
 }));
@@ -76,6 +81,7 @@ describe('initializeAffiliatePackagePurchase', () => {
     associateOrganisationWithResellerMock.mockResolvedValue({ associated: true });
     createPendingOrganisationCreditPurchaseMock.mockResolvedValue(undefined);
     prismaMock.organisation.findUniqueOrThrow.mockResolvedValue({ url: 'buyer-org' } as never);
+    prismaMock.organisation.findUnique.mockResolvedValue({ url: 'buyer-org' } as never);
   });
 
   it('uses full reseller purchase when stock is sufficient', async () => {
@@ -130,7 +136,7 @@ describe('initializeAffiliatePackagePurchase', () => {
           totalCredits: 100,
           catalogPackageId: 'payg-100',
         }),
-        callbackPath: '/r/acme?purchase=success',
+        callbackPath: '/r/acme?purchase=success&orgUrl=buyer-org',
       }),
     );
     expect(result.authorizationUrl).toBe('https://paystack.test/partial');

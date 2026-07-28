@@ -1,10 +1,10 @@
 import { ResellerPayoutMode } from '@prisma/client';
 
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
-import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createPendingOrganisationCreditPurchase } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
+import { getEsignCreditPackageByIdFromCatalog } from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import { createTransaction } from '@documenso/lib/server-only/paystack';
 import { prefixedId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
@@ -61,7 +61,14 @@ export const initializeAffiliatePackagePurchase = async ({
 
   // Purchases initiated from the affiliate page must always return to the affiliate page,
   // regardless of whether the reseller can fulfill from stock or Nomia handles it.
-  const affiliateCallbackPath = `/r/${affiliateSlug}?purchase=success`;
+  const purchaserOrganisation = await prisma.organisation.findUnique({
+    where: { id: purchaserOrganisationId },
+    select: { url: true },
+  });
+
+  const affiliateCallbackPath = purchaserOrganisation?.url
+    ? `/r/${affiliateSlug}?purchase=success&orgUrl=${encodeURIComponent(purchaserOrganisation.url)}`
+    : `/r/${affiliateSlug}?purchase=success`;
 
   const purchaseGroupId = prefixedId('pur');
   const availableCredits = await getOrganisationCredits(profile.organisationId);
@@ -129,7 +136,7 @@ export const initializeAffiliatePackagePurchase = async ({
     };
   }
 
-  const catalog = ESIGN_CREDIT_PACKAGES.find((item) => item.id === pkg.catalogPackageId);
+  const catalog = await getEsignCreditPackageByIdFromCatalog(pkg.catalogPackageId);
 
   if (!catalog) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
