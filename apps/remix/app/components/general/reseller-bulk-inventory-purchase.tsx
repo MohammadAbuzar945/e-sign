@@ -1,7 +1,7 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { CheckCircle2Icon, PackageIcon } from 'lucide-react';
+import { CheckIcon, PackageIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { canAccessResellerBulkTools } from '@documenso/lib/constants/demo-feature-flags';
@@ -27,7 +27,53 @@ type ResellerBulkInventoryPurchaseProps = {
   organisationId: string;
 };
 
+type BulkRateTierChip = {
+  minCredits: number;
+  pricePerCreditCents: number;
+};
+
 const formatZarFromCents = (cents: number) => `ZAR ${(cents / 100).toFixed(2)}`;
+
+type BulkTierQuickSelectGridProps = {
+  tiers: BulkRateTierChip[];
+  matchedMinCredits: number | null;
+  onSelect: (minCredits: number) => void;
+};
+
+const BulkTierQuickSelectGrid = ({
+  tiers,
+  matchedMinCredits,
+  onSelect,
+}: BulkTierQuickSelectGridProps) => {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      {tiers.map((tier) => {
+        const isMatched = matchedMinCredits === tier.minCredits;
+
+        return (
+          <button
+            key={tier.minCredits}
+            type="button"
+            className={cn(
+              'inline-flex items-center justify-center gap-1.5 rounded-full border px-3.5 py-2 text-[12px] leading-none transition',
+              'border-purple-200/80 bg-white/90 text-gray-700 hover:border-purple-400 hover:bg-white',
+              isMatched &&
+                'border-[#7C3AED] bg-purple-50 font-medium text-purple-800 ring-2 ring-purple-200',
+            )}
+            onClick={() => {
+              onSelect(tier.minCredits);
+            }}
+          >
+            <span className="whitespace-nowrap tabular-nums">
+              {tier.minCredits.toLocaleString()}+ · {formatZarFromCents(tier.pricePerCreditCents)}
+            </span>
+            {isMatched ? <CheckIcon className="h-3.5 w-3.5 shrink-0 text-[#7C3AED]" /> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 export const ResellerBulkInventoryPurchase = ({
   organisationId,
@@ -179,41 +225,13 @@ export const ResellerBulkInventoryPurchase = ({
           <Trans>Quick select</Trans>
         </p>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {sortedTiers.map((tier) => {
-            const isMatched = matchedTier?.minCredits === tier.minCredits;
-            const exampleTotal = tier.minCredits * tier.pricePerCreditCents;
-
-            return (
-              <button
-                key={tier.minCredits}
-                type="button"
-                className={cn(
-                  'rounded-lg border bg-white/90 p-4 text-left transition hover:border-purple-400 hover:shadow-sm',
-                  isMatched && 'border-purple-500 ring-2 ring-purple-200',
-                )}
-                onClick={() => {
-                  setCreditsInput(String(tier.minCredits));
-                }}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-lg font-semibold text-gray-800">
-                    {tier.minCredits.toLocaleString()}+ <Trans>credits</Trans>
-                  </p>
-                  {isMatched ? (
-                    <CheckCircle2Icon className="h-5 w-5 shrink-0 text-purple-600" />
-                  ) : null}
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {formatZarFromCents(tier.pricePerCreditCents)} <Trans>per credit</Trans>
-                </p>
-                <p className="mt-3 text-sm font-medium text-purple-700">
-                  {formatZarFromCents(exampleTotal)} <Trans>from</Trans>
-                </p>
-              </button>
-            );
-          })}
-        </div>
+        <BulkTierQuickSelectGrid
+          tiers={sortedTiers}
+          matchedMinCredits={matchedTier?.minCredits ?? null}
+          onSelect={(minCredits) => {
+            setCreditsInput(String(minCredits));
+          }}
+        />
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
           <div className="space-y-2">

@@ -39,6 +39,10 @@ import {
   replaceGlobalResellerBulkRatesRoute,
   replaceResellerBulkRatesRoute,
 } from './reseller-bulk-rates';
+import {
+  getNomiaPricePlansRoute,
+  updateNomiaPricePlansRoute,
+} from './nomia-pricing';
 import { updateResellerAllowNegativeCreditsRoute } from './update-reseller-allow-negative-credits';
 import {
   refreshResellerBankAccountStatusRoute,
@@ -97,6 +101,10 @@ export const adminRouter = router({
     replaceForReseller: replaceResellerBulkRatesRoute,
     findPurchases: findResellerBulkPurchasesRoute,
     exportPurchases: exportResellerBulkPurchasesRoute,
+  },
+  nomiaPricing: {
+    getMany: getNomiaPricePlansRoute,
+    updateMany: updateNomiaPricePlansRoute,
   },
   stripe: {
     createCustomer: createStripeCustomerRoute,

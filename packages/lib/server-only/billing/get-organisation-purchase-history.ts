@@ -3,11 +3,16 @@ import {
   ResellerCreditTransactionStatus,
 } from '@prisma/client';
 
-import { getNomiaSubscriptionPlanDetails } from '@documenso/lib/constants/nomia-subscription-plans';
+import {
+  findNomiaSubscriptionPlanForChargeFromCatalog,
+  getNomiaSubscriptionPlanDetailsFromCatalog,
+} from '@documenso/lib/server-only/billing/nomia-price-catalog';
+import { formatNomiaSubscriptionPlanTitle } from '@documenso/lib/constants/nomia-subscription-plans';
 import { prisma } from '@documenso/prisma';
 
 import { getSubscriptionsByUserId } from '../subscription/get-subscriptions-by-user-id';
 import { resolveResellerDisplayName } from '../reseller/reseller-association';
+import { resolveNomiaPurchaseInvoiceId } from './record-organisation-credit-purchase';
 
 export type PurchaseHistoryLineItem = {
   provider: 'nomia' | 'reseller';
@@ -210,17 +215,38 @@ export const getOrganisationPurchaseHistory = async ({
   ]);
 
   const items: OrganisationPurchaseHistoryItem[] = [];
+  let hasSubscriptionChargeInvoices = false;
 
   for (const purchase of payAsYouGoPurchases) {
     const isBulk = purchase.purchaseType === 'BULK';
+    const isSubscription = purchase.purchaseType === 'SUBSCRIPTION';
+
+    if (isSubscription) {
+      hasSubscriptionChargeInvoices = true;
+    }
+
+    const subscriptionPlan = isSubscription
+      ? await findNomiaSubscriptionPlanForChargeFromCatalog({
+          credits: purchase.credits,
+          priceInCents: purchase.grossAmount,
+        })
+      : null;
+
+    const title = isBulk
+      ? 'Bulk inventory top-up'
+      : isSubscription
+        ? formatNomiaSubscriptionPlanTitle(subscriptionPlan)
+        : 'Pay as you go top-up';
+
+    const kind = isBulk ? 'bulk' : isSubscription ? 'subscription' : 'pay_as_you_go';
 
     items.push({
-      invoiceId: `nomia_${purchase.id}`,
+      invoiceId: resolveNomiaPurchaseInvoiceId({ purchaseId: purchase.id }),
       purchaseGroupId: purchase.purchaseGroupId,
       date: purchase.completedAt ?? purchase.createdAt,
-      kind: isBulk ? 'bulk' : 'pay_as_you_go',
+      kind,
       issuer: 'NOMIA',
-      title: isBulk ? 'Bulk inventory top-up' : 'Pay as you go top-up',
+      title,
       totalCredits: purchase.credits,
       totalGrossAmount: purchase.grossAmount,
       currency: purchase.currency,
@@ -232,8 +258,10 @@ export const getOrganisationPurchaseHistory = async ({
           grossAmount: purchase.grossAmount,
           currency: purchase.currency,
           status: purchase.status,
-          reference: purchase.paystackReference,
-          description: isBulk ? 'Bulk inventory top-up' : 'Pay as you go top-up',
+          reference: isSubscription
+            ? (subscriptionPlan?.planCode ?? purchase.paystackReference)
+            : purchase.paystackReference,
+          description: title,
         }),
       ],
     });
@@ -273,41 +301,45 @@ export const getOrganisationPurchaseHistory = async ({
     });
   }
 
-  const subscriptionItems: OrganisationPurchaseHistoryItem[] = subscriptions.map((subscription) => {
-    const planCode = subscription.priceId || subscription.planId;
-    const planDetails = getNomiaSubscriptionPlanDetails(planCode);
-    const credits = planDetails?.credits ?? 0;
-    const grossAmount = planDetails?.priceInCents ?? 0;
-    const title = planDetails
-      ? `${planDetails.label} — ${planDetails.name}`
-      : planCode;
-    const status = subscription.status === 'PAST_DUE' ? 'INCOMPLETE' : subscription.status;
+  // Legacy fallback: one synthetic invoice per Subscription row when this org
+  // has no per-charge subscription ledger entries yet.
+  const subscriptionItems: OrganisationPurchaseHistoryItem[] = hasSubscriptionChargeInvoices
+    ? []
+    : await Promise.all(
+        subscriptions.map(async (subscription) => {
+          const planCode = subscription.priceId || subscription.planId;
+          const planDetails = await getNomiaSubscriptionPlanDetailsFromCatalog(planCode);
+          const credits = planDetails?.credits ?? 0;
+          const grossAmount = planDetails?.priceInCents ?? 0;
+          const title = formatNomiaSubscriptionPlanTitle(planDetails, planCode);
+          const status = subscription.status === 'PAST_DUE' ? 'INCOMPLETE' : subscription.status;
 
-    return {
-      invoiceId: `subscription_${subscription.id}`,
-      purchaseGroupId: null,
-      date: subscription.updatedAt,
-      kind: 'subscription' as const,
-      issuer: 'NOMIA' as const,
-      title,
-      totalCredits: credits,
-      totalGrossAmount: grossAmount,
-      currency: 'ZAR',
-      status,
-      buyerVatNumber,
-      lineItems: [
-        {
-          provider: 'nomia' as const,
-          description: title,
-          credits,
-          grossAmount,
-          currency: 'ZAR',
-          status,
-          reference: planCode,
-        },
-      ],
-    };
-  });
+          return {
+            invoiceId: `subscription_${subscription.id}`,
+            purchaseGroupId: null,
+            date: subscription.updatedAt,
+            kind: 'subscription' as const,
+            issuer: 'NOMIA' as const,
+            title,
+            totalCredits: credits,
+            totalGrossAmount: grossAmount,
+            currency: 'ZAR',
+            status,
+            buyerVatNumber,
+            lineItems: [
+              {
+                provider: 'nomia' as const,
+                description: title,
+                credits,
+                grossAmount,
+                currency: 'ZAR',
+                status,
+                reference: planCode,
+              },
+            ],
+          };
+        }),
+      );
 
   return [...subscriptionItems, ...items].sort(
     (left, right) => right.date.getTime() - left.date.getTime(),

@@ -1,7 +1,7 @@
 import { PaystackWebhookEventStatus, type Prisma } from '@prisma/client';
 
 import { prisma } from '@documenso/prisma';
-import { PLAN_DOCUMENT_QUOTAS } from '@documenso/ee/server-only/limits/constants';
+import { getNomiaCreditsForPlanCode } from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import { ensureOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import {
   createPaystackWebhookEvent,
@@ -412,7 +412,7 @@ const processPaystackWebhookEvent = async (event: {
   }
 
   if (event.event === 'charge.success') {
-    const { customer, metadata, plan, reference, amount } = event.data as {
+    const { customer, metadata, plan, reference, amount, id: chargeId } = event.data as {
       customer?: { email?: string };
       metadata?: {
         value?: number;
@@ -428,6 +428,7 @@ const processPaystackWebhookEvent = async (event: {
       plan?: { plan_code?: string };
       reference?: string;
       amount?: number;
+      id?: number | string;
     };
 
     if (metadata?.type === 'reseller-credit-purchase') {
@@ -633,50 +634,114 @@ const processPaystackWebhookEvent = async (event: {
       });
       console.log('Subscription updated:', subscription);
 
-      const userCreditsRecord = await ensureOrganisationCredits(organisationId, user.id);
+      const {
+        completeOrganisationCreditPurchase,
+        resolveNomiaPurchaseInvoiceId,
+      } = await import('@documenso/lib/server-only/billing/record-organisation-credit-purchase');
+      const { getNomiaSubscriptionPlanDetailsFromCatalog } = await import(
+        '@documenso/lib/server-only/billing/nomia-price-catalog'
+      );
 
-      console.log('User credits record:', userCreditsRecord);
-      const newPlanCredits = PLAN_DOCUMENT_QUOTAS[planCode] ?? 0;
-      console.log('New plan credits:', newPlanCredits);
+      const planDetails = await getNomiaSubscriptionPlanDetailsFromCatalog(planCode);
+      const newPlanCredits =
+        (await getNomiaCreditsForPlanCode(planCode)) || (planDetails?.credits ?? 0);
+      const grossAmount =
+        Number(amount ?? 0) > 0 ? Number(amount) : (planDetails?.priceInCents ?? 0);
+
+      const paystackReference =
+        typeof reference === 'string' && reference.length > 0
+          ? reference
+          : chargeId != null
+            ? `paystack_charge_${chargeId}`
+            : null;
+
+      if (!paystackReference) {
+        console.error(
+          'Paystack webhook charge.success: missing charge reference for subscription',
+          event.data,
+        );
+
+        return {
+          status: PaystackWebhookEventStatus.FAILED,
+          error: 'Missing charge reference for subscription',
+          result: {
+            action: 'subscription_charge_missing_reference',
+            subscriptionId: subscription.id,
+            organisationId,
+            planCode,
+          },
+          response: jsonResponse({ success: false, error: 'Missing charge reference' }, 400),
+        };
+      }
+
+      const { purchase, isNewlyCompleted } = await completeOrganisationCreditPurchase({
+        paystackReference,
+        organisationId,
+        userId: user.id,
+        credits: newPlanCredits,
+        grossAmount,
+        purchaseType: 'SUBSCRIPTION',
+      });
 
       let creditsAfter: number | null = null;
+      let creditsAdded = 0;
 
-      if (newPlanCredits > 0) {
+      if (isNewlyCompleted && newPlanCredits > 0) {
+        const userCreditsRecord = await ensureOrganisationCredits(organisationId, user.id);
+        console.log('User credits record:', userCreditsRecord);
+        console.log('New plan credits:', newPlanCredits);
+
         const userCredits = await prisma.userCredits.update({
           where: { id: userCreditsRecord.id },
           data: { credits: Number(userCreditsRecord.credits) + newPlanCredits },
         });
         console.log('User credits updated:', userCredits);
         creditsAfter = Number(userCredits.credits);
+        creditsAdded = newPlanCredits;
       }
 
-      console.log('subscription and credits updated successfully');
+      let invoiceEmailSent = false;
 
-      const { sendPurchaseInvoiceEmail } = await import(
-        '@documenso/lib/server-only/billing/send-purchase-invoice-email'
-      );
+      if (isNewlyCompleted) {
+        const { sendPurchaseInvoiceEmail } = await import(
+          '@documenso/lib/server-only/billing/send-purchase-invoice-email'
+        );
 
-      await sendPurchaseInvoiceEmail({
-        organisationId,
-        invoiceId: `subscription_${subscription.id}`,
-        recipientEmail: user.email,
-        recipientName: user.name,
-      }).catch((invoiceError) => {
-        console.error('[NOMIA]: Failed to send subscription invoice email', invoiceError);
+        await sendPurchaseInvoiceEmail({
+          organisationId,
+          invoiceId: resolveNomiaPurchaseInvoiceId({ purchaseId: purchase.id }),
+          recipientEmail: user.email,
+          recipientName: user.name,
+        }).catch((invoiceError) => {
+          console.error('[NOMIA]: Failed to send subscription invoice email', invoiceError);
+        });
+
+        invoiceEmailSent = true;
+      }
+
+      console.log('subscription charge ledgered successfully', {
+        purchaseId: purchase.id,
+        isNewlyCompleted,
+        creditsAdded,
       });
 
       return {
         status: PaystackWebhookEventStatus.SUCCESS,
         result: {
-          action: 'subscription_activated_and_credits_added',
+          action: isNewlyCompleted
+            ? 'subscription_activated_and_credits_added'
+            : 'subscription_charge_already_processed',
           subscriptionId: subscription.id,
           organisationId,
           userId: user.id,
           planCode,
-          creditsAdded: newPlanCredits,
+          creditsAdded,
           creditsAfter,
-          reference: reference ?? null,
-          invoiceEmailSent: true,
+          reference: paystackReference,
+          purchaseId: purchase.id,
+          invoiceId: resolveNomiaPurchaseInvoiceId({ purchaseId: purchase.id }),
+          isNewlyCompleted,
+          invoiceEmailSent,
         },
         response: jsonResponse({ success: true }),
       };

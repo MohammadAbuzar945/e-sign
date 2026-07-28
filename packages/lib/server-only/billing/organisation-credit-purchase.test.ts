@@ -17,6 +17,9 @@ const prismaMock = vi.hoisted(() => ({
   resellerProfile: {
     findUnique: vi.fn(),
   },
+  nomiaPricePlan: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 vi.mock('@documenso/prisma', () => ({
@@ -286,6 +289,49 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         name: 'Acme Trading',
       }),
     });
+  });
+
+  it('includes per-charge subscription purchases as separate invoices', async () => {
+    const { getOrganisationPurchaseHistory } = await import('./get-organisation-purchase-history');
+
+    prismaMock.organisationCreditPurchase.findMany.mockResolvedValue([
+      {
+        id: 'sub_charge_1',
+        purchaseGroupId: null,
+        purchaseType: 'SUBSCRIPTION',
+        completedAt: new Date('2026-07-12T10:00:00.000Z'),
+        createdAt: new Date('2026-07-12T09:55:00.000Z'),
+        credits: 50,
+        grossAmount: 40000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        paystackReference: 'ref_sub_july',
+      },
+      {
+        id: 'sub_charge_2',
+        purchaseGroupId: null,
+        purchaseType: 'SUBSCRIPTION',
+        completedAt: new Date('2026-08-12T10:00:00.000Z'),
+        createdAt: new Date('2026-08-12T09:55:00.000Z'),
+        credits: 50,
+        grossAmount: 40000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        paystackReference: 'ref_sub_aug',
+      },
+    ]);
+    prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([]);
+
+    const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
+
+    expect(history).toHaveLength(2);
+    expect(history.map((item) => item.invoiceId)).toEqual([
+      'nomia_sub_charge_2',
+      'nomia_sub_charge_1',
+    ]);
+    expect(history.every((item) => item.kind === 'subscription')).toBe(true);
+    expect(history.every((item) => item.issuer === 'NOMIA')).toBe(true);
+    expect(history[0]?.title).toContain('Monthly');
   });
 });
 

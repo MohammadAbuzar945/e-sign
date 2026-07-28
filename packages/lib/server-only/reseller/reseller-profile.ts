@@ -3,7 +3,7 @@ import { ResellerCreditTransactionStatus, ResellerProfileStatus, ResellerSubacco
 
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { getPaystackWebhookUrl, getResellerPaystackWebhookUrl, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
+import { getActiveNomiaPaygPackages } from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import {
   parseResellerBankAccountType,
   parseResellerBankDocumentType,
@@ -111,7 +111,7 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
     hasPaystackConfigured: payoutReadiness.hasOwnPaystackConfigured,
     canAcceptAffiliatePayments: payoutReadiness.canAcceptPayments,
     payoutBlockingReason: payoutReadiness.blockingReason ?? null,
-    catalogPackages: ESIGN_CREDIT_PACKAGES,
+    catalogPackages: await getActiveNomiaPaygPackages(),
   };
 };
 

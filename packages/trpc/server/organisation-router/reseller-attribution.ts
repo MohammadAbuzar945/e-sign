@@ -1,7 +1,7 @@
-import { ESIGN_CREDIT_PACKAGES } from '@documenso/lib/constants/esign-credit-packages';
 import { createTransaction } from '@documenso/lib/server-only/paystack';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { createPendingOrganisationCreditPurchase } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
+import { getEsignCreditPackageByIdFromCatalog } from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import {
   associateOrganisationWithReseller,
   clearOrganisationResellerAssociation,
@@ -34,9 +34,6 @@ import {
   ZSetStickyBillingOptInRequestSchema,
   ZSetStickyBillingOptInResponseSchema,
 } from './reseller-attribution.types';
-
-const getCatalogPackage = (catalogPackageId: string) =>
-  ESIGN_CREDIT_PACKAGES.find((item) => item.id === catalogPackageId);
 
 export const getOrganisationBillingAttributionRoute = authenticatedProcedure
   .input(ZGetOrganisationBillingAttributionRequestSchema)
@@ -184,7 +181,7 @@ export const initializeAttributedPaygPurchaseRoute = authenticatedProcedure
 
     // Full Nomia (no association, zero stock, delinquent, etc.) or hybrid Nomia remainder.
     if (resolution.source === 'NOMIA' || hybridStep === 'NOMIA') {
-      const catalog = getCatalogPackage(catalogPackageId);
+      const catalog = await getEsignCreditPackageByIdFromCatalog(catalogPackageId);
       const nomiaCredits =
         nomiaCreditsOverride ??
         (hybridStep === 'NOMIA' && resolution.split

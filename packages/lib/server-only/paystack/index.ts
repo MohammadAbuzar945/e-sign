@@ -55,6 +55,7 @@ export async function createTransaction(options: {
   email: string;
   amount: number;
   plan?: string;
+  currency?: string;
   callback_url?: string;
   metadata?: Record<string, unknown>;
   secretKey?: string;
@@ -74,19 +75,26 @@ export async function createTransaction(options: {
   const { secretKey, subaccount, transaction_charge, bearer, split, ...rest } = options;
   const client = secretKey ? new Paystack(secretKey) : paystack;
 
-  return client.transaction.initialize({
-    ...rest,
-    amount: rest.amount.toString(),
-    ...(split
-      ? { split }
-      : subaccount
-        ? {
-            subaccount,
-            ...(transaction_charge !== undefined ? { transaction_charge } : {}),
-            ...(bearer ? { bearer } : {}),
-          }
-        : {}),
-  });
+  try {
+    return await client.transaction.initialize({
+      ...rest,
+      amount: rest.amount.toString(),
+      ...(rest.currency ? { currency: rest.currency } : {}),
+      ...(split
+        ? { split }
+        : subaccount
+          ? {
+              subaccount,
+              ...(transaction_charge !== undefined ? { transaction_charge } : {}),
+              ...(bearer ? { bearer } : {}),
+            }
+          : {}),
+    });
+  } catch (error) {
+    const { getPaystackClientErrorMessage } = await import('./paystack-error');
+
+    throw new Error(getPaystackClientErrorMessage(error));
+  }
 }
 
 export {
