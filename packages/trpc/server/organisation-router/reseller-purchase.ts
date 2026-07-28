@@ -1,6 +1,6 @@
 import { assertResellerCheckoutAccess } from '@documenso/lib/constants/demo-feature-flags';
 import { RESELLER_BILLING_DISCLOSURE_PREFIX } from '@documenso/lib/constants/reseller-attribution';
-import { getEsignCreditPackageByIdFromCatalog } from '@documenso/lib/server-only/billing/nomia-price-catalog';
+import { resolveResellerPackageCommercials } from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import { initializeAffiliatePackagePurchase } from '@documenso/lib/server-only/reseller/initialize-affiliate-package-purchase';
 import { resolveResellerDisplayName } from '@documenso/lib/server-only/reseller/reseller-association';
 import { getResellerProfileByAffiliateSlug } from '@documenso/lib/server-only/reseller/reseller-profile';
@@ -32,25 +32,24 @@ export const getAffiliateResellerRoute = procedure
 
     const packages = await Promise.all(
       profile.packages.map(async (pkg) => {
-        const catalog = await getEsignCreditPackageByIdFromCatalog(pkg.catalogPackageId);
+        const commercials = await resolveResellerPackageCommercials(pkg);
         const hasEnoughCredits =
-          profile.allowNegativeCredits || profile.availableCredits >= pkg.creditAmount;
+          profile.allowNegativeCredits || profile.availableCredits >= commercials.creditAmount;
         const canPurchase = profile.canAcceptAffiliatePayments && hasEnoughCredits;
         const canPartialFulfill =
           profile.canAcceptAffiliatePayments &&
           !profile.allowNegativeCredits &&
           profile.availableCredits > 0 &&
-          profile.availableCredits < pkg.creditAmount;
+          profile.availableCredits < commercials.creditAmount;
 
         return {
           id: pkg.id,
           catalogPackageId: pkg.catalogPackageId,
-          creditAmount: pkg.creditAmount,
-          priceInCents: pkg.priceInCents,
-          currency: pkg.currency,
-          displayPrice:
-            catalog?.displayPrice ?? `${pkg.currency} ${(pkg.priceInCents / 100).toFixed(2)}`,
-          name: catalog?.name ?? `${pkg.creditAmount} envelopes`,
+          creditAmount: commercials.creditAmount,
+          priceInCents: commercials.priceInCents,
+          currency: commercials.currency,
+          displayPrice: commercials.displayPrice,
+          name: commercials.name,
           isHighlighted: profile.highlightedCatalogPackageId === pkg.catalogPackageId,
           canPurchase,
           canPartialFulfill,

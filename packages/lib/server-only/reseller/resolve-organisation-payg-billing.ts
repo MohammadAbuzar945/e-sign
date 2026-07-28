@@ -5,6 +5,7 @@ import {
 import {
   findNomiaPriceInCentsForCredits,
   getEsignCreditPackageByIdFromCatalog,
+  resolveResellerPackageCommercials,
 } from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import { prisma } from '@documenso/prisma';
 
@@ -157,17 +158,18 @@ export const resolveOrganisationPaygBilling = async ({
     };
   }
 
+  const commercials = await resolveResellerPackageCommercials(resellerPkg);
   const availableCredits = await getOrganisationCredits(fresh.organisationId);
-  const requested = resellerPkg.creditAmount;
+  const requested = commercials.creditAmount;
 
   const packagePayload = {
     id: resellerPkg.id,
     catalogPackageId: resellerPkg.catalogPackageId,
-    creditAmount: resellerPkg.creditAmount,
-    priceInCents: resellerPkg.priceInCents,
-    currency: resellerPkg.currency,
-    displayPrice: catalog.displayPrice,
-    name: catalog.name,
+    creditAmount: commercials.creditAmount,
+    priceInCents: commercials.priceInCents,
+    currency: commercials.currency,
+    displayPrice: commercials.displayPrice,
+    name: commercials.name,
   };
 
   if (fresh.allowNegativeCredits || availableCredits >= requested) {
@@ -201,7 +203,7 @@ export const resolveOrganisationPaygBilling = async ({
   const resellerCredits = availableCredits;
   const nomiaCredits = requested - resellerCredits;
   const resellerAmountInCents = Math.round(
-    (resellerPkg.priceInCents * resellerCredits) / requested,
+    (commercials.priceInCents * resellerCredits) / requested,
   );
   const nomiaAmountInCents = await findNomiaPriceInCentsForCredits(nomiaCredits);
 
@@ -335,14 +337,18 @@ export const getOrganisationBillingAttributionSummary = async (organisationId: s
     isDelinquent: profile?.isDelinquent ?? false,
     packages: await Promise.all(
       (profile?.packages ?? []).map(async (pkg) => {
-        const catalog = await getEsignCreditPackageByIdFromCatalog(pkg.catalogPackageId);
+        const commercials = await resolveResellerPackageCommercials(pkg);
         const hasEnough =
-          Boolean(profile?.allowNegativeCredits) || availableCredits >= pkg.creditAmount;
+          Boolean(profile?.allowNegativeCredits) ||
+          availableCredits >= commercials.creditAmount;
 
         return {
           ...pkg,
-          name: catalog?.name ?? `${pkg.creditAmount} envelopes`,
-          displayPrice: catalog?.displayPrice ?? `ZAR ${(pkg.priceInCents / 100).toFixed(2)}`,
+          creditAmount: commercials.creditAmount,
+          priceInCents: commercials.priceInCents,
+          currency: commercials.currency,
+          name: commercials.name,
+          displayPrice: commercials.displayPrice,
           canFulfillFromReseller: hasEnough,
           billingSource: hasEnough
             ? ('RESELLER' as const)

@@ -2,7 +2,9 @@ import { ResellerPayoutMode, ResellerProfileStatus } from '@prisma/client';
 
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { resolveResellerPackageCommercials } from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import { createTransaction } from '@documenso/lib/server-only/paystack';
+import { getPaystackClientErrorMessage } from '@documenso/lib/server-only/paystack/paystack-error';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { prefixedId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
@@ -95,30 +97,37 @@ export const initializeResellerPurchase = async ({
   }
 
   const availableCredits = await getOrganisationCredits(profile.organisationId);
+  const commercials = await resolveResellerPackageCommercials(pkg);
   const isHybridSingleCheckout =
     Boolean(hybridSingleCheckoutSplit) &&
     profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT;
 
   const creditAmount = isHybridSingleCheckout
     ? hybridSingleCheckoutSplit!.totalCredits
-    : (creditAmountOverride ?? pkg.creditAmount);
+    : (creditAmountOverride ?? commercials.creditAmount);
   const amountInCents = isHybridSingleCheckout
     ? hybridSingleCheckoutSplit!.totalAmountInCents
     : (amountInCentsOverride ??
-      (creditAmount === pkg.creditAmount
-        ? pkg.priceInCents
-        : Math.round((pkg.priceInCents * creditAmount) / pkg.creditAmount)));
+      (creditAmount === commercials.creditAmount
+        ? commercials.priceInCents
+        : Math.round((commercials.priceInCents * creditAmount) / commercials.creditAmount)));
   const resellerCreditsToTransfer = isHybridSingleCheckout
     ? hybridSingleCheckoutSplit!.resellerCredits
     : creditAmount;
 
-  if (creditAmount <= 0 || creditAmount > pkg.creditAmount) {
+  if (creditAmount <= 0 || creditAmount > commercials.creditAmount) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'Invalid credit amount for this package',
     });
   }
 
-  if (isHybridSingleCheckout && hybridSingleCheckoutSplit!.totalCredits !== pkg.creditAmount) {
+  if (!Number.isFinite(amountInCents) || amountInCents < 100) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Invalid package price for checkout',
+    });
+  }
+
+  if (isHybridSingleCheckout && hybridSingleCheckoutSplit!.totalCredits !== commercials.creditAmount) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'Hybrid checkout must cover the full package credit amount',
     });
@@ -164,6 +173,21 @@ export const initializeResellerPurchase = async ({
 
   let transaction;
 
+  const initializePaystackCheckout = async (
+    options: Parameters<typeof createTransaction>[0],
+  ) => {
+    try {
+      return await createTransaction({
+        ...options,
+        currency: options.currency ?? commercials.currency ?? 'ZAR',
+      });
+    } catch (error) {
+      throw new AppError(AppErrorCode.INVALID_REQUEST, {
+        message: getPaystackClientErrorMessage(error),
+      });
+    }
+  };
+
   if (profile.payoutMode === ResellerPayoutMode.OWN_PAYSTACK) {
     if (!profile.paystackSecretKey) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -171,7 +195,7 @@ export const initializeResellerPurchase = async ({
       });
     }
 
-    transaction = await createTransaction({
+    transaction = await initializePaystackCheckout({
       email: purchaserEmail,
       amount: amountInCents,
       callback_url: callbackUrl,
@@ -210,35 +234,26 @@ export const initializeResellerPurchase = async ({
       });
     }
 
-    try {
-      transaction = await createTransaction({
-        email: purchaserEmail,
-        amount: amountInCents,
-        callback_url: callbackUrl,
-        metadata,
-        ...(isHybridSingleCheckout
-          ? {
-              // Both Nomia and the reseller bear Paystack fees (`bearer_type: all`).
-              split: buildHybridPaystackSplit({
-                subaccountCode: profile.paystackSubaccountCode,
-                amountInCents,
-                transactionCharge,
-              }),
-            }
-          : {
-              subaccount: profile.paystackSubaccountCode,
-              bearer: 'subaccount',
-              ...(transactionCharge > 0 ? { transaction_charge: transactionCharge } : {}),
+    transaction = await initializePaystackCheckout({
+      email: purchaserEmail,
+      amount: amountInCents,
+      callback_url: callbackUrl,
+      metadata,
+      ...(isHybridSingleCheckout
+        ? {
+            // Both Nomia and the reseller bear Paystack fees (`bearer_type: all`).
+            split: buildHybridPaystackSplit({
+              subaccountCode: profile.paystackSubaccountCode,
+              amountInCents,
+              transactionCharge,
             }),
-      });
-    } catch (error) {
-      const paystackMessage =
-        error instanceof Error ? error.message : 'Failed to initialize Paystack transaction';
-
-      throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message: paystackMessage,
-      });
-    }
+          }
+        : {
+            subaccount: profile.paystackSubaccountCode,
+            bearer: 'subaccount',
+            ...(transactionCharge > 0 ? { transaction_charge: transactionCharge } : {}),
+          }),
+    });
   }
 
   if (!transaction.status || !transaction.data) {

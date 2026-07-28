@@ -9,6 +9,8 @@ const initializeResellerPurchaseMock = vi.fn();
 const createTransactionMock = vi.fn();
 const associateOrganisationWithResellerMock = vi.fn();
 const createPendingOrganisationCreditPurchaseMock = vi.fn();
+const resolveResellerPackageCommercialsMock = vi.fn();
+const getEsignCreditPackageByIdFromCatalogMock = vi.fn();
 
 vi.mock('@documenso/ee/server-only/limits/user-credits', () => ({
   getOrganisationCredits: (...args: unknown[]) => getOrganisationCreditsMock(...args),
@@ -27,9 +29,20 @@ vi.mock('@documenso/lib/server-only/paystack', () => ({
   createTransaction: (...args: unknown[]) => createTransactionMock(...args),
 }));
 
+vi.mock('@documenso/lib/server-only/paystack/paystack-error', () => ({
+  isPaystackSubaccountMissingError: () => false,
+}));
+
 vi.mock('@documenso/lib/server-only/billing/record-organisation-credit-purchase', () => ({
   createPendingOrganisationCreditPurchase: (...args: unknown[]) =>
     createPendingOrganisationCreditPurchaseMock(...args),
+}));
+
+vi.mock('@documenso/lib/server-only/billing/nomia-price-catalog', () => ({
+  resolveResellerPackageCommercials: (...args: unknown[]) =>
+    resolveResellerPackageCommercialsMock(...args),
+  getEsignCreditPackageByIdFromCatalog: (...args: unknown[]) =>
+    getEsignCreditPackageByIdFromCatalogMock(...args),
 }));
 
 vi.mock('@documenso/prisma', () => ({
@@ -82,6 +95,27 @@ describe('initializeAffiliatePackagePurchase', () => {
     createPendingOrganisationCreditPurchaseMock.mockResolvedValue(undefined);
     prismaMock.organisation.findUniqueOrThrow.mockResolvedValue({ url: 'buyer-org' } as never);
     prismaMock.organisation.findUnique.mockResolvedValue({ url: 'buyer-org' } as never);
+    resolveResellerPackageCommercialsMock.mockImplementation(async (pkg: {
+      catalogPackageId: string;
+      creditAmount: number;
+      priceInCents: number;
+      currency: string;
+    }) => ({
+      creditAmount: pkg.creditAmount,
+      priceInCents: pkg.priceInCents,
+      currency: pkg.currency,
+      name: `${pkg.creditAmount} envelopes`,
+      displayPrice: `ZAR ${(pkg.priceInCents / 100).toFixed(2)}`,
+    }));
+    getEsignCreditPackageByIdFromCatalogMock.mockResolvedValue({
+      id: 'payg-100',
+      name: '100 envelopes',
+      credits: 100,
+      priceInCents: 10000,
+      currency: 'ZAR',
+      displayPrice: 'ZAR 100.00',
+      category: 'pay-as-you-go',
+    });
   });
 
   it('uses full reseller purchase when stock is sufficient', async () => {

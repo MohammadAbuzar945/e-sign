@@ -1,6 +1,5 @@
 import { NomiaPricePlanCategory, type NomiaPricePlan } from '@prisma/client';
 
-import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import type { EsignCreditPackage } from '@documenso/lib/constants/esign-credit-packages';
 import type { NomiaSubscriptionPlanDetails } from '@documenso/lib/constants/nomia-subscription-plans';
 import {
@@ -13,7 +12,13 @@ import {
   type NomiaPricePlanSeed,
 } from '@documenso/lib/constants/nomia-price-plan-seeds';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import {
+  isNomiaLivePaystackEnv,
+  isNomiaTestPaystackEnv,
+} from '@documenso/lib/utils/nomia-paystack-env';
 import { prisma } from '@documenso/prisma';
+
+export { isNomiaLivePaystackEnv, isNomiaTestPaystackEnv };
 
 export type NomiaPricePlanRow = {
   id: string;
@@ -47,6 +52,7 @@ export type NomiaPricePlansUiCatalog = {
 
 export type UpdateNomiaPricePlanInput = {
   id: string;
+  name: string;
   credits: number;
   priceInCents: number;
   isEnabled: boolean;
@@ -92,19 +98,6 @@ const mapDbRow = (row: NomiaPricePlan): NomiaPricePlanRow => ({
   isEnabled: row.isEnabled,
   sortOrder: row.sortOrder,
 });
-
-export const isNomiaTestPaystackEnv = (baseUrl = NEXT_PUBLIC_WEBAPP_URL()) => {
-  try {
-    const hostname = new URL(baseUrl).hostname;
-
-    return hostname === 'sign.nomiadocs.com' || hostname.includes('localhost');
-  } catch {
-    return baseUrl.includes('sign.nomiadocs.com') || baseUrl.includes('localhost');
-  }
-};
-
-export const isNomiaLivePaystackEnv = (baseUrl = NEXT_PUBLIC_WEBAPP_URL()) =>
-  !isNomiaTestPaystackEnv(baseUrl);
 
 /**
  * List all Nomia price plans (admin). Falls back to seed constants if DB empty.
@@ -176,14 +169,37 @@ export const updateNomiaPricePlans = async (
     });
   }
 
-  await prisma.$transaction(
-    updates.map((item) => {
+  const useLive = isNomiaLivePaystackEnv();
+
+  for (const item of updates) {
+    const current = existingById.get(item.id)!;
+
+    if (current.category === 'PAYG') {
+      continue;
+    }
+
+    if (useLive && !item.paystackPlanCodeLive.trim()) {
+      throw new AppError(AppErrorCode.INVALID_BODY, {
+        message: `Live Paystack plan code is required for ${item.id} on e-sign.nomiadocs.com.`,
+      });
+    }
+
+    if (!useLive && !item.paystackPlanCodeTest.trim()) {
+      throw new AppError(AppErrorCode.INVALID_BODY, {
+        message: `Test Paystack plan code is required for ${item.id} outside production.`,
+      });
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const item of updates) {
       const current = existingById.get(item.id)!;
       const isPayg = current.category === 'PAYG';
 
-      return prisma.nomiaPricePlan.update({
+      const updated = await tx.nomiaPricePlan.update({
         where: { id: item.id },
         data: {
+          name: item.name.trim(),
           credits: item.credits,
           priceInCents: item.priceInCents,
           isEnabled: item.isEnabled,
@@ -195,8 +211,24 @@ export const updateNomiaPricePlans = async (
               }),
         },
       });
-    }),
-  );
+
+      if (!isPayg) {
+        continue;
+      }
+
+      // Keep reseller package snapshots aligned with Nomia PAYG catalog.
+      await tx.resellerPackage.updateMany({
+        where: { catalogPackageId: item.id },
+        data: {
+          creditAmount: item.credits,
+          priceInCents: item.priceInCents,
+          paystackPlanCode: useLive
+            ? updated.paystackPlanCodeLive || null
+            : updated.paystackPlanCodeTest || null,
+        },
+      });
+    }
+  });
 
   return listNomiaPricePlans();
 };
@@ -220,7 +252,9 @@ const toEsignPackage = (
         : row.category === 'MONTHLY'
           ? 'monthly'
           : 'annual',
-    paystackPlanCode: useLive ? row.paystackPlanCodeLive : row.paystackPlanCodeTest,
+    paystackPlanCode: useLive
+      ? row.paystackPlanCodeLive || undefined
+      : row.paystackPlanCodeTest || undefined,
   };
 };
 
@@ -253,6 +287,28 @@ export const getEsignCreditPackageByIdFromCatalog = async (
   const catalog = await getActiveNomiaCatalog({ enabledOnly: false });
 
   return catalog.find((item) => item.id === catalogPackageId);
+};
+
+/**
+ * Prefer live Nomia catalog commercials over ResellerPackage snapshots.
+ * Snapshots are kept in sync on admin save; this guards display/checkout drift.
+ */
+export const resolveResellerPackageCommercials = async (pkg: {
+  catalogPackageId: string;
+  creditAmount: number;
+  priceInCents: number;
+  currency: string;
+}) => {
+  const catalog = await getEsignCreditPackageByIdFromCatalog(pkg.catalogPackageId);
+
+  return {
+    creditAmount: catalog?.credits ?? pkg.creditAmount,
+    priceInCents: catalog?.priceInCents ?? pkg.priceInCents,
+    currency: catalog?.currency ?? pkg.currency,
+    name: catalog?.name ?? `${pkg.creditAmount} envelopes`,
+    displayPrice:
+      catalog?.displayPrice ?? `${pkg.currency} ${(pkg.priceInCents / 100).toFixed(2)}`,
+  };
 };
 
 const categoryLabel = (
@@ -291,8 +347,14 @@ export const getNomiaPricePlansUiCatalog = async ({
 
   return {
     'Pay-as-you-go / Top-up': rows.filter((row) => row.category === 'PAYG').map(toUi),
-    Monthly: rows.filter((row) => row.category === 'MONTHLY').map(toUi),
-    Annual: rows.filter((row) => row.category === 'ANNUAL').map(toUi),
+    Monthly: rows
+      .filter((row) => row.category === 'MONTHLY')
+      .filter((row) => (useLive ? row.paystackPlanCodeLive : row.paystackPlanCodeTest).trim())
+      .map(toUi),
+    Annual: rows
+      .filter((row) => row.category === 'ANNUAL')
+      .filter((row) => (useLive ? row.paystackPlanCodeLive : row.paystackPlanCodeTest).trim())
+      .map(toUi),
   };
 };
 
@@ -305,8 +367,13 @@ export const getNomiaPlanDocumentQuotas = async (): Promise<Record<string, numbe
   const quotas: Record<string, number> = {};
 
   for (const row of rows) {
-    quotas[row.paystackPlanCodeTest] = row.credits;
-    quotas[row.paystackPlanCodeLive] = row.credits;
+    if (row.paystackPlanCodeTest.trim()) {
+      quotas[row.paystackPlanCodeTest] = row.credits;
+    }
+
+    if (row.paystackPlanCodeLive.trim()) {
+      quotas[row.paystackPlanCodeLive] = row.credits;
+    }
   }
 
   return quotas;

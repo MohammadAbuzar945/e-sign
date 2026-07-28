@@ -19,21 +19,25 @@ export const NOMIA_SUBSCRIPTION_PLANS: NomiaSubscriptionPlanDetails[] =
       const label = plan.category === 'MONTHLY' ? ('Monthly' as const) : ('Annually' as const);
 
       return [
-        {
-          planCode: plan.paystackPlanCodeTest,
-          name: plan.name,
-          label,
-          credits: plan.credits,
-          priceInCents: plan.priceInCents,
-        },
-        {
-          planCode: plan.paystackPlanCodeLive,
-          name: plan.name,
-          label,
-          credits: plan.credits,
-          priceInCents: plan.priceInCents,
-        },
-      ];
+        plan.paystackPlanCodeTest
+          ? {
+              planCode: plan.paystackPlanCodeTest,
+              name: plan.name,
+              label,
+              credits: plan.credits,
+              priceInCents: plan.priceInCents,
+            }
+          : null,
+        plan.paystackPlanCodeLive
+          ? {
+              planCode: plan.paystackPlanCodeLive,
+              name: plan.name,
+              label,
+              credits: plan.credits,
+              priceInCents: plan.priceInCents,
+            }
+          : null,
+      ].filter((item): item is NomiaSubscriptionPlanDetails => item !== null);
     });
 
 const NOMIA_SUBSCRIPTION_PLANS_BY_CODE = Object.fromEntries(

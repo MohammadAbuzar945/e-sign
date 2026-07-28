@@ -32,6 +32,7 @@ export type NomiaPricePlanDraft = {
 type AdminNomiaPricingEditorProps = {
   category: 'PAYG' | 'MONTHLY' | 'ANNUAL';
   initialPlans: NomiaPricePlanDraft[];
+  isLivePaystackEnv: boolean;
   isSaving?: boolean;
   onSave: (plans: NomiaPricePlanDraft[]) => Promise<void> | void;
 };
@@ -62,8 +63,13 @@ const parseCreditsInput = (value: string) => {
 export const validateNomiaPricePlanDrafts = (
   plans: NomiaPricePlanDraft[],
   category: NomiaPricePlanDraft['category'],
+  isLivePaystackEnv: boolean,
 ) => {
   for (const plan of plans) {
+    if (!plan.name.trim()) {
+      return msg`Each plan needs a name.`;
+    }
+
     if (plan.credits < 1) {
       return msg`Each plan needs at least 1 credit.`;
     }
@@ -76,8 +82,12 @@ export const validateNomiaPricePlanDrafts = (
       continue;
     }
 
-    if (!plan.paystackPlanCodeTest.trim() || !plan.paystackPlanCodeLive.trim()) {
-      return msg`Each plan needs both test and live Paystack plan codes.`;
+    if (isLivePaystackEnv && !plan.paystackPlanCodeLive.trim()) {
+      return msg`Each plan needs a live Paystack plan code on production.`;
+    }
+
+    if (!isLivePaystackEnv && !plan.paystackPlanCodeTest.trim()) {
+      return msg`Each plan needs a test Paystack plan code outside production.`;
     }
   }
 
@@ -91,6 +101,7 @@ const compactCellClassName = 'px-2 py-1.5';
 export const AdminNomiaPricingEditor = ({
   category,
   initialPlans,
+  isLivePaystackEnv,
   isSaving = false,
   onSave,
 }: AdminNomiaPricingEditorProps) => {
@@ -114,7 +125,7 @@ export const AdminNomiaPricingEditor = ({
   };
 
   const handleSave = async () => {
-    const error = validateNomiaPricePlanDrafts(categoryPlans, category);
+    const error = validateNomiaPricePlanDrafts(categoryPlans, category, isLivePaystackEnv);
 
     if (error) {
       setValidationError(_(error));
@@ -152,10 +163,18 @@ export const AdminNomiaPricingEditor = ({
               {showPaystackPlanCodes ? (
                 <>
                   <TableHead className={cn(compactHeadClassName, 'w-[26%]')}>
-                    <Trans>Test code</Trans>
+                    {isLivePaystackEnv ? (
+                      <Trans>Test code (optional)</Trans>
+                    ) : (
+                      <Trans>Test code</Trans>
+                    )}
                   </TableHead>
                   <TableHead className={cn(compactHeadClassName, 'w-[26%]')}>
-                    <Trans>Live code</Trans>
+                    {isLivePaystackEnv ? (
+                      <Trans>Live code</Trans>
+                    ) : (
+                      <Trans>Live code (optional)</Trans>
+                    )}
                   </TableHead>
                 </>
               ) : null}
@@ -172,14 +191,12 @@ export const AdminNomiaPricingEditor = ({
           <TableBody>
             {categoryPlans.map((plan) => (
               <TableRow key={plan.id}>
-                <TableCell
-                  className={cn(
-                    compactCellClassName,
-                    'truncate whitespace-nowrap text-xs font-medium',
-                  )}
-                  title={plan.name}
-                >
-                  {plan.name}
+                <TableCell className={compactCellClassName}>
+                  <Input
+                    className={cn(compactInputClassName, showPaystackPlanCodes ? 'w-full' : 'min-w-[10rem]')}
+                    value={plan.name}
+                    onChange={(event) => updatePlan(plan.id, { name: event.target.value })}
+                  />
                 </TableCell>
                 <TableCell className={compactCellClassName}>
                   <Input
@@ -207,6 +224,7 @@ export const AdminNomiaPricingEditor = ({
                       <Input
                         className={cn(compactInputClassName, 'w-full font-mono')}
                         value={plan.paystackPlanCodeTest}
+                        placeholder={isLivePaystackEnv ? 'Optional' : undefined}
                         onChange={(event) =>
                           updatePlan(plan.id, { paystackPlanCodeTest: event.target.value })
                         }
@@ -216,6 +234,7 @@ export const AdminNomiaPricingEditor = ({
                       <Input
                         className={cn(compactInputClassName, 'w-full font-mono')}
                         value={plan.paystackPlanCodeLive}
+                        placeholder={isLivePaystackEnv ? undefined : 'Optional'}
                         onChange={(event) =>
                           updatePlan(plan.id, { paystackPlanCodeLive: event.target.value })
                         }

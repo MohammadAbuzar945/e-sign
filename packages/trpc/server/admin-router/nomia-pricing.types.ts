@@ -29,8 +29,8 @@ export const ZNomiaPricePlanSchema = z.object({
   credits: z.number().int().positive(),
   priceInCents: z.number().int().positive(),
   currency: z.string(),
-  paystackPlanCodeTest: z.string().min(1),
-  paystackPlanCodeLive: z.string().min(1),
+  paystackPlanCodeTest: z.string(),
+  paystackPlanCodeLive: z.string(),
   isEnabled: z.boolean(),
   sortOrder: z.number().int(),
 });
@@ -43,11 +43,12 @@ export const ZGetNomiaPricePlansResponseSchema = z.object({
 
 export const ZUpdateNomiaPricePlanItemSchema = z.object({
   id: z.string().min(1),
+  name: z.string().trim().min(1).max(120),
   credits: z.number().int().positive(),
   priceInCents: z.number().int().positive(),
   isEnabled: z.boolean(),
-  paystackPlanCodeTest: z.string().min(1),
-  paystackPlanCodeLive: z.string().min(1),
+  paystackPlanCodeTest: z.string(),
+  paystackPlanCodeLive: z.string(),
 });
 
 export const ZUpdateNomiaPricePlansRequestSchema = z.object({

@@ -7,6 +7,7 @@ import { Link, redirect, useLocation, useSearchParams } from 'react-router';
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
 import { canAccessNomiaPricing } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
+import { isNomiaLivePaystackEnv } from '@documenso/lib/utils/nomia-paystack-env';
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
@@ -18,6 +19,8 @@ import {
 } from '~/components/general/admin-nomia-pricing-editor';
 import { SettingsHeader } from '~/components/general/settings-header';
 import { appMetaTags } from '~/utils/meta';
+
+import type { Route } from './+types/nomia-pricing';
 
 const PRICING_VIEW = {
   PAYG: 'payg',
@@ -46,26 +49,28 @@ export function meta() {
   return appMetaTags('Nomia pricing');
 }
 
-export async function loader({ request }: { request: Request }) {
+export async function loader({ request }: Route.LoaderArgs) {
   const { user } = await getSession(request);
 
   if (!canAccessNomiaPricing(user.email)) {
     throw redirect('/admin');
   }
 
-  return null;
+  return {
+    isLivePaystackEnv: isNomiaLivePaystackEnv(),
+  };
 }
 
-export default function AdminNomiaPricingPage() {
+export default function AdminNomiaPricingPage({ loaderData }: Route.ComponentProps) {
+  const { isLivePaystackEnv } = loaderData;
   const { _ } = useLingui();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const { pathname } = useLocation();
   const utils = trpc.useUtils();
 
-  const currentView = isPricingView(searchParams.get('view'))
-    ? searchParams.get('view')!
-    : PRICING_VIEW.PAYG;
+  const viewParam = searchParams.get('view');
+  const currentView: PricingView = isPricingView(viewParam) ? viewParam : PRICING_VIEW.PAYG;
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -91,6 +96,7 @@ export default function AdminNomiaPricingPage() {
       await updatePlans({
         plans: categoryPlans.map((plan) => ({
           id: plan.id,
+          name: plan.name,
           credits: plan.credits,
           priceInCents: plan.priceInCents,
           isEnabled: plan.isEnabled,
@@ -103,7 +109,9 @@ export default function AdminNomiaPricingPage() {
 
       toast({
         title: _(msg`Pricing updated`),
-        description: _(msg`Nomia catalog changes were saved.`),
+        description: _(
+          msg`Nomia catalog changes were saved. PAYG updates also sync to reseller packages and storefronts.`,
+        ),
       });
     } catch (error) {
       const parsed = AppError.parseError(error);
@@ -132,11 +140,19 @@ export default function AdminNomiaPricingPage() {
           <Trans>Paystack sync required</Trans>
         </AlertTitle>
         <AlertDescription>
-          <Trans>
-            Changing monthly or annual prices requires creating or updating the Paystack plan, then
-            pasting the new plan code here. PAYG has no Paystack plans — only credits and price are
-            edited, and checkout uses create-transaction with the saved price.
-          </Trans>
+          {isLivePaystackEnv ? (
+            <Trans>
+              On e-sign.nomiadocs.com only live Paystack plan codes are required for monthly and
+              annual plans. Test codes are optional. PAYG has no Paystack plans — checkout uses
+              create-transaction with the saved price.
+            </Trans>
+          ) : (
+            <Trans>
+              Outside production, monthly and annual plans require a test Paystack plan code. Live
+              codes are optional. PAYG has no Paystack plans — checkout uses create-transaction
+              with the saved price.
+            </Trans>
+          )}
         </AlertDescription>
       </Alert>
 
@@ -173,8 +189,9 @@ export default function AdminNomiaPricingPage() {
 
       {!isLoading && !isError ? (
         <AdminNomiaPricingEditor
-          category={viewToCategory(currentView)}
+          category={viewToCategory(currentView as PricingView)}
           initialPlans={plans}
+          isLivePaystackEnv={isLivePaystackEnv}
           isSaving={isSaving}
           onSave={handleSave}
         />

@@ -4,8 +4,12 @@ import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-cr
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createPendingOrganisationCreditPurchase } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
-import { getEsignCreditPackageByIdFromCatalog } from '@documenso/lib/server-only/billing/nomia-price-catalog';
+import {
+  getEsignCreditPackageByIdFromCatalog,
+  resolveResellerPackageCommercials,
+} from '@documenso/lib/server-only/billing/nomia-price-catalog';
 import { createTransaction } from '@documenso/lib/server-only/paystack';
+import { isPaystackSubaccountMissingError } from '@documenso/lib/server-only/paystack/paystack-error';
 import { prefixedId } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
 
@@ -20,6 +24,76 @@ export type InitializeAffiliatePackagePurchaseOptions = {
   purchaserOrganisationId: string;
   purchaserUserId: number;
   purchaserEmail: string;
+};
+
+const initializeNomiaDirectCheckout = async ({
+  affiliateSlug,
+  catalogPackageId,
+  purchaserOrganisationId,
+  purchaserUserId,
+  purchaserEmail,
+  affiliateCallbackPath,
+  purchaseGroupId,
+  creditAmount,
+  priceInCents,
+  currency,
+}: {
+  affiliateSlug: string;
+  catalogPackageId: string;
+  purchaserOrganisationId: string;
+  purchaserUserId: number;
+  purchaserEmail: string;
+  affiliateCallbackPath: string;
+  purchaseGroupId: string;
+  creditAmount: number;
+  priceInCents: number;
+  currency: string;
+}) => {
+  const catalog = await getEsignCreditPackageByIdFromCatalog(catalogPackageId);
+
+  if (!catalog) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'This package is not available for purchase right now',
+    });
+  }
+
+  const transaction = await createTransaction({
+    email: purchaserEmail,
+    amount: priceInCents,
+    currency,
+    callback_url: `${NEXT_PUBLIC_WEBAPP_URL()}${affiliateCallbackPath}`,
+    metadata: {
+      value: creditAmount,
+      organisationId: purchaserOrganisationId,
+      type: 'organisation-credit-purchase',
+      catalogPackageId,
+      affiliateSlug,
+      purchaseGroupId,
+    },
+  });
+
+  if (!transaction.status || !transaction.data) {
+    throw new AppError(AppErrorCode.UNKNOWN_ERROR, {
+      message: transaction.message || 'Failed to initialize Paystack transaction',
+    });
+  }
+
+  await createPendingOrganisationCreditPurchase({
+    organisationId: purchaserOrganisationId,
+    userId: purchaserUserId,
+    paystackReference: transaction.data.reference,
+    credits: creditAmount,
+    grossAmount: priceInCents,
+    currency,
+    purchaseGroupId,
+  }).catch(() => {
+    // Pending row is best-effort; webhook still grants credits from metadata.
+  });
+
+  return {
+    authorizationUrl: transaction.data.authorization_url,
+    reference: transaction.data.reference,
+  };
 };
 
 export const initializeAffiliatePackagePurchase = async ({
@@ -70,114 +144,100 @@ export const initializeAffiliatePackagePurchase = async ({
     ? `/r/${affiliateSlug}?purchase=success&orgUrl=${encodeURIComponent(purchaserOrganisation.url)}`
     : `/r/${affiliateSlug}?purchase=success`;
 
+  const commercials = await resolveResellerPackageCommercials(pkg);
+
   const purchaseGroupId = prefixedId('pur');
   const availableCredits = await getOrganisationCredits(profile.organisationId);
   const payoutReadiness = getResellerPayoutReadiness(profile);
   const canAcceptPayments = payoutReadiness.canAcceptPayments;
   const hasFullStock =
     canAcceptPayments &&
-    (profile.allowNegativeCredits || availableCredits >= pkg.creditAmount);
+    (profile.allowNegativeCredits || availableCredits >= commercials.creditAmount);
   const hasPartialStock =
     canAcceptPayments &&
     !profile.allowNegativeCredits &&
     availableCredits > 0 &&
-    availableCredits < pkg.creditAmount;
+    availableCredits < commercials.creditAmount;
 
-  if (hasFullStock) {
-    const result = await initializeResellerPurchase({
+  const nomiaDirectCheckout = () =>
+    initializeNomiaDirectCheckout({
       affiliateSlug,
-      packageId,
+      catalogPackageId: pkg.catalogPackageId,
       purchaserOrganisationId,
       purchaserUserId,
       purchaserEmail,
-      callbackPath: affiliateCallbackPath,
+      affiliateCallbackPath,
       purchaseGroupId,
+      creditAmount: commercials.creditAmount,
+      priceInCents: commercials.priceInCents,
+      currency: commercials.currency,
     });
 
-    return {
-      authorizationUrl: result.authorizationUrl,
-      reference: result.reference,
-    };
+  if (hasFullStock) {
+    try {
+      const result = await initializeResellerPurchase({
+        affiliateSlug,
+        packageId,
+        purchaserOrganisationId,
+        purchaserUserId,
+        purchaserEmail,
+        callbackPath: affiliateCallbackPath,
+        purchaseGroupId,
+      });
+
+      return {
+        authorizationUrl: result.authorizationUrl,
+        reference: result.reference,
+      };
+    } catch (error) {
+      // Subaccount missing / wrong Paystack mode → fulfill via Nomia instead of blocking the buyer.
+      if (!isPaystackSubaccountMissingError(error)) {
+        throw error;
+      }
+    }
   }
 
   if (hasPartialStock) {
-    const hybridAmounts = calculateHybridCheckoutAmounts({
-      packageCreditAmount: pkg.creditAmount,
-      packagePriceInCents: pkg.priceInCents,
-      resellerCredits: availableCredits,
-    });
-    const isNomiaSubaccount = profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT;
+    try {
+      const hybridAmounts = calculateHybridCheckoutAmounts({
+        packageCreditAmount: commercials.creditAmount,
+        packagePriceInCents: commercials.priceInCents,
+        resellerCredits: availableCredits,
+      });
+      const isNomiaSubaccount = profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT;
 
-    const result = await initializeResellerPurchase({
-      affiliateSlug,
-      packageId,
-      purchaserOrganisationId,
-      purchaserUserId,
-      purchaserEmail,
-      purchaseGroupId,
-      ...(isNomiaSubaccount
-        ? {
-            hybridSingleCheckoutSplit: {
-              ...hybridAmounts,
-              catalogPackageId: pkg.catalogPackageId,
-            },
-            callbackPath: affiliateCallbackPath,
-          }
-        : {
-            creditAmountOverride: hybridAmounts.resellerCredits,
-            amountInCentsOverride: hybridAmounts.resellerAmountInCents,
-            callbackPath: `${affiliateCallbackPath}&hybrid=nomia&catalogPackageId=${pkg.catalogPackageId}&nomiaCredits=${hybridAmounts.nomiaCredits}&nomiaAmount=${hybridAmounts.nomiaAmountInCents}&purchaseGroupId=${purchaseGroupId}`,
-          }),
-    });
+      const result = await initializeResellerPurchase({
+        affiliateSlug,
+        packageId,
+        purchaserOrganisationId,
+        purchaserUserId,
+        purchaserEmail,
+        purchaseGroupId,
+        ...(isNomiaSubaccount
+          ? {
+              hybridSingleCheckoutSplit: {
+                ...hybridAmounts,
+                catalogPackageId: pkg.catalogPackageId,
+              },
+              callbackPath: affiliateCallbackPath,
+            }
+          : {
+              creditAmountOverride: hybridAmounts.resellerCredits,
+              amountInCentsOverride: hybridAmounts.resellerAmountInCents,
+              callbackPath: `${affiliateCallbackPath}&hybrid=nomia&catalogPackageId=${pkg.catalogPackageId}&nomiaCredits=${hybridAmounts.nomiaCredits}&nomiaAmount=${hybridAmounts.nomiaAmountInCents}&purchaseGroupId=${purchaseGroupId}`,
+            }),
+      });
 
-    return {
-      authorizationUrl: result.authorizationUrl,
-      reference: result.reference,
-    };
+      return {
+        authorizationUrl: result.authorizationUrl,
+        reference: result.reference,
+      };
+    } catch (error) {
+      if (!isPaystackSubaccountMissingError(error)) {
+        throw error;
+      }
+    }
   }
 
-  const catalog = await getEsignCreditPackageByIdFromCatalog(pkg.catalogPackageId);
-
-  if (!catalog) {
-    throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'This package is not available for purchase right now',
-    });
-  }
-
-  const transaction = await createTransaction({
-    email: purchaserEmail,
-    amount: catalog.priceInCents,
-    callback_url: `${NEXT_PUBLIC_WEBAPP_URL()}${affiliateCallbackPath}`,
-    metadata: {
-      value: catalog.credits,
-      organisationId: purchaserOrganisationId,
-      type: 'organisation-credit-purchase',
-      catalogPackageId: pkg.catalogPackageId,
-      affiliateSlug,
-      purchaseGroupId,
-    },
-  });
-
-  if (!transaction.status || !transaction.data) {
-    throw new AppError(AppErrorCode.UNKNOWN_ERROR, {
-      message: transaction.message || 'Failed to initialize Paystack transaction',
-    });
-  }
-
-  await createPendingOrganisationCreditPurchase({
-    organisationId: purchaserOrganisationId,
-    userId: purchaserUserId,
-    paystackReference: transaction.data.reference,
-    credits: catalog.credits,
-    grossAmount: catalog.priceInCents,
-    currency: catalog.currency,
-    purchaseGroupId,
-  }).catch(() => {
-    // Pending row is best-effort; webhook still grants credits from metadata.
-  });
-
-  return {
-    authorizationUrl: transaction.data.authorization_url,
-    reference: transaction.data.reference,
-  };
+  return nomiaDirectCheckout();
 };
