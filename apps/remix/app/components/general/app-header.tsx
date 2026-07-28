@@ -7,6 +7,7 @@ import { Link, useParams } from 'react-router';
 
 import { useOptionalCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
+import { resolveOrganisationBillingPath } from '@documenso/lib/utils/organisation-billing-path';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
 import { getRootHref } from '@documenso/lib/utils/params';
 import { trpc } from '@documenso/trpc/react';
@@ -55,11 +56,26 @@ export const Header = ({ className, ...props }: HeaderProps) => {
     {},
   );
 
+  const { data: billingAttribution } = trpc.organisation.reseller.getBillingAttribution.useQuery(
+    {
+      organisationId: organisation?.id ?? '',
+    },
+    {
+      enabled: Boolean(organisation?.id),
+    },
+  );
+
   const unreadCount = unreadCountData?.count ?? 0;
   const pendingInvitesCount = pendingInvitesData?.length ?? 0;
   const attentionCount = unreadCount + pendingInvitesCount;
   const availableCredits = organisation?.credits ?? 0;
   const hasNegativeCredits = availableCredits < 0;
+  const creditsPurchasePath = organisation
+    ? resolveOrganisationBillingPath({
+        organisationUrl: organisation.url,
+        billingAttribution: billingAttribution ?? undefined,
+      })
+    : null;
 
   useEffect(() => {
     const onScroll = () => {
@@ -90,7 +106,7 @@ export const Header = ({ className, ...props }: HeaderProps) => {
 
         <AppNavDesktop setIsCommandMenuOpen={setIsCommandMenuOpen} />
 
-        {organisation && (
+        {organisation && creditsPurchasePath && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -104,14 +120,14 @@ export const Header = ({ className, ...props }: HeaderProps) => {
                       : 'border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary',
                   )}
                 >
-                  <Link to={`/o/${organisation.url}/price-plan`}>
+                  <Link to={creditsPurchasePath}>
                     <CoinsIcon className="h-3.5 w-3.5 flex-shrink-0" />
                     <span className="text-xs font-medium tabular-nums">{availableCredits}</span>
                   </Link>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <Trans>Credits available for this organisation</Trans>
+                <Trans>Credits available. Click to buy more</Trans>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
