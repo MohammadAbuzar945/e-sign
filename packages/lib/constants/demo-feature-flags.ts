@@ -105,19 +105,10 @@ export const canAccessInvoiceHistory = (_email?: string | null) =>
   isDemoFeatureVisible('INVOICE_HISTORY');
 
 /**
- * Admin reseller Email / Notify broadcast — email allowlist only.
+ * Admin reseller Email / Notify broadcast.
+ * Open to all admins (route is already protected by adminProcedure / admin layout).
  */
-const RESELLER_NOTIFY_ALLOWED_EMAILS = new Set(['awanabuzar945@gmail.com']);
-
-export const canAccessResellerNotify = (email?: string | null) => {
-  const normalizedEmail = email?.trim().toLowerCase();
-
-  if (!normalizedEmail) {
-    return false;
-  }
-
-  return RESELLER_NOTIFY_ALLOWED_EMAILS.has(normalizedEmail);
-};
+export const canAccessResellerNotify = (_email?: string | null) => true;
 
 export const assertResellerNotifyAccess = (email: string | null | undefined) => {
   if (!canAccessResellerNotify(email)) {
