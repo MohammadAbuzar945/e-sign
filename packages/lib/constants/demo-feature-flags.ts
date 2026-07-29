@@ -104,19 +104,3 @@ export const assertResellerCheckoutAccess = (email: string | null | undefined) =
 export const canAccessInvoiceHistory = (_email?: string | null) =>
   isDemoFeatureVisible('INVOICE_HISTORY');
 
-/**
- * Admin Nomia PAYG / subscription pricing editor.
- * Hard-gated to a single operator email (temporary).
- */
-export const NOMIA_PRICING_ALLOWED_EMAIL = 'awanabuzar945@gmail.com';
-
-export const canAccessNomiaPricing = (email?: string | null) =>
-  email?.trim().toLowerCase() === NOMIA_PRICING_ALLOWED_EMAIL;
-
-export const assertNomiaPricingAccess = (email: string | null | undefined) => {
-  if (!canAccessNomiaPricing(email)) {
-    throw new AppError(AppErrorCode.UNAUTHORIZED, {
-      message: 'Nomia pricing is not available for your account.',
-    });
-  }
-};

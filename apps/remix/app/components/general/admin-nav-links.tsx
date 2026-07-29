@@ -13,11 +13,9 @@ import {
 import { Link, useLocation } from 'react-router';
 
 import {
-  canAccessNomiaPricing,
   canAccessResellerBulkTools,
   isDemoFeatureVisible,
 } from '@documenso/lib/constants/demo-feature-flags';
-import { useSession } from '@documenso/lib/client-only/providers/session';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 
@@ -33,9 +31,7 @@ export const AdminNavLinks = ({
   buttonClassName,
 }: AdminNavLinksProps) => {
   const { pathname } = useLocation();
-  const { user } = useSession();
   const canAccessBulkTools = canAccessResellerBulkTools();
-  const canAccessPricing = canAccessNomiaPricing(user.email);
 
   const items = [
     {
@@ -62,16 +58,12 @@ export const AdminNavLinks = ({
       icon: Trophy,
       isActive: pathname?.startsWith('/admin/organisation-insights'),
     },
-    ...(canAccessPricing
-      ? [
-          {
-            href: '/admin/nomia-pricing',
-            label: <Trans>Nomia pricing</Trans>,
-            icon: CoinsIcon,
-            isActive: pathname?.startsWith('/admin/nomia-pricing'),
-          },
-        ]
-      : []),
+    {
+      href: '/admin/nomia-pricing',
+      label: <Trans>Nomia pricing</Trans>,
+      icon: CoinsIcon,
+      isActive: pathname?.startsWith('/admin/nomia-pricing'),
+    },
     ...(isDemoFeatureVisible('ADMIN_RESELLERS')
       ? [
           {
