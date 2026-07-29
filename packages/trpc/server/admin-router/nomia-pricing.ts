@@ -1,4 +1,3 @@
-import { assertNomiaPricingAccess } from '@documenso/lib/constants/demo-feature-flags';
 import {
   listNomiaPricePlans,
   updateNomiaPricePlans,
@@ -18,9 +17,7 @@ export const getNomiaPricePlansRoute = adminProcedure
   .meta(getNomiaPricePlansMeta)
   .input(ZGetNomiaPricePlansRequestSchema)
   .output(ZGetNomiaPricePlansResponseSchema)
-  .query(async ({ ctx }) => {
-    assertNomiaPricingAccess(ctx.user.email);
-
+  .query(async () => {
     const plans = await listNomiaPricePlans();
 
     return {
@@ -43,9 +40,7 @@ export const updateNomiaPricePlansRoute = adminProcedure
   .meta(updateNomiaPricePlansMeta)
   .input(ZUpdateNomiaPricePlansRequestSchema)
   .output(ZUpdateNomiaPricePlansResponseSchema)
-  .mutation(async ({ ctx, input }) => {
-    assertNomiaPricingAccess(ctx.user.email);
-
+  .mutation(async ({ input }) => {
     const { plans: inputPlans } = input;
 
     const plans = await updateNomiaPricePlans(inputPlans);

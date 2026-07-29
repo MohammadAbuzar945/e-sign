@@ -2,10 +2,9 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { useMemo, useState } from 'react';
-import { Link, redirect, useLocation, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
-import { canAccessNomiaPricing } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { isNomiaLivePaystackEnv } from '@documenso/lib/utils/nomia-paystack-env';
 import { trpc } from '@documenso/trpc/react';
@@ -50,11 +49,7 @@ export function meta() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const { user } = await getSession(request);
-
-  if (!canAccessNomiaPricing(user.email)) {
-    throw redirect('/admin');
-  }
+  await getSession(request);
 
   return {
     isLivePaystackEnv: isNomiaLivePaystackEnv(),
