@@ -146,7 +146,9 @@ export const resolveOrganisationPaygBilling = async ({
     (item) => item.catalogPackageId === catalogPackageId && item.isEnabled,
   );
 
-  const catalog = await getEsignCreditPackageByIdFromCatalog(catalogPackageId);
+  const catalog = await getEsignCreditPackageByIdFromCatalog(catalogPackageId, {
+    enabledOnly: true,
+  });
 
   if (!resellerPkg || !catalog) {
     return {
@@ -159,6 +161,16 @@ export const resolveOrganisationPaygBilling = async ({
   }
 
   const commercials = await resolveResellerPackageCommercials(resellerPkg);
+
+  if (!commercials) {
+    return {
+      ...emptyNomia('PACKAGE_DISABLED'),
+      resellerDisplayName: displayName,
+      affiliateSlug: fresh.affiliateSlug,
+      resellerProfileId: fresh.id,
+      disclosure,
+    };
+  }
   const availableCredits = await getOrganisationCredits(fresh.organisationId);
   const requested = commercials.creditAmount;
 
@@ -335,28 +347,35 @@ export const getOrganisationBillingAttributionSummary = async (organisationId: s
         ? `${RESELLER_BILLING_DISCLOSURE_PREFIX} ${displayName}`
         : null,
     isDelinquent: profile?.isDelinquent ?? false,
-    packages: await Promise.all(
-      (profile?.packages ?? []).map(async (pkg) => {
-        const commercials = await resolveResellerPackageCommercials(pkg);
-        const hasEnough =
-          Boolean(profile?.allowNegativeCredits) ||
-          availableCredits >= commercials.creditAmount;
+    packages: (
+      await Promise.all(
+        (profile?.packages ?? []).map(async (pkg) => {
+          const commercials = await resolveResellerPackageCommercials(pkg);
 
-        return {
-          ...pkg,
-          creditAmount: commercials.creditAmount,
-          priceInCents: commercials.priceInCents,
-          currency: commercials.currency,
-          name: commercials.name,
-          displayPrice: commercials.displayPrice,
-          canFulfillFromReseller: hasEnough,
-          billingSource: hasEnough
-            ? ('RESELLER' as const)
-            : availableCredits > 0
-              ? ('HYBRID' as const)
-              : ('NOMIA' as const),
-        };
-      }),
-    ),
+          if (!commercials) {
+            return null;
+          }
+
+          const hasEnough =
+            Boolean(profile?.allowNegativeCredits) ||
+            availableCredits >= commercials.creditAmount;
+
+          return {
+            ...pkg,
+            creditAmount: commercials.creditAmount,
+            priceInCents: commercials.priceInCents,
+            currency: commercials.currency,
+            name: commercials.name,
+            displayPrice: commercials.displayPrice,
+            canFulfillFromReseller: hasEnough,
+            billingSource: hasEnough
+              ? ('RESELLER' as const)
+              : availableCredits > 0
+                ? ('HYBRID' as const)
+                : ('NOMIA' as const),
+          };
+        }),
+      )
+    ).filter((pkg): pkg is NonNullable<typeof pkg> => pkg !== null),
   };
 };

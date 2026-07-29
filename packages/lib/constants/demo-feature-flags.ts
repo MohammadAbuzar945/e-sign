@@ -104,3 +104,26 @@ export const assertResellerCheckoutAccess = (email: string | null | undefined) =
 export const canAccessInvoiceHistory = (_email?: string | null) =>
   isDemoFeatureVisible('INVOICE_HISTORY');
 
+/**
+ * Admin reseller Email / Notify broadcast — email allowlist only.
+ */
+const RESELLER_NOTIFY_ALLOWED_EMAILS = new Set(['awanabuzar945@gmail.com']);
+
+export const canAccessResellerNotify = (email?: string | null) => {
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    return false;
+  }
+
+  return RESELLER_NOTIFY_ALLOWED_EMAILS.has(normalizedEmail);
+};
+
+export const assertResellerNotifyAccess = (email: string | null | undefined) => {
+  if (!canAccessResellerNotify(email)) {
+    throw new AppError(AppErrorCode.UNAUTHORIZED, {
+      message: RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+    });
+  }
+};
+

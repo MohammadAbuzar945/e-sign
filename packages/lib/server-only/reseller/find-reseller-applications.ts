@@ -3,7 +3,7 @@ import type { Prisma, ResellerApplicationStatus, ResellerProfile } from '@prisma
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import {
   RESELLER_ADMIN_VIEW_STATUSES,
-  type ResellerAdminView,
+  type ResellerAdminApplicationsView,
 } from '@documenso/lib/constants/reseller-application-status';
 import {
   parseResellerBankAccountType,
@@ -37,7 +37,7 @@ type FindResellerApplicationsOptions = {
   page?: number;
   perPage?: number;
   status?: string;
-  view?: ResellerAdminView;
+  view?: ResellerAdminApplicationsView;
 };
 
 export const findResellerApplications = async ({

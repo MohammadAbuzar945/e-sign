@@ -191,6 +191,15 @@ export const updateNomiaPricePlans = async (
     }
   }
 
+  const updatedPaygPlans: Array<{
+    id: string;
+    credits: number;
+    priceInCents: number;
+    currency: string;
+    isEnabled: boolean;
+    paystackPlanCode: string | null;
+  }> = [];
+
   await prisma.$transaction(async (tx) => {
     for (const item of updates) {
       const current = existingById.get(item.id)!;
@@ -216,19 +225,33 @@ export const updateNomiaPricePlans = async (
         continue;
       }
 
+      const paystackPlanCode = useLive
+        ? updated.paystackPlanCodeLive || null
+        : updated.paystackPlanCodeTest || null;
+
+      updatedPaygPlans.push({
+        id: updated.id,
+        credits: updated.credits,
+        priceInCents: updated.priceInCents,
+        currency: updated.currency,
+        isEnabled: updated.isEnabled,
+        paystackPlanCode,
+      });
+
       // Keep reseller package snapshots aligned with Nomia PAYG catalog.
       await tx.resellerPackage.updateMany({
         where: { catalogPackageId: item.id },
         data: {
           creditAmount: item.credits,
           priceInCents: item.priceInCents,
-          paystackPlanCode: useLive
-            ? updated.paystackPlanCodeLive || null
-            : updated.paystackPlanCodeTest || null,
+          paystackPlanCode,
+          ...(!item.isEnabled ? { isEnabled: false } : {}),
         },
       });
     }
   });
+
+  await syncResellerPackagesFromNomiaPaygPlans(updatedPaygPlans);
 
   return listNomiaPricePlans();
 };
@@ -283,8 +306,13 @@ export const getActiveNomiaPaygPackages = async (): Promise<EsignCreditPackage[]
 
 export const getEsignCreditPackageByIdFromCatalog = async (
   catalogPackageId: string,
+  {
+    enabledOnly = false,
+  }: {
+    enabledOnly?: boolean;
+  } = {},
 ): Promise<EsignCreditPackage | undefined> => {
-  const catalog = await getActiveNomiaCatalog({ enabledOnly: false });
+  const catalog = await getActiveNomiaCatalog({ enabledOnly });
 
   return catalog.find((item) => item.id === catalogPackageId);
 };
@@ -299,16 +327,103 @@ export const resolveResellerPackageCommercials = async (pkg: {
   priceInCents: number;
   currency: string;
 }) => {
-  const catalog = await getEsignCreditPackageByIdFromCatalog(pkg.catalogPackageId);
+  const catalog = await getEsignCreditPackageByIdFromCatalog(pkg.catalogPackageId, {
+    enabledOnly: true,
+  });
+
+  if (!catalog) {
+    return null;
+  }
 
   return {
-    creditAmount: catalog?.credits ?? pkg.creditAmount,
-    priceInCents: catalog?.priceInCents ?? pkg.priceInCents,
-    currency: catalog?.currency ?? pkg.currency,
-    name: catalog?.name ?? `${pkg.creditAmount} envelopes`,
-    displayPrice:
-      catalog?.displayPrice ?? `${pkg.currency} ${(pkg.priceInCents / 100).toFixed(2)}`,
+    creditAmount: catalog.credits,
+    priceInCents: catalog.priceInCents,
+    currency: catalog.currency,
+    name: catalog.name,
+    displayPrice: catalog.displayPrice,
   };
+};
+
+/**
+ * Keep ResellerPackage rows aligned with Nomia PAYG enablement:
+ * - disabled Nomia packs → force reseller packs off (hidden from storefronts)
+ * - enabled Nomia packs → update commercials and create missing rows for every reseller
+ */
+export const syncResellerPackagesFromNomiaPaygPlans = async (
+  paygPlans: Array<{
+    id: string;
+    credits: number;
+    priceInCents: number;
+    currency: string;
+    isEnabled: boolean;
+    paystackPlanCode: string | null;
+  }>,
+) => {
+  if (paygPlans.length === 0) {
+    return;
+  }
+
+  const resellerProfiles = await prisma.resellerProfile.findMany({
+    select: { id: true },
+  });
+
+  for (const plan of paygPlans) {
+    if (!plan.isEnabled) {
+      await prisma.resellerPackage.updateMany({
+        where: { catalogPackageId: plan.id },
+        data: {
+          isEnabled: false,
+          creditAmount: plan.credits,
+          priceInCents: plan.priceInCents,
+          paystackPlanCode: plan.paystackPlanCode,
+        },
+      });
+
+      await prisma.resellerProfile.updateMany({
+        where: { highlightedCatalogPackageId: plan.id },
+        data: { highlightedCatalogPackageId: null },
+      });
+
+      continue;
+    }
+
+    await prisma.resellerPackage.updateMany({
+      where: { catalogPackageId: plan.id },
+      data: {
+        creditAmount: plan.credits,
+        priceInCents: plan.priceInCents,
+        paystackPlanCode: plan.paystackPlanCode,
+      },
+    });
+
+    if (resellerProfiles.length === 0) {
+      continue;
+    }
+
+    const existing = await prisma.resellerPackage.findMany({
+      where: { catalogPackageId: plan.id },
+      select: { resellerProfileId: true },
+    });
+    const existingProfileIds = new Set(existing.map((item) => item.resellerProfileId));
+    const missingProfiles = resellerProfiles.filter((profile) => !existingProfileIds.has(profile.id));
+
+    if (missingProfiles.length === 0) {
+      continue;
+    }
+
+    await prisma.resellerPackage.createMany({
+      data: missingProfiles.map((profile) => ({
+        resellerProfileId: profile.id,
+        catalogPackageId: plan.id,
+        creditAmount: plan.credits,
+        priceInCents: plan.priceInCents,
+        currency: plan.currency || 'ZAR',
+        paystackPlanCode: plan.paystackPlanCode,
+        isEnabled: false,
+      })),
+      skipDuplicates: true,
+    });
+  }
 };
 
 const categoryLabel = (

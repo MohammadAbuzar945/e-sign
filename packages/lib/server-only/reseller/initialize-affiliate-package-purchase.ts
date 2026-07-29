@@ -146,6 +146,12 @@ export const initializeAffiliatePackagePurchase = async ({
 
   const commercials = await resolveResellerPackageCommercials(pkg);
 
+  if (!commercials) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'This package is no longer available for purchase',
+    });
+  }
+
   const purchaseGroupId = prefixedId('pur');
   const availableCredits = await getOrganisationCredits(profile.organisationId);
   const payoutReadiness = getResellerPayoutReadiness(profile);
