@@ -30,33 +30,40 @@ export const getAffiliateResellerRoute = procedure
       brandingCompanyDetails: profile.brandingCompanyDetails,
     });
 
-    const packages = await Promise.all(
-      profile.packages.map(async (pkg) => {
-        const commercials = await resolveResellerPackageCommercials(pkg);
-        const hasEnoughCredits =
-          profile.allowNegativeCredits || profile.availableCredits >= commercials.creditAmount;
-        const canPurchase = profile.canAcceptAffiliatePayments && hasEnoughCredits;
-        const canPartialFulfill =
-          profile.canAcceptAffiliatePayments &&
-          !profile.allowNegativeCredits &&
-          profile.availableCredits > 0 &&
-          profile.availableCredits < commercials.creditAmount;
+    const packages = (
+      await Promise.all(
+        profile.packages.map(async (pkg) => {
+          const commercials = await resolveResellerPackageCommercials(pkg);
 
-        return {
-          id: pkg.id,
-          catalogPackageId: pkg.catalogPackageId,
-          creditAmount: commercials.creditAmount,
-          priceInCents: commercials.priceInCents,
-          currency: commercials.currency,
-          displayPrice: commercials.displayPrice,
-          name: commercials.name,
-          isHighlighted: profile.highlightedCatalogPackageId === pkg.catalogPackageId,
-          canPurchase,
-          canPartialFulfill,
-          availableResellerCredits: profile.availableCredits,
-        };
-      }),
-    );
+          if (!commercials) {
+            return null;
+          }
+
+          const hasEnoughCredits =
+            profile.allowNegativeCredits || profile.availableCredits >= commercials.creditAmount;
+          const canPurchase = profile.canAcceptAffiliatePayments && hasEnoughCredits;
+          const canPartialFulfill =
+            profile.canAcceptAffiliatePayments &&
+            !profile.allowNegativeCredits &&
+            profile.availableCredits > 0 &&
+            profile.availableCredits < commercials.creditAmount;
+
+          return {
+            id: pkg.id,
+            catalogPackageId: pkg.catalogPackageId,
+            creditAmount: commercials.creditAmount,
+            priceInCents: commercials.priceInCents,
+            currency: commercials.currency,
+            displayPrice: commercials.displayPrice,
+            name: commercials.name,
+            isHighlighted: profile.highlightedCatalogPackageId === pkg.catalogPackageId,
+            canPurchase,
+            canPartialFulfill,
+            availableResellerCredits: profile.availableCredits,
+          };
+        }),
+      )
+    ).filter((pkg): pkg is NonNullable<typeof pkg> => pkg !== null);
 
     return {
       affiliateSlug: profile.affiliateSlug,

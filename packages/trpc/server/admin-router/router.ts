@@ -29,6 +29,11 @@ import {
 } from './reseller-applications';
 import { getResellerApplicationRoute } from './get-reseller-application';
 import { getResellerTermsTemplateVariablesRoute } from './get-reseller-terms-template-variables';
+import {
+  getResellerNotifyRecipientsRoute,
+  notifyResellersRoute,
+  previewResellerNotifyRoute,
+} from './notify-resellers';
 import { markResellerDelinquentRoute } from './mark-reseller-delinquent';
 import { reactivateResellerProfileRoute } from './reactivate-reseller-profile';
 import {
@@ -93,6 +98,9 @@ export const adminRouter = router({
     refreshBankAccountStatus: refreshResellerBankAccountStatusRoute,
     retrySubaccount: retryResellerSubaccountRoute,
     delete: deleteResellerRoute,
+    getNotifyRecipients: getResellerNotifyRecipientsRoute,
+    previewNotify: previewResellerNotifyRoute,
+    notify: notifyResellersRoute,
   },
   resellerBulkRates: {
     listGlobal: listGlobalResellerBulkRatesRoute,

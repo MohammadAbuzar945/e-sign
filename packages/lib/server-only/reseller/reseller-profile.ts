@@ -89,9 +89,14 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
 
   const availableCredits = await getOrganisationCredits(organisationId);
   const payoutReadiness = getResellerPayoutReadiness(resolvedProfile);
+  const catalogPackages = await getActiveNomiaPaygPackages();
+  const activeCatalogPackageIds = new Set(catalogPackages.map((item) => item.id));
 
   return {
     ...resolvedProfile,
+    packages: resolvedProfile.packages.filter((pkg) =>
+      activeCatalogPackageIds.has(pkg.catalogPackageId),
+    ),
     bankAccountType: parseResellerBankAccountType(profileWithVerification.bankAccountType),
     bankDocumentType: parseResellerBankDocumentType(profileWithVerification.bankDocumentType),
     paystackSecretKey: undefined,
@@ -111,7 +116,7 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
     hasPaystackConfigured: payoutReadiness.hasOwnPaystackConfigured,
     canAcceptAffiliatePayments: payoutReadiness.canAcceptPayments,
     payoutBlockingReason: payoutReadiness.blockingReason ?? null,
-    catalogPackages: await getActiveNomiaPaygPackages(),
+    catalogPackages,
   };
 };
 
@@ -231,12 +236,20 @@ export const updateResellerPackages = async ({
     throw new Error('Reseller profile not found');
   }
 
+  const activeCatalogPackages = await getActiveNomiaPaygPackages();
+  const activeCatalogPackageIds = new Set(activeCatalogPackages.map((item) => item.id));
+  const allowedEnabledIds = enabledCatalogPackageIds.filter((id) =>
+    activeCatalogPackageIds.has(id),
+  );
+
   await Promise.all(
     profile.packages.map((pkg) =>
       prisma.resellerPackage.update({
         where: { id: pkg.id },
         data: {
-          isEnabled: enabledCatalogPackageIds.includes(pkg.catalogPackageId),
+          isEnabled:
+            activeCatalogPackageIds.has(pkg.catalogPackageId) &&
+            allowedEnabledIds.includes(pkg.catalogPackageId),
         },
       }),
     ),

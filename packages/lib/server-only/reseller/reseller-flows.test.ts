@@ -1238,6 +1238,7 @@ describe('initializeResellerPurchase flow', () => {
     packages: [
       {
         id: 'pkg_1',
+        catalogPackageId: 'payg-50',
         isEnabled: true,
         creditAmount: 50,
         priceInCents: 45000,
@@ -1380,6 +1381,7 @@ describe('initializeResellerPurchase flow', () => {
       packages: [
         {
           id: 'pkg_1000',
+          catalogPackageId: 'payg-1000',
           isEnabled: true,
           creditAmount: 1000,
           priceInCents: 700000,

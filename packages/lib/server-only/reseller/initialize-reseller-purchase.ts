@@ -98,6 +98,13 @@ export const initializeResellerPurchase = async ({
 
   const availableCredits = await getOrganisationCredits(profile.organisationId);
   const commercials = await resolveResellerPackageCommercials(pkg);
+
+  if (!commercials) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'This package is no longer available for purchase',
+    });
+  }
+
   const isHybridSingleCheckout =
     Boolean(hybridSingleCheckoutSplit) &&
     profile.payoutMode === ResellerPayoutMode.NOMIA_SUBACCOUNT;

@@ -8,9 +8,9 @@ import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-upda
 import {
   getResellerApplicationStatusLabel,
   getResellerProfileStatusLabel,
-  isResellerAdminView,
+  isResellerAdminApplicationsView,
   RESELLER_ADMIN_VIEW,
-  type ResellerAdminView,
+  type ResellerAdminApplicationsView,
 } from '@documenso/lib/constants/reseller-application-status';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
@@ -38,8 +38,8 @@ import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
-const getAdminView = (value: string | null): ResellerAdminView => {
-  if (isResellerAdminView(value)) {
+const getAdminView = (value: string | null): ResellerAdminApplicationsView => {
+  if (isResellerAdminApplicationsView(value)) {
     return value;
   }
 

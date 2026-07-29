@@ -4,11 +4,17 @@ export const RESELLER_ADMIN_VIEW = {
   QUEUE: 'queue',
   ACCOUNTS: 'accounts',
   CLOSED: 'closed',
+  EMAIL: 'email',
 } as const;
 
 export type ResellerAdminView = (typeof RESELLER_ADMIN_VIEW)[keyof typeof RESELLER_ADMIN_VIEW];
 
-export const RESELLER_ADMIN_VIEW_STATUSES: Record<ResellerAdminView, string[]> = {
+export type ResellerAdminApplicationsView = Exclude<
+  ResellerAdminView,
+  typeof RESELLER_ADMIN_VIEW.EMAIL
+>;
+
+export const RESELLER_ADMIN_VIEW_STATUSES: Record<ResellerAdminApplicationsView, string[]> = {
   [RESELLER_ADMIN_VIEW.QUEUE]: ['PENDING', 'TERMS_SENT', 'TERMS_COMPLETED'],
   [RESELLER_ADMIN_VIEW.ACCOUNTS]: ['APPROVED'],
   [RESELLER_ADMIN_VIEW.CLOSED]: ['REJECTED', 'CANCELLED'],
@@ -70,6 +76,17 @@ export const getResellerProfileStatusLabel = (status: string) => {
 };
 
 export const isResellerAdminView = (value: string | null | undefined): value is ResellerAdminView => {
+  return (
+    value === RESELLER_ADMIN_VIEW.QUEUE ||
+    value === RESELLER_ADMIN_VIEW.ACCOUNTS ||
+    value === RESELLER_ADMIN_VIEW.CLOSED ||
+    value === RESELLER_ADMIN_VIEW.EMAIL
+  );
+};
+
+export const isResellerAdminApplicationsView = (
+  value: string | null | undefined,
+): value is ResellerAdminApplicationsView => {
   return (
     value === RESELLER_ADMIN_VIEW.QUEUE ||
     value === RESELLER_ADMIN_VIEW.ACCOUNTS ||
