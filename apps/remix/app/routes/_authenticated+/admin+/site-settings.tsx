@@ -374,7 +374,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <Trans>DocGen API Key</Trans>
+                      <Trans>DocGen WorkspaceAPI Key</Trans>
                     </FormLabel>
                     <FormControl>
                       <Input
