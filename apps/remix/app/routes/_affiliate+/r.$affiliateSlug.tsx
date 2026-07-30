@@ -688,8 +688,8 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
                 className={cn(
                   'text-sm font-medium leading-none transition-colors',
                   stickyBillingOptIn === true
-                    ? 'text-foreground opacity-100'
-                    : 'text-muted-foreground opacity-50',
+                    ? 'text-muted-foreground opacity-50'
+                    : 'text-foreground opacity-100',
                 )}
               >
                 <Trans>Always buy from this reseller</Trans>
@@ -697,7 +697,9 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
               <Switch
                 id="sticky-billing-opt-in"
                 className={cn(
-                  stickyBillingOptIn === true && 'opacity-100 disabled:opacity-100',
+                  stickyBillingOptIn === true
+                    ? 'opacity-50 disabled:opacity-50'
+                    : 'opacity-100 disabled:opacity-100',
                 )}
                 checked={stickyBillingOptIn === true}
                 disabled={isUpdatingStickyBilling || stickyBillingOptIn === null}
