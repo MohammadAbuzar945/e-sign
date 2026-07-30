@@ -399,7 +399,12 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
     }
 
     if (isOneTime) {
-      handleApiPaystackOneTimeTransaction(email, amount, metadata);
+      await handleApiPaystackOneTimeTransaction(
+        email,
+        amount,
+        metadata,
+        `${NEXT_PUBLIC_WEBAPP_URL()}/o/${orgUrl}/price-plan?purchase=success`,
+      );
       return;
     }
 
@@ -457,6 +462,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
     email: string,
     amount: any,
     metadata?: number,
+    callback_url: string = `${NEXT_PUBLIC_WEBAPP_URL()}/o/${orgUrl}/price-plan?purchase=success`,
   ) {
     const sanitizedAmount = amount.replace(/[^\d]/g, '');
     const response = await fetch(`${NEXT_PUBLIC_WEBAPP_URL()}/api/paystack/create-transaction`, {
@@ -467,6 +473,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
       body: JSON.stringify({
         email,
         amount: parseInt(sanitizedAmount) * 100,
+        callback_url,
         metadata: {
           ...(metadata ? { value: metadata } : {}),
           organisationId: organisation.id,
@@ -487,7 +494,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
       return;
     }
 
-    window.open(data?.authorization_url, '_blank');
+    window.location.href = data?.authorization_url;
   }
 
   async function handleApiCancelPaystackSubscription(subscriptionCode: string) {
