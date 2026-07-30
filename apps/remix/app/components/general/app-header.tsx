@@ -70,6 +70,7 @@ export const Header = ({ className, ...props }: HeaderProps) => {
   const attentionCount = unreadCount + pendingInvitesCount;
   const availableCredits = organisation?.credits ?? 0;
   const hasNegativeCredits = availableCredits < 0;
+  const hasZeroCredits = availableCredits === 0;
   const creditsPurchasePath = organisation
     ? resolveOrganisationBillingPath({
         organisationUrl: organisation.url,
@@ -122,12 +123,22 @@ export const Header = ({ className, ...props }: HeaderProps) => {
                 >
                   <Link to={creditsPurchasePath}>
                     <CoinsIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="text-xs font-medium tabular-nums">{availableCredits}</span>
+                    {hasZeroCredits ? (
+                      <span className="max-w-[11rem] truncate text-xs font-medium">
+                        <Trans>Credits unavailable. Click to buy more</Trans>
+                      </span>
+                    ) : (
+                      <span className="text-xs font-medium tabular-nums">{availableCredits}</span>
+                    )}
                   </Link>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <Trans>Credits available. Click to buy more</Trans>
+                {hasZeroCredits || hasNegativeCredits ? (
+                  <Trans>Credits unavailable. Click to buy more</Trans>
+                ) : (
+                  <Trans>Credits available. Click to buy more</Trans>
+                )}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
