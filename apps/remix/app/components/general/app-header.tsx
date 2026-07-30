@@ -117,19 +117,15 @@ export const Header = ({ className, ...props }: HeaderProps) => {
                   className={cn(
                     'hidden h-8 shrink-0 gap-1 rounded-md border px-2 shadow-none md:flex',
                     hasNegativeCredits
-                      ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800'
-                      : 'border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary',
+                      ? 'border-yellow-300 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:text-yellow-900'
+                      : hasZeroCredits
+                        ? 'border-red-300 bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800'
+                        : 'border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary',
                   )}
                 >
                   <Link to={creditsPurchasePath}>
                     <CoinsIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                    {hasZeroCredits ? (
-                      <span className="max-w-[11rem] truncate text-xs font-medium">
-                        <Trans>Credits unavailable. Click to buy more</Trans>
-                      </span>
-                    ) : (
-                      <span className="text-xs font-medium tabular-nums">{availableCredits}</span>
-                    )}
+                    <span className="text-xs font-medium tabular-nums">{availableCredits}</span>
                   </Link>
                 </Button>
               </TooltipTrigger>
