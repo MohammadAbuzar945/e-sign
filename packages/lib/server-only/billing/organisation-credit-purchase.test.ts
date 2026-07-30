@@ -473,6 +473,7 @@ describe('build-purchase-invoice', () => {
     expect(html).toContain('<h1>Invoice</h1>');
     expect(html).toContain('Supplier is not registered for VAT. VAT has not been charged.');
     expect(html).not.toContain('<th class="num">VAT</th>');
+    expect(html).not.toContain('VAT pricing:');
   },
   15_000,
   );

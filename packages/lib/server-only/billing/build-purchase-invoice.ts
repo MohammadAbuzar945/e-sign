@@ -331,7 +331,11 @@ export const buildPurchaseInvoiceHtml = ({
       </div>
       <h1>${escapeHtml(policy.documentTitle)}</h1>
       <p class="muted">${escapeHtml(policy.issuedBySubtitle)}</p>
-      <p class="muted">VAT pricing: ${escapeHtml(policy.pricingMode.toLowerCase())}</p>
+      ${
+        showVatColumns
+          ? `<p class="muted">VAT pricing: ${escapeHtml(policy.pricingMode.toLowerCase())}</p>`
+          : ''
+      }
 
       <div class="meta-row">
         <div>
