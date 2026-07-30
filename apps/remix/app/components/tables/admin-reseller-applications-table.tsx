@@ -628,7 +628,9 @@ export const AdminResellerApplicationsTable = () => {
               ) : profileAction === 'delete' ? (
                 <Trans>
                   Deleting {selectedApplication?.snapshotOrgName ?? 'this organisation'} will
-                  permanently disable their reseller account and free their affiliate slug.They can apply to the reseller programme again later.
+                  permanently remove their reseller account and sales history, and free their
+                  affiliate slug. Client purchase invoices from this reseller are kept. They can
+                  apply to the reseller programme again later.
                 </Trans>
               ) : profileAction === 'markDelinquent' ? (
                 <Trans>

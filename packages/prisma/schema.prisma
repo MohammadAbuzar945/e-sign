@@ -1401,7 +1401,7 @@ model ResellerProfile {
   isDelinquent     Boolean   @default(false)
   delinquentAt     DateTime?
 
-  /// Soft-delete timestamp. Profile and purchase history are retained for audit.
+  /// Soft-delete timestamp (legacy). New admin deletes hard-remove the profile.
   deletedAt DateTime?
 
   // Bulk inventory pricing: when true, use ResellerProfileBulkRateTier (optionally merged with global)
@@ -1528,8 +1528,9 @@ model ResellerCreditTransaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  resellerProfileId String
-  resellerProfile   ResellerProfile @relation("ResellerTransactions", fields: [resellerProfileId], references: [id], onDelete: Restrict)
+  /// Nullable so buyer purchase history survives hard-delete of the reseller profile.
+  resellerProfileId String?
+  resellerProfile   ResellerProfile? @relation("ResellerTransactions", fields: [resellerProfileId], references: [id], onDelete: SetNull)
 
   resellerOrganisationId   String
   purchaserOrganisationId  String
@@ -1545,6 +1546,10 @@ model ResellerCreditTransaction {
   /// Snapshot of seller VAT at purchase time (do not re-derive from live profile).
   sellerVatStatus ResellerVatStatus?
   sellerVatNumber String?
+  /// Snapshot of seller identity for buyer invoices after reseller profile deletion.
+  sellerDisplayName      String?
+  sellerPhysicalAddress  String?
+  sellerAffiliateSlug    String?
   currency     String  @default("ZAR")
   status       ResellerCreditTransactionStatus @default(PENDING)
 
