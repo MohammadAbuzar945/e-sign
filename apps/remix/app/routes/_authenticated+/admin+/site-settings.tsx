@@ -409,7 +409,8 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
                     </FormControl>
                     <FormDescription>
                       <Trans>
-                        Default e-sign API key used when sending reseller T&Cs for e-signing.
+                        Optional. Used when the Nomia DocGen workspace has no e-sign API key
+                        configured. Leave blank if the workspace already has e-sign settings.
                       </Trans>
                     </FormDescription>
                   </FormItem>

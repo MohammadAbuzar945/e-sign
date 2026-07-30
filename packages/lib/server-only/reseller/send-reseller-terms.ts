@@ -210,6 +210,7 @@ export const sendResellerTerms = async ({
       try {
         const docGenResult = await generateResellerTermsDocument({
           templateId: templateConfig.termsDocGenTemplateId!,
+          organizationId: templateConfig.termsDocGenOrganizationId!,
           workspaceId: templateConfig.termsDocGenWorkspaceId,
           documentName,
           variableValues,

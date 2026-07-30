@@ -6,6 +6,10 @@ import {
   parseTemplateVariableContentFormat,
   type NomiaDocGenTemplateVariable,
 } from './fetch-template-variables';
+import {
+  fetchWorkspaceEsignSettings,
+  hasWorkspaceEsignApiKeyConfigured,
+} from './fetch-workspace-esign-settings';
 
 export type { NomiaDocGenTemplateVariable } from './fetch-template-variables';
 export {
@@ -16,6 +20,11 @@ export {
   isSignatureTemplateVariable,
   parseTemplateVariableContentFormat,
 } from './fetch-template-variables';
+export {
+  fetchWorkspaceEsignSettings,
+  hasWorkspaceEsignApiKeyConfigured,
+} from './fetch-workspace-esign-settings';
+export type { NomiaWorkspaceEsignSettings } from './fetch-workspace-esign-settings';
 
 export type NomiaDocGenSignatory = {
   fullName: string;
@@ -41,6 +50,7 @@ export type NomiaDocGenCredentials = {
 
 export type GenerateResellerTermsDocumentOptions = {
   templateId: number;
+  organizationId: number;
   workspaceId: number;
   documentName: string;
   variableValues: ResellerTermsVariableValues;
@@ -256,6 +266,7 @@ const parseDocGenResponse = async ({
  */
 export const generateResellerTermsDocument = async ({
   templateId,
+  organizationId,
   workspaceId,
   documentName,
   variableValues,
@@ -267,7 +278,7 @@ export const generateResellerTermsDocument = async ({
 }: GenerateResellerTermsDocumentOptions): Promise<GenerateResellerTermsDocumentResult> => {
   const authToken = credentials.authToken.trim();
   const apiKey = credentials.apiKey.trim();
-  const esignApiKey =
+  let esignApiKey =
     docGenOptions.esignApiKey?.trim() || credentials.esignApiKey?.trim() || undefined;
 
   if (!apiKey) {
@@ -285,9 +296,23 @@ export const generateResellerTermsDocument = async ({
   const hasEsignFields = docGenOptions.buildForEsign || docGenOptions.sendForEsign;
 
   if (hasEsignFields && !esignApiKey) {
-    throw new Error(
-      'An e-sign API key is required when build for e-sign or send for e-sign is enabled. Configure it in Admin Site Settings or enter it in the send form.',
-    );
+    const workspaceEsignSettings = await fetchWorkspaceEsignSettings({
+      organizationId,
+      workspaceId,
+      credentials: {
+        apiUrl: credentials.apiUrl,
+        authToken,
+      },
+    });
+
+    if (hasWorkspaceEsignApiKeyConfigured(workspaceEsignSettings)) {
+      // Workspace already has e-sign configured in Nomia — no site/form override needed.
+      esignApiKey = undefined;
+    } else {
+      throw new Error(
+        'An e-sign API key is required when build or send for e-sign is enabled and the Nomia DocGen workspace has no e-sign API key configured. Set it in Admin Site Settings, enter it in the send form, or configure e-sign settings on the Nomia workspace.',
+      );
+    }
   }
 
   const docGenApiUrl = getNomiaApiBaseUrl(credentials.apiUrl);
@@ -320,7 +345,8 @@ export const generateResellerTermsDocument = async ({
       signing_order: 'PARALLEL',
     },
     external_id: externalId ?? null,
-    esign_api_key: hasEsignFields ? esignApiKey : null,
+    // When omitted, Nomia uses the workspace e-sign settings if configured.
+    esign_api_key: hasEsignFields ? (esignApiKey ?? null) : null,
     signatories: hasEsignFields
       ? signatories.map((signatory, index) => ({
           signatory_index: signatory.signatoryIndex ?? index + 1,
