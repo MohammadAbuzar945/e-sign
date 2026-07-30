@@ -1,4 +1,4 @@
-import { DocumentStatus, EnvelopeType, ResellerApplicationStatus, ResellerProfileStatus } from '@prisma/client';
+import { DocumentStatus, EnvelopeType, ResellerApplicationStatus } from '@prisma/client';
 
 import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import {
@@ -138,8 +138,7 @@ export const getResellerEligibility = async ({
     }),
   ]);
 
-  const hasBlockingResellerProfile =
-    Boolean(existingProfile) && existingProfile?.status !== ResellerProfileStatus.DELETED;
+  const hasBlockingResellerProfile = Boolean(existingProfile);
 
   // RESELLER_ELIGIBILITY_BYPASS opens credits/tenure checks for all (testing).
   const hasEligibilityBypass = isDemoFeatureVisible('RESELLER_ELIGIBILITY_BYPASS');

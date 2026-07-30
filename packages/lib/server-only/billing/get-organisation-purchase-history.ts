@@ -129,6 +129,51 @@ const buildResellerSellerDetails = (profile: {
   hasLogo: Boolean(profile.brandingEnabled && profile.brandingLogo),
 });
 
+const resolveResellerSellerFromTransaction = (transaction: {
+  sellerDisplayName: string | null;
+  sellerPhysicalAddress: string | null;
+  sellerAffiliateSlug: string | null;
+  sellerVatStatus: 'NOT_REGISTERED' | 'REGISTERED' | null;
+  sellerVatNumber: string | null;
+  resellerProfile: {
+    organisation: { name: string };
+    brandingCompanyDetails: string | null;
+    physicalAddress: string | null;
+    vatStatus: 'NOT_REGISTERED' | 'REGISTERED' | null;
+    vatNumber: string | null;
+    affiliateSlug: string;
+    brandingEnabled: boolean;
+    brandingLogo: string | null;
+  } | null;
+}): { resellerDisplayName: string; resellerSeller: PurchaseInvoiceResellerSeller } => {
+  if (transaction.resellerProfile) {
+    const liveSeller = buildResellerSellerDetails(transaction.resellerProfile);
+
+    return {
+      resellerDisplayName: getResellerPurchaseDisplayName(transaction.resellerProfile),
+      resellerSeller: {
+        ...liveSeller,
+        vatStatus: transaction.sellerVatStatus ?? liveSeller.vatStatus,
+        vatNumber: transaction.sellerVatNumber ?? liveSeller.vatNumber,
+      },
+    };
+  }
+
+  const resellerDisplayName = transaction.sellerDisplayName?.trim() || 'Reseller';
+
+  return {
+    resellerDisplayName,
+    resellerSeller: {
+      name: resellerDisplayName,
+      physicalAddress: transaction.sellerPhysicalAddress,
+      vatStatus: transaction.sellerVatStatus,
+      vatNumber: transaction.sellerVatNumber,
+      affiliateSlug: transaction.sellerAffiliateSlug?.trim() || '',
+      hasLogo: false,
+    },
+  };
+};
+
 /**
  * Ordinary organisations do not store buyer VAT.
  * Only when the buyer org is itself a VAT-registered reseller.
@@ -268,13 +313,7 @@ export const getOrganisationPurchaseHistory = async ({
   }
 
   for (const transaction of resellerPurchases) {
-    const resellerDisplayName = getResellerPurchaseDisplayName(transaction.resellerProfile);
-    const liveSeller = buildResellerSellerDetails(transaction.resellerProfile);
-    const resellerSeller: PurchaseInvoiceResellerSeller = {
-      ...liveSeller,
-      vatStatus: transaction.sellerVatStatus ?? liveSeller.vatStatus,
-      vatNumber: transaction.sellerVatNumber ?? liveSeller.vatNumber,
-    };
+    const { resellerDisplayName, resellerSeller } = resolveResellerSellerFromTransaction(transaction);
 
     items.push({
       invoiceId: `reseller_${transaction.id}`,

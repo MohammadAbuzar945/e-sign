@@ -9,6 +9,7 @@ import { getActiveNomiaPaygPackages } from '@documenso/lib/server-only/billing/n
 import { prisma } from '@documenso/prisma';
 
 import { resolveInitialAffiliateSlug } from './affiliate-slug';
+import { resolveResellerDisplayName } from './reseller-association';
 import { sendResellerWelcomeEmail } from './send-reseller-welcome-email';
 
 export type ActivateResellerFromTermsCompletionOptions = {
@@ -93,81 +94,56 @@ export const activateResellerFromTermsCompletion = async ({
 
   const existingProfile = await prisma.resellerProfile.findUnique({
     where: { organisationId: application.organisationId },
+    include: {
+      organisation: {
+        select: {
+          name: true,
+        },
+      },
+    },
   });
 
+  // Legacy soft-deleted profiles must be removed so re-apply creates a fresh profile.
   if (existingProfile?.status === ResellerProfileStatus.DELETED) {
-    const reactivatedProfile = await prisma.$transaction(async (tx) => {
-      const affiliateSlug = await resolveInitialAffiliateSlug({
-        orgUrl: application.organisation.url,
-        client: tx,
-      });
+    const sellerDisplayName = resolveResellerDisplayName(existingProfile);
 
-      await tx.resellerApplication.update({
-        where: { id: application.id },
+    await prisma.$transaction(async (tx) => {
+      await tx.organisation.updateMany({
+        where: { associatedResellerProfileId: existingProfile.id },
         data: {
-          status: ResellerApplicationStatus.APPROVED,
-          termsCompletedAt: new Date(),
-          approvedAt: new Date(),
-          rejectedAt: null,
-          rejectionReason: null,
-          termsEnvelopeId: envelopeId,
+          associatedResellerProfileId: null,
+          resellerAssociatedAt: null,
+          resellerAssociationSource: null,
+          resellerRequiresReconsent: false,
         },
       });
 
-      const updatedProfile = await tx.resellerProfile.update({
+      await tx.resellerCreditTransaction.updateMany({
+        where: {
+          resellerProfileId: existingProfile.id,
+          sellerVatStatus: null,
+        },
+        data: {
+          sellerVatStatus: existingProfile.vatStatus,
+          sellerVatNumber: existingProfile.vatNumber,
+        },
+      });
+
+      await tx.resellerCreditTransaction.updateMany({
+        where: { resellerProfileId: existingProfile.id },
+        data: {
+          sellerDisplayName,
+          sellerPhysicalAddress: existingProfile.physicalAddress,
+          sellerAffiliateSlug: existingProfile.affiliateSlug,
+          resellerProfileId: null,
+        },
+      });
+
+      await tx.resellerProfile.delete({
         where: { id: existingProfile.id },
-        data: {
-          status: ResellerProfileStatus.ACTIVE,
-          deletedAt: null,
-          affiliateSlug,
-          allowNegativeCredits: false,
-          isDelinquent: false,
-          delinquentAt: null,
-          zeroBalanceSince: null,
-          payoutMode: ResellerPayoutMode.NOMIA_SUBACCOUNT,
-        },
       });
-
-      await tx.organisation.update({
-        where: { id: application.organisationId },
-        data: {
-          resellerStickyBillingOptIn: false,
-        },
-      });
-
-      const existingPackageCount = await tx.resellerPackage.count({
-        where: { resellerProfileId: updatedProfile.id },
-      });
-
-      if (existingPackageCount === 0) {
-        await tx.resellerPackage.createMany({
-          data: paygPackages.map((pkg) => ({
-            resellerProfileId: updatedProfile.id,
-            creditAmount: pkg.credits,
-            priceInCents: pkg.priceInCents,
-            currency: pkg.currency,
-            catalogPackageId: pkg.id,
-            isEnabled: false,
-            paystackPlanCode: pkg.paystackPlanCode,
-            paystackPaymentUrl: null,
-          })),
-        });
-      }
-
-      return updatedProfile;
     });
-
-    await sendResellerWelcomeEmail({
-      organisationName: application.organisation.name,
-      applicantEmail: application.snapshotApplicantEmail,
-      applicantName: application.snapshotApplicantName,
-      affiliateSlug: reactivatedProfile.affiliateSlug,
-    });
-
-    return reactivatedProfile;
-  }
-
-  if (existingProfile) {
+  } else if (existingProfile) {
     if (application.status !== ResellerApplicationStatus.APPROVED) {
       await approveResellerApplication({
         applicationId: application.id,

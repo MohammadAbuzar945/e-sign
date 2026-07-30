@@ -15,7 +15,7 @@ import {
 } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
 import { sendPurchaseInvoiceEmail } from '@documenso/lib/server-only/billing/send-purchase-invoice-email';
 
-import { associateOrganisationWithReseller } from './reseller-association';
+import { associateOrganisationWithReseller, resolveResellerDisplayName } from './reseller-association';
 import { markResellerCreditsBalanceChanged } from './reseller-delinquency';
 import { buildNomiaHybridPurchaseReference } from './hybrid-single-checkout';
 import { sendResellerInsufficientCreditsEmail } from './send-reseller-insufficient-credits-email';
@@ -79,6 +79,9 @@ const buildTransactionRecordData = ({
   purchaseGroupId,
   sellerVatStatus,
   sellerVatNumber,
+  sellerDisplayName,
+  sellerPhysicalAddress,
+  sellerAffiliateSlug,
 }: {
   profile: {
     id: string;
@@ -107,6 +110,9 @@ const buildTransactionRecordData = ({
   purchaseGroupId?: string | null;
   sellerVatStatus?: 'NOT_REGISTERED' | 'REGISTERED' | null;
   sellerVatNumber?: string | null;
+  sellerDisplayName?: string | null;
+  sellerPhysicalAddress?: string | null;
+  sellerAffiliateSlug?: string | null;
 }) => ({
   resellerProfileId: profile.id,
   resellerOrganisationId: profile.organisationId,
@@ -119,6 +125,9 @@ const buildTransactionRecordData = ({
   vatAmount,
   sellerVatStatus: sellerVatStatus ?? null,
   sellerVatNumber: sellerVatNumber?.trim() || null,
+  sellerDisplayName: sellerDisplayName?.trim() || null,
+  sellerPhysicalAddress: sellerPhysicalAddress?.trim() || null,
+  sellerAffiliateSlug: sellerAffiliateSlug?.trim() || null,
   currency: pkg.currency,
   status: ResellerCreditTransactionStatus.PENDING,
   payoutMode,
@@ -303,6 +312,9 @@ export const processResellerPaystackWebhook = async ({
           purchaseGroupId,
           sellerVatStatus: profile.vatStatus,
           sellerVatNumber: profile.vatNumber,
+          sellerDisplayName: resolveResellerDisplayName(profile),
+          sellerPhysicalAddress: profile.physicalAddress,
+          sellerAffiliateSlug: profile.affiliateSlug,
         }),
       }));
 

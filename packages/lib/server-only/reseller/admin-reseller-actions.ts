@@ -7,6 +7,7 @@ import {
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
 
+import { resolveResellerDisplayName } from './reseller-association';
 import {
   applyResellerDelinquency,
   clearResellerDelinquency,
@@ -158,8 +159,8 @@ export const reactivateResellerProfile = async ({
   ) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message:
-        profile.status === ('DELETED' as ResellerProfileStatus)
-          ? 'Deleted resellers cannot be reactivated. Purchase history is retained for audit.'
+        profile.status === ResellerProfileStatus.DELETED
+          ? 'Deleted resellers cannot be reactivated.'
           : 'This reseller profile is already active.',
     });
   }
@@ -312,17 +313,18 @@ export const deleteReseller = async ({
 
   const profile = await prisma.resellerProfile.findUnique({
     where: { organisationId: application.organisationId },
+    include: {
+      organisation: {
+        select: {
+          name: true,
+        },
+      },
+    },
   });
 
   if (!profile) {
     throw new AppError(AppErrorCode.NOT_FOUND, {
       message: 'Reseller profile not found.',
-    });
-  }
-
-  if (profile.status === ResellerProfileStatus.DELETED) {
-    throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'This reseller is already deleted.',
     });
   }
 
@@ -340,8 +342,7 @@ export const deleteReseller = async ({
   }
 
   const deletedAt = new Date();
-  // Free the public slug while keeping the row for purchase-history joins.
-  const archivedAffiliateSlug = `deleted.${profile.id}`;
+  const sellerDisplayName = resolveResellerDisplayName(profile);
 
   await prisma.$transaction(async (tx) => {
     await tx.organisation.updateMany({
@@ -354,25 +355,33 @@ export const deleteReseller = async ({
       },
     });
 
-    await tx.resellerPackage.updateMany({
-      where: { resellerProfileId: profile.id },
-      data: { isEnabled: false },
-    });
-
-    await tx.resellerProfile.update({
-      where: { id: profile.id },
+    // Keep buyer purchase rows; snapshot seller identity then detach from the profile.
+    await tx.resellerCreditTransaction.updateMany({
+      where: {
+        resellerProfileId: profile.id,
+        sellerVatStatus: null,
+      },
       data: {
-        status: ResellerProfileStatus.DELETED,
-        deletedAt,
-        affiliateSlug: archivedAffiliateSlug,
-        allowNegativeCredits: false,
-        isDelinquent: false,
-        delinquentAt: null,
-        zeroBalanceSince: null,
+        sellerVatStatus: profile.vatStatus,
+        sellerVatNumber: profile.vatNumber,
       },
     });
 
-    // Allow the organisation to re-apply later while keeping sales history on the profile.
+    await tx.resellerCreditTransaction.updateMany({
+      where: { resellerProfileId: profile.id },
+      data: {
+        sellerDisplayName,
+        sellerPhysicalAddress: profile.physicalAddress,
+        sellerAffiliateSlug: profile.affiliateSlug,
+        resellerProfileId: null,
+      },
+    });
+
+    await tx.resellerProfile.delete({
+      where: { id: profile.id },
+    });
+
+    // Allow the organisation to re-apply later with a fresh reseller profile.
     await tx.resellerApplication.update({
       where: { id: applicationId },
       data: {

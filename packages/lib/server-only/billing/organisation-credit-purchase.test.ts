@@ -256,6 +256,9 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         paystackReference: 'ref_reseller_1',
         sellerVatStatus: null,
         sellerVatNumber: null,
+        sellerDisplayName: null,
+        sellerPhysicalAddress: null,
+        sellerAffiliateSlug: null,
         package: {
           creditAmount: 50,
           catalogPackageId: 'payg-50',
@@ -288,6 +291,53 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         affiliateSlug: 'acme',
         name: 'Acme Trading',
       }),
+    });
+  });
+
+  it('keeps buyer reseller invoices after the reseller profile is deleted', async () => {
+    const { getOrganisationPurchaseHistory } = await import('./get-organisation-purchase-history');
+
+    prismaMock.organisationCreditPurchase.findMany.mockResolvedValue([]);
+    prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([
+      {
+        id: 'reseller_tx_detached',
+        purchaseGroupId: null,
+        completedAt: new Date('2026-07-16T10:00:00.000Z'),
+        createdAt: new Date('2026-07-16T09:55:00.000Z'),
+        credits: 50,
+        grossAmount: 35000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        paystackReference: 'ref_reseller_detached',
+        sellerVatStatus: 'REGISTERED',
+        sellerVatNumber: '4123456789',
+        sellerDisplayName: 'Acme Trading',
+        sellerPhysicalAddress: '1 Main Street',
+        sellerAffiliateSlug: 'acme',
+        package: {
+          creditAmount: 50,
+          catalogPackageId: 'payg-50',
+        },
+        resellerProfile: null,
+      },
+    ]);
+
+    const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
+
+    expect(history).toHaveLength(1);
+    expect(history[0]).toMatchObject({
+      kind: 'reseller',
+      issuer: 'RESELLER',
+      title: 'Credits from Acme Trading',
+      invoiceId: 'reseller_reseller_tx_detached',
+      resellerSeller: {
+        name: 'Acme Trading',
+        physicalAddress: '1 Main Street',
+        vatStatus: 'REGISTERED',
+        vatNumber: '4123456789',
+        affiliateSlug: 'acme',
+        hasLogo: false,
+      },
     });
   });
 

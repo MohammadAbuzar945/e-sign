@@ -54,6 +54,7 @@ const prismaMock = vi.hoisted(() => ({
     count: vi.fn(),
     findMany: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
   },
   organisation: {
     findUnique: vi.fn(),
@@ -1090,7 +1091,7 @@ describe('admin reseller application actions', () => {
     await expect(organisationAllowsNegativeCredits('org_1')).resolves.toBe(false);
   });
 
-  it('soft-deletes an approved reseller and retains purchase history', async () => {
+  it('hard-deletes an approved reseller and detaches buyer purchase history', async () => {
     const { deleteReseller } = await import('./admin-reseller-actions');
 
     prismaMock.resellerApplication.findUnique.mockResolvedValue({
@@ -1104,14 +1105,24 @@ describe('admin reseller application actions', () => {
       organisationId: 'org_1',
       status: ResellerProfileStatus.ACTIVE,
       affiliateSlug: 'acme',
+      physicalAddress: '1 Main Street',
+      vatStatus: 'REGISTERED',
+      vatNumber: '4123456789',
+      brandingCompanyDetails: 'Acme Trading',
+      organisation: {
+        name: 'Acme Org',
+      },
     });
 
     prismaMock.resellerCreditTransaction.count.mockResolvedValue(0);
     prismaMock.organisation.updateMany.mockResolvedValue({ count: 1 });
-    prismaMock.resellerPackage.updateMany.mockResolvedValue({ count: 1 });
-    prismaMock.resellerProfile.update.mockResolvedValue({
+    prismaMock.resellerCreditTransaction.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.resellerProfile.delete.mockResolvedValue({
       id: 'profile_1',
-      status: 'DELETED',
+    });
+    prismaMock.resellerApplication.update.mockResolvedValue({
+      id: 'app_1',
+      status: ResellerApplicationStatus.CANCELLED,
     });
 
     const result = await deleteReseller({
@@ -1119,15 +1130,28 @@ describe('admin reseller application actions', () => {
     });
 
     expect(result).toEqual({ success: true });
-    expect(prismaMock.resellerProfile.delete).not.toHaveBeenCalled();
-    expect(prismaMock.resellerApplication.delete).not.toHaveBeenCalled();
-    expect(prismaMock.resellerProfile.update).toHaveBeenCalledWith({
+    expect(prismaMock.resellerProfile.update).not.toHaveBeenCalled();
+    expect(prismaMock.resellerProfile.delete).toHaveBeenCalledWith({
       where: { id: 'profile_1' },
-      data: expect.objectContaining({
-        status: 'DELETED',
-        affiliateSlug: 'deleted.profile_1',
-        allowNegativeCredits: false,
-      }),
+    });
+    expect(prismaMock.resellerCreditTransaction.updateMany).toHaveBeenCalledWith({
+      where: {
+        resellerProfileId: 'profile_1',
+        sellerVatStatus: null,
+      },
+      data: {
+        sellerVatStatus: 'REGISTERED',
+        sellerVatNumber: '4123456789',
+      },
+    });
+    expect(prismaMock.resellerCreditTransaction.updateMany).toHaveBeenCalledWith({
+      where: { resellerProfileId: 'profile_1' },
+      data: {
+        sellerDisplayName: 'Acme Trading',
+        sellerPhysicalAddress: '1 Main Street',
+        sellerAffiliateSlug: 'acme',
+        resellerProfileId: null,
+      },
     });
     expect(prismaMock.resellerApplication.update).toHaveBeenCalledWith({
       where: { id: 'app_1' },
