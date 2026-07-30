@@ -434,12 +434,12 @@ export const SendResellerTermsDialog = ({
                           placeholder="Optional"
                         />
                       </FormControl>
-                      <FormDescription>
-                        <Trans>
-                          Optional. Required only when build or send for e-sign is enabled. Uses
-                          the default from Admin Site Settings if left blank.
-                        </Trans>
-                      </FormDescription>
+                    <FormDescription>
+                      <Trans>
+                        Optional override. Leave blank to use Admin Site Settings, or the e-sign
+                        key already configured on the Nomia DocGen workspace.
+                      </Trans>
+                    </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
