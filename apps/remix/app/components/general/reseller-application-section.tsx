@@ -17,6 +17,7 @@ import {
 import {
   createDefaultResellerTermsVariableValues,
   formatResellerTermsVariableLabel,
+  isResellerTermsApplicantEditableVariable,
 } from '@documenso/lib/constants/reseller-terms-variables';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { RESELLER_TERMS_PROVIDER } from '@documenso/lib/server-only/site-settings/schemas/reseller';
@@ -133,6 +134,12 @@ export const ResellerApplicationSection = () => {
   );
 
   const editableVariables = templateVariablesData?.editableVariables ?? [];
+  const applicantEditableVariables = useMemo(
+    () => editableVariables.filter((variable) =>
+      isResellerTermsApplicantEditableVariable(variable.variable_name),
+    ),
+    [editableVariables],
+  );
   const usesNomiaDocGen =
     (templateVariablesData?.provider ?? RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN) ===
     RESELLER_TERMS_PROVIDER.NOMIA_DOCGEN;
@@ -143,9 +150,9 @@ export const ResellerApplicationSection = () => {
         organisationName: organisation.name,
         applicantName: user.name ?? user.email,
         applicantEmail: user.email,
-        templateVariables: editableVariables,
+        templateVariables: applicantEditableVariables,
       }),
-    [editableVariables, organisation.name, user.email, user.name],
+    [applicantEditableVariables, organisation.name, user.email, user.name],
   );
 
   const form = useForm<TApplyResellerFormSchema>({
@@ -156,14 +163,14 @@ export const ResellerApplicationSection = () => {
   });
 
   useEffect(() => {
-    if (!isOpen || editableVariables.length === 0) {
+    if (!isOpen || applicantEditableVariables.length === 0) {
       return;
     }
 
     form.reset({
       variableValues: defaultVariableValues,
     });
-  }, [defaultVariableValues, editableVariables.length, form, isOpen]);
+  }, [defaultVariableValues, applicantEditableVariables.length, form, isOpen]);
 
   const utils = trpc.useUtils();
 
@@ -481,7 +488,7 @@ export const ResellerApplicationSection = () => {
 
                   {!isLoadingTemplateVariables &&
                   !templateVariablesErrorMessage &&
-                  editableVariables.length === 0 ? (
+                  applicantEditableVariables.length === 0 ? (
                     <p className="text-muted-foreground text-sm">
                       <Trans>
                         No editable template variables were returned. You can still submit your
@@ -491,7 +498,7 @@ export const ResellerApplicationSection = () => {
                   ) : null}
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    {editableVariables.map((variable) => (
+                    {applicantEditableVariables.map((variable) => (
                       <FormField
                         key={variable.variable_name}
                         control={form.control}
