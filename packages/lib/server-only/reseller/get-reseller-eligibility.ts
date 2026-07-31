@@ -1,10 +1,7 @@
 import { DocumentStatus, EnvelopeType, ResellerApplicationStatus } from '@prisma/client';
 
 import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
-import {
-  RESELLER_MIN_CREDITS_USED,
-  RESELLER_MIN_SIGNUP_MONTHS,
-} from '@documenso/lib/constants/esign-credit-packages';
+import { getResellerEligibilityThresholds } from '@documenso/lib/server-only/site-settings/get-reseller-site-settings';
 import { prisma } from '@documenso/prisma';
 
 export type OrganisationResellerMetrics = {
@@ -94,16 +91,18 @@ export const getResellerEligibility = async ({
   organisationId: string;
   userEmail?: string;
 }): Promise<ResellerEligibility> => {
+  const { minCreditsUsed, minSignupMonths } = await getResellerEligibilityThresholds();
+
   if (!userEmail) {
     return {
       isEligible: false,
       creditsUsed: 0,
-      requiredCredits: RESELLER_MIN_CREDITS_USED,
+      requiredCredits: minCreditsUsed,
       hasSignupTenure: false,
-      requiredSignupMonths: RESELLER_MIN_SIGNUP_MONTHS,
+      requiredSignupMonths: minSignupMonths,
       accountCreatedAt: null,
       hasSubscriptionTenure: false,
-      requiredSubscriptionMonths: RESELLER_MIN_SIGNUP_MONTHS,
+      requiredSubscriptionMonths: minSignupMonths,
       subscriptionStartDate: null,
       hasActiveApplication: false,
       hasActiveResellerProfile: false,
@@ -126,8 +125,8 @@ export const getResellerEligibility = async ({
     : 0;
 
   const creditsUsed = Math.max(metrics.creditsConsumed, metrics.completedDocumentCount);
-  const hasCreditsRequirement = creditsUsed >= RESELLER_MIN_CREDITS_USED;
-  const hasSignupTenure = monthsSinceSignup >= RESELLER_MIN_SIGNUP_MONTHS;
+  const hasCreditsRequirement = creditsUsed >= minCreditsUsed;
+  const hasSignupTenure = monthsSinceSignup >= minSignupMonths;
 
   const [existingApplication, existingProfile] = await Promise.all([
     prisma.resellerApplication.findUnique({
@@ -147,13 +146,13 @@ export const getResellerEligibility = async ({
 
   if (!hasCreditsRequirement && !hasEligibilityBypass) {
     reasons.push(
-      `You must have used at least ${RESELLER_MIN_CREDITS_USED} e-sign credits before applying.`,
+      `You must have used at least ${minCreditsUsed} e-sign credits before applying.`,
     );
   }
 
   if (!hasSignupTenure && !hasEligibilityBypass) {
     reasons.push(
-      `Your organisation must have been signed up for at least ${RESELLER_MIN_SIGNUP_MONTHS} months.`,
+      `Your organisation must have been signed up for at least ${minSignupMonths} months.`,
     );
   }
 
@@ -180,12 +179,12 @@ export const getResellerEligibility = async ({
   return {
     isEligible: meetsRequirements && reasons.length === 0 && !hasBlockingResellerProfile,
     creditsUsed,
-    requiredCredits: RESELLER_MIN_CREDITS_USED,
+    requiredCredits: minCreditsUsed,
     hasSignupTenure,
-    requiredSignupMonths: RESELLER_MIN_SIGNUP_MONTHS,
+    requiredSignupMonths: minSignupMonths,
     accountCreatedAt,
     hasSubscriptionTenure: hasSignupTenure,
-    requiredSubscriptionMonths: RESELLER_MIN_SIGNUP_MONTHS,
+    requiredSubscriptionMonths: minSignupMonths,
     subscriptionStartDate: accountCreatedAt,
     hasActiveApplication: Boolean(
       existingApplication && !['REJECTED', 'CANCELLED'].includes(existingApplication.status),

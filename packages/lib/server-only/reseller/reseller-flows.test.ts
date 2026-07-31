@@ -135,6 +135,20 @@ vi.mock('@documenso/lib/server-only/billing/send-purchase-invoice-email', () => 
 
 vi.mock('@documenso/lib/server-only/site-settings/get-reseller-site-settings', () => ({
   getResellerSiteSettings: getResellerSiteSettingsMock,
+  getResellerEligibilityThresholds: async () => {
+    const data = await getResellerSiteSettingsMock();
+
+    return {
+      minCreditsUsed:
+        typeof data?.minCreditsUsed === 'number' && data.minCreditsUsed > 0
+          ? data.minCreditsUsed
+          : 50,
+      minSignupMonths:
+        typeof data?.minSignupMonths === 'number' && data.minSignupMonths > 0
+          ? data.minSignupMonths
+          : 2,
+    };
+  },
 }));
 
 vi.mock('@documenso/lib/server-only/document/send-document', () => ({
@@ -187,6 +201,8 @@ const setupNoActiveApplicationOrProfile = () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+
+  getResellerSiteSettingsMock.mockResolvedValue(null);
 
   prismaMock.$transaction.mockImplementation(async (callback: (tx: typeof prismaMock) => unknown) => {
     return callback(prismaMock);
@@ -345,6 +361,82 @@ describe('getResellerEligibility flow', () => {
     expect(eligibility.reasons).not.toContain(
       'An application is already in progress for this organisation.',
     );
+  });
+
+  it('uses default eligibility thresholds when reseller site settings are unset', async () => {
+    const { getResellerEligibility } = await import('./get-reseller-eligibility');
+
+    getResellerSiteSettingsMock.mockResolvedValue(null);
+    setupOrganisationMetrics();
+    setupOrganisationSignup();
+    setupNoActiveApplicationOrProfile();
+
+    const eligibility = await getResellerEligibility({
+      organisationId: 'org_1',
+      userEmail: TEST_EMAIL,
+    });
+
+    expect(eligibility.requiredCredits).toBe(50);
+    expect(eligibility.requiredSignupMonths).toBe(2);
+    expect(eligibility.requiredSubscriptionMonths).toBe(2);
+  });
+
+  it('uses admin-configured eligibility thresholds from reseller site settings', async () => {
+    const { getResellerEligibility } = await import('./get-reseller-eligibility');
+
+    getResellerSiteSettingsMock.mockResolvedValue({
+      minCreditsUsed: 100,
+      minSignupMonths: 6,
+    });
+    setupOrganisationMetrics();
+    setupOrganisationSignup();
+    setupNoActiveApplicationOrProfile();
+
+    const eligibility = await getResellerEligibility({
+      organisationId: 'org_1',
+      userEmail: TEST_EMAIL,
+    });
+
+    expect(eligibility.requiredCredits).toBe(100);
+    expect(eligibility.requiredSignupMonths).toBe(6);
+    expect(eligibility.requiredSubscriptionMonths).toBe(6);
+  });
+
+  it('blocks eligibility against custom thresholds when bypass is disabled', async () => {
+    const demoFlags = await import('@documenso/lib/constants/demo-feature-flags');
+    const isDemoFeatureVisibleSpy = vi
+      .spyOn(demoFlags, 'isDemoFeatureVisible')
+      .mockImplementation((feature) => feature !== 'RESELLER_ELIGIBILITY_BYPASS');
+
+    const { getResellerEligibility } = await import('./get-reseller-eligibility');
+
+    getResellerSiteSettingsMock.mockResolvedValue({
+      minCreditsUsed: 100,
+      minSignupMonths: 6,
+    });
+    setupOrganisationMetrics({
+      completedDocumentCount: 60,
+      creditsConsumed: 60,
+    });
+    setupOrganisationSignup(3);
+    setupNoActiveApplicationOrProfile();
+
+    const eligibility = await getResellerEligibility({
+      organisationId: 'org_1',
+      userEmail: TEST_EMAIL,
+    });
+
+    expect(eligibility.isEligible).toBe(false);
+    expect(eligibility.requiredCredits).toBe(100);
+    expect(eligibility.requiredSignupMonths).toBe(6);
+    expect(eligibility.reasons).toContain(
+      'You must have used at least 100 e-sign credits before applying.',
+    );
+    expect(eligibility.reasons).toContain(
+      'Your organisation must have been signed up for at least 6 months.',
+    );
+
+    isDemoFeatureVisibleSpy.mockRestore();
   });
 });
 
