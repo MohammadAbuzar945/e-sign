@@ -9,18 +9,18 @@ export type ResellerNotifyRecipient = {
   resellerProfileId: string;
 };
 
+/**
+ * Prefer the organisation owner (e-sign account) email.
+ * Never use payout `contactEmail`.
+ */
 const resolveRecipientEmail = ({
-  contactEmail,
-  snapshotApplicantEmail,
-  applicantUserEmail,
   ownerEmail,
+  applicantUserEmail,
 }: {
-  contactEmail: string | null;
-  snapshotApplicantEmail: string | null | undefined;
-  applicantUserEmail: string | null | undefined;
   ownerEmail: string | null | undefined;
+  applicantUserEmail: string | null | undefined;
 }) => {
-  const candidates = [contactEmail, snapshotApplicantEmail, applicantUserEmail, ownerEmail];
+  const candidates = [ownerEmail, applicantUserEmail];
 
   for (const candidate of candidates) {
     const email = candidate?.trim().toLowerCase();
@@ -34,17 +34,15 @@ const resolveRecipientEmail = ({
 };
 
 const resolveRecipientName = ({
-  snapshotApplicantName,
-  applicantUserName,
   ownerName,
+  applicantUserName,
   organisationName,
 }: {
-  snapshotApplicantName: string | null | undefined;
-  applicantUserName: string | null | undefined;
   ownerName: string | null | undefined;
+  applicantUserName: string | null | undefined;
   organisationName: string;
 }) => {
-  const candidates = [snapshotApplicantName, applicantUserName, ownerName];
+  const candidates = [ownerName, applicantUserName];
 
   for (const candidate of candidates) {
     const name = candidate?.trim();
@@ -65,7 +63,6 @@ export const getResellerNotifyRecipients = async (): Promise<ResellerNotifyRecip
     },
     select: {
       id: true,
-      contactEmail: true,
       organisation: {
         select: {
           name: true,
@@ -77,8 +74,6 @@ export const getResellerNotifyRecipients = async (): Promise<ResellerNotifyRecip
           },
           resellerApplication: {
             select: {
-              snapshotApplicantEmail: true,
-              snapshotApplicantName: true,
               applicantUser: {
                 select: {
                   email: true,
@@ -102,10 +97,8 @@ export const getResellerNotifyRecipients = async (): Promise<ResellerNotifyRecip
   for (const profile of profiles) {
     const application = profile.organisation.resellerApplication;
     const email = resolveRecipientEmail({
-      contactEmail: profile.contactEmail,
-      snapshotApplicantEmail: application?.snapshotApplicantEmail,
-      applicantUserEmail: application?.applicantUser.email,
       ownerEmail: profile.organisation.owner.email,
+      applicantUserEmail: application?.applicantUser.email,
     });
 
     if (!email || recipientsByEmail.has(email)) {
@@ -115,9 +108,8 @@ export const getResellerNotifyRecipients = async (): Promise<ResellerNotifyRecip
     recipientsByEmail.set(email, {
       email,
       name: resolveRecipientName({
-        snapshotApplicantName: application?.snapshotApplicantName,
-        applicantUserName: application?.applicantUser.name,
         ownerName: profile.organisation.owner.name,
+        applicantUserName: application?.applicantUser.name,
         organisationName: profile.organisation.name,
       }),
       organisationName: profile.organisation.name,
