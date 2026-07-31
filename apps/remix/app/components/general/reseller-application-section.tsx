@@ -11,6 +11,10 @@ import { z } from 'zod';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import {
+  RESELLER_MIN_CREDITS_USED,
+  RESELLER_MIN_SIGNUP_MONTHS,
+} from '@documenso/lib/constants/esign-credit-packages';
+import {
   createDefaultResellerTermsVariableValues,
   formatResellerTermsVariableLabel,
 } from '@documenso/lib/constants/reseller-terms-variables';
@@ -339,11 +343,11 @@ export const ResellerApplicationSection = () => {
                     title={<Trans>Use platform credits</Trans>}
                     description={
                       <Trans>
-                        Use at least {eligibility?.requiredCredits ?? 50} e-sign credits before
-                        applying.
+                        Use at least {eligibility?.requiredCredits ?? RESELLER_MIN_CREDITS_USED}{' '}
+                        e-sign credits before applying.
                       </Trans>
                     }
-                    progressLabel={`${eligibility?.creditsUsed ?? 0} / ${eligibility?.requiredCredits ?? 50} credits`}
+                    progressLabel={`${eligibility?.creditsUsed ?? 0} / ${eligibility?.requiredCredits ?? RESELLER_MIN_CREDITS_USED} credits`}
                     progressValue={creditsProgress}
                   />
 
@@ -353,7 +357,7 @@ export const ResellerApplicationSection = () => {
                     description={
                       <Trans>
                         Your organisation must have been signed up for at least{' '}
-                        {eligibility?.requiredSignupMonths ?? 2} months.
+                        {eligibility?.requiredSignupMonths ?? RESELLER_MIN_SIGNUP_MONTHS} months.
                       </Trans>
                     }
                     progressLabel={

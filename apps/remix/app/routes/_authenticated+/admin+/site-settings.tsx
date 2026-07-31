@@ -7,6 +7,10 @@ import { useRevalidator } from 'react-router';
 import type { z } from 'zod';
 
 import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import {
+  RESELLER_MIN_CREDITS_USED,
+  RESELLER_MIN_SIGNUP_MONTHS,
+} from '@documenso/lib/constants/esign-credit-packages';
 import { getSiteSettings } from '@documenso/lib/server-only/site-settings/get-site-settings';
 import {
   SITE_SETTINGS_BANNER_ID,
@@ -111,6 +115,8 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
         // Always use pdf_link; not exposed in the UI.
         docGenApiEndpoint: 'pdf_link',
         docGenEsignApiKey: reseller?.data?.docGenEsignApiKey ?? '',
+        minCreditsUsed: reseller?.data?.minCreditsUsed ?? RESELLER_MIN_CREDITS_USED,
+        minSignupMonths: reseller?.data?.minSignupMonths ?? RESELLER_MIN_SIGNUP_MONTHS,
       },
     },
   });
@@ -160,7 +166,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
 
       toast({
         title: _(msg`Reseller settings updated`),
-        description: _(msg`Reseller T&Cs template configuration has been saved.`),
+        description: _(msg`Reseller programme settings have been saved.`),
         duration: 5000,
       });
 
@@ -308,11 +314,12 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
 
         <div className="mt-12">
           <h2 className="font-semibold">
-            <Trans>Reseller T&Cs</Trans>
+            <Trans>Reseller programme</Trans>
           </h2>
           <p className="text-muted-foreground mt-2 text-sm">
             <Trans>
-              Configure Nomia DocGen settings used when sending reseller terms and conditions.
+              Configure reseller application eligibility and Nomia DocGen settings used when sending
+              terms and conditions.
             </Trans>
           </p>
 
@@ -321,6 +328,82 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
               className="mt-4 space-y-4"
               onSubmit={resellerForm.handleSubmit(onResellerUpdate)}
             >
+              <div className="space-y-4 rounded-md border p-4">
+                <div>
+                  <h3 className="text-sm font-medium">
+                    <Trans>Eligibility</Trans>
+                  </h3>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    <Trans>
+                      Organisations must meet these requirements before they can apply to the
+                      reseller programme.
+                    </Trans>
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={resellerForm.control}
+                    name="data.minCreditsUsed"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>Minimum e-sign credits used</Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            step={1}
+                            value={field.value ?? ''}
+                            onChange={(event) => {
+                              field.onChange(parseOptionalSiteSettingIdInput(event.target.value));
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          <Trans>
+                            Default is {RESELLER_MIN_CREDITS_USED} credits when left unset.
+                          </Trans>
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={resellerForm.control}
+                    name="data.minSignupMonths"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans>Minimum months since signup</Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            step={1}
+                            value={field.value ?? ''}
+                            onChange={(event) => {
+                              field.onChange(parseOptionalSiteSettingIdInput(event.target.value));
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          <Trans>
+                            Default is {RESELLER_MIN_SIGNUP_MONTHS} months when left unset.
+                          </Trans>
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
               <FormField
                 control={resellerForm.control}
                 name="data.docGenApiUrl"
@@ -510,7 +593,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
               />
 
               <Button type="submit" loading={isUpdatingReseller}>
-                <Trans>Save reseller T&Cs settings</Trans>
+                <Trans>Save reseller settings</Trans>
               </Button>
             </form>
           </Form>
