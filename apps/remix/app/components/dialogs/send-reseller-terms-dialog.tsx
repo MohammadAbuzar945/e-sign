@@ -10,7 +10,12 @@ import { useSession } from '@documenso/lib/client-only/providers/session';
 import {
   createDefaultResellerTermsSignatories,
   createDefaultResellerTermsVariableValues,
+  ensureResellerTermsAdminFilledVariables,
+  formatResellerTermsDocumentTitle,
+  formatResellerTermsEffectiveDate,
   formatResellerTermsVariableLabel,
+  isResellerTermsDocumentTitleVariable,
+  isResellerTermsEffectiveDateVariable,
   type ResellerTermsVariableValues,
 } from '@documenso/lib/constants/reseller-terms-variables';
 import type { NomiaDocGenTemplateVariable } from '@documenso/lib/server-only/nomia-docgen/fetch-template-variables';
@@ -229,6 +234,38 @@ export const SendResellerTermsDialog = ({
     usesNomiaDocGen,
   ]);
 
+  const partyShortName = form.watch('variableValues.PartySN');
+
+  useEffect(() => {
+    if (!open || isLoadingPrefillData) {
+      return;
+    }
+
+    const documentTitleVariable = editableVariables.find((variable) =>
+      isResellerTermsDocumentTitleVariable(variable.variable_name),
+    );
+
+    if (documentTitleVariable) {
+      form.setValue(
+        `variableValues.${documentTitleVariable.variable_name}`,
+        formatResellerTermsDocumentTitle(partyShortName ?? ''),
+        { shouldDirty: false },
+      );
+    }
+
+    const effectiveDateVariable = editableVariables.find((variable) =>
+      isResellerTermsEffectiveDateVariable(variable.variable_name),
+    );
+
+    if (effectiveDateVariable) {
+      form.setValue(
+        `variableValues.${effectiveDateVariable.variable_name}`,
+        formatResellerTermsEffectiveDate(),
+        { shouldDirty: false },
+      );
+    }
+  }, [editableVariables, form, isLoadingPrefillData, open, partyShortName]);
+
   const { mutateAsync: sendTerms, isPending } = trpc.admin.resellerApplications.sendTerms.useMutation(
     {
       onSuccess: async () => {
@@ -266,7 +303,10 @@ export const SendResellerTermsDialog = ({
       applications: [
         {
           applicationId: application.id,
-          variableValues,
+          variableValues: ensureResellerTermsAdminFilledVariables(
+            variableValues,
+            allTemplateVariables,
+          ),
           signatories,
           docGenOptions: {
             showInNomia,

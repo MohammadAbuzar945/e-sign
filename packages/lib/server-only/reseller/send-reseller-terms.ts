@@ -4,6 +4,7 @@ import { DateTime } from 'luxon';
 import { mailer } from '@documenso/email/mailer';
 import { DOCUMENSO_INTERNAL_EMAIL } from '@documenso/lib/constants/email';
 import type { ResellerTermsVariableValues } from '@documenso/lib/constants/reseller-terms-variables';
+import { ensureResellerTermsAdminFilledVariables } from '@documenso/lib/constants/reseller-terms-variables';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { sendDocument } from '@documenso/lib/server-only/document/send-document';
 import { generateResellerTermsDocument, fetchResellerTermsTemplateVariables } from '@documenso/lib/server-only/nomia-docgen';
@@ -206,6 +207,10 @@ export const sendResellerTerms = async ({
 
       const documentTimestamp = DateTime.now().toFormat('dd MMM yyyy HH:mm');
       const documentName = `Nomia Reseller Agreement - ${application.snapshotOrgName} - ${documentTimestamp}`;
+      const resolvedVariableValues = ensureResellerTermsAdminFilledVariables(
+        variableValues,
+        templateVariables ?? [],
+      );
 
       try {
         const docGenResult = await generateResellerTermsDocument({
@@ -213,7 +218,7 @@ export const sendResellerTerms = async ({
           organizationId: templateConfig.termsDocGenOrganizationId!,
           workspaceId: templateConfig.termsDocGenWorkspaceId,
           documentName,
-          variableValues,
+          variableValues: resolvedVariableValues,
           templateVariables: templateVariables ?? [],
           docGenOptions,
           credentials: {
