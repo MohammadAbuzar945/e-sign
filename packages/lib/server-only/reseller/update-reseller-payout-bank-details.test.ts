@@ -107,7 +107,7 @@ describe('updateResellerBankDetails', () => {
     );
     expect(registerResellerPaystackSubaccountMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        organisationName: 'Acme Org',
+        businessName: 'Test Account',
         affiliateSlug: 'acme',
         bankCode: '632005',
         accountNumber: '0123456047',
