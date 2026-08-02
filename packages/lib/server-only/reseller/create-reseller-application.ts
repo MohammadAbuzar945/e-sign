@@ -1,4 +1,4 @@
-import { ResellerApplicationStatus, type Prisma } from '@prisma/client';
+import { Prisma, ResellerApplicationStatus } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
@@ -42,10 +42,10 @@ export const createResellerApplication = async ({
 
   const metrics = await getOrganisationResellerMetrics(organisationId);
 
-  const normalizedVariableValues =
+  const termsVariableValues =
     variableValues && Object.keys(variableValues).length > 0
       ? (variableValues as Prisma.InputJsonValue)
-      : undefined;
+      : Prisma.DbNull;
 
   const applicationData = {
     applicantUserId,
@@ -66,7 +66,7 @@ export const createResellerApplication = async ({
     termsTemplateId: null,
     termsEnvelopeId: null,
     externalDocGenRequestId: null,
-    termsVariableValues: normalizedVariableValues ?? null,
+    termsVariableValues,
   };
 
   const existingApplication = await prisma.resellerApplication.findUnique({
