@@ -11,6 +11,7 @@ import { ZSupportedLanguageCodeSchema } from '../../constants/i18n';
 import type { TDocumentAuditLogBaseSchema } from '../../types/document-audit-logs';
 import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import { getTranslations } from '../../utils/i18n';
+import { parseClaimFlags } from '../../utils/parse-claim-flags';
 import { getDocumentCertificateAuditLogs } from '../document/get-document-certificate-audit-logs';
 import { getOrganisationClaimByTeamId } from '../organisation/get-organisation-claims';
 import { renderCertificate } from './render-certificate';
@@ -148,7 +149,7 @@ export const generateCertificatePdf = async (options: GenerateCertificatePdfOpti
     envelopeOwner,
     qrToken: envelope.qrToken,
     includeQrCodeInCertificate,
-    hidePoweredBy: organisationClaim.flags.hidePoweredBy ?? false,
+    hidePoweredBy: parseClaimFlags(organisationClaim.flags).hidePoweredBy ?? false,
     pageWidth,
     pageHeight,
     i18n,

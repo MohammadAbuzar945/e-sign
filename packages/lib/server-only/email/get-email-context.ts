@@ -17,7 +17,7 @@ import {
 
 import { DOCUMENSO_INTERNAL_EMAIL } from '../../constants/email';
 import { AppError, AppErrorCode } from '../../errors/app-error';
-import { ZClaimFlagsSchema } from '../../types/subscription';
+import { parseClaimFlags } from '../../utils/parse-claim-flags';
 import {
   organisationGlobalSettingsToBranding,
   teamGlobalSettingsToBranding,
@@ -160,15 +160,16 @@ const handleOrganisationEmailContext = async (organisationId: string) => {
   }
 
   const claims = organisation.organisationClaim;
+  const claimFlags = parseClaimFlags(claims.flags);
 
-  const allowedEmails = getAllowedEmails(organisation);
+  const allowedEmails = getAllowedEmails(organisation, claimFlags);
 
   return {
     allowedEmails,
     branding: organisationGlobalSettingsToBranding(
       organisation.organisationGlobalSettings,
       organisation.id,
-      parseClaimFlags(claims.flags)?.hidePoweredBy ?? false,
+      claimFlags.hidePoweredBy ?? false,
     ),
     settings: organisation.organisationGlobalSettings,
     claims,
@@ -206,8 +207,9 @@ const handleTeamEmailContext = async (teamId: number) => {
 
   const organisation = team.organisation;
   const claims = organisation.organisationClaim;
+  const claimFlags = parseClaimFlags(claims.flags);
 
-  const allowedEmails = getAllowedEmails(organisation);
+  const allowedEmails = getAllowedEmails(organisation, claimFlags);
 
   const teamSettings = extractDerivedTeamSettings(
     organisation.organisationGlobalSettings,
@@ -219,7 +221,7 @@ const handleTeamEmailContext = async (teamId: number) => {
     branding: teamGlobalSettingsToBranding(
       teamSettings,
       teamId,
-      parseClaimFlags(claims.flags)?.hidePoweredBy ?? false,
+      claimFlags.hidePoweredBy ?? false,
     ),
     settings: teamSettings,
     claims,
@@ -237,8 +239,9 @@ const getAllowedEmails = (
     emailDomains: (Pick<EmailDomain, 'status'> & { emails: OrganisationEmail[] })[];
     organisationClaim: OrganisationClaim;
   },
+  claimFlags: ReturnType<typeof parseClaimFlags>,
 ) => {
-  if (!parseClaimFlags(organisation.organisationClaim.flags)?.emailDomains) {
+  if (!claimFlags.emailDomains) {
     return [];
   }
 

@@ -58,11 +58,13 @@ export const EnvelopeDropZoneWrapper = ({
     TIME_ZONES.find((timezone) => timezone === Intl.DateTimeFormat().resolvedOptions().timeZone) ??
     DEFAULT_DOCUMENT_TIME_ZONE;
 
-  const { quota, remaining, refreshLimits, maximumEnvelopeItemCount } = useLimits();
+  const { quota, remaining, refreshLimits, maximumEnvelopeItemCount, allowNegativeCredits } =
+    useLimits();
 
   const { mutateAsync: createEnvelope } = trpc.envelope.create.useMutation();
 
-  const isUploadDisabled = remaining.documents === 0 || !user.emailVerified;
+  const isUploadDisabled =
+    (!allowNegativeCredits && remaining.documents === 0) || !user.emailVerified;
 
   const onFileDrop = async (files: File[]) => {
     if (isUploadDisabled && IS_BILLING_ENABLED()) {
@@ -255,9 +257,15 @@ export const EnvelopeDropZoneWrapper = ({
 
             {!isUploadDisabled &&
               team?.id === undefined &&
-              remaining.documents > 0 &&
+              remaining.documents !== 0 &&
               Number.isFinite(remaining.documents) && (
-                <p className="mt-4 text-sm text-muted-foreground/80">
+                <p
+                  className={`mt-4 text-sm ${
+                    remaining.documents < 0
+                      ? 'font-medium text-amber-700'
+                      : 'text-muted-foreground/80'
+                  }`}
+                >
                   <Trans>
                     {remaining.documents} of {quota.documents} documents remaining this month.
                   </Trans>

@@ -56,6 +56,7 @@ export const getLimits = async ({ headers, teamId }: GetLimitsOptions) => {
           directTemplates: 0,
         },
         maximumEnvelopeItemCount: 0,
+        allowNegativeCredits: false,
       } satisfies TLimitsResponseSchema;
     });
 };

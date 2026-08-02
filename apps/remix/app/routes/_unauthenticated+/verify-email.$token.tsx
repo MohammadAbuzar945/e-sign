@@ -36,6 +36,7 @@ export default function VerifyEmailPage({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
 
   const [state, setState] = useState<keyof typeof EMAIL_VERIFICATION_STATE | null>(null);
+  const [redirectTo, setRedirectTo] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const verifyToken = async () => {
@@ -49,6 +50,7 @@ export default function VerifyEmailPage({ loaderData }: Route.ComponentProps) {
       await refreshSession();
 
       setState(response.state);
+      setRedirectTo(response.redirectTo ?? null);
     } catch (err) {
       console.error(err);
 
@@ -152,7 +154,7 @@ export default function VerifyEmailPage({ loaderData }: Route.ComponentProps) {
             </p>
 
             <Button className="mt-4" asChild>
-              <Link to="/">
+              <Link to={redirectTo ?? '/'}>
                 <Trans>Continue</Trans>
               </Link>
             </Button>

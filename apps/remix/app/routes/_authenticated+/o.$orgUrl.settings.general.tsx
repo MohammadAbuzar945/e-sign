@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/al
 import { OrganisationDeleteDialog } from '~/components/dialogs/organisation-delete-dialog';
 import { AvatarImageForm } from '~/components/forms/avatar-image';
 import { OrganisationUpdateForm } from '~/components/forms/organisation-update-form';
+import { ResellerApplicationSection } from '~/components/general/reseller-application-section';
 import { SettingsHeader } from '~/components/general/settings-header';
 import { appMetaTags } from '~/utils/meta';
 
@@ -32,6 +33,7 @@ export default function OrganisationSettingsGeneral() {
       <div className="space-y-8">
         <AvatarImageForm organisation={organisation} />
         <OrganisationUpdateForm />
+        <ResellerApplicationSection />
       </div>
 
       {canExecuteOrganisationAction(

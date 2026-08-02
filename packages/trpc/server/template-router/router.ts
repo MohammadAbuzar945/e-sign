@@ -488,7 +488,7 @@ export const templateRouter = router({
 
       const limits = await getServerLimits({ userId: ctx.user.id, teamId });
 
-      if (limits.remaining.documents === 0) {
+      if (!limits.allowNegativeCredits && limits.remaining.documents === 0) {
         throw new Error('You have reached your document limit.');
       }
 

@@ -42,6 +42,7 @@ export default function Layout() {
           directTemplates: 0,
         },
         maximumEnvelopeItemCount: 0,
+        allowNegativeCredits: false,
       };
     }
 
@@ -49,6 +50,7 @@ export default function Layout() {
       quota: PAID_PLAN_LIMITS,
       remaining: PAID_PLAN_LIMITS,
       maximumEnvelopeItemCount: DEFAULT_MINIMUM_ENVELOPE_ITEM_COUNT,
+      allowNegativeCredits: false,
     };
   }, [organisation?.subscription]);
 

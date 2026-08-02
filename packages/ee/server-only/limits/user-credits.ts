@@ -59,7 +59,15 @@ export const ensureOrganisationCredits = async (organisationId: string, userId: 
  * Deducts credits from an organisation's account.
  * Returns the updated credits record.
  */
-export const deductOrganisationCredits = async (organisationId: string, amount: number = 1) => {
+export const deductOrganisationCredits = async (
+  organisationId: string,
+  amount: number = 1,
+  {
+    allowNegative = false,
+  }: {
+    allowNegative?: boolean;
+  } = {},
+) => {
   // Get organisation to find the owner userId
   const organisation = await prisma.organisation.findUnique({
     where: { id: organisationId },
@@ -72,12 +80,17 @@ export const deductOrganisationCredits = async (organisationId: string, amount: 
 
   const userCredits = await ensureOrganisationCredits(organisationId, organisation.ownerUserId);
 
+  const nextCredits = allowNegative
+    ? userCredits.credits - amount
+    : Math.max(userCredits.credits - amount, 0);
+
   const updatedCredits = await prisma.userCredits.update({
     where: {
       id: userCredits.id,
     },
     data: {
-      credits: Math.max(userCredits.credits - amount, 0),
+      credits: nextCredits,
+      lastUpdatedAt: new Date(),
     },
   });
 
@@ -109,6 +122,108 @@ export const updateOrganisationCredits = async (organisationId: string, credits:
   });
 
   return updated;
+};
+
+type TransferOrganisationCreditsOptions = {
+  fromOrganisationId: string;
+  toOrganisationId: string;
+  amount: number;
+  allowNegativeFrom?: boolean;
+};
+
+/**
+ * Atomically transfers credits from one organisation to another.
+ */
+export const transferOrganisationCredits = async ({
+  fromOrganisationId,
+  toOrganisationId,
+  amount,
+  allowNegativeFrom = false,
+}: TransferOrganisationCreditsOptions) => {
+  if (amount <= 0) {
+    throw new Error('Transfer amount must be positive');
+  }
+
+  if (fromOrganisationId === toOrganisationId) {
+    throw new Error('Cannot transfer credits to the same organisation');
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    const fromOrganisation = await tx.organisation.findUnique({
+      where: { id: fromOrganisationId },
+      select: { ownerUserId: true },
+    });
+
+    const toOrganisation = await tx.organisation.findUnique({
+      where: { id: toOrganisationId },
+      select: { ownerUserId: true },
+    });
+
+    if (!fromOrganisation || !toOrganisation) {
+      throw new Error('Organisation not found for credit transfer');
+    }
+
+    let fromCredits = await tx.userCredits.findFirst({
+      where: {
+        organisationId: fromOrganisationId,
+        isActive: true,
+      },
+    });
+
+    if (!fromCredits) {
+      fromCredits = await tx.userCredits.create({
+        data: {
+          userId: fromOrganisation.ownerUserId,
+          organisationId: fromOrganisationId,
+          credits: 0,
+          isActive: true,
+        },
+      });
+    }
+
+    if (!allowNegativeFrom && fromCredits.credits < amount) {
+      throw new Error('Insufficient reseller credits');
+    }
+
+    let toCredits = await tx.userCredits.findFirst({
+      where: {
+        organisationId: toOrganisationId,
+        isActive: true,
+      },
+    });
+
+    if (!toCredits) {
+      toCredits = await tx.userCredits.create({
+        data: {
+          userId: toOrganisation.ownerUserId,
+          organisationId: toOrganisationId,
+          credits: 0,
+          isActive: true,
+        },
+      });
+    }
+
+    const updatedFrom = await tx.userCredits.update({
+      where: { id: fromCredits.id },
+      data: {
+        credits: fromCredits.credits - amount,
+        lastUpdatedAt: new Date(),
+      },
+    });
+
+    const updatedTo = await tx.userCredits.update({
+      where: { id: toCredits.id },
+      data: {
+        credits: toCredits.credits + amount,
+        lastUpdatedAt: new Date(),
+      },
+    });
+
+    return {
+      fromCredits: updatedFrom,
+      toCredits: updatedTo,
+    };
+  });
 };
 
 /**

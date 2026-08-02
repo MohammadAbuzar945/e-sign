@@ -7,6 +7,7 @@ const SEND_CONFIRMATION_EMAIL_JOB_DEFINITION_ID = 'send.signup.confirmation.emai
 const SEND_CONFIRMATION_EMAIL_JOB_DEFINITION_SCHEMA = z.object({
   email: z.string().email(),
   force: z.boolean().optional(),
+  affiliateSlug: z.string().optional(),
 });
 
 export type TSendConfirmationEmailJobDefinition = z.infer<

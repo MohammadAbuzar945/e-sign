@@ -15,6 +15,8 @@ import {
 } from './constants';
 import { ERROR_CODES } from './errors';
 import type { TLimitsResponseSchema } from './schema';
+import { organisationAllowsNegativeCredits } from '@documenso/lib/server-only/reseller/organisation-allows-negative-credits';
+
 import { ensureOrganisationCredits, getOrganisationCredits } from './user-credits';
 
 export type GetServerLimitsOptions = {
@@ -133,6 +135,9 @@ export const getServerLimits = async ({
     throw new Error(ERROR_CODES.USER_FETCH_FAILED);
   }
 
+  const allowNegativeCredits = await organisationAllowsNegativeCredits(organisation.id);
+  const remainingDocuments = allowNegativeCredits ? userCredits : Math.max(userCredits, 0);
+
   // Set quota and remaining from user credits
   // Always use user credits for documents quota and remaining
   const quota = {
@@ -142,7 +147,7 @@ export const getServerLimits = async ({
   };
   
   const remaining = {
-    documents: Math.max(userCredits, 0), // Current remaining credits from UserCredits table
+    documents: remainingDocuments,
     recipients: FREE_PLAN_LIMITS.recipients,
     directTemplates: FREE_PLAN_LIMITS.directTemplates,
   };
@@ -160,6 +165,7 @@ export const getServerLimits = async ({
         directTemplates: SELFHOSTED_PLAN_LIMITS.directTemplates,
       },
       maximumEnvelopeItemCount,
+      allowNegativeCredits,
     };
   }
 
@@ -177,6 +183,7 @@ export const getServerLimits = async ({
         directTemplates: PAID_PLAN_LIMITS.directTemplates,
       },
       maximumEnvelopeItemCount,
+      allowNegativeCredits,
     };
   }
 
@@ -194,6 +201,7 @@ export const getServerLimits = async ({
         directTemplates: INACTIVE_PLAN_LIMITS.directTemplates,
       },
       maximumEnvelopeItemCount,
+      allowNegativeCredits,
     };
   }
 
@@ -212,6 +220,7 @@ export const getServerLimits = async ({
         directTemplates: PAID_PLAN_LIMITS.directTemplates,
       },
       maximumEnvelopeItemCount,
+      allowNegativeCredits,
     };
   }
 
@@ -232,11 +241,12 @@ export const getServerLimits = async ({
 
   // Ensure quota and remaining documents are always set from user credits
   quota.documents = userCredits;
-  remaining.documents = Math.max(userCredits, 0);
+  remaining.documents = remainingDocuments;
 
   return {
     quota,
     remaining,
     maximumEnvelopeItemCount,
+    allowNegativeCredits,
   };
 };

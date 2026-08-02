@@ -59,7 +59,8 @@ export type BrandingPreferencesFormProps = {
   canInherit?: boolean;
   settings: SettingsSubset;
   onFormSubmit: (data: TBrandingPreferencesFormSchema) => Promise<void>;
-  context: 'Team' | 'Organisation';
+  context: 'Team' | 'Organisation' | 'Reseller';
+  affiliateSlug?: string;
 };
 
 export function BrandingPreferencesForm({
@@ -67,6 +68,7 @@ export function BrandingPreferencesForm({
   settings,
   onFormSubmit,
   context,
+  affiliateSlug,
 }: BrandingPreferencesFormProps) {
   const { t } = useLingui();
 
@@ -96,7 +98,9 @@ export function BrandingPreferencesForm({
         const logoUrl =
           context === 'Team'
             ? `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/team/${team?.id}`
-            : `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/organisation/${organisation?.id}`;
+            : context === 'Reseller'
+              ? `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/reseller/${affiliateSlug}`
+              : `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/organisation/${organisation?.id}`;
 
         setPreviewUrl(logoUrl);
         setHasLoadedPreview(true);
@@ -104,7 +108,7 @@ export function BrandingPreferencesForm({
     }
 
     setHasLoadedPreview(true);
-  }, [settings.brandingLogo]);
+  }, [settings.brandingLogo, context, affiliateSlug, team?.id, organisation?.id]);
 
   // Cleanup ObjectURL on unmount or when previewUrl changes
   useEffect(() => {
@@ -164,6 +168,8 @@ export function BrandingPreferencesForm({
                 <FormDescription>
                   {context === 'Team' ? (
                     <Trans>Enable custom branding for all documents in this team</Trans>
+                  ) : context === 'Reseller' ? (
+                    <Trans>Enable custom branding on your affiliate credit purchase page</Trans>
                   ) : (
                     <Trans>Enable custom branding for all documents in this organisation</Trans>
                   )}
@@ -171,6 +177,35 @@ export function BrandingPreferencesForm({
               </FormItem>
             )}
           />
+
+          {context === 'Reseller' ? (
+            <FormField
+              control={form.control}
+              name="brandingCompanyDetails"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>
+                    <Trans>Trading / legal name & brand details</Trans>
+                  </FormLabel>
+
+                  <FormControl>
+                    <Textarea
+                      placeholder={t`Trading or legal name on the first line`}
+                      className="min-h-[100px] resize-y"
+                      {...field}
+                    />
+                  </FormControl>
+
+                  <FormDescription>
+                    <Trans>
+                      First line is used as your trading or legal name on the /r billing page. If
+                      blank, your organisation name is shown instead.
+                    </Trans>
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+          ) : null}
 
           <div className="relative flex w-full flex-col gap-y-4">
             {!isBrandingEnabled && <div className="bg-background/60 absolute inset-0 z-[9998]" />}
@@ -301,37 +336,39 @@ export function BrandingPreferencesForm({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="brandingCompanyDetails"
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>
-                    <Trans>Brand Details</Trans>
-                  </FormLabel>
+            {context !== 'Reseller' ? (
+              <FormField
+                control={form.control}
+                name="brandingCompanyDetails"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>
+                      <Trans>Brand Details</Trans>
+                    </FormLabel>
 
-                  <FormControl>
-                    <Textarea
-                      placeholder={t`Enter your brand details`}
-                      className="min-h-[100px] resize-y"
-                      disabled={!isBrandingEnabled}
-                      {...field}
-                    />
-                  </FormControl>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t`Enter your brand details`}
+                        className="min-h-[100px] resize-y"
+                        disabled={!isBrandingEnabled}
+                        {...field}
+                      />
+                    </FormControl>
 
-                  <FormDescription>
-                    <Trans>Additional brand information to display at the bottom of emails</Trans>
+                    <FormDescription>
+                      <Trans>Additional brand information to display at the bottom of emails</Trans>
 
-                    {canInherit && (
-                      <span>
-                        {'. '}
-                        <Trans>Leave blank to inherit from the organisation.</Trans>
-                      </span>
-                    )}
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
+                      {canInherit && (
+                        <span>
+                          {'. '}
+                          <Trans>Leave blank to inherit from the organisation.</Trans>
+                        </span>
+                      )}
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+            ) : null}
           </div>
 
           <div className="flex flex-row justify-end space-x-4">

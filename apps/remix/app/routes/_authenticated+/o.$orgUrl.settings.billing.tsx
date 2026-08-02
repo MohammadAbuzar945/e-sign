@@ -7,6 +7,7 @@ import { match } from 'ts-pattern';
 
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { canAccessInvoiceHistory } from '@documenso/lib/constants/demo-feature-flags';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 
@@ -154,10 +155,12 @@ export default function TeamsSettingBillingPage() {
         canManageBilling && <BillingPlans plans={plans} />}
 
       <section className="mt-6">
-        <OrganisationBillingInvoicesTable
-          organisationId={organisation.id}
-          subscriptionExists={Boolean(subscription)}
-        />
+        {canAccessInvoiceHistory(user.email) ? (
+          <OrganisationBillingInvoicesTable
+            organisationId={organisation.id}
+            subscriptionExists={Boolean(subscription)}
+          />
+        ) : null}
       </section>
     </div>
   );

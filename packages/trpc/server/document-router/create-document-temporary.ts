@@ -41,9 +41,9 @@ export const createDocumentTemporaryRoute = authenticatedProcedure
       formValues,
     } = input;
 
-    const { remaining } = await getServerLimits({ userId: user.id, teamId });
+    const { remaining, allowNegativeCredits } = await getServerLimits({ userId: user.id, teamId });
 
-    if (remaining.documents <= 0) {
+    if (!allowNegativeCredits && remaining.documents <= 0) {
       throw new AppError(AppErrorCode.LIMIT_EXCEEDED, {
         message: 'You have reached your document limit. Please upgrade your plan.',
         statusCode: 400,

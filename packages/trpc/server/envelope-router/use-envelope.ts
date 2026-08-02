@@ -46,7 +46,7 @@ export const useEnvelopeRoute = authenticatedProcedure
 
     const limits = await getServerLimits({ userId: user.id, teamId });
 
-    if (limits.remaining.documents === 0) {
+    if (!limits.allowNegativeCredits && limits.remaining.documents === 0) {
       throw new AppError(AppErrorCode.LIMIT_EXCEEDED, {
         message: 'You have reached your document limit.',
       });

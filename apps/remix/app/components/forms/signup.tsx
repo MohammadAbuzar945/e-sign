@@ -15,6 +15,7 @@ import communityCardsImage from '@documenso/assets/images/community-cards.png';
 import { authClient } from '@documenso/auth/client';
 import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { extractAffiliateSlugFromPath } from '@documenso/lib/utils/affiliate-slug';
 import { ZPasswordSchema } from '@documenso/trpc/server/auth-router/schema';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
@@ -104,15 +105,18 @@ export const SignUpForm = ({
   const isSubmitting = form.formState.isSubmitting;
 
   const onFormSubmit = async ({ name, email, password, signature }: TSignUpFormSchema) => {
+    const affiliateSlug = extractAffiliateSlugFromPath(returnTo);
+
     try {
       await authClient.emailPassword.signUp({
         name,
         email,
         password,
         signature,
+        ...(affiliateSlug ? { affiliateSlug } : {}),
       });
 
-      await navigate(returnTo ? returnTo : '/unverified-account');
+      await navigate('/unverified-account');
 
       toast({
         title: _(msg`Registration Successful`),

@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import {
+  canAccessResellerCheckout,
+  RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+} from '@documenso/lib/constants/demo-feature-flags';
 import { initializeTransaction } from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 // import { SubscriptionStatus } from '@documenso/prisma/generated/zod/inputTypeSchemas/SubscriptionStatusSchema';
@@ -14,6 +19,17 @@ const initializeTransactionSchema = z.object({
 
 export async function action({ request }: { request: Request }) {
   try {
+    const { user } = await getSession(request);
+
+    if (!canAccessResellerCheckout(user?.email)) {
+      return new Response(
+        JSON.stringify({
+          error: RESELLER_DEMO_EXTRAS_DENIED_MESSAGE,
+        }),
+        { status: 403 },
+      );
+    }
+
     const body = await request.json();
     const validatedData = initializeTransactionSchema.parse(body);
 
@@ -30,16 +46,52 @@ export async function action({ request }: { request: Request }) {
 
 
     console.log('Transaction data:', transaction.data);
-    //create subscription record in database
-    const subscription = await prisma.subscription.create({
-      data: {
-        planId: validatedData.plan ?? '',
-        priceId: validatedData.plan ?? '',
-        customerId: validatedData.email,
-        organisationId: validatedData.metadata?.organisationId as string,
+
+    const organisationId = validatedData.metadata?.organisationId;
+
+    if (typeof organisationId !== 'string' || organisationId.length === 0) {
+      return new Response(
+        JSON.stringify({
+          error: 'organisationId is required in metadata',
+        }),
+        { status: 400 },
+      );
+    }
+
+    const paystackReference = transaction.data.reference;
+    const planCode = validatedData.plan ?? '';
+
+    // planId must be globally unique (Stripe subscription id / Paystack subscription_code).
+    // Until Paystack returns a subscription_code, use the checkout reference as a temporary id.
+    const existingPendingSubscription = await prisma.subscription.findFirst({
+      where: {
+        organisationId,
+        priceId: planCode,
         status: 'PAST_DUE',
       },
+      orderBy: {
+        updatedAt: 'desc',
+      },
     });
+
+    const subscription = existingPendingSubscription
+      ? await prisma.subscription.update({
+          where: { id: existingPendingSubscription.id },
+          data: {
+            planId: paystackReference,
+            priceId: planCode,
+            customerId: validatedData.email,
+          },
+        })
+      : await prisma.subscription.create({
+          data: {
+            planId: paystackReference,
+            priceId: planCode,
+            customerId: validatedData.email,
+            organisationId,
+            status: 'PAST_DUE',
+          },
+        });
 
     console.log('Subscription created:', subscription);
 

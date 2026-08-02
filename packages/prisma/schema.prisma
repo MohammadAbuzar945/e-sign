@@ -74,6 +74,8 @@ model User {
   siteSettings       SiteSettings[]
   passkeys           Passkey[]
   userCredits        UserCredits[]
+  creditPurchases    OrganisationCreditPurchase[]
+  resellerApplications ResellerApplication[]
   avatarImage        AvatarImage?           @relation(fields: [avatarImageId], references: [id], onDelete: SetNull)
 
   @@index([email])
@@ -801,9 +803,23 @@ model Organisation {
   organisationAuthenticationPortal   OrganisationAuthenticationPortal @relation(fields: [organisationAuthenticationPortalId], references: [id])
 
   subscriptions Subscription[]
+  creditPurchases OrganisationCreditPurchase[]
+
+  resellerApplication ResellerApplication?
+  resellerProfile     ResellerProfile?
+
+  // Sticky reseller attribution (agreement §8 / §12)
+  associatedResellerProfileId String?
+  associatedResellerProfile   ResellerProfile? @relation("AssociatedBuyerOrganisations", fields: [associatedResellerProfileId], references: [id], onDelete: SetNull)
+  resellerAssociatedAt         DateTime?
+  resellerAssociationSource    ResellerAssociationSource?
+  resellerRequiresReconsent    Boolean   @default(false)
+  /// When true, Billing nav / price-plan redirect to /r/{slug}. Signup defaults ON; visits default OFF.
+  resellerStickyBillingOptIn   Boolean   @default(false)
 
   @@index([name])
   @@index([ownerUserId])
+  @@index([associatedResellerProfileId])
 }
 
 model OrganisationMember {
@@ -1204,4 +1220,387 @@ model UserCredits {
   @@index([organisationId])
   @@index([organisationId, isActive])
   @@index([isActive])
+}
+
+enum OrganisationCreditPurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum OrganisationCreditPurchaseType {
+  PAYG
+  BULK
+  SUBSCRIPTION
+}
+
+model OrganisationCreditPurchase {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  paystackReference String @unique
+  credits           Int
+  grossAmount       Int
+  currency          String @default("ZAR")
+  status            OrganisationCreditPurchaseStatus @default(PENDING)
+  purchaseType      OrganisationCreditPurchaseType @default(PAYG)
+  completedAt       DateTime?
+  purchaseGroupId   String?
+
+  @@index([organisationId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([purchaseGroupId])
+  @@index([purchaseType])
+}
+
+enum ResellerApplicationStatus {
+  PENDING
+  TERMS_SENT
+  TERMS_COMPLETED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ResellerProfileStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum ResellerAssociationSource {
+  AFFILIATE_VISIT
+  AFFILIATE_SIGNUP
+  AFFILIATE_PURCHASE
+  CUSTOMER_CONSENT
+}
+
+enum ResellerCreditTransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ResellerPayoutMode {
+  OWN_PAYSTACK
+  NOMIA_SUBACCOUNT
+}
+
+enum ResellerSubaccountStatus {
+  PENDING
+  ACTIVE
+  FAILED
+}
+
+enum ResellerVatStatus {
+  NOT_REGISTERED
+  REGISTERED
+}
+
+model ResellerApplication {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisationId String       @unique
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  applicantUserId Int
+  applicantUser   User @relation(fields: [applicantUserId], references: [id], onDelete: Cascade)
+
+  status ResellerApplicationStatus @default(PENDING)
+
+  appliedAt          DateTime  @default(now())
+  termsSentAt        DateTime?
+  termsCompletedAt   DateTime?
+  approvedAt         DateTime?
+  rejectedAt         DateTime?
+  rejectionReason    String?
+
+  snapshotOrgName              String
+  snapshotApplicantName        String
+  snapshotApplicantEmail       String
+  snapshotCompletedDocCount    Int
+  snapshotUniqueSignerCount    Int
+  snapshotOrgUserCount         Int
+  snapshotOrgSignupDate        DateTime
+
+  termsTemplateId         String?
+  termsEnvelopeId         String? @unique
+  externalDocGenRequestId String?
+
+  /// Applicant-supplied DocGen template variable values (variable_name -> value).
+  termsVariableValues Json?
+
+  @@index([status])
+  @@index([applicantUserId])
+}
+
+model ResellerProfile {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisationId String       @unique
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  status ResellerProfileStatus @default(ACTIVE)
+
+  affiliateSlug String @unique
+
+  paystackPublicKey     String?
+  paystackSecretKey     String?
+  paystackCallbackUrl   String?
+  vatNumber             String?
+  vatStatus             ResellerVatStatus?
+  allowNegativeCredits  Boolean   @default(false)
+  instructionsDismissedAt DateTime?
+
+  payoutMode                ResellerPayoutMode @default(NOMIA_SUBACCOUNT)
+  paystackSubaccountCode    String?
+  paystackSubaccountId      Int?
+  bankCode                  String?
+  bankName                  String?
+  bankAccountNumber         String?
+  bankAccountName           String?
+  bankAccountType           String?
+  bankDocumentType          String?
+  bankDocumentNumber        String?
+  physicalAddress           String?
+  contactPhone              String?
+  contactEmail              String?
+  bankDetailsConfirmedAt    DateTime?
+  subaccountStatus          ResellerSubaccountStatus?
+  subaccountVerifiedAt      DateTime?
+  subaccountFailureReason   String?
+  platformFeePercent        Decimal? @db.Decimal(5, 2)
+
+  brandingEnabled         Boolean @default(false)
+  brandingLogo            String?
+  brandingUrl             String?
+  brandingCompanyDetails  String?
+  brandingPrimaryColor    String?
+  affiliatePageTitle      String?
+  affiliatePageDescription String?
+  affiliateAboutText      String?
+  affiliateSupportEmail   String?
+  highlightedCatalogPackageId String?
+
+  // Delinquency (agreement §12): continuous zero balance ≥ 3 months
+  zeroBalanceSince DateTime?
+  isDelinquent     Boolean   @default(false)
+  delinquentAt     DateTime?
+
+  /// Soft-delete timestamp (legacy). New admin deletes hard-remove the profile.
+  deletedAt DateTime?
+
+  // Bulk inventory pricing: when true, use ResellerProfileBulkRateTier (optionally merged with global)
+  bulkRatesUseCustom Boolean @default(false)
+  /// When custom rates are on, also include global tiers (custom overrides same minCredits).
+  bulkRatesIncludeGlobal Boolean @default(false)
+
+  packages     ResellerPackage[]
+  transactions ResellerCreditTransaction[] @relation("ResellerTransactions")
+  associatedBuyerOrganisations Organisation[] @relation("AssociatedBuyerOrganisations")
+  bulkRateTiers ResellerProfileBulkRateTier[]
+  vatRegistrations ResellerVatRegistration[]
+
+  @@index([affiliateSlug])
+  @@index([status])
+  @@index([isDelinquent])
+}
+
+/// Historical VAT registration periods for reseller invoicing (as-of purchase date).
+model ResellerVatRegistration {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resellerProfileId String
+  resellerProfile   ResellerProfile @relation(fields: [resellerProfileId], references: [id], onDelete: Cascade)
+
+  status     ResellerVatStatus
+  vatNumber  String?
+  validFrom  DateTime
+  verifiedAt DateTime?
+  endedAt    DateTime?
+
+  @@index([resellerProfileId, validFrom])
+  @@index([resellerProfileId, endedAt])
+}
+
+enum NomiaPricePlanCategory {
+  PAYG
+  MONTHLY
+  ANNUAL
+}
+
+/// Admin-editable Nomia PAYG / monthly / annual catalog (credits, prices, Paystack codes).
+model NomiaPricePlan {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category NomiaPricePlanCategory
+  name     String
+  credits  Int
+  /// Amount charged in ZAR cents (display + PAYG charge amount).
+  priceInCents Int
+  currency     String @default("ZAR")
+
+  paystackPlanCodeTest String
+  paystackPlanCodeLive String
+  paystackPaymentUrlTest String?
+  paystackPaymentUrlLive String?
+
+  isEnabled Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  @@index([category, sortOrder])
+  @@index([isEnabled])
+  @@index([paystackPlanCodeTest])
+  @@index([paystackPlanCodeLive])
+}
+
+model ResellerBulkRateTier {
+  id                  String   @id @default(cuid())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  minCredits          Int
+  pricePerCreditCents Int
+  isEnabled           Boolean  @default(true)
+
+  @@unique([minCredits])
+  @@index([isEnabled, minCredits])
+}
+
+model ResellerProfileBulkRateTier {
+  id                  String   @id @default(cuid())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  resellerProfileId   String
+  resellerProfile     ResellerProfile @relation(fields: [resellerProfileId], references: [id], onDelete: Cascade)
+
+  minCredits          Int
+  pricePerCreditCents Int
+  isEnabled           Boolean  @default(true)
+
+  @@unique([resellerProfileId, minCredits])
+  @@index([resellerProfileId, isEnabled, minCredits])
+}
+
+model ResellerPackage {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resellerProfileId String
+  resellerProfile   ResellerProfile @relation(fields: [resellerProfileId], references: [id], onDelete: Cascade)
+
+  creditAmount     Int
+  priceInCents     Int
+  currency         String  @default("ZAR")
+  catalogPackageId String
+  isEnabled        Boolean @default(false)
+  paystackPlanCode String?
+  paystackPaymentUrl String?
+
+  transactions ResellerCreditTransaction[]
+
+  @@unique([resellerProfileId, catalogPackageId])
+  @@index([resellerProfileId])
+}
+
+model ResellerCreditTransaction {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Nullable so buyer purchase history survives hard-delete of the reseller profile.
+  resellerProfileId String?
+  resellerProfile   ResellerProfile? @relation("ResellerTransactions", fields: [resellerProfileId], references: [id], onDelete: SetNull)
+
+  resellerOrganisationId   String
+  purchaserOrganisationId  String
+  purchaserUserId          Int
+  packageId                String?
+  package                  ResellerPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+
+  paystackReference String? @unique
+
+  credits      Int
+  grossAmount  Int
+  vatAmount    Int     @default(0)
+  /// Snapshot of seller VAT at purchase time (do not re-derive from live profile).
+  sellerVatStatus ResellerVatStatus?
+  sellerVatNumber String?
+  /// Snapshot of seller identity for buyer invoices after reseller profile deletion.
+  sellerDisplayName      String?
+  sellerPhysicalAddress  String?
+  sellerAffiliateSlug    String?
+  currency     String  @default("ZAR")
+  status       ResellerCreditTransactionStatus @default(PENDING)
+
+  payoutMode               ResellerPayoutMode @default(OWN_PAYSTACK)
+  paystackSubaccountCode   String?
+
+  purchaserName            String
+  purchaserEmail           String
+  purchaserOrganisationName String
+
+  completedAt DateTime?
+  purchaseGroupId String?
+
+  @@index([resellerProfileId])
+  @@index([resellerOrganisationId])
+  @@index([purchaserOrganisationId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([purchaseGroupId])
+}
+
+enum PaystackWebhookEventStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  IGNORED
+}
+
+/// Inbound Paystack webhook payloads and processing outcomes (admin audit log).
+model PaystackWebhookEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Paystack event name, e.g. charge.success, subscription.create
+  event  String
+  status PaystackWebhookEventStatus @default(PENDING)
+
+  payload Json
+  result  Json?
+  error   String?
+
+  /// Paystack transaction reference or subscription_code when present
+  reference     String?
+  customerEmail String?
+
+  processedAt DateTime?
+
+  @@index([event])
+  @@index([status])
+  @@index([createdAt])
+  @@index([reference])
+  @@index([customerEmail])
 }

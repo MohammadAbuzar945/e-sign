@@ -147,8 +147,9 @@ const FormMessage = React.forwardRef<
     return null;
   }
 
-  // Checks to see if there's a translation for the string, since we're passing IDs for Zod errors.
-  if (typeof body === 'string' && i18n.t(body)) {
+  // Zod schemas pass Lingui message IDs (msg`...`.id). Only translate when the ID
+  // exists in the compiled catalog — avoid i18n.t() on raw English (uncompiled warning).
+  if (typeof body === 'string' && Object.prototype.hasOwnProperty.call(i18n.messages, body)) {
     body = i18n.t(body);
   }
 

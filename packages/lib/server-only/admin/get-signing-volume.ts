@@ -160,7 +160,6 @@ export async function getOrganisationInsights({
   let findQuery = kyselyPrisma.$kysely
     .selectFrom('Organisation as o')
     .innerJoin('User as owner', 'owner.id', 'o.ownerUserId')
-    .leftJoin('Subscription as s', 'o.id', 's.organisationId')
     .where((eb) =>
       eb.and([
         eb.not(eb('owner.email', 'in', hiddenEmailsInsights)),
@@ -180,9 +179,14 @@ export async function getOrganisationInsights({
       'o.createdAt as createdAt',
       'o.customerId as customerId',
       sql<string>`COALESCE(o.name, 'Unknown')`.as('name'),
-      sql<string>`CASE WHEN s.status IS NOT NULL THEN s.status ELSE NULL END`.as(
-        'subscriptionStatus',
-      ),
+      // Subquery (not a join) so orgs with multiple subscriptions are not duplicated.
+      eb
+        .selectFrom('Subscription as s')
+        .whereRef('s.organisationId', '=', 'o.id')
+        .orderBy('s.createdAt', 'desc')
+        .select('s.status')
+        .limit(1)
+        .as('subscriptionStatus'),
       eb
         .selectFrom('Team as t')
         .whereRef('t.organisationId', '=', 'o.id')

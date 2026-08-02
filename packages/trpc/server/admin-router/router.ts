@@ -11,10 +11,48 @@ import { findAdminOrganisationsRoute } from './find-admin-organisations';
 import { findDocumentAuditLogsRoute } from './find-document-audit-logs';
 import { findDocumentJobsRoute } from './find-document-jobs';
 import { findDocumentsRoute } from './find-documents';
+import { findPaystackWebhookEventsRoute } from './find-paystack-webhook-events';
 import { findSubscriptionClaimsRoute } from './find-subscription-claims';
 import { getAdminOrganisationRoute } from './get-admin-organisation';
+import { getPaystackWebhookEventRoute } from './get-paystack-webhook-event';
 import { getUserRoute } from './get-user';
 import { promoteMemberToOwnerRoute } from './promote-member-to-owner';
+import { cancelResellerApplicationRoute } from './cancel-reseller-application';
+import { clearResellerDelinquencyRoute } from './clear-reseller-delinquency';
+import { deactivateResellerProfileRoute } from './deactivate-reseller-profile';
+import { deleteResellerRoute } from './delete-reseller';
+import {
+  findResellerApplicationsRoute,
+  rejectResellerApplicationRoute,
+  retryResellerApplicationActivationRoute,
+  sendResellerTermsRoute,
+} from './reseller-applications';
+import { getResellerApplicationRoute } from './get-reseller-application';
+import { getResellerTermsTemplateVariablesRoute } from './get-reseller-terms-template-variables';
+import {
+  getResellerNotifyRecipientsRoute,
+  notifyResellersRoute,
+  previewResellerNotifyRoute,
+} from './notify-resellers';
+import { markResellerDelinquentRoute } from './mark-reseller-delinquent';
+import { reactivateResellerProfileRoute } from './reactivate-reseller-profile';
+import {
+  findResellerBulkPurchasesRoute,
+  exportResellerBulkPurchasesRoute,
+  getResellerBulkRatesRoute,
+  listGlobalResellerBulkRatesRoute,
+  replaceGlobalResellerBulkRatesRoute,
+  replaceResellerBulkRatesRoute,
+} from './reseller-bulk-rates';
+import {
+  getNomiaPricePlansRoute,
+  updateNomiaPricePlansRoute,
+} from './nomia-pricing';
+import { updateResellerAllowNegativeCreditsRoute } from './update-reseller-allow-negative-credits';
+import {
+  refreshResellerBankAccountStatusRoute,
+  retryResellerSubaccountRoute,
+} from './verify-reseller-bank-account';
 import { resealDocumentRoute } from './reseal-document';
 import { resetTwoFactorRoute } from './reset-two-factor-authentication';
 import { resyncLicenseRoute } from './resync-license';
@@ -44,6 +82,38 @@ export const adminRouter = router({
     update: updateSubscriptionClaimRoute,
     delete: deleteSubscriptionClaimRoute,
   },
+  resellerApplications: {
+    find: findResellerApplicationsRoute,
+    get: getResellerApplicationRoute,
+    getTermsTemplateVariables: getResellerTermsTemplateVariablesRoute,
+    sendTerms: sendResellerTermsRoute,
+    reject: rejectResellerApplicationRoute,
+    cancel: cancelResellerApplicationRoute,
+    retryActivation: retryResellerApplicationActivationRoute,
+    deactivate: deactivateResellerProfileRoute,
+    reactivate: reactivateResellerProfileRoute,
+    markDelinquent: markResellerDelinquentRoute,
+    clearDelinquency: clearResellerDelinquencyRoute,
+    updateAllowNegativeCredits: updateResellerAllowNegativeCreditsRoute,
+    refreshBankAccountStatus: refreshResellerBankAccountStatusRoute,
+    retrySubaccount: retryResellerSubaccountRoute,
+    delete: deleteResellerRoute,
+    getNotifyRecipients: getResellerNotifyRecipientsRoute,
+    previewNotify: previewResellerNotifyRoute,
+    notify: notifyResellersRoute,
+  },
+  resellerBulkRates: {
+    listGlobal: listGlobalResellerBulkRatesRoute,
+    replaceGlobal: replaceGlobalResellerBulkRatesRoute,
+    getForReseller: getResellerBulkRatesRoute,
+    replaceForReseller: replaceResellerBulkRatesRoute,
+    findPurchases: findResellerBulkPurchasesRoute,
+    exportPurchases: exportResellerBulkPurchasesRoute,
+  },
+  nomiaPricing: {
+    getMany: getNomiaPricePlansRoute,
+    updateMany: updateNomiaPricePlansRoute,
+  },
   stripe: {
     createCustomer: createStripeCustomerRoute,
   },
@@ -64,6 +134,10 @@ export const adminRouter = router({
     reseal: resealDocumentRoute,
     findJobs: findDocumentJobsRoute,
     findAuditLogs: findDocumentAuditLogsRoute,
+  },
+  paystackWebhooks: {
+    find: findPaystackWebhookEventsRoute,
+    get: getPaystackWebhookEventRoute,
   },
   recipient: {
     update: updateRecipientRoute,

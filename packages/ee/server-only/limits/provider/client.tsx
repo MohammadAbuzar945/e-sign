@@ -31,6 +31,7 @@ export const LimitsProvider = ({
     quota: FREE_PLAN_LIMITS,
     remaining: FREE_PLAN_LIMITS,
     maximumEnvelopeItemCount: DEFAULT_MINIMUM_ENVELOPE_ITEM_COUNT,
+    allowNegativeCredits: false,
   },
   teamId,
   children,

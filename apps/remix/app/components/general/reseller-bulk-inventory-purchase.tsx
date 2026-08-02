@@ -1,0 +1,395 @@
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { CheckIcon, PackageIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
+import { canAccessResellerBulkTools } from '@documenso/lib/constants/demo-feature-flags';
+import { AppError } from '@documenso/lib/errors/app-error';
+import { matchBulkRateTier } from '@documenso/lib/utils/reseller-bulk-rate';
+import { trpc } from '@documenso/trpc/react';
+import { Badge } from '@documenso/ui/primitives/badge';
+import { Button } from '@documenso/ui/primitives/button';
+import { Input } from '@documenso/ui/primitives/input';
+import { Label } from '@documenso/ui/primitives/label';
+import { cn } from '@documenso/ui/lib/utils';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@documenso/ui/primitives/table';
+import { useToast } from '@documenso/ui/primitives/use-toast';
+
+type ResellerBulkInventoryPurchaseProps = {
+  organisationId: string;
+};
+
+type BulkRateTierChip = {
+  minCredits: number;
+  pricePerCreditCents: number;
+};
+
+const formatZarFromCents = (cents: number) => `ZAR ${(cents / 100).toFixed(2)}`;
+
+type BulkTierQuickSelectGridProps = {
+  tiers: BulkRateTierChip[];
+  matchedMinCredits: number | null;
+  onSelect: (minCredits: number) => void;
+};
+
+const BulkTierQuickSelectGrid = ({
+  tiers,
+  matchedMinCredits,
+  onSelect,
+}: BulkTierQuickSelectGridProps) => {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      {tiers.map((tier) => {
+        const isMatched = matchedMinCredits === tier.minCredits;
+
+        return (
+          <button
+            key={tier.minCredits}
+            type="button"
+            className={cn(
+              'inline-flex items-center justify-center gap-1.5 rounded-full border px-3.5 py-2 text-[12px] leading-none transition',
+              'border-purple-200/80 bg-white/90 text-gray-700 hover:border-purple-400 hover:bg-white',
+              isMatched &&
+                'border-[#7C3AED] bg-purple-50 font-medium text-purple-800 ring-2 ring-purple-200',
+            )}
+            onClick={() => {
+              onSelect(tier.minCredits);
+            }}
+          >
+            <span className="whitespace-nowrap tabular-nums">
+              {tier.minCredits.toLocaleString()}+ · {formatZarFromCents(tier.pricePerCreditCents)}
+            </span>
+            {isMatched ? <CheckIcon className="h-3.5 w-3.5 shrink-0 text-[#7C3AED]" /> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+export const ResellerBulkInventoryPurchase = ({
+  organisationId,
+}: ResellerBulkInventoryPurchaseProps) => {
+  const { _ } = useLingui();
+  const { toast } = useToast();
+  const [creditsInput, setCreditsInput] = useState('');
+  const canAccessBulkTools = canAccessResellerBulkTools();
+
+  const { data: rates, isLoading, isError, error } =
+    trpc.organisation.reseller.getEffectiveBulkRates.useQuery(
+      {
+        organisationId,
+      },
+      {
+        enabled: canAccessBulkTools,
+      },
+    );
+
+  const { mutateAsync: initializeBulkPurchase, isPending } =
+    trpc.organisation.reseller.initializeBulkPurchase.useMutation({
+      onSuccess: (result) => {
+        window.location.href = result.authorizationUrl;
+      },
+      onError: (error) => {
+        toast({
+          title: _(msg`Bulk purchase failed`),
+          description: AppError.parseError(error).message,
+          variant: 'destructive',
+        });
+      },
+    });
+
+  const sortedTiers = useMemo(() => {
+    if (!rates?.tiers.length) {
+      return [];
+    }
+
+    return [...rates.tiers].sort((a, b) => a.minCredits - b.minCredits);
+  }, [rates?.tiers]);
+
+  const tiersWithDefaults = useMemo(
+    () =>
+      sortedTiers.map((tier) => ({
+        ...tier,
+        isEnabled: true,
+      })),
+    [sortedTiers],
+  );
+
+  const credits = Number(creditsInput);
+  const hasValidCredits = Number.isInteger(credits) && credits > 0;
+
+  const matchedTier = useMemo(() => {
+    if (!tiersWithDefaults.length || !hasValidCredits) {
+      return null;
+    }
+
+    return matchBulkRateTier({ credits, tiers: tiersWithDefaults });
+  }, [credits, hasValidCredits, tiersWithDefaults]);
+
+  const amountInCents =
+    matchedTier && hasValidCredits ? credits * matchedTier.pricePerCreditCents : null;
+
+  const minimumCredits = sortedTiers[0]?.minCredits ?? 1;
+
+  const nextTier = useMemo(() => {
+    if (!hasValidCredits || matchedTier) {
+      return null;
+    }
+
+    return sortedTiers.find((tier) => tier.minCredits > credits) ?? null;
+  }, [credits, hasValidCredits, matchedTier, sortedTiers]);
+
+  if (!canAccessBulkTools) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+        <Trans>Loading bulk rates…</Trans>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="rounded-xl border border-dashed border-red-200 bg-red-50 p-6 text-sm text-red-800">
+        <Trans>Unable to load bulk rates.</Trans>{' '}
+        {AppError.parseError(error).message}
+      </div>
+    );
+  }
+
+  if (!rates || sortedTiers.length === 0) {
+    return (
+      <section className="space-y-3 rounded-xl border border-dashed p-6">
+        <div className="flex items-center gap-2">
+          <PackageIcon className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-xl font-semibold text-gray-700">
+            <Trans>Reseller bulk inventory</Trans>
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          <Trans>
+            No wholesale rate tiers are configured yet. Add global bulk rates in admin, then refresh
+            this page.
+          </Trans>
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <PackageIcon className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-xl font-semibold text-gray-700">
+              <Trans>Reseller bulk inventory</Trans>
+            </h2>
+          </div>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            <Trans>
+              Top up your reseller stock at wholesale volume rates. Retail packages below remain
+              available for normal customer purchases.
+            </Trans>
+          </p>
+        </div>
+        <Badge
+          variant={
+            rates.source === 'CUSTOM' || rates.source === 'MERGED' ? 'default' : 'neutral'
+          }
+        >
+          {rates.source === 'CUSTOM' ? (
+            <Trans>Custom wholesale rates</Trans>
+          ) : rates.source === 'MERGED' ? (
+            <Trans>Custom + global wholesale rates</Trans>
+          ) : (
+            <Trans>Standard wholesale rates</Trans>
+          )}
+        </Badge>
+      </div>
+
+      <div className="rounded-xl border border-dashed border-purple-300 bg-gradient-to-br from-blue-50 to-purple-50 p-5">
+        <p className="mb-3 text-sm font-medium text-gray-600">
+          <Trans>Quick select</Trans>
+        </p>
+
+        <BulkTierQuickSelectGrid
+          tiers={sortedTiers}
+          matchedMinCredits={matchedTier?.minCredits ?? null}
+          onSelect={(minCredits) => {
+            setCreditsInput(String(minCredits));
+          }}
+        />
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="space-y-2">
+            <Label htmlFor="bulk-credits">
+              <Trans>Credits to buy</Trans>
+            </Label>
+            <Input
+              id="bulk-credits"
+              type="number"
+              min={minimumCredits}
+              step={1}
+              value={creditsInput}
+              placeholder={String(minimumCredits)}
+              onChange={(event) => {
+                setCreditsInput(event.target.value);
+              }}
+            />
+          </div>
+
+          <Button
+            className="w-full lg:w-auto"
+            loading={isPending}
+            disabled={!matchedTier || amountInCents === null}
+            onClick={async () => {
+              await initializeBulkPurchase({
+                organisationId,
+                credits,
+              });
+            }}
+          >
+            <Trans>Buy bulk inventory</Trans>
+          </Button>
+        </div>
+
+        <div className="mt-5 overflow-hidden rounded-lg border bg-white/90">
+          <div className="border-b bg-white px-4 py-3">
+            <p className="text-sm font-medium text-gray-700">
+              <Trans>Live rate preview</Trans>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              <Trans>
+                Your order uses the highest tier you qualify for. Enter a quantity to see which rate
+                applies.
+              </Trans>
+            </p>
+          </div>
+
+          <Table className="table-fixed">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[28%]">
+                  <Trans>Tier</Trans>
+                </TableHead>
+                <TableHead className="w-[18%]">
+                  <Trans>Min credits</Trans>
+                </TableHead>
+                <TableHead className="w-[18%]">
+                  <Trans>Rate / credit</Trans>
+                </TableHead>
+                <TableHead className="w-[36%]">
+                  <Trans>Your total</Trans>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedTiers.map((tier, index) => {
+                const isMatched = matchedTier?.minCredits === tier.minCredits;
+                const creditsNeeded = tier.minCredits - credits;
+                const orderTotalCents = hasValidCredits ? credits * tier.pricePerCreditCents : null;
+
+                return (
+                  <TableRow
+                    key={tier.minCredits}
+                    className={cn(isMatched && 'bg-purple-50/80 hover:bg-purple-50/80')}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex min-h-6 items-center gap-2">
+                        <span className="shrink-0">
+                          <Trans>Tier {index + 1}</Trans>
+                        </span>
+                        <span className="inline-flex min-w-[4.5rem]">
+                          {isMatched ? (
+                            <Badge variant="default" className="font-normal">
+                              <Trans>Matched</Trans>
+                            </Badge>
+                          ) : null}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="tabular-nums">{tier.minCredits.toLocaleString()}+</TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatZarFromCents(tier.pricePerCreditCents)}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {!hasValidCredits ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : isMatched && orderTotalCents !== null ? (
+                        <span className="font-semibold text-purple-700">
+                          {formatZarFromCents(orderTotalCents)}
+                        </span>
+                      ) : hasValidCredits && credits < tier.minCredits ? (
+                        <span className="text-muted-foreground">
+                          <Trans>
+                            Unlock with {creditsNeeded.toLocaleString()} more credit
+                            {creditsNeeded === 1 ? '' : 's'}
+                          </Trans>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+
+        {matchedTier && amountInCents !== null ? (
+          <div className="mt-4 rounded-lg border border-purple-200 bg-white px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  <Trans>Your order</Trans>
+                </p>
+                <p className="text-lg font-semibold text-gray-800">
+                  {credits.toLocaleString()} <Trans>credits</Trans>
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">
+                  <Trans>
+                    {matchedTier.minCredits.toLocaleString()}+ tier ·{' '}
+                    {formatZarFromCents(matchedTier.pricePerCreditCents)} / credit
+                  </Trans>
+                </p>
+                <p className="text-xl font-bold text-purple-700">
+                  {formatZarFromCents(amountInCents)}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : creditsInput ? (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {nextTier ? (
+              <Trans>
+                Enter at least {minimumCredits.toLocaleString()} credits. Add{' '}
+                {(nextTier.minCredits - credits).toLocaleString()} more to unlock{' '}
+                {formatZarFromCents(nextTier.pricePerCreditCents)} per credit.
+              </Trans>
+            ) : (
+              <Trans>
+                Enter at least {minimumCredits.toLocaleString()} credits to match a wholesale tier.
+              </Trans>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+};

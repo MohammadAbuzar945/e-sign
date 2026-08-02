@@ -213,14 +213,14 @@ export const OrgMenuSwitcher = () => {
 
       <DropdownMenuContent
         className={cn(
-          'divide-border z-[60] ml-6 flex w-full divide-x p-0 md:ml-0 md:min-w-[40rem]',
+          'divide-border z-[60] ml-0 flex w-[min(100vw-2rem,22rem)] flex-col divide-x-0 p-0 md:ml-0 md:min-w-[40rem] md:w-full',
         )}
         align="end"
         forceMount
       >
-        <div className="flex h-[400px] w-full divide-x">
+        <div className="flex max-h-[min(85vh,32rem)] w-full flex-col divide-y md:h-[400px] md:flex-row md:divide-x md:divide-y-0">
           {/* Organisations column */}
-          <div className="flex w-full flex-col md:w-1/3">
+          <div className="flex min-h-0 w-full flex-col md:w-1/3">
             <div className="flex h-12 items-center border-b p-2">
               <h3 className="text-muted-foreground flex items-center px-2 text-sm font-medium">
                 <Building2Icon className="mr-2 h-3.5 w-3.5" />
@@ -279,6 +279,56 @@ export const OrgMenuSwitcher = () => {
                 <Plus className="mr-2 h-4 w-4" />
                 <Trans>Create Organisation</Trans>
               </Button>
+            </div>
+
+            {/* Mobile settings — desktop uses the third column */}
+            <div className="mt-auto border-t p-1.5 md:hidden">
+              {isUserAdmin && (
+                <DropdownMenuItem className="text-muted-foreground px-4 py-2" asChild>
+                  <Link to="/admin">
+                    <Trans>Admin panel</Trans>
+                  </Link>
+                </DropdownMenuItem>
+              )}
+
+              {currentOrganisation &&
+                currentOrganisation.type !== OrganisationType.PERSONAL &&
+                canExecuteOrganisationAction(
+                  'MANAGE_ORGANISATION',
+                  currentOrganisation.currentOrganisationRole,
+                ) && (
+                  <DropdownMenuItem className="text-muted-foreground px-4 py-2" asChild>
+                    <Link to={`/o/${currentOrganisation.url}/settings`}>
+                      <Trans>Organisation settings</Trans>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+
+              <DropdownMenuItem className="text-muted-foreground px-4 py-2" asChild>
+                <Link to="/inbox">
+                  <Trans>Personal Inbox</Trans>
+                </Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem className="text-muted-foreground px-4 py-2" asChild>
+                <Link to="/settings/profile">
+                  <Trans>Account</Trans>
+                </Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="text-muted-foreground px-4 py-2"
+                onClick={() => setLanguageSwitcherOpen(true)}
+              >
+                <Trans>Language</Trans>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="text-destructive/90 hover:!text-destructive px-4 py-2"
+                onSelect={async () => authClient.signOut()}
+              >
+                <Trans>Sign Out</Trans>
+              </DropdownMenuItem>
             </div>
           </div>
 
