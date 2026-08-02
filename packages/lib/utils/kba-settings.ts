@@ -1,5 +1,3 @@
-import type { Prisma } from '@prisma/client';
-
 import {
   type TDocumentKbaSettings,
   ZDocumentKbaSettingsSchema,
@@ -13,10 +11,10 @@ export const normalizeStoredKbaSettings = (value: unknown): TDocumentKbaSettings
 };
 
 /**
- * Serialise defaults for persisting on `OrganisationGlobalSettings`.
+ * Defaults for persisting on `OrganisationGlobalSettings.kbaSettings`.
  */
-export const getDefaultOrganisationKbaSettingsJson = (): Prisma.InputJsonValue => {
-  return ZDocumentKbaSettingsSchema.parse({}) as Prisma.InputJsonValue;
+export const getDefaultOrganisationKbaSettingsJson = (): TDocumentKbaSettings => {
+  return ZDocumentKbaSettingsSchema.parse({});
 };
 
 /**

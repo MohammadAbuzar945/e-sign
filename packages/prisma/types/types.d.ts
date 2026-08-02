@@ -2,6 +2,7 @@
 import type { TDefaultRecipient } from '@documenso/lib/types/default-recipients';
 import type {
   TDocumentAuthOptions,
+  TDocumentKbaSettings,
   TRecipientAuthOptions,
 } from '@documenso/lib/types/document-auth';
 import type { TDocumentEmailSettings } from '@documenso/lib/types/document-email';
@@ -21,6 +22,7 @@ declare global {
     type DocumentAuthOptions = TDocumentAuthOptions;
     type DocumentEmailSettings = TDocumentEmailSettings;
     type DocumentEmailSettingsNullable = TDocumentEmailSettings | null;
+    type DocumentKbaSettings = TDocumentKbaSettings;
 
     type RecipientAuthOptions = TRecipientAuthOptions;
 
