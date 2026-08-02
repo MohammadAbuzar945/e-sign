@@ -211,10 +211,10 @@ export const ResellerPayoutSettings = ({
   }, [isOwnPaystackPayoutVisible, selectedMode]);
 
   useEffect(() => {
-    if (!hasSavedBankDetails) {
+    if (!hasSavedBankDetails || subaccountStatus === 'FAILED') {
       setIsEditingBankDetails(true);
     }
-  }, [hasSavedBankDetails]);
+  }, [hasSavedBankDetails, subaccountStatus]);
 
   const { data: banksData, isLoading: isLoadingBanks } =
     trpc.organisation.reseller.listBanks.useQuery(
@@ -535,7 +535,14 @@ export const ResellerPayoutSettings = ({
               <AlertTitle>
                 <Trans>Registration failed</Trans>
               </AlertTitle>
-              <AlertDescription>{subaccountFailureReason}</AlertDescription>
+              <AlertDescription>
+                {subaccountFailureReason}
+                <span className="mt-2 block">
+                  <Trans>
+                    Update and submit your bank details again to create a new Paystack subaccount.
+                  </Trans>
+                </span>
+              </AlertDescription>
             </Alert>
           ) : null}
 
