@@ -1,8 +1,13 @@
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { DownloadIcon } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 
 import type { OrganisationPurchaseHistoryItem } from '@documenso/lib/server-only/billing/get-organisation-purchase-history';
+import { DEFAULT_PURCHASE_HISTORY_PER_PAGE } from '@documenso/lib/server-only/billing/get-organisation-purchase-history';
+import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
 import {
   Dialog,
@@ -23,7 +28,7 @@ import {
 
 type OrganisationPurchaseHistoryDialogProps = {
   orgUrl: string;
-  purchaseHistory: OrganisationPurchaseHistoryItem[];
+  organisationId: string;
   /** When true, show the View History link but open a Coming soon dialog instead. */
   isComingSoon?: boolean;
   getSubscriptionPlanDetails?: (planCode: string) => {
@@ -94,10 +99,30 @@ const formatHistoryCredits = (
 
 export const OrganisationPurchaseHistoryDialog = ({
   orgUrl,
-  purchaseHistory,
+  organisationId,
   isComingSoon = false,
   getSubscriptionPlanDetails,
 }: OrganisationPurchaseHistoryDialogProps) => {
+  const { _ } = useLingui();
+  const [isOpen, setIsOpen] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading, isFetching } = trpc.organisation.getPurchaseHistory.useQuery(
+    {
+      organisationId,
+      page,
+      perPage: DEFAULT_PURCHASE_HISTORY_PER_PAGE,
+    },
+    {
+      enabled: isOpen && !isComingSoon && Boolean(organisationId),
+    },
+  );
+
+  const purchaseHistory = data?.data ?? [];
+  const totalPages = data?.totalPages ?? 1;
+  const currentPage = data?.currentPage ?? page;
+  const count = data?.count ?? 0;
+
   if (isComingSoon) {
     return (
       <Dialog>
@@ -121,7 +146,16 @@ export const OrganisationPurchaseHistoryDialog = ({
   }
 
   return (
-    <Dialog>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+
+        if (!open) {
+          setPage(1);
+        }
+      }}
+    >
       <DialogTrigger asChild className="flex w-full items-end justify-end">
         <button className="text-md cursor-pointer pb-6 text-blue-500 underline">
           <Trans>View History</Trans>
@@ -138,86 +172,121 @@ export const OrganisationPurchaseHistoryDialog = ({
         </DialogHeader>
         <div className="max-h-[70vh] overflow-auto p-6 sm:p-8">
           <div className="min-w-[900px] overflow-hidden rounded-xl border shadow-sm">
-          <Table className="w-full">
-            <TableHeader className="bg-primary/10 sticky top-0 z-10 backdrop-blur">
-              <TableRow>
-                <TableHead className="text-primary w-36 whitespace-nowrap font-semibold">
-                  <Trans>Date</Trans>
-                </TableHead>
-                <TableHead className="text-primary w-40 font-semibold">
-                  <Trans>Source</Trans>
-                </TableHead>
-                <TableHead className="text-primary min-w-64 font-semibold">
-                  <Trans>Description</Trans>
-                </TableHead>
-                <TableHead className="text-primary w-36 whitespace-nowrap font-semibold">
-                  <Trans>Amount</Trans>
-                </TableHead>
-                <TableHead className="text-primary w-28 font-semibold">
-                  <Trans>Credits</Trans>
-                </TableHead>
-                <TableHead className="text-primary w-32 font-semibold">
-                  <Trans>Status</Trans>
-                </TableHead>
-                <TableHead className="text-primary w-36 text-right font-semibold">
-                  <Trans>Invoice</Trans>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {purchaseHistory.length === 0 ? (
+            <Table className="w-full">
+              <TableHeader className="bg-primary/10 sticky top-0 z-10 backdrop-blur">
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                    <Trans>No purchases found yet.</Trans>
-                  </TableCell>
+                  <TableHead className="text-primary w-36 whitespace-nowrap font-semibold">
+                    <Trans>Date</Trans>
+                  </TableHead>
+                  <TableHead className="text-primary w-40 font-semibold">
+                    <Trans>Source</Trans>
+                  </TableHead>
+                  <TableHead className="text-primary min-w-64 font-semibold">
+                    <Trans>Description</Trans>
+                  </TableHead>
+                  <TableHead className="text-primary w-36 whitespace-nowrap font-semibold">
+                    <Trans>Amount</Trans>
+                  </TableHead>
+                  <TableHead className="text-primary w-28 font-semibold">
+                    <Trans>Credits</Trans>
+                  </TableHead>
+                  <TableHead className="text-primary w-32 font-semibold">
+                    <Trans>Status</Trans>
+                  </TableHead>
+                  <TableHead className="text-primary w-36 text-right font-semibold">
+                    <Trans>Invoice</Trans>
+                  </TableHead>
                 </TableRow>
-              ) : (
-                purchaseHistory.map((item) => (
-                  <TableRow key={item.invoiceId} className="hover:bg-muted/50 transition-colors">
-                    <TableCell className="whitespace-nowrap font-medium">
-                      {new Date(item.date).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <span className="bg-primary/10 text-primary inline-flex rounded-full px-2.5 py-1 text-xs font-semibold">
-                        {formatHistorySource(item)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="min-w-64">
-                      {formatHistoryDescription(item, getSubscriptionPlanDetails)}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap font-medium">
-                      {formatHistoryAmount(item, getSubscriptionPlanDetails)}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {formatHistoryCredits(item, getSubscriptionPlanDetails)}
-                    </TableCell>
-                    <TableCell>
-                      <span className="bg-muted inline-flex rounded-full px-2.5 py-1 text-xs font-medium">
-                        {item.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link
-                          to={`/o/${orgUrl}/purchase-invoice/${encodeURIComponent(item.invoiceId)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <DownloadIcon className="mr-2 h-4 w-4" />
-                          <Trans>Download</Trans>
-                        </Link>
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                      <Trans>Loading purchase history…</Trans>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : purchaseHistory.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                      <Trans>No purchases found yet.</Trans>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  purchaseHistory.map((item) => (
+                    <TableRow key={item.invoiceId} className="hover:bg-muted/50 transition-colors">
+                      <TableCell className="whitespace-nowrap font-medium">
+                        {new Date(item.date).toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <span className="bg-primary/10 text-primary inline-flex rounded-full px-2.5 py-1 text-xs font-semibold">
+                          {formatHistorySource(item)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="min-w-64">
+                        {formatHistoryDescription(item, getSubscriptionPlanDetails)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap font-medium">
+                        {formatHistoryAmount(item, getSubscriptionPlanDetails)}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {formatHistoryCredits(item, getSubscriptionPlanDetails)}
+                      </TableCell>
+                      <TableCell>
+                        <span className="bg-muted inline-flex rounded-full px-2.5 py-1 text-xs font-medium">
+                          {item.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link
+                            to={`/o/${orgUrl}/purchase-invoice/${encodeURIComponent(item.invoiceId)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <DownloadIcon className="mr-2 h-4 w-4" />
+                            <Trans>Download</Trans>
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
+
+          {count > 0 ? (
+            <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+              <p className="text-sm text-muted-foreground">
+                {_(msg`Page ${currentPage} of ${totalPages}`)}
+                {isFetching && !isLoading ? ' · …' : ''}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1 || isFetching}
+                  onClick={() => setPage(currentPage - 1)}
+                >
+                  <Trans>Previous</Trans>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages || isFetching}
+                  onClick={() => setPage(currentPage + 1)}
+                >
+                  <Trans>Next</Trans>
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

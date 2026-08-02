@@ -14,7 +14,7 @@ export const getOrganisationPurchaseHistoryRoute = authenticatedProcedure
   .input(ZGetOrganisationPurchaseHistoryRequestSchema)
   .output(ZGetOrganisationPurchaseHistoryResponseSchema)
   .query(async ({ input, ctx }) => {
-    const { organisationId } = input;
+    const { organisationId, page, perPage } = input;
 
     if (!canAccessInvoiceHistory(ctx.user.email)) {
       throw new AppError(AppErrorCode.UNAUTHORIZED, {
@@ -45,5 +45,9 @@ export const getOrganisationPurchaseHistoryRoute = authenticatedProcedure
       });
     }
 
-    return getOrganisationPurchaseHistory({ organisationId: organisation.id });
+    return getOrganisationPurchaseHistory({
+      organisationId: organisation.id,
+      page,
+      perPage,
+    });
   });
