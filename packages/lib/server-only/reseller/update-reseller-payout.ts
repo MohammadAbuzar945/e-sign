@@ -252,9 +252,15 @@ export const updateResellerBankDetails = async ({
   const previousBankName = (profile.bankName ?? '').trim();
   const previousAccountName = (profile.bankAccountName ?? '').trim();
 
-  // Paystack settlement fields only — skip API when contact/VAT/ID-only updates.
+  // Failed / missing Paystack subaccounts must be re-created, never updated.
+  const shouldCreateNewPaystackSubaccount =
+    profile.subaccountStatus === ResellerSubaccountStatus.FAILED ||
+    !profile.paystackSubaccountCode;
+
+  // Paystack settlement fields only — skip API when contact/VAT/ID-only updates
+  // on a healthy existing subaccount.
   const shouldSyncPaystackSubaccount =
-    !profile.paystackSubaccountCode ||
+    shouldCreateNewPaystackSubaccount ||
     previousAccountNumber !== trimmedAccountNumber ||
     previousBankCode !== trimmedBankCode ||
     previousBankName !== trimmedBankName ||
@@ -278,6 +284,13 @@ export const updateResellerBankDetails = async ({
         vatNumber: nextVatNumber,
         bankDetailsConfirmedAt: new Date(),
         ...(shouldSyncPaystackSubaccount ? { subaccountFailureReason: null } : {}),
+        ...(shouldCreateNewPaystackSubaccount
+          ? {
+              paystackSubaccountCode: null,
+              paystackSubaccountId: null,
+              subaccountVerifiedAt: null,
+            }
+          : {}),
       },
     });
 
@@ -303,7 +316,10 @@ export const updateResellerBankDetails = async ({
         bankCode: trimmedBankCode,
         accountNumber: trimmedAccountNumber,
         platformFeePercent: profile.platformFeePercent,
-        existingSubaccountCode: savedProfile.paystackSubaccountCode,
+        // Never update a deleted/failed subaccount — always create a fresh one.
+        existingSubaccountCode: shouldCreateNewPaystackSubaccount
+          ? null
+          : savedProfile.paystackSubaccountCode,
       });
 
     return await prisma.resellerProfile.update({

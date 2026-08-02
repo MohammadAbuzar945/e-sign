@@ -135,13 +135,19 @@ export const adminRetryResellerSubaccount = async ({
     await getResellerProfileForBankVerification(applicationId);
 
   try {
+    const shouldCreateNewPaystackSubaccount =
+      profile.subaccountStatus === ResellerSubaccountStatus.FAILED ||
+      !profile.paystackSubaccountCode;
+
     const registration = await registerResellerPaystackSubaccount({
       businessName,
       affiliateSlug: profile.affiliateSlug,
       bankCode: profile.bankCode!,
       accountNumber,
       platformFeePercent: profile.platformFeePercent,
-      existingSubaccountCode: profile.paystackSubaccountCode,
+      existingSubaccountCode: shouldCreateNewPaystackSubaccount
+        ? null
+        : profile.paystackSubaccountCode,
     });
 
     await prisma.resellerProfile.update({
