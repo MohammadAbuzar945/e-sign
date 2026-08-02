@@ -3,6 +3,7 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createEmbeddingPresignToken } from '@documenso/lib/server-only/embedding-presign/create-embedding-presign-token';
 import { getOrganisationClaimByTeamId } from '@documenso/lib/server-only/organisation/get-organisation-claims';
 import { getApiTokenByToken } from '@documenso/lib/server-only/public-api/get-api-token-by-token';
+import { parseClaimFlags } from '@documenso/lib/utils/parse-claim-flags';
 
 import { procedure } from '../trpc';
 import {
@@ -44,7 +45,7 @@ export const createEmbeddingPresignTokenRoute = procedure
           teamId: token.teamId,
         });
 
-        if (!organisationClaim.flags.embedAuthoring) {
+        if (!parseClaimFlags(organisationClaim.flags).embedAuthoring) {
           throw new AppError(AppErrorCode.UNAUTHORIZED, {
             message: 'You do not have permission to create embedding presign tokens',
           });

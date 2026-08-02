@@ -3,6 +3,7 @@ import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
+import { parseClaimFlags } from '@documenso/lib/utils/parse-claim-flags';
 import { prisma } from '@documenso/prisma';
 
 import { authenticatedProcedure } from '../trpc';
@@ -47,7 +48,7 @@ export const createOrganisationEmailDomainRoute = authenticatedProcedure
       throw new AppError(AppErrorCode.UNAUTHORIZED);
     }
 
-    if (!organisation.organisationClaim.flags.emailDomains) {
+    if (!parseClaimFlags(organisation.organisationClaim.flags).emailDomains) {
       throw new AppError(AppErrorCode.INVALID_BODY, {
         message: 'Email domains are not enabled for this organisation',
       });
