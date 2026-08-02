@@ -19,6 +19,7 @@ import type { TRecipientActionAuth } from '../../types/document-auth';
 import {
   ZCheckboxFieldMeta,
   ZDropdownFieldMeta,
+  ZFieldMetaSchema,
   ZNumberFieldMeta,
   ZRadioFieldMeta,
   ZTextFieldMeta,
@@ -209,12 +210,17 @@ export const signFieldWithToken = async ({
     throw new Error('Typed signatures are not allowed. Please draw your signature');
   }
 
-  if (field.fieldMeta?.readOnly && !AUTO_SIGNABLE_FIELD_TYPES.includes(field.type)) {
+  const parsedFieldMeta = field.fieldMeta
+    ? ZFieldMetaSchema.safeParse(field.fieldMeta)
+    : null;
+  const fieldMeta = parsedFieldMeta?.success ? parsedFieldMeta.data : undefined;
+
+  if (fieldMeta?.readOnly && !AUTO_SIGNABLE_FIELD_TYPES.includes(field.type)) {
     // !: This is a bit of a hack at the moment, readonly fields with default values
     // !: should be inserted with their default value on document creation instead of
     // !: this weird programattic approach. Until that's fixed though this will verify
     // !: that the programmatic signed value is only that of its default.
-    const isAutomaticSigningValueValid = match(field.fieldMeta)
+    const isAutomaticSigningValueValid = match(fieldMeta)
       .with({ type: 'text' }, (meta) => customText === meta.text)
       .with({ type: 'number' }, (meta) => customText === meta.value)
       .with({ type: 'checkbox' }, (meta) =>
