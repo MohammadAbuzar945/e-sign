@@ -229,6 +229,11 @@ const handleTeamEmailContext = async (teamId: number) => {
   };
 };
 
+const parseClaimFlags = (flags: OrganisationClaim['flags']) => {
+  const parsed = ZClaimFlagsSchema.safeParse(flags);
+  return parsed.success ? parsed.data : null;
+};
+
 const getAllowedEmails = (
   organisation: Organisation & {
     emailDomains: (Pick<EmailDomain, 'status'> & { emails: OrganisationEmail[] })[];

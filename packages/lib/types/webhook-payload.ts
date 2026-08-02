@@ -14,6 +14,7 @@ import {
 import { z } from 'zod';
 
 import { NEXT_PUBLIC_WEBAPP_URL } from '../constants/app';
+
 import { mapSecondaryIdToDocumentId, mapSecondaryIdToTemplateId } from '../utils/envelope';
 
 /**
@@ -80,11 +81,6 @@ export const ZWebhookDocumentSchema = z.object({
   source: z.nativeEnum(DocumentSource),
   documentMeta: ZWebhookDocumentMetaSchema.nullable(),
   recipients: z.array(ZWebhookRecipientSchema),
-
-  /**
-   * Legacy field for backwards compatibility.
-   */
-  Recipient: z.array(ZWebhookRecipientSchema),
 });
 
 export type TWebhookRecipient = z.infer<typeof ZWebhookRecipientSchema>;
@@ -157,7 +153,6 @@ export const mapEnvelopeToWebhookDocumentPayload = (
           dateFormat: 'yyyy-MM-dd hh:mm a',
         }
       : null,
-    Recipient: mappedRecipients,
     recipients: mappedRecipients,
   };
 };

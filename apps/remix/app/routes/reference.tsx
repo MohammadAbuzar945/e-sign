@@ -2,10 +2,18 @@ import { useLoaderData } from 'react-router';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 
+import { API_V2_URL, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+
 import { BrandingLogo } from '~/components/general/branding-logo';
 import { appMetaTags } from '~/utils/meta';
 
 import type { LoaderFunctionArgs } from 'react-router';
+
+/** Swagger UI reads root `servers`; static specs often bundle multiple URLs — show only this deployment's public API base. */
+function getPublicApiServerUrl(): string {
+  const base = NEXT_PUBLIC_WEBAPP_URL().replace(/\/+$/, '');
+  return `${base}${API_V2_URL}`;
+}
 
 export function meta() {
   return appMetaTags('API Reference');
@@ -100,7 +108,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     );
     patchOpenApiMultipartFileParts(apiSpec);
     const filteredSpec = filterDeprecatedEndpoints(apiSpec);
-    
+    filteredSpec.servers = [{ url: getPublicApiServerUrl() }];
+
     return {
       apiSpec: filteredSpec,
       apiSpecUrl,
