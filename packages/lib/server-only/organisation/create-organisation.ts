@@ -63,7 +63,6 @@ export const createOrganisation = async ({
     const organisationSetting = await tx.organisationGlobalSettings.create({
       data: {
         ...generateDefaultOrganisationSettings(),
-        defaultRecipients: Prisma.DbNull,
         id: generateDatabaseId('org_setting'),
       },
     });
