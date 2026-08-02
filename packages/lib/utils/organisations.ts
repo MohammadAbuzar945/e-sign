@@ -111,8 +111,7 @@ export const buildOrganisationWhereQuery = ({
   };
 };
 
-export const generateDefaultOrganisationSettings =
-  (): Omit<Prisma.OrganisationGlobalSettingsUncheckedCreateInput, 'id'> => {
+export const generateDefaultOrganisationSettings = () => {
   return {
     documentVisibility: DocumentVisibility.EVERYONE,
     documentLanguage: 'en',
@@ -142,5 +141,5 @@ export const generateDefaultOrganisationSettings =
     defaultRecipients: Prisma.DbNull,
     aiFeaturesEnabled: false,
     kbaSettings: getDefaultOrganisationKbaSettingsJson(),
-  };
+  } satisfies Omit<Prisma.OrganisationGlobalSettingsUncheckedCreateInput, 'id'>;
 };

@@ -183,7 +183,10 @@ export const createTeam = async ({
         const teamSettings = await tx.teamGlobalSettings.create({
           data: {
             ...generateDefaultTeamSettings(),
+            // Prisma create inputs reject TS `null` for Json fields — use DbNull.
             defaultRecipients: Prisma.DbNull,
+            emailDocumentSettings: Prisma.DbNull,
+            kbaSettings: Prisma.DbNull,
             id: generateDatabaseId('team_setting'),
           },
         });

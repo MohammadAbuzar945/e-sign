@@ -177,15 +177,13 @@ export const updateTeamSettingsRoute = authenticatedProcedure
             // AI features settings.
             aiFeaturesEnabled,
 
-            // KBA defaults (null / DbNull = inherit organisation). Cast for Prisma client versions
-            // where generated XOR input has not yet picked up `kbaSettings`.
+            // KBA defaults (null / DbNull = inherit organisation).
             ...(kbaSettings !== undefined
               ? {
-                  kbaSettings:
-                    kbaSettings === null ? Prisma.DbNull : (kbaSettings as Prisma.InputJsonValue),
+                  kbaSettings: kbaSettings === null ? Prisma.DbNull : kbaSettings,
                 }
               : {}),
-          } as unknown as Prisma.TeamGlobalSettingsUncheckedUpdateWithoutTeamInput,
+          },
         },
       },
     });

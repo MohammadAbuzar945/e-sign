@@ -169,9 +169,13 @@ export const updateOrganisationSettingsRoute = authenticatedProcedure
             // AI features settings.
             aiFeaturesEnabled,
 
-            // KBA defaults.
+            // KBA defaults (null → DbNull so the org clears/overrides correctly).
             kbaSettings:
-              kbaSettings === undefined ? undefined : (kbaSettings as Prisma.InputJsonValue),
+              kbaSettings === undefined
+                ? undefined
+                : kbaSettings === null
+                  ? Prisma.DbNull
+                  : kbaSettings,
           },
         },
       },
