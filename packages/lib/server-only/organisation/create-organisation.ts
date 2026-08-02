@@ -9,7 +9,7 @@ import { IS_BILLING_ENABLED } from '../../constants/app';
 import { ORGANISATION_INTERNAL_GROUPS } from '../../constants/organisations';
 import { AppErrorCode } from '../../errors/app-error';
 import { AppError } from '../../errors/app-error';
-import type { InternalClaim } from '../../types/subscription';
+import type { InternalClaim, TClaimFlags } from '../../types/subscription';
 import { INTERNAL_CLAIM_ID, internalClaims } from '../../types/subscription';
 import { generateDatabaseId, prefixedId } from '../../universal/id';
 import { generateDefaultOrganisationSettings } from '../../utils/organisations';
@@ -209,13 +209,16 @@ export const createPersonalOrganisation = async ({
 };
 
 export const createOrganisationClaimUpsertData = (subscriptionClaim: InternalClaim) => {
+  // Claim flags are Prisma JSON; cast so spreads stay valid under stricter rollup tsc.
+  const flags = subscriptionClaim.flags as TClaimFlags;
+
   // Done like this to ensure type errors are thrown if items are added.
   const data: Omit<
     Prisma.SubscriptionClaimCreateInput,
     'id' | 'createdAt' | 'updatedAt' | 'locked' | 'name'
   > = {
     flags: {
-      ...subscriptionClaim.flags,
+      ...flags,
     },
     envelopeItemCount: subscriptionClaim.envelopeItemCount,
     teamCount: subscriptionClaim.teamCount,
