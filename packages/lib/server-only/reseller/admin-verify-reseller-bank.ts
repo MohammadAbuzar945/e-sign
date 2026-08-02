@@ -62,7 +62,7 @@ const getResellerProfileForBankVerification = async (applicationId: string) => {
   return {
     application,
     profile,
-    organisationName: application.organisation.name,
+    businessName: profile.bankAccountName,
     accountNumber: decryptResellerSecret(profile.bankAccountNumber),
     accountType,
     documentType,
@@ -131,12 +131,12 @@ export type AdminRetryResellerSubaccountOptions = {
 export const adminRetryResellerSubaccount = async ({
   applicationId,
 }: AdminRetryResellerSubaccountOptions) => {
-  const { profile, organisationName, accountNumber } =
+  const { profile, businessName, accountNumber } =
     await getResellerProfileForBankVerification(applicationId);
 
   try {
     const registration = await registerResellerPaystackSubaccount({
-      organisationName,
+      businessName,
       affiliateSlug: profile.affiliateSlug,
       bankCode: profile.bankCode!,
       accountNumber,

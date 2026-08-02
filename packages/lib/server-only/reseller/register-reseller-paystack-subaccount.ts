@@ -6,7 +6,8 @@ import {
 } from '@documenso/lib/server-only/paystack';
 
 export type RegisterResellerPaystackSubaccountOptions = {
-  organisationName: string;
+  /** Account holder / business name from payout settings (Paystack `business_name`). */
+  businessName: string;
   affiliateSlug: string;
   bankCode: string;
   accountNumber: string;
@@ -15,7 +16,7 @@ export type RegisterResellerPaystackSubaccountOptions = {
 };
 
 export const registerResellerPaystackSubaccount = async ({
-  organisationName,
+  businessName,
   affiliateSlug,
   bankCode,
   accountNumber,
@@ -24,18 +25,19 @@ export const registerResellerPaystackSubaccount = async ({
 }: RegisterResellerPaystackSubaccountOptions) => {
   const description = `Nomia reseller: ${affiliateSlug}`;
   const percentageCharge = Number(platformFeePercent ?? 0);
+  const trimmedBusinessName = businessName.trim();
 
   const subaccount = existingSubaccountCode
     ? await updatePaystackSubaccount({
         subaccountCode: existingSubaccountCode,
-        businessName: organisationName,
+        businessName: trimmedBusinessName,
         settlementBank: bankCode,
         accountNumber,
         percentageCharge,
         description,
       })
     : await createPaystackSubaccount({
-        businessName: organisationName,
+        businessName: trimmedBusinessName,
         settlementBank: bankCode,
         accountNumber,
         percentageCharge,
