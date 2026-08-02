@@ -15,6 +15,7 @@ import {
 import { nanoid } from '../../universal/id';
 import { createRecipientAuthOptions } from '../../utils/document-auth';
 import { type EnvelopeIdOptions, mapSecondaryIdToTemplateId } from '../../utils/envelope';
+import { parseClaimFlags } from '../../utils/parse-claim-flags';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 
 export type SetTemplateRecipientsOptions = {
@@ -70,7 +71,10 @@ export const setTemplateRecipients = async ({
   );
 
   // Check if user has permission to set the global action auth.
-  if (recipientsHaveActionAuth && !envelope.team.organisation.organisationClaim.flags.cfr21) {
+  if (
+    recipientsHaveActionAuth &&
+    !parseClaimFlags(envelope.team.organisation.organisationClaim.flags).cfr21
+  ) {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {
       message: 'You do not have permission to set the action auth',
     });

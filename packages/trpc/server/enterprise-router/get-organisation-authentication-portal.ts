@@ -1,6 +1,7 @@
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
+import { parseClaimFlags } from '@documenso/lib/utils/parse-claim-flags';
 import { prisma } from '@documenso/prisma';
 
 import { authenticatedProcedure } from '../trpc';
@@ -64,7 +65,7 @@ export const getOrganisationAuthenticationPortal = async ({
     });
   }
 
-  if (!organisation.organisationClaim.flags.authenticationPortal) {
+  if (!parseClaimFlags(organisation.organisationClaim.flags).authenticationPortal) {
     throw new AppError(AppErrorCode.NOT_FOUND, {
       message: 'Authentication portal not found',
     });
