@@ -106,4 +106,6 @@ export {
   updatePaystackSubaccount,
 } from './reseller-paystack';
 
+export { isPaystackSubaccountMissingError } from './paystack-error';
+
 export type { ListPaystackBanksOptions, PaystackBankListItem } from './reseller-paystack';

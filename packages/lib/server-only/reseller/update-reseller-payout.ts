@@ -7,7 +7,10 @@ import {
 } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { getPaystackSubaccount } from '@documenso/lib/server-only/paystack';
+import {
+  getPaystackSubaccount,
+  isPaystackSubaccountMissingError,
+} from '@documenso/lib/server-only/paystack';
 import { prisma } from '@documenso/prisma';
 
 import { ZResellerBankVerificationFieldsSchema } from '@documenso/lib/constants/reseller-bank-verification';
@@ -19,17 +22,32 @@ import { encryptResellerSecret, decryptResellerSecret } from './reseller-secrets
 import { registerResellerPaystackSubaccount } from './register-reseller-paystack-subaccount';
 import { recordResellerVatRegistrationChange } from './reseller-vat-registration';
 
+const SUBACCOUNT_MISSING_FAILURE_REASON =
+  'Paystack subaccount was not found. It may have been removed from Paystack. Submit bank details again to create a new subaccount.';
+
+const SUBACCOUNT_INACTIVE_FAILURE_REASON =
+  'Paystack reports this subaccount as inactive. Contact Nomia support or submit bank details again.';
+
 const getSubaccountStatusFromPaystack = (subaccount: {
   is_verified?: boolean;
   active?: boolean;
 }) => {
-  if (subaccount.is_verified === true && subaccount.active !== false) {
+  if (subaccount.active === false) {
+    return ResellerSubaccountStatus.FAILED;
+  }
+
+  if (subaccount.is_verified === true) {
     return ResellerSubaccountStatus.ACTIVE;
   }
 
   return ResellerSubaccountStatus.PENDING;
 };
 
+/**
+ * Reconcile local subaccount state with Paystack.
+ * Always calls Paystack when a subaccount code exists (including ACTIVE), so verification
+ * and remote deletions are reflected in Nomia.
+ */
 export const syncResellerSubaccountStatus = async (organisationId: string) => {
   const profile = await prisma.resellerProfile.findUnique({
     where: { organisationId },
@@ -39,17 +57,18 @@ export const syncResellerSubaccountStatus = async (organisationId: string) => {
     return profile;
   }
 
-  if (profile.subaccountStatus === ResellerSubaccountStatus.ACTIVE) {
-    return profile;
-  }
-
   try {
     const subaccount = await getPaystackSubaccount(profile.paystackSubaccountCode);
     const nextStatus = getSubaccountStatusFromPaystack(subaccount);
     const isVerified = nextStatus === ResellerSubaccountStatus.ACTIVE;
+    const nextFailureReason =
+      nextStatus === ResellerSubaccountStatus.FAILED ? SUBACCOUNT_INACTIVE_FAILURE_REASON : null;
 
     if (
       nextStatus === profile.subaccountStatus &&
+      profile.paystackSubaccountCode === subaccount.subaccount_code &&
+      profile.paystackSubaccountId === subaccount.id &&
+      (profile.subaccountFailureReason ?? null) === nextFailureReason &&
       (!isVerified || profile.subaccountVerifiedAt !== null)
     ) {
       return profile;
@@ -59,14 +78,30 @@ export const syncResellerSubaccountStatus = async (organisationId: string) => {
       where: { organisationId },
       data: {
         subaccountStatus: nextStatus,
-        subaccountVerifiedAt: isVerified ? (profile.subaccountVerifiedAt ?? new Date()) : null,
-        subaccountFailureReason: null,
+        subaccountVerifiedAt: isVerified
+          ? (profile.subaccountVerifiedAt ?? new Date())
+          : null,
+        subaccountFailureReason: nextFailureReason,
         paystackSubaccountId: subaccount.id,
         paystackSubaccountCode: subaccount.subaccount_code,
       },
     });
-  } catch {
-    return profile;
+  } catch (error) {
+    if (!isPaystackSubaccountMissingError(error)) {
+      return profile;
+    }
+
+    // Subaccount deleted / missing in Paystack — clear local link so the reseller can re-register.
+    return await prisma.resellerProfile.update({
+      where: { organisationId },
+      data: {
+        paystackSubaccountCode: null,
+        paystackSubaccountId: null,
+        subaccountStatus: ResellerSubaccountStatus.FAILED,
+        subaccountVerifiedAt: null,
+        subaccountFailureReason: SUBACCOUNT_MISSING_FAILURE_REASON,
+      },
+    });
   }
 };
 

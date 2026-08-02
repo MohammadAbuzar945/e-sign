@@ -1,6 +1,7 @@
-import type { Organisation, OrganisationGlobalSettings, Prisma } from '@prisma/client';
 import {
   DocumentVisibility,
+  Prisma,
+  type Organisation,
   type OrganisationGroup,
   type OrganisationMemberRole,
 } from '@prisma/client';
@@ -110,10 +111,7 @@ export const buildOrganisationWhereQuery = ({
   };
 };
 
-export const generateDefaultOrganisationSettings = (): Omit<
-  OrganisationGlobalSettings,
-  'id' | 'organisation'
-> => {
+export const generateDefaultOrganisationSettings = () => {
   return {
     documentVisibility: DocumentVisibility.EVERYONE,
     documentLanguage: 'en',
@@ -140,8 +138,8 @@ export const generateDefaultOrganisationSettings = (): Omit<
     // emailReplyToName: null,
     emailDocumentSettings: DEFAULT_DOCUMENT_EMAIL_SETTINGS,
 
-    defaultRecipients: null,
+    defaultRecipients: Prisma.DbNull,
     aiFeaturesEnabled: false,
     kbaSettings: getDefaultOrganisationKbaSettingsJson(),
-  };
+  } satisfies Omit<Prisma.OrganisationGlobalSettingsUncheckedCreateInput, 'id'>;
 };

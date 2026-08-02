@@ -25,7 +25,7 @@ type ResellerProfileWithBankVerificationFields = {
   bankDocumentNumber?: string | null;
 };
 
-const maybeSyncPendingSubaccountStatus = async <
+const maybeSyncSubaccountStatus = async <
   T extends {
     organisationId: string;
     subaccountStatus: ResellerSubaccountStatus | null;
@@ -37,10 +37,9 @@ const maybeSyncPendingSubaccountStatus = async <
 >(
   profile: T,
 ): Promise<T> => {
-  if (
-    profile.subaccountStatus !== ResellerSubaccountStatus.PENDING ||
-    !profile.paystackSubaccountCode
-  ) {
+  // Sync whenever a Paystack subaccount is linked — including ACTIVE — so remote
+  // verification and deletions are reflected when the reseller opens settings.
+  if (!profile.paystackSubaccountCode) {
     return profile;
   }
 
@@ -83,7 +82,7 @@ export const getResellerProfileByOrganisationId = async (organisationId: string)
     return null;
   }
 
-  const resolvedProfile = await maybeSyncPendingSubaccountStatus(profile);
+  const resolvedProfile = await maybeSyncSubaccountStatus(profile);
   const profileWithVerification = resolvedProfile as typeof resolvedProfile &
     ResellerProfileWithBankVerificationFields;
 
@@ -144,7 +143,7 @@ export const getResellerProfileByAffiliateSlug = async (affiliateSlug: string) =
     return null;
   }
 
-  const resolvedProfile = await maybeSyncPendingSubaccountStatus(profile);
+  const resolvedProfile = await maybeSyncSubaccountStatus(profile);
 
   const availableCredits = await getOrganisationCredits(profile.organisationId);
   const payoutReadiness = getResellerPayoutReadiness(resolvedProfile);

@@ -1,7 +1,7 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -288,12 +288,33 @@ export const ResellerPayoutSettings = ({
     setIsEditingBankDetails(false);
   };
 
+  const isSilentSubaccountSyncRef = useRef(false);
+
   const { mutateAsync: refreshSubaccountStatus, isPending: isRefreshingSubaccountStatus } =
     trpc.organisation.reseller.refreshSubaccountStatus.useMutation({
       onSuccess: async (result) => {
+        const wasSilent = isSilentSubaccountSyncRef.current;
+        isSilentSubaccountSyncRef.current = false;
+
         await onUpdated();
+
+        if (wasSilent) {
+          return;
+        }
+
         if (result.subaccountStatus === 'ACTIVE') {
           toast({ title: _(msg`Bank account verified`) });
+          return;
+        }
+
+        if (result.subaccountStatus === 'FAILED') {
+          toast({
+            title: _(msg`Subaccount issue detected`),
+            description: _(
+              msg`Paystack no longer has a valid subaccount for these details. Please submit bank details again.`,
+            ),
+            variant: 'destructive',
+          });
           return;
         }
 
@@ -305,6 +326,7 @@ export const ResellerPayoutSettings = ({
         });
       },
       onError: (error) => {
+        isSilentSubaccountSyncRef.current = false;
         toast({
           title: _(msg`Could not refresh status`),
           description: AppError.parseError(error).message,
@@ -312,6 +334,28 @@ export const ResellerPayoutSettings = ({
         });
       },
     });
+
+  // When payouts open, reconcile local status with Paystack (verification + remote deletes).
+  useEffect(() => {
+    if (selectedMode !== 'NOMIA_SUBACCOUNT') {
+      return;
+    }
+
+    if (
+      subaccountStatus !== 'PENDING' &&
+      subaccountStatus !== 'ACTIVE' &&
+      subaccountStatus !== 'FAILED'
+    ) {
+      return;
+    }
+
+    isSilentSubaccountSyncRef.current = true;
+    void refreshSubaccountStatus({ organisationId }).catch(() => {
+      isSilentSubaccountSyncRef.current = false;
+    });
+    // Intentionally once per payouts mount / mode switch — not on every status prop change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync on open
+  }, [organisationId, selectedMode]);
 
   const banks = useMemo(() => banksData?.banks ?? [], [banksData?.banks]);
   const selectedBankCode = bankForm.watch('bankCode');
@@ -460,13 +504,14 @@ export const ResellerPayoutSettings = ({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {statusBadge}
-              {subaccountStatus === 'PENDING' ? (
+              {subaccountStatus === 'PENDING' || subaccountStatus === 'ACTIVE' ? (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   loading={isRefreshingSubaccountStatus}
                   onClick={async () => {
+                    isSilentSubaccountSyncRef.current = false;
                     await refreshSubaccountStatus({ organisationId });
                   }}
                 >
