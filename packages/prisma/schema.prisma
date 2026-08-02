@@ -1254,11 +1254,12 @@ model OrganisationCreditPurchase {
   completedAt       DateTime?
   purchaseGroupId   String?
 
-  @@index([organisationId])
   @@index([status])
   @@index([createdAt])
   @@index([purchaseGroupId])
   @@index([purchaseType])
+  /// Covers org history (status + createdAt sort); replaces standalone organisationId index.
+  @@index([organisationId, status, createdAt])
 }
 
 enum ResellerApplicationStatus {
@@ -1520,7 +1521,8 @@ model ResellerPackage {
   transactions ResellerCreditTransaction[]
 
   @@unique([resellerProfileId, catalogPackageId])
-  @@index([resellerProfileId])
+  /// Speeds Nomia catalog sync updateMany by catalogPackageId (rare writes).
+  @@index([catalogPackageId])
 }
 
 model ResellerCreditTransaction {
@@ -1563,12 +1565,14 @@ model ResellerCreditTransaction {
   completedAt DateTime?
   purchaseGroupId String?
 
-  @@index([resellerProfileId])
   @@index([resellerOrganisationId])
-  @@index([purchaserOrganisationId])
   @@index([status])
   @@index([createdAt])
   @@index([purchaseGroupId])
+  /// Buyer history; replaces standalone purchaserOrganisationId index.
+  @@index([purchaserOrganisationId, status, createdAt])
+  /// Reseller ledger + pending checks; replaces standalone resellerProfileId index.
+  @@index([resellerProfileId, status, createdAt])
 }
 
 enum PaystackWebhookEventStatus {
