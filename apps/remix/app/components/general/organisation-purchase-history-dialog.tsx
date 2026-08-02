@@ -5,8 +5,10 @@ import { DownloadIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 
-import type { OrganisationPurchaseHistoryItem } from '@documenso/lib/server-only/billing/get-organisation-purchase-history';
-import { DEFAULT_PURCHASE_HISTORY_PER_PAGE } from '@documenso/lib/server-only/billing/get-organisation-purchase-history';
+import {
+  DEFAULT_PURCHASE_HISTORY_PER_PAGE,
+  type OrganisationPurchaseHistoryItem,
+} from '@documenso/lib/types/organisation-purchase-history';
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
 import {
