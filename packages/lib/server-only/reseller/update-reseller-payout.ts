@@ -263,7 +263,7 @@ export const updateResellerBankDetails = async ({
   try {
     const { subaccount, subaccountStatus, subaccountVerifiedAt } =
       await registerResellerPaystackSubaccount({
-        organisationName: profile.organisation.name,
+        businessName: trimmedAccountName,
         affiliateSlug: profile.affiliateSlug,
         bankCode: trimmedBankCode,
         accountNumber: trimmedAccountNumber,
