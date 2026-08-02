@@ -16,7 +16,13 @@ import {
   listNomiaPricePlans,
   type NomiaPricePlanRow,
 } from '@documenso/lib/server-only/billing/nomia-price-catalog';
-import type { FindResultResponse } from '@documenso/lib/types/search-params';
+import {
+  DEFAULT_PURCHASE_HISTORY_PER_PAGE,
+  type OrganisationPurchaseHistoryItem,
+  type OrganisationPurchaseHistoryResult,
+  type PurchaseHistoryLineItem,
+  type PurchaseInvoiceResellerSeller,
+} from '@documenso/lib/types/organisation-purchase-history';
 import { prisma } from '@documenso/prisma';
 
 import { getSubscriptionsByUserId } from '../subscription/get-subscriptions-by-user-id';
@@ -26,7 +32,13 @@ import {
   resolveResellerPurchaseInvoiceId,
 } from './record-organisation-credit-purchase';
 
-export const DEFAULT_PURCHASE_HISTORY_PER_PAGE = 20;
+export {
+  DEFAULT_PURCHASE_HISTORY_PER_PAGE,
+  type OrganisationPurchaseHistoryItem,
+  type OrganisationPurchaseHistoryResult,
+  type PurchaseHistoryLineItem,
+  type PurchaseInvoiceResellerSeller,
+} from '@documenso/lib/types/organisation-purchase-history';
 
 const PURCHASE_HISTORY_STATUSES = [
   OrganisationCreditPurchaseStatus.COMPLETED,
@@ -37,50 +49,6 @@ const RESELLER_HISTORY_STATUSES = [
   ResellerCreditTransactionStatus.COMPLETED,
   ResellerCreditTransactionStatus.PENDING,
 ] as const;
-
-export type PurchaseHistoryLineItem = {
-  provider: 'nomia' | 'reseller';
-  description: string;
-  credits: number;
-  grossAmount: number;
-  currency: string;
-  status: string;
-  reference: string | null;
-};
-
-export type PurchaseInvoiceResellerSeller = {
-  name: string;
-  physicalAddress: string | null;
-  vatStatus: 'NOT_REGISTERED' | 'REGISTERED' | null;
-  vatNumber: string | null;
-  affiliateSlug: string;
-  hasLogo: boolean;
-};
-
-export type OrganisationPurchaseHistoryItem = {
-  invoiceId: string;
-  purchaseGroupId: string | null;
-  date: Date;
-  kind: 'subscription' | 'pay_as_you_go' | 'reseller' | 'bulk';
-  /** Who issues / supplies this invoice document. */
-  issuer: 'NOMIA' | 'RESELLER';
-  title: string;
-  totalCredits: number;
-  totalGrossAmount: number;
-  currency: string;
-  status: string;
-  lineItems: PurchaseHistoryLineItem[];
-  /** Present when this invoice is issued by a reseller. */
-  resellerSeller?: PurchaseInvoiceResellerSeller | null;
-  /**
-   * Buyer VAT number when the purchasing org is itself a VAT-registered
-   * reseller (Nomia tax invoices only). Ordinary orgs never store buyer VAT.
-   */
-  buyerVatNumber?: string | null;
-};
-
-export type OrganisationPurchaseHistoryResult =
-  FindResultResponse<OrganisationPurchaseHistoryItem[]>;
 
 const formatAmount = (currency: string, amountInCents: number) =>
   `${currency} ${(amountInCents / 100).toFixed(2)}`;
