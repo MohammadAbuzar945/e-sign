@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-export const ZGetOrganisationPurchaseHistoryRequestSchema = z.object({
+import { ZFindResultResponse, ZFindSearchParamsSchema } from '@documenso/lib/types/search-params';
+
+export const ZGetOrganisationPurchaseHistoryRequestSchema = ZFindSearchParamsSchema.pick({
+  page: true,
+  perPage: true,
+}).extend({
   organisationId: z.string(),
 });
 
@@ -40,6 +45,6 @@ export const ZOrganisationPurchaseHistoryItemSchema = z.object({
     .optional(),
 });
 
-export const ZGetOrganisationPurchaseHistoryResponseSchema = z.array(
-  ZOrganisationPurchaseHistoryItemSchema,
-);
+export const ZGetOrganisationPurchaseHistoryResponseSchema = ZFindResultResponse.extend({
+  data: z.array(ZOrganisationPurchaseHistoryItemSchema),
+});

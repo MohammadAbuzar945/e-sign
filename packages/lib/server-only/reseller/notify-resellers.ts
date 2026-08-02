@@ -1,7 +1,11 @@
 import { createElement } from 'react';
 
+import { ResellerProfileStatus } from '@prisma/client';
+import pMap from 'p-map';
+
 import { mailer } from '@documenso/email/mailer';
 import ResellerAdminBroadcastEmailTemplate from '@documenso/email/templates/reseller-admin-broadcast';
+import { prisma } from '@documenso/prisma';
 
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
 import { AppError, AppErrorCode } from '../../errors/app-error';
@@ -14,6 +18,7 @@ import {
 } from './sanitize-reseller-broadcast-html';
 
 const PREVIEW_RECIPIENT_NAME = 'Reseller Partner';
+const BROADCAST_SEND_CONCURRENCY = 15;
 
 export type PreviewResellerBroadcastOptions = {
   subject: string;
@@ -30,6 +35,14 @@ const getSender = () => ({
   name: env('NEXT_PRIVATE_SMTP_FROM_NAME') || 'Nomia',
   address: env('NEXT_PRIVATE_SMTP_FROM_ADDRESS') || 'noreply@nomiadocs.com',
 });
+
+const countActiveResellerRecipients = async () =>
+  prisma.resellerProfile.count({
+    where: {
+      status: ResellerProfileStatus.ACTIVE,
+      deletedAt: null,
+    },
+  });
 
 const renderBroadcastEmail = async ({
   subject,
@@ -85,17 +98,19 @@ export const previewResellerBroadcast = async ({
   subject,
   htmlBody,
 }: PreviewResellerBroadcastOptions) => {
-  const recipients = await getResellerNotifyRecipients();
-  const rendered = await renderBroadcastEmail({
-    subject,
-    htmlBody,
-    recipientName: PREVIEW_RECIPIENT_NAME,
-  });
+  const [recipientCount, rendered] = await Promise.all([
+    countActiveResellerRecipients(),
+    renderBroadcastEmail({
+      subject,
+      htmlBody,
+      recipientName: PREVIEW_RECIPIENT_NAME,
+    }),
+  ]);
 
   return {
     html: rendered.html,
     subject: rendered.subject,
-    recipientCount: recipients.length,
+    recipientCount,
   };
 };
 
@@ -130,38 +145,37 @@ export const notifyResellers = async ({
     }),
   );
 
-  const results = await Promise.allSettled(
-    recipients.map(async (recipient) => {
-      const rendered = await renderBroadcastEmail({
-        subject,
-        htmlBody,
-        recipientName: recipient.name,
-      });
+  const settled = await pMap(
+    recipients,
+    async (recipient) => {
+      try {
+        const rendered = await renderBroadcastEmail({
+          subject,
+          htmlBody,
+          recipientName: recipient.name,
+        });
 
-      await mailer.sendMail({
-        to: recipient.email,
-        from: sender,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
-      });
+        await mailer.sendMail({
+          to: recipient.email,
+          from: sender,
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text,
+        });
 
-      return recipient.email;
-    }),
+        return { status: 'fulfilled' as const, email: recipient.email };
+      } catch {
+        return { status: 'rejected' as const, email: recipient.email };
+      }
+    },
+    { concurrency: BROADCAST_SEND_CONCURRENCY },
   );
 
-  const sentCount = results.filter((result) => result.status === 'fulfilled').length;
-  const failedCount = results.filter((result) => result.status === 'rejected').length;
-
-  const failedEmails = results
-    .map((result, index) => {
-      if (result.status === 'rejected') {
-        return recipients[index]?.email;
-      }
-
-      return null;
-    })
-    .filter((email): email is string => Boolean(email));
+  const sentCount = settled.filter((result) => result.status === 'fulfilled').length;
+  const failedCount = settled.filter((result) => result.status === 'rejected').length;
+  const failedEmails = settled
+    .filter((result) => result.status === 'rejected')
+    .map((result) => result.email);
 
   console.info(
     JSON.stringify({

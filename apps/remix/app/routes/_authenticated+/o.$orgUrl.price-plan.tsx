@@ -24,7 +24,6 @@ import { useSession } from '@documenso/lib/client-only/providers/session';
 import {
   getNomiaPricePlansUiCatalog,
 } from '@documenso/lib/server-only/billing/nomia-price-catalog';
-import { getOrganisationPurchaseHistory } from '@documenso/lib/server-only/billing/get-organisation-purchase-history';
 import { getSubscriptionsByUserId } from '@documenso/lib/server-only/subscription/get-subscriptions-by-user-id';
 import { Button } from '@documenso/ui/primitives/button';
 import {
@@ -91,11 +90,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
   const canViewInvoiceHistory = canAccessInvoiceHistory(user.email);
 
-  const [subscriptions, purchaseHistory, resellerProfile, plansData] = await Promise.all([
+  const [subscriptions, resellerProfile, plansData] = await Promise.all([
     getSubscriptionsByUserId({ organisationId: organisation.id }),
-    canViewInvoiceHistory
-      ? getOrganisationPurchaseHistory({ organisationId: organisation.id })
-      : Promise.resolve([]),
     prisma.resellerProfile.findUnique({
       where: { organisationId: organisation.id },
       select: { id: true, status: true },
@@ -105,7 +101,6 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
   return superLoaderJson({
     subscriptions,
-    purchaseHistory,
     user,
     organisation,
     isActiveReseller: resellerProfile?.status === 'ACTIVE',
@@ -203,7 +198,6 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
   const { orgUrl } = params;
   const {
     subscriptions,
-    purchaseHistory,
     organisation,
     isActiveReseller,
     canViewInvoiceHistory,
@@ -663,7 +657,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
 
         <OrganisationPurchaseHistoryDialog
           orgUrl={orgUrl}
-          purchaseHistory={purchaseHistory}
+          organisationId={organisation.id}
           isComingSoon={!canViewInvoiceHistory}
           getSubscriptionPlanDetails={getActiveSubscriptionDetails}
         />

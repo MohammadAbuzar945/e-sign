@@ -136,15 +136,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
     Boolean(affiliate) &&
     affiliate?.organisationId !== purchaserOrganisation?.id;
 
-  const { data: purchaseHistory = [], refetch: refetchPurchaseHistory } =
-    trpc.organisation.getPurchaseHistory.useQuery(
-    {
-      organisationId: purchaserOrganisation?.id ?? '',
-    },
-    {
-      enabled: Boolean(canViewPurchaseHistory && purchaserOrganisation?.id),
-    },
-  );
+  const utils = trpc.useUtils();
 
   useEffect(() => {
     setStickyBillingOptIn(null);
@@ -163,16 +155,21 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
       return;
     }
 
-    void refetchPurchaseHistory();
+    if (purchaserOrganisation?.id) {
+      void utils.organisation.getPurchaseHistory.invalidate({
+        organisationId: purchaserOrganisation.id,
+      });
+    }
 
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('purchase');
     setSearchParams(nextParams, { replace: true });
   }, [
     canViewPurchaseHistory,
-    refetchPurchaseHistory,
+    purchaserOrganisation?.id,
     searchParams,
     setSearchParams,
+    utils.organisation.getPurchaseHistory,
   ]);
 
   const { mutateAsync: associateReseller } =
@@ -345,7 +342,9 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
         });
 
         setIsReconsentOpen(false);
-        void refetchPurchaseHistory();
+        void utils.organisation.getPurchaseHistory.invalidate({
+          organisationId: purchaserOrganisation.id,
+        });
         void refetchBillingAttribution();
         return;
       }
@@ -737,7 +736,7 @@ export default function AffiliateResellerPage({ params }: Route.ComponentProps) 
         <div className="flex justify-end">
           <OrganisationPurchaseHistoryDialog
             orgUrl={purchaserOrganisation.url}
-            purchaseHistory={purchaseHistory}
+            organisationId={purchaserOrganisation.id}
             isComingSoon={!canViewPurchaseHistory}
           />
         </div>

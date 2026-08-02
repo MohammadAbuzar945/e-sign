@@ -3,16 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const prismaMock = vi.hoisted(() => ({
   organisationCreditPurchase: {
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
     upsert: vi.fn(),
     update: vi.fn(),
     create: vi.fn(),
     findMany: vi.fn(),
+    count: vi.fn(),
   },
   subscription: {
     findMany: vi.fn(),
+    findFirst: vi.fn(),
   },
   resellerCreditTransaction: {
     findMany: vi.fn(),
+    findFirst: vi.fn(),
+    count: vi.fn(),
   },
   resellerProfile: {
     findUnique: vi.fn(),
@@ -107,6 +112,9 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+    prismaMock.organisationCreditPurchase.count.mockResolvedValue(0);
+    prismaMock.resellerCreditTransaction.count.mockResolvedValue(0);
+    prismaMock.nomiaPricePlan.findMany.mockResolvedValue([]);
   });
 
   it('includes pay-as-you-go purchases in billing history', async () => {
@@ -126,12 +134,15 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         paystackReference: 'ref_123',
       },
     ]);
+    prismaMock.organisationCreditPurchase.count.mockResolvedValue(1);
     prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([]);
+    prismaMock.resellerCreditTransaction.count.mockResolvedValue(0);
 
     const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
 
-    expect(history).toHaveLength(1);
-    expect(history[0]).toMatchObject({
+    expect(history.data).toHaveLength(1);
+    expect(history.count).toBe(1);
+    expect(history.data[0]).toMatchObject({
       kind: 'pay_as_you_go',
       issuer: 'NOMIA',
       totalCredits: 50,
@@ -165,12 +176,14 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         paystackReference: 'ref_nomia_only',
       },
     ]);
+    prismaMock.organisationCreditPurchase.count.mockResolvedValue(1);
     prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([]);
+    prismaMock.resellerCreditTransaction.count.mockResolvedValue(0);
 
     const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
 
-    expect(history).toHaveLength(1);
-    expect(history[0]).toMatchObject({
+    expect(history.data).toHaveLength(1);
+    expect(history.data[0]).toMatchObject({
       invoiceId: 'nomia_purchase_grouped',
       purchaseGroupId: 'pur_nomia_only',
       kind: 'pay_as_you_go',
@@ -197,6 +210,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         paystackReference: 'ref_nomia_split',
       },
     ]);
+    prismaMock.organisationCreditPurchase.count.mockResolvedValue(1);
     prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([
       {
         id: 'reseller_tx_split',
@@ -228,21 +242,24 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         },
       },
     ]);
+    prismaMock.resellerCreditTransaction.count.mockResolvedValue(1);
 
     const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
 
-    expect(history).toHaveLength(2);
-    expect(history.map((item) => item.invoiceId).sort()).toEqual([
+    expect(history.data).toHaveLength(2);
+    expect(history.count).toBe(2);
+    expect(history.data.map((item) => item.invoiceId).sort()).toEqual([
       'nomia_purchase_split',
       'reseller_reseller_tx_split',
     ]);
-    expect(history.every((item) => item.purchaseGroupId === 'pur_hybrid')).toBe(true);
+    expect(history.data.every((item) => item.purchaseGroupId === 'pur_hybrid')).toBe(true);
   });
 
   it('includes standalone reseller purchases in billing history', async () => {
     const { getOrganisationPurchaseHistory } = await import('./get-organisation-purchase-history');
 
     prismaMock.organisationCreditPurchase.findMany.mockResolvedValue([]);
+    prismaMock.organisationCreditPurchase.count.mockResolvedValue(0);
     prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([
       {
         id: 'reseller_tx_1',
@@ -277,11 +294,12 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         },
       },
     ]);
+    prismaMock.resellerCreditTransaction.count.mockResolvedValue(1);
 
     const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
 
-    expect(history).toHaveLength(1);
-    expect(history[0]).toMatchObject({
+    expect(history.data).toHaveLength(1);
+    expect(history.data[0]).toMatchObject({
       kind: 'reseller',
       issuer: 'RESELLER',
       invoiceId: 'reseller_reseller_tx_1',
@@ -298,6 +316,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
     const { getOrganisationPurchaseHistory } = await import('./get-organisation-purchase-history');
 
     prismaMock.organisationCreditPurchase.findMany.mockResolvedValue([]);
+    prismaMock.organisationCreditPurchase.count.mockResolvedValue(0);
     prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([
       {
         id: 'reseller_tx_detached',
@@ -321,11 +340,12 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         resellerProfile: null,
       },
     ]);
+    prismaMock.resellerCreditTransaction.count.mockResolvedValue(1);
 
     const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
 
-    expect(history).toHaveLength(1);
-    expect(history[0]).toMatchObject({
+    expect(history.data).toHaveLength(1);
+    expect(history.data[0]).toMatchObject({
       kind: 'reseller',
       issuer: 'RESELLER',
       title: 'Credits from Acme Trading',
@@ -370,18 +390,20 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         paystackReference: 'ref_sub_aug',
       },
     ]);
+    prismaMock.organisationCreditPurchase.count.mockResolvedValue(2);
     prismaMock.resellerCreditTransaction.findMany.mockResolvedValue([]);
+    prismaMock.resellerCreditTransaction.count.mockResolvedValue(0);
 
     const history = await getOrganisationPurchaseHistory({ organisationId: 'org_1' });
 
-    expect(history).toHaveLength(2);
-    expect(history.map((item) => item.invoiceId)).toEqual([
+    expect(history.data).toHaveLength(2);
+    expect(history.data.map((item) => item.invoiceId)).toEqual([
       'nomia_sub_charge_2',
       'nomia_sub_charge_1',
     ]);
-    expect(history.every((item) => item.kind === 'subscription')).toBe(true);
-    expect(history.every((item) => item.issuer === 'NOMIA')).toBe(true);
-    expect(history[0]?.title).toContain('Monthly');
+    expect(history.data.every((item) => item.kind === 'subscription')).toBe(true);
+    expect(history.data.every((item) => item.issuer === 'NOMIA')).toBe(true);
+    expect(history.data[0]?.title).toContain('Monthly');
   });
 });
 
