@@ -1,7 +1,7 @@
 import { EnvelopeType, type FieldType } from '@prisma/client';
 
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
-import type { TFieldMetaSchema } from '@documenso/lib/types/field-meta';
+import { ZFieldMetaSchema, type TFieldMetaSchema } from '@documenso/lib/types/field-meta';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import {
   createDocumentAuditLogData,
@@ -99,7 +99,14 @@ export const updateEnvelopeFields = async ({
     }
 
     const fieldType = field.type || originalField.type;
-    const fieldMetaType = field.fieldMeta?.type || originalField.fieldMeta?.type;
+    const parsedOriginalFieldMeta = originalField.fieldMeta
+      ? ZFieldMetaSchema.safeParse(originalField.fieldMeta)
+      : null;
+    const originalFieldMetaType =
+      parsedOriginalFieldMeta?.success && parsedOriginalFieldMeta.data
+        ? parsedOriginalFieldMeta.data.type
+        : undefined;
+    const fieldMetaType = field.fieldMeta?.type || originalFieldMetaType;
 
     // Not going to mess with V1 envelopes.
     if (
