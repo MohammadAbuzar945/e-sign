@@ -8,6 +8,7 @@ import { FontLibrary } from 'skia-canvas';
 
 import type { FieldWithSignature } from '@documenso/prisma/types/field-with-signature';
 
+import { ZFieldMetaSchema } from '../../types/field-meta';
 import { renderField } from '../../universal/field-renderer/render-field';
 
 type InsertFieldInPDFV2Options = {
@@ -37,6 +38,10 @@ export const insertFieldInPDFV2 = async ({
 
   // Render the fields onto the layer.
   for (const field of fields) {
+    const parsedFieldMeta = field.fieldMeta
+      ? ZFieldMetaSchema.safeParse(field.fieldMeta)
+      : null;
+
     renderField({
       scale: 1,
       field: {
@@ -46,6 +51,7 @@ export const insertFieldInPDFV2 = async ({
         height: Number(field.height),
         positionX: Number(field.positionX),
         positionY: Number(field.positionY),
+        fieldMeta: parsedFieldMeta?.success ? parsedFieldMeta.data : null,
       },
       translations: null,
       pageLayer: layer,
