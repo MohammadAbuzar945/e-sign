@@ -3,7 +3,7 @@ import { getFileServerSide } from '@documenso/lib/universal/upload/get-file.serv
 import { loadLogo } from '@documenso/lib/utils/images/logo';
 import { prisma } from '@documenso/prisma';
 
-import { getOrganisationPurchaseHistory } from './get-organisation-purchase-history';
+import { findOrganisationPurchaseHistoryItems } from './get-organisation-purchase-history';
 
 export const resolveResellerInvoiceLogoDataUrl = async (
   affiliateSlug: string | null | undefined,
@@ -42,12 +42,12 @@ export const getOrganisationPurchaseInvoice = async ({
   organisationId: string;
   invoiceId: string;
 }) => {
-  const history = await getOrganisationPurchaseHistory({ organisationId });
-  const invoice =
-    history.find((item) => item.invoiceId === invoiceId) ??
-    // Legacy hybrid emails used purchaseGroupId as the invoice id.
-    history.find((item) => item.purchaseGroupId === invoiceId && item.issuer === 'RESELLER') ??
-    history.find((item) => item.purchaseGroupId === invoiceId);
+  const invoices = await findOrganisationPurchaseHistoryItems({
+    organisationId,
+    invoiceId,
+  });
+
+  const invoice = invoices[0];
 
   if (!invoice) {
     throw new AppError(AppErrorCode.NOT_FOUND, {
@@ -111,45 +111,15 @@ export const getOrganisationPurchaseInvoicesForEmail = async ({
   invoiceIds?: string[];
   purchaseGroupId?: string | null;
 }) => {
-  const history = await getOrganisationPurchaseHistory({ organisationId });
-  const organisation = await getOrganisationOwner(organisationId);
-
-  let invoices = [] as typeof history;
-
-  if (purchaseGroupId) {
-    invoices = history
-      .filter((item) => item.purchaseGroupId === purchaseGroupId)
-      .sort((a, b) => {
-        if (a.issuer === b.issuer) {
-          return a.invoiceId.localeCompare(b.invoiceId);
-        }
-
-        // Reseller leg first, then Nomia remainder.
-        return a.issuer === 'RESELLER' ? -1 : 1;
-      });
-  }
-
-  if (invoices.length === 0 && invoiceIds?.length) {
-    invoices = invoiceIds
-      .map(
-        (id) =>
-          history.find((item) => item.invoiceId === id) ??
-          history.find((item) => item.purchaseGroupId === id && item.issuer === 'RESELLER') ??
-          history.find((item) => item.purchaseGroupId === id),
-      )
-      .filter((item): item is (typeof history)[number] => Boolean(item));
-  }
-
-  if (invoices.length === 0 && invoiceId) {
-    const invoice =
-      history.find((item) => item.invoiceId === invoiceId) ??
-      history.find((item) => item.purchaseGroupId === invoiceId && item.issuer === 'RESELLER') ??
-      history.find((item) => item.purchaseGroupId === invoiceId);
-
-    if (invoice) {
-      invoices = [invoice];
-    }
-  }
+  const [invoices, organisation] = await Promise.all([
+    findOrganisationPurchaseHistoryItems({
+      organisationId,
+      invoiceId,
+      invoiceIds,
+      purchaseGroupId,
+    }),
+    getOrganisationOwner(organisationId),
+  ]);
 
   if (invoices.length === 0) {
     throw new AppError(AppErrorCode.NOT_FOUND, {
