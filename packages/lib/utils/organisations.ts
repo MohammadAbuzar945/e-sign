@@ -137,7 +137,7 @@ export const generateDefaultOrganisationSettings =
     emailId: null,
     emailReplyTo: null,
     // emailReplyToName: null,
-    emailDocumentSettings: DEFAULT_DOCUMENT_EMAIL_SETTINGS as Prisma.InputJsonValue,
+    emailDocumentSettings: DEFAULT_DOCUMENT_EMAIL_SETTINGS,
 
     defaultRecipients: Prisma.DbNull,
     aiFeaturesEnabled: false,
