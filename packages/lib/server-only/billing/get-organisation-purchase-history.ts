@@ -632,9 +632,15 @@ const findLegacySubscriptionHistoryItem = async ({
   buyerVatNumber: string | null;
   catalogRows: NomiaPricePlanRow[];
 }) => {
+  const parsedSubscriptionId = Number(subscriptionId);
+
+  if (!Number.isInteger(parsedSubscriptionId) || parsedSubscriptionId <= 0) {
+    return null;
+  }
+
   const subscription = await prisma.subscription.findFirst({
     where: {
-      id: subscriptionId,
+      id: parsedSubscriptionId,
       organisationId,
     },
   });
