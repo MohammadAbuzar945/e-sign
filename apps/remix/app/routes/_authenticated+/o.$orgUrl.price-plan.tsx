@@ -18,6 +18,7 @@ import {
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getOrganisationBillingAttributionSummary } from '@documenso/lib/server-only/reseller/resolve-organisation-payg-billing';
 import { resolveOrganisationBillingPath } from '@documenso/lib/utils/organisation-billing-path';
+import { hasResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import { prisma } from '@documenso/prisma';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import {
@@ -736,6 +737,7 @@ export default function PricePlansPage({ params, loaderData }: Route.ComponentPr
         </div>
 
         {isActiveReseller &&
+        hasResellerFeatureAccess(user.email) &&
         isDemoFeatureVisible('RESELLER_USER_FACING') &&
         canAccessResellerBulkTools() ? (
           <div className="mt-8">

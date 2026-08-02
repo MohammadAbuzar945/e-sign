@@ -21,6 +21,7 @@ import {
 } from '@documenso/lib/constants/reseller-terms-variables';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { RESELLER_TERMS_PROVIDER } from '@documenso/lib/server-only/site-settings/schemas/reseller';
+import { hasResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import { cn } from '@documenso/ui/lib/utils';
 import { trpc } from '@documenso/trpc/react';
 import { Badge } from '@documenso/ui/primitives/badge';
@@ -114,10 +115,16 @@ export const ResellerApplicationSection = () => {
   const { user } = useSession();
   const organisation = useCurrentOrganisation();
   const [isOpen, setIsOpen] = useState(false);
+  const canAccessReseller = hasResellerFeatureAccess(user.email);
 
-  const { data: eligibility, isLoading } = trpc.organisation.reseller.getEligibility.useQuery({
-    organisationId: organisation.id,
-  });
+  const { data: eligibility, isLoading } = trpc.organisation.reseller.getEligibility.useQuery(
+    {
+      organisationId: organisation.id,
+    },
+    {
+      enabled: canAccessReseller,
+    },
+  );
 
   const {
     data: templateVariablesData,
@@ -128,7 +135,7 @@ export const ResellerApplicationSection = () => {
       organisationId: organisation.id,
     },
     {
-      enabled: isOpen,
+      enabled: canAccessReseller && isOpen,
       retry: false,
     },
   );
@@ -261,6 +268,10 @@ export const ResellerApplicationSection = () => {
       variableValues: values.variableValues,
     });
   };
+
+  if (!canAccessReseller) {
+    return null;
+  }
 
   return (
     <>

@@ -15,6 +15,7 @@ import {
   isResellerAdminView,
   RESELLER_ADMIN_VIEW,
 } from '@documenso/lib/constants/reseller-application-status';
+import { hasResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import { Input } from '@documenso/ui/primitives/input';
 import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 
@@ -32,7 +33,7 @@ export function meta() {
 export async function loader({ request }: Route.LoaderArgs) {
   const { user } = await getSession(request);
 
-  if (!isDemoFeatureVisible('ADMIN_RESELLERS')) {
+  if (!isDemoFeatureVisible('ADMIN_RESELLERS') || !hasResellerFeatureAccess(user.email)) {
     throw redirect('/admin');
   }
 

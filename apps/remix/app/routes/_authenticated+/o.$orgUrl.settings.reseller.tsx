@@ -16,6 +16,7 @@ import {
 import { AppError } from '@documenso/lib/errors/app-error';
 import { putFile } from '@documenso/lib/universal/upload/put-file';
 import { buildResellerTransactionsCsv } from '@documenso/lib/utils/build-reseller-transactions-csv';
+import { hasResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import {
   calculateResellerNetAmountInCents,
   formatCentsAsDecimal,
@@ -98,6 +99,7 @@ export default function OrganisationSettingsResellerPage() {
   const { toast } = useToast();
   const { user } = useSession();
   const organisation = useCurrentOrganisation();
+  const canAccessReseller = hasResellerFeatureAccess(user.email);
   const canViewSalesHistory = canAccessInvoiceHistory(user.email);
   const [activeTab, setActiveTab] = useState('branding');
   const [transactionQuery, setTransactionQuery] = useState('');
@@ -117,9 +119,14 @@ export default function OrganisationSettingsResellerPage() {
     ? new Date(`${transactionToDate}T23:59:59`)
     : undefined;
 
-  const { data: profile, isLoading, refetch } = trpc.organisation.reseller.getProfile.useQuery({
-    organisationId: organisation.id,
-  });
+  const { data: profile, isLoading, refetch } = trpc.organisation.reseller.getProfile.useQuery(
+    {
+      organisationId: organisation.id,
+    },
+    {
+      enabled: canAccessReseller,
+    },
+  );
 
   const { data: transactions, isLoading: isTransactionsLoading } =
     trpc.organisation.reseller.findTransactions.useQuery(
@@ -130,6 +137,9 @@ export default function OrganisationSettingsResellerPage() {
         toDate: transactionToDateValue,
         page: transactionPage,
         perPage: 20,
+      },
+      {
+        enabled: canAccessReseller,
       },
     );
 
@@ -199,7 +209,7 @@ export default function OrganisationSettingsResellerPage() {
     });
   };
 
-  if (!isDemoFeatureVisible('RESELLER_USER_FACING')) {
+  if (!canAccessReseller || !isDemoFeatureVisible('RESELLER_USER_FACING')) {
     return (
       <div>
         <SettingsHeader
