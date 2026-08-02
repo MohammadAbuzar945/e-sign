@@ -8,6 +8,7 @@ import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-reques
 import { nanoid } from '@documenso/lib/universal/id';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { createRecipientAuthOptions } from '@documenso/lib/utils/document-auth';
+import { parseClaimFlags } from '@documenso/lib/utils/parse-claim-flags';
 import { prisma } from '@documenso/prisma';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
@@ -77,7 +78,10 @@ export const createEnvelopeRecipients = async ({
   );
 
   // Check if user has permission to set the global action auth.
-  if (recipientsHaveActionAuth && !envelope.team.organisation.organisationClaim.flags.cfr21) {
+  if (
+    recipientsHaveActionAuth &&
+    !parseClaimFlags(envelope.team.organisation.organisationClaim.flags).cfr21
+  ) {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {
       message: 'You do not have permission to set the action auth',
     });
