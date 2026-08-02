@@ -12,6 +12,7 @@ import {
 } from '@documenso/lib/constants/demo-feature-flags';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { buildAdminPurchaseInvoicesCsv } from '@documenso/lib/utils/build-admin-purchase-invoices-csv';
+import { hasResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import { trpc } from '@documenso/trpc/react';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
@@ -52,9 +53,9 @@ export function meta() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  await getSession(request);
+  const { user } = await getSession(request);
 
-  if (!canAccessResellerBulkTools()) {
+  if (!canAccessResellerBulkTools() || !hasResellerFeatureAccess(user.email)) {
     throw redirect('/admin');
   }
 

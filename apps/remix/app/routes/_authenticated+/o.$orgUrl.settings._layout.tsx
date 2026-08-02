@@ -18,6 +18,7 @@ import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/org
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { resolveOrganisationBillingPath } from '@documenso/lib/utils/organisation-billing-path';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
+import { hasResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import { trpc } from '@documenso/trpc/react';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
@@ -37,10 +38,16 @@ export default function SettingsLayout() {
   const { user } = useSession();
 
   const isOrganisationOwner = organisation.ownerUserId === user.id;
+  const canAccessReseller = hasResellerFeatureAccess(user.email);
 
-  const { data: resellerProfile } = trpc.organisation.reseller.getProfile.useQuery({
-    organisationId: organisation.id,
-  });
+  const { data: resellerProfile } = trpc.organisation.reseller.getProfile.useQuery(
+    {
+      organisationId: organisation.id,
+    },
+    {
+      enabled: canAccessReseller,
+    },
+  );
 
   const { data: billingAttribution, isFetched: isBillingAttributionFetched } =
     trpc.organisation.reseller.getBillingAttribution.useQuery(
@@ -110,7 +117,7 @@ export default function SettingsLayout() {
       label: t`SSO`,
       icon: ShieldCheckIcon,
     },
-    ...(resellerProfile
+    ...(canAccessReseller && resellerProfile
       ? [
           {
             path: `/o/${organisation.url}/settings/reseller`,

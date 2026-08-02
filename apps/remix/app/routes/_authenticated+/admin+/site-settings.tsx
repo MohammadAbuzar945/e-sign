@@ -21,6 +21,7 @@ import {
   SITE_SETTINGS_RESELLER_ID,
   ZSiteSettingsResellerSchema,
 } from '@documenso/lib/server-only/site-settings/schemas/reseller';
+import { hasResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import { trpc as trpcReact } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
 import { ColorPicker } from '@documenso/ui/primitives/color-picker';
@@ -70,11 +71,15 @@ export async function loader({ request }: Route.LoaderArgs) {
   const banner = settings.find((setting) => setting.id === SITE_SETTINGS_BANNER_ID);
   const reseller = settings.find((setting) => setting.id === SITE_SETTINGS_RESELLER_ID);
 
-  return { banner, reseller };
+  return {
+    banner,
+    reseller,
+    canAccessReseller: hasResellerFeatureAccess(user.email),
+  };
 }
 
 export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
-  const { banner, reseller } = loaderData;
+  const { banner, reseller, canAccessReseller } = loaderData;
 
   const { toast } = useToast();
   const { _ } = useLingui();
@@ -312,6 +317,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
           </Form>
         </div>
 
+        {canAccessReseller ? (
         <div className="mt-12">
           <h2 className="font-semibold">
             <Trans>Reseller programme</Trans>
@@ -598,6 +604,7 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
             </form>
           </Form>
         </div>
+        ) : null}
       </div>
     </div>
   );

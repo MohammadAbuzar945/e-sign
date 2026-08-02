@@ -12,10 +12,12 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import {
   canAccessResellerBulkTools,
   isDemoFeatureVisible,
 } from '@documenso/lib/constants/demo-feature-flags';
+import { hasResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 
@@ -31,6 +33,8 @@ export const AdminNavLinks = ({
   buttonClassName,
 }: AdminNavLinksProps) => {
   const { pathname } = useLocation();
+  const { user } = useSession();
+  const canAccessReseller = hasResellerFeatureAccess(user.email);
   const canAccessBulkTools = canAccessResellerBulkTools();
 
   const items = [
@@ -64,7 +68,7 @@ export const AdminNavLinks = ({
       icon: CoinsIcon,
       isActive: pathname?.startsWith('/admin/nomia-pricing'),
     },
-    ...(isDemoFeatureVisible('ADMIN_RESELLERS')
+    ...(canAccessReseller && isDemoFeatureVisible('ADMIN_RESELLERS')
       ? [
           {
             href: '/admin/reseller-applications',
@@ -74,7 +78,7 @@ export const AdminNavLinks = ({
           },
         ]
       : []),
-    ...(canAccessBulkTools && isDemoFeatureVisible('ADMIN_BULK_RATES')
+    ...(canAccessReseller && canAccessBulkTools && isDemoFeatureVisible('ADMIN_BULK_RATES')
       ? [
           {
             href: '/admin/reseller-bulk-rates',

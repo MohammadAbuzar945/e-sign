@@ -33,10 +33,23 @@ describe('reseller credits helpers', () => {
   });
 });
 
-describe('reseller constants', () => {
-  it('defines qualification thresholds', () => {
-    expect(RESELLER_MIN_CREDITS_USED).toBe(50);
-    expect(RESELLER_MIN_SIGNUP_MONTHS).toBe(2);
+describe('reseller feature access', () => {
+  it('allows exact emails, mdmacdonald.com domain, and emails containing abuzar', async () => {
+    const {
+      hasResellerFeatureAccess,
+      isResellerFeatureAllowedEmail,
+      RESELLER_EMAIL_GATE_ENABLED,
+    } = await import('@documenso/lib/utils/reseller-feature-access');
+
+    expect(RESELLER_EMAIL_GATE_ENABLED).toBe(true);
+    expect(isResellerFeatureAllowedEmail('nomiadeveloper@gmail.com')).toBe(true);
+    expect(isResellerFeatureAllowedEmail('NomiaCreator@gmail.com')).toBe(true);
+    expect(isResellerFeatureAllowedEmail('anyone@mdmacdonald.com')).toBe(true);
+    expect(isResellerFeatureAllowedEmail('abuzarmohammad945@gmail.com')).toBe(true);
+    expect(isResellerFeatureAllowedEmail('test.abuzar@example.com')).toBe(true);
+    expect(isResellerFeatureAllowedEmail('other@example.com')).toBe(false);
+    expect(hasResellerFeatureAccess('other@example.com')).toBe(false);
+    expect(hasResellerFeatureAccess('nomiadeveloper@gmail.com')).toBe(true);
   });
 });
 
