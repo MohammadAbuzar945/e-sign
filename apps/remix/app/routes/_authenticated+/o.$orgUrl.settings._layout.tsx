@@ -55,7 +55,7 @@ export default function SettingsLayout() {
         organisationId: organisation.id,
       },
       {
-        enabled: isOrganisationOwner && isBillingEnabled,
+        enabled: isOrganisationOwner,
       },
     );
 
@@ -64,7 +64,7 @@ export default function SettingsLayout() {
     billingAttribution: billingAttribution ?? undefined,
   });
 
-  const shouldWaitForBillingAttribution = isOrganisationOwner && isBillingEnabled;
+  const shouldWaitForBillingAttribution = isOrganisationOwner;
   const organisationSettingRoutes = [
     {
       path: `/o/${organisation.url}/settings/general`,
@@ -140,10 +140,6 @@ export default function SettingsLayout() {
     }
 
     if ('requiresOwner' in route && route.requiresOwner && !isOrganisationOwner) {
-      return false;
-    }
-
-    if (!isBillingEnabled && route.path.includes('/billing')) {
       return false;
     }
 
