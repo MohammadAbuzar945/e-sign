@@ -37,10 +37,12 @@ export type OrganisationPurchaseHistoryItem = {
   /** Present when this invoice is issued by a reseller. */
   resellerSeller?: PurchaseInvoiceResellerSeller | null;
   /**
-   * Buyer VAT number when the purchasing org is itself a VAT-registered
-   * reseller (Nomia tax invoices only). Ordinary orgs never store buyer VAT.
+   * Buyer VAT number for Nomia tax invoices (Bill to).
+   * Prefer VAT-registered reseller profile; otherwise organisation.vatNumber.
    */
   buyerVatNumber?: string | null;
+  /** Purchaser billing address for Nomia invoice Bill to. */
+  buyerBillingAddress?: string | null;
 };
 
 export type OrganisationPurchaseHistoryResult =
