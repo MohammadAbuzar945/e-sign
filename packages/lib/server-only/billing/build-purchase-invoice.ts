@@ -124,13 +124,11 @@ export const buildPurchaseInvoiceHtml = ({
       </div>
     `;
 
-  const buyerVatBlock =
-    policy.issuer === 'NOMIA' && policy.buyerVatNumber
-      ? `<br /><span class="muted">Buyer VAT number — ${escapeHtml(policy.buyerVatNumber)}</span>`
-      : '';
+  const buyerVatBlock = policy.buyerVatNumber
+    ? `<br /><span class="muted">Buyer VAT number — ${escapeHtml(policy.buyerVatNumber)}</span>`
+    : '';
 
-  const buyerBillingAddressHtml =
-    policy.issuer === 'NOMIA' ? formatAddressHtml(invoice.buyerBillingAddress) : null;
+  const buyerBillingAddressHtml = formatAddressHtml(invoice.buyerBillingAddress);
 
   const buyerAddressBlock = buyerBillingAddressHtml
     ? `<br /><span class="muted">${buyerBillingAddressHtml}</span>`

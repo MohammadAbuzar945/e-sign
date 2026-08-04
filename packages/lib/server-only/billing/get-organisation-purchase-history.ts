@@ -372,9 +372,15 @@ const mapNomiaPurchaseToHistoryItem = ({
   };
 };
 
-const mapResellerTransactionToHistoryItem = (
-  transaction: ResellerTransactionWithRelations,
-): OrganisationPurchaseHistoryItem => {
+const mapResellerTransactionToHistoryItem = ({
+  transaction,
+  buyerVatNumber,
+  buyerBillingAddress,
+}: {
+  transaction: ResellerTransactionWithRelations;
+  buyerVatNumber: string | null;
+  buyerBillingAddress: string | null;
+}): OrganisationPurchaseHistoryItem => {
   const { resellerDisplayName, resellerSeller } = resolveResellerSellerFromTransaction(transaction);
 
   return {
@@ -389,6 +395,8 @@ const mapResellerTransactionToHistoryItem = (
     currency: transaction.currency,
     status: transaction.status,
     resellerSeller,
+    buyerVatNumber,
+    buyerBillingAddress,
     lineItems: [
       buildResellerLineItem({
         resellerDisplayName,
@@ -532,7 +540,11 @@ export const getOrganisationPurchaseHistory = async ({
       }),
     ),
     ...resellerPurchases.map((transaction) =>
-      mapResellerTransactionToHistoryItem(transaction as ResellerTransactionWithRelations),
+      mapResellerTransactionToHistoryItem({
+        transaction: transaction as ResellerTransactionWithRelations,
+        buyerVatNumber,
+        buyerBillingAddress,
+      }),
     ),
   ];
 
@@ -599,9 +611,13 @@ const findNomiaPurchaseHistoryItem = async ({
 const findResellerPurchaseHistoryItem = async ({
   organisationId,
   transactionId,
+  buyerVatNumber,
+  buyerBillingAddress,
 }: {
   organisationId: string;
   transactionId: string;
+  buyerVatNumber: string | null;
+  buyerBillingAddress: string | null;
 }) => {
   const transaction = await prisma.resellerCreditTransaction.findFirst({
     where: {
@@ -616,7 +632,11 @@ const findResellerPurchaseHistoryItem = async ({
     return null;
   }
 
-  return mapResellerTransactionToHistoryItem(transaction as ResellerTransactionWithRelations);
+  return mapResellerTransactionToHistoryItem({
+    transaction: transaction as ResellerTransactionWithRelations,
+    buyerVatNumber,
+    buyerBillingAddress,
+  });
 };
 
 const findLegacySubscriptionHistoryItem = async ({
@@ -706,7 +726,11 @@ export const findOrganisationPurchaseHistoryItems = async ({
         }),
       ),
       ...resellerPurchases.map((transaction) =>
-        mapResellerTransactionToHistoryItem(transaction as ResellerTransactionWithRelations),
+        mapResellerTransactionToHistoryItem({
+          transaction: transaction as ResellerTransactionWithRelations,
+          buyerVatNumber,
+          buyerBillingAddress,
+        }),
       ),
     ].sort((a, b) => {
       if (a.issuer === b.issuer) {
@@ -749,6 +773,8 @@ export const findOrganisationPurchaseHistoryItems = async ({
       const item = await findResellerPurchaseHistoryItem({
         organisationId,
         transactionId: id.slice('reseller_'.length),
+        buyerVatNumber,
+        buyerBillingAddress,
       });
 
       if (item) {
