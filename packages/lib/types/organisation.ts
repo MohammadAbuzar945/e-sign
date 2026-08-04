@@ -13,6 +13,8 @@ export const ZOrganisationSchema = OrganisationSchema.pick({
   avatarImageId: true,
   customerId: true,
   ownerUserId: true,
+  vatNumber: true,
+  billingAddress: true,
 }).extend({
   organisationClaim: OrganisationClaimSchema.pick({
     id: true,
