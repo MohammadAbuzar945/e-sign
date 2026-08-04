@@ -76,7 +76,7 @@ describe('purchase invoice policy', () => {
     expect(policy.requiredNote).toBe(NON_VAT_SUPPLIER_INVOICE_NOTE);
   });
 
-  it('issues reseller tax invoices for VAT-registered sellers', () => {
+  it('issues reseller tax invoices for VAT-registered sellers and keeps buyer VAT', () => {
     const policy = resolvePurchaseInvoicePolicy({
       issuer: 'RESELLER',
       amountInCents: 35000,
@@ -89,6 +89,6 @@ describe('purchase invoice policy', () => {
     expect(policy.documentTitle).toBe('Tax Invoice');
     expect(policy.showVatColumns).toBe(true);
     expect(policy.supplier.vatNumber).toBe('4123456789');
-    expect(policy.buyerVatNumber).toBeNull();
+    expect(policy.buyerVatNumber).toBe('9999999999');
   });
 });

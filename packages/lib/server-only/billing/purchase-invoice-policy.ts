@@ -30,8 +30,8 @@ export type ResolvePurchaseInvoicePolicyInput = {
   sellerVatStatus?: VatSellerStatus;
   sellerVatNumber?: string | null;
   /**
-   * Display-only on Nomia tax invoices when the buyer org is itself a
-   * VAT-registered reseller. Never used to decide whether VAT is charged.
+   * Display-only on tax invoices (Nomia or reseller) under Bill to.
+   * Never used to decide whether VAT is charged.
    */
   buyerVatNumber?: string | null;
   resellerDisplayName?: string | null;
@@ -126,7 +126,7 @@ export const resolvePurchaseInvoicePolicy = ({
         vatNumber: sellerVatNumber?.trim() || null,
         vatStatus: 'REGISTERED',
       },
-      buyerVatNumber: null,
+      buyerVatNumber: buyerVatNumber?.trim() || null,
       issuedBySubtitle: `Issued via Nomia on behalf of ${supplierName}`,
     };
   }
@@ -147,7 +147,7 @@ export const resolvePurchaseInvoicePolicy = ({
       vatNumber: null,
       vatStatus: 'NOT_REGISTERED',
     },
-    buyerVatNumber: null,
+    buyerVatNumber: buyerVatNumber?.trim() || null,
     issuedBySubtitle: `Issued via Nomia on behalf of ${supplierName}`,
   };
 };

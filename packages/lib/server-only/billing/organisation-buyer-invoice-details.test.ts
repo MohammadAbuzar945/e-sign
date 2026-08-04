@@ -118,4 +118,49 @@ describe('buildPurchaseInvoiceHtml Bill to', () => {
     expect(html).toContain('10 Long Street<br />Cape Town<br />8001');
     expect(html).toContain("Abuzar's Org");
   });
+
+  it('renders purchaser VAT and billing address on reseller invoices', () => {
+    const html = buildPurchaseInvoiceHtml({
+      invoice: {
+        invoiceId: 'reseller_abc',
+        purchaseGroupId: null,
+        date: new Date('2026-08-01T12:00:00.000Z'),
+        kind: 'reseller',
+        issuer: 'RESELLER',
+        title: 'Credits from Acme Trading',
+        totalCredits: 100,
+        totalGrossAmount: 550000,
+        currency: 'ZAR',
+        status: 'COMPLETED',
+        buyerVatNumber: '4123456789',
+        buyerBillingAddress: '10 Long Street\nCape Town\n8001',
+        resellerSeller: {
+          name: 'Acme Trading',
+          physicalAddress: '2 Seller Rd',
+          vatStatus: 'REGISTERED',
+          vatNumber: '4987654321',
+          affiliateSlug: 'acme',
+          hasLogo: false,
+        },
+        lineItems: [
+          {
+            provider: 'reseller',
+            description: 'Credits from Acme Trading',
+            credits: 100,
+            grossAmount: 550000,
+            currency: 'ZAR',
+            status: 'COMPLETED',
+            reference: 'ref_r1',
+          },
+        ],
+      },
+      organisationName: "Abuzar's Org",
+      customerName: 'Abuzar',
+      customerEmail: 'abuzar@example.com',
+    });
+
+    expect(html).toContain('Buyer VAT number — 4123456789');
+    expect(html).toContain('10 Long Street<br />Cape Town<br />8001');
+    expect(html).toContain('Acme Trading');
+  });
 });
