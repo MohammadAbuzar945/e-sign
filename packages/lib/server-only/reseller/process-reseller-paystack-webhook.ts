@@ -19,6 +19,7 @@ import { associateOrganisationWithReseller, resolveResellerDisplayName } from '.
 import { markResellerCreditsBalanceChanged } from './reseller-delinquency';
 import { buildNomiaHybridPurchaseReference } from './hybrid-single-checkout';
 import { sendResellerInsufficientCreditsEmail } from './send-reseller-insufficient-credits-email';
+import { sendResellerSaleInvoiceEmail } from './send-reseller-sale-invoice-email';
 import {
   atomicIncrementOrganisationCredits,
   tryAtomicDecrementOrganisationCredits,
@@ -437,6 +438,16 @@ export const processResellerPaystackWebhook = async ({
         console.error('[RESELLER]: Failed to send purchase invoice email', error);
       });
     }
+
+    // Separate direct email to the reseller (not a CC on the buyer mail).
+    await sendResellerSaleInvoiceEmail({
+      resellerOrganisationId: profile.organisationId,
+      transactionId: fulfillmentResult.transaction.id,
+      recipientEmail: profile.contactEmail || profile.organisation.owner.email,
+      recipientName: profile.organisation.owner.name,
+    }).catch((error) => {
+      console.error('[RESELLER]: Failed to send reseller sale invoice email', error);
+    });
   }
 
   // Sticky attribution on purchase (§8.2) + delinquency balance sync (§12).

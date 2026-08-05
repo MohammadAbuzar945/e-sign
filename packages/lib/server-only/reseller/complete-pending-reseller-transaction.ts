@@ -4,12 +4,15 @@ import {
 } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { resolveResellerPurchaseInvoiceId } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
+import { sendPurchaseInvoiceEmail } from '@documenso/lib/server-only/billing/send-purchase-invoice-email';
 import { prisma } from '@documenso/prisma';
 
 import {
   atomicIncrementOrganisationCredits,
   tryAtomicDecrementOrganisationCredits,
 } from './reseller-credit-transfer';
+import { sendResellerSaleInvoiceEmail } from './send-reseller-sale-invoice-email';
 
 export type CompletePendingResellerTransactionOptions = {
   organisationId: string;
@@ -26,6 +29,12 @@ export const completePendingResellerTransaction = async ({
       organisation: {
         select: {
           ownerUserId: true,
+          owner: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
         },
       },
     },
@@ -85,6 +94,28 @@ export const completePendingResellerTransaction = async ({
         completedAt: new Date(),
       },
     });
+  });
+
+  await sendPurchaseInvoiceEmail({
+    organisationId: completedTransaction.purchaserOrganisationId,
+    purchaseGroupId: completedTransaction.purchaseGroupId,
+    invoiceId: resolveResellerPurchaseInvoiceId({
+      transactionId: completedTransaction.id,
+      purchaseGroupId: completedTransaction.purchaseGroupId,
+    }),
+    recipientEmail: completedTransaction.purchaserEmail,
+    recipientName: completedTransaction.purchaserName,
+  }).catch((error) => {
+    console.error('[RESELLER]: Failed to send purchase invoice email after manual transfer', error);
+  });
+
+  await sendResellerSaleInvoiceEmail({
+    resellerOrganisationId: profile.organisationId,
+    transactionId: completedTransaction.id,
+    recipientEmail: profile.contactEmail || profile.organisation.owner.email,
+    recipientName: profile.organisation.owner.name,
+  }).catch((error) => {
+    console.error('[RESELLER]: Failed to send reseller sale invoice email after manual transfer', error);
   });
 
   return completedTransaction;
