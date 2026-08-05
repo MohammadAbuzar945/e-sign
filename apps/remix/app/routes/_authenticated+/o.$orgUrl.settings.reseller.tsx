@@ -2,8 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
+import { DownloadIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { Link } from 'react-router';
 import { z } from 'zod';
 
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
@@ -945,7 +947,7 @@ export default function OrganisationSettingsResellerPage() {
                     <Trans>Net</Trans>
                   </TableHead>
                   <TableHead>
-                    <Trans>Status</Trans>
+                    <Trans>Invoice</Trans>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -1036,6 +1038,34 @@ export default function OrganisationSettingsResellerPage() {
                               </p>
                             ) : null}
                           </div>
+                        ) : transaction.status === 'COMPLETED' ? (
+                          canViewSalesHistory ? (
+                            <Button variant="outline" size="sm" asChild>
+                              <Link
+                                to={`/o/${organisation.url}/reseller-sale-invoice/${encodeURIComponent(transaction.invoiceId)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <DownloadIcon className="mr-2 h-4 w-4" />
+                                <Trans>Download</Trans>
+                              </Link>
+                            </Button>
+                          ) : (
+                            <ComingSoonDialog
+                              trigger={
+                                <Button variant="outline" size="sm" type="button">
+                                  <DownloadIcon className="mr-2 h-4 w-4" />
+                                  <Trans>Download</Trans>
+                                </Button>
+                              }
+                              title={<Trans>Coming soon</Trans>}
+                              description={
+                                <Trans>
+                                  Invoice download is not available for your account yet.
+                                </Trans>
+                              }
+                            />
+                          )
                         ) : (
                           <Badge variant="default">{transaction.status}</Badge>
                         )}

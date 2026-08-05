@@ -775,6 +775,11 @@ model Organisation {
   url           String           @unique
   avatarImageId String?
 
+  /// Optional SA VAT registration number for Nomia purchase invoices (Bill to).
+  vatNumber String?
+  /// Optional purchaser billing address for Full Tax Invoice Bill-to.
+  billingAddress String?
+
   customerId String? @unique
 
   organisationClaimId String            @unique

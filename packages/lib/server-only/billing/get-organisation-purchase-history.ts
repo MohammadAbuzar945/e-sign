@@ -212,26 +212,43 @@ type ResellerTransactionWithRelations = ResellerCreditTransaction & {
 };
 
 /**
- * Ordinary organisations do not store buyer VAT.
- * Only when the buyer org is itself a VAT-registered reseller.
+ * Buyer VAT for Nomia tax invoices (Bill to).
+ * Prefer a VAT-registered reseller profile on the buyer org; otherwise use
+ * organisation.vatNumber from General settings.
  */
 export const resolveBuyerVatNumberForOrganisation = async (organisationId: string) => {
-  const buyerResellerProfile = await prisma.resellerProfile.findUnique({
-    where: { organisationId },
+  const organisation = await prisma.organisation.findUnique({
+    where: { id: organisationId },
     select: {
-      vatStatus: true,
       vatNumber: true,
+      resellerProfile: {
+        select: {
+          vatStatus: true,
+          vatNumber: true,
+        },
+      },
     },
   });
 
   if (
-    buyerResellerProfile?.vatStatus === 'REGISTERED' &&
-    buyerResellerProfile.vatNumber?.trim()
+    organisation?.resellerProfile?.vatStatus === 'REGISTERED' &&
+    organisation.resellerProfile.vatNumber?.trim()
   ) {
-    return buyerResellerProfile.vatNumber.trim();
+    return organisation.resellerProfile.vatNumber.trim();
   }
 
-  return null;
+  return organisation?.vatNumber?.trim() || null;
+};
+
+export const resolveBuyerBillingAddressForOrganisation = async (organisationId: string) => {
+  const organisation = await prisma.organisation.findUnique({
+    where: { id: organisationId },
+    select: {
+      billingAddress: true,
+    },
+  });
+
+  return organisation?.billingAddress?.trim() || null;
 };
 
 const resolveSubscriptionPlanFromCatalogRows = ({
@@ -300,10 +317,12 @@ const resolveSubscriptionPlanFromCatalogRows = ({
 const mapNomiaPurchaseToHistoryItem = ({
   purchase,
   buyerVatNumber,
+  buyerBillingAddress,
   catalogRows,
 }: {
   purchase: OrganisationCreditPurchase;
   buyerVatNumber: string | null;
+  buyerBillingAddress: string | null;
   catalogRows: NomiaPricePlanRow[];
 }): OrganisationPurchaseHistoryItem => {
   const isBulk = purchase.purchaseType === 'BULK';
@@ -337,6 +356,7 @@ const mapNomiaPurchaseToHistoryItem = ({
     currency: purchase.currency,
     status: purchase.status,
     buyerVatNumber,
+    buyerBillingAddress,
     lineItems: [
       buildNomiaLineItem({
         credits: purchase.credits,
@@ -352,9 +372,15 @@ const mapNomiaPurchaseToHistoryItem = ({
   };
 };
 
-const mapResellerTransactionToHistoryItem = (
-  transaction: ResellerTransactionWithRelations,
-): OrganisationPurchaseHistoryItem => {
+const mapResellerTransactionToHistoryItem = ({
+  transaction,
+  buyerVatNumber,
+  buyerBillingAddress,
+}: {
+  transaction: ResellerTransactionWithRelations;
+  buyerVatNumber: string | null;
+  buyerBillingAddress: string | null;
+}): OrganisationPurchaseHistoryItem => {
   const { resellerDisplayName, resellerSeller } = resolveResellerSellerFromTransaction(transaction);
 
   return {
@@ -369,6 +395,8 @@ const mapResellerTransactionToHistoryItem = (
     currency: transaction.currency,
     status: transaction.status,
     resellerSeller,
+    buyerVatNumber,
+    buyerBillingAddress,
     lineItems: [
       buildResellerLineItem({
         resellerDisplayName,
@@ -385,10 +413,12 @@ const mapResellerTransactionToHistoryItem = (
 const mapLegacySubscriptionToHistoryItem = ({
   subscription,
   buyerVatNumber,
+  buyerBillingAddress,
   catalogRows,
 }: {
   subscription: Subscription;
   buyerVatNumber: string | null;
+  buyerBillingAddress: string | null;
   catalogRows: NomiaPricePlanRow[];
 }): OrganisationPurchaseHistoryItem => {
   const planCode = subscription.priceId || subscription.planId;
@@ -413,6 +443,7 @@ const mapLegacySubscriptionToHistoryItem = ({
     currency: 'ZAR',
     status,
     buyerVatNumber,
+    buyerBillingAddress,
     lineItems: [
       {
         provider: 'nomia',
@@ -451,6 +482,7 @@ export const getOrganisationPurchaseHistory = async ({
     resellerCount,
     subscriptionChargeCount,
     buyerVatNumber,
+    buyerBillingAddress,
     catalogRows,
   ] = await Promise.all([
     getSubscriptionsByUserId({ organisationId }),
@@ -491,6 +523,7 @@ export const getOrganisationPurchaseHistory = async ({
       },
     }),
     resolveBuyerVatNumberForOrganisation(organisationId),
+    resolveBuyerBillingAddressForOrganisation(organisationId),
     listNomiaPricePlans(),
   ]);
 
@@ -502,11 +535,16 @@ export const getOrganisationPurchaseHistory = async ({
       mapNomiaPurchaseToHistoryItem({
         purchase,
         buyerVatNumber,
+        buyerBillingAddress,
         catalogRows,
       }),
     ),
     ...resellerPurchases.map((transaction) =>
-      mapResellerTransactionToHistoryItem(transaction as ResellerTransactionWithRelations),
+      mapResellerTransactionToHistoryItem({
+        transaction: transaction as ResellerTransactionWithRelations,
+        buyerVatNumber,
+        buyerBillingAddress,
+      }),
     ),
   ];
 
@@ -516,6 +554,7 @@ export const getOrganisationPurchaseHistory = async ({
         mapLegacySubscriptionToHistoryItem({
           subscription,
           buyerVatNumber,
+          buyerBillingAddress,
           catalogRows,
         }),
       ),
@@ -540,11 +579,13 @@ const findNomiaPurchaseHistoryItem = async ({
   organisationId,
   purchaseId,
   buyerVatNumber,
+  buyerBillingAddress,
   catalogRows,
 }: {
   organisationId: string;
   purchaseId: string;
   buyerVatNumber: string | null;
+  buyerBillingAddress: string | null;
   catalogRows: NomiaPricePlanRow[];
 }) => {
   const purchase = await prisma.organisationCreditPurchase.findFirst({
@@ -562,6 +603,7 @@ const findNomiaPurchaseHistoryItem = async ({
   return mapNomiaPurchaseToHistoryItem({
     purchase,
     buyerVatNumber,
+    buyerBillingAddress,
     catalogRows,
   });
 };
@@ -569,9 +611,13 @@ const findNomiaPurchaseHistoryItem = async ({
 const findResellerPurchaseHistoryItem = async ({
   organisationId,
   transactionId,
+  buyerVatNumber,
+  buyerBillingAddress,
 }: {
   organisationId: string;
   transactionId: string;
+  buyerVatNumber: string | null;
+  buyerBillingAddress: string | null;
 }) => {
   const transaction = await prisma.resellerCreditTransaction.findFirst({
     where: {
@@ -586,18 +632,24 @@ const findResellerPurchaseHistoryItem = async ({
     return null;
   }
 
-  return mapResellerTransactionToHistoryItem(transaction as ResellerTransactionWithRelations);
+  return mapResellerTransactionToHistoryItem({
+    transaction: transaction as ResellerTransactionWithRelations,
+    buyerVatNumber,
+    buyerBillingAddress,
+  });
 };
 
 const findLegacySubscriptionHistoryItem = async ({
   organisationId,
   subscriptionId,
   buyerVatNumber,
+  buyerBillingAddress,
   catalogRows,
 }: {
   organisationId: string;
   subscriptionId: string;
   buyerVatNumber: string | null;
+  buyerBillingAddress: string | null;
   catalogRows: NomiaPricePlanRow[];
 }) => {
   const parsedSubscriptionId = Number(subscriptionId);
@@ -620,6 +672,7 @@ const findLegacySubscriptionHistoryItem = async ({
   return mapLegacySubscriptionToHistoryItem({
     subscription,
     buyerVatNumber,
+    buyerBillingAddress,
     catalogRows,
   });
 };
@@ -638,8 +691,9 @@ export const findOrganisationPurchaseHistoryItems = async ({
   invoiceIds?: string[];
   purchaseGroupId?: string | null;
 }): Promise<OrganisationPurchaseHistoryItem[]> => {
-  const [buyerVatNumber, catalogRows] = await Promise.all([
+  const [buyerVatNumber, buyerBillingAddress, catalogRows] = await Promise.all([
     resolveBuyerVatNumberForOrganisation(organisationId),
+    resolveBuyerBillingAddressForOrganisation(organisationId),
     listNomiaPricePlans(),
   ]);
 
@@ -667,11 +721,16 @@ export const findOrganisationPurchaseHistoryItems = async ({
         mapNomiaPurchaseToHistoryItem({
           purchase,
           buyerVatNumber,
+          buyerBillingAddress,
           catalogRows,
         }),
       ),
       ...resellerPurchases.map((transaction) =>
-        mapResellerTransactionToHistoryItem(transaction as ResellerTransactionWithRelations),
+        mapResellerTransactionToHistoryItem({
+          transaction: transaction as ResellerTransactionWithRelations,
+          buyerVatNumber,
+          buyerBillingAddress,
+        }),
       ),
     ].sort((a, b) => {
       if (a.issuer === b.issuer) {
@@ -699,6 +758,7 @@ export const findOrganisationPurchaseHistoryItems = async ({
         organisationId,
         purchaseId: id.slice('nomia_'.length),
         buyerVatNumber,
+        buyerBillingAddress,
         catalogRows,
       });
 
@@ -713,6 +773,8 @@ export const findOrganisationPurchaseHistoryItems = async ({
       const item = await findResellerPurchaseHistoryItem({
         organisationId,
         transactionId: id.slice('reseller_'.length),
+        buyerVatNumber,
+        buyerBillingAddress,
       });
 
       if (item) {
@@ -727,6 +789,7 @@ export const findOrganisationPurchaseHistoryItems = async ({
         organisationId,
         subscriptionId: id.slice('subscription_'.length),
         buyerVatNumber,
+        buyerBillingAddress,
         catalogRows,
       });
 

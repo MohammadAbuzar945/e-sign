@@ -17,17 +17,21 @@ import { Button } from '@documenso/ui/primitives/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
+import { Textarea } from '@documenso/ui/primitives/textarea';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 const ZOrganisationUpdateFormSchema = ZUpdateOrganisationRequestSchema.shape.data.pick({
   name: true,
   url: true,
+  vatNumber: true,
+  billingAddress: true,
 });
 
 type TOrganisationUpdateFormSchema = z.infer<typeof ZOrganisationUpdateFormSchema>;
@@ -46,17 +50,26 @@ export const OrganisationUpdateForm = () => {
     defaultValues: {
       name: organisation.name,
       url: organisation.url,
+      vatNumber: organisation.vatNumber ?? '',
+      billingAddress: organisation.billingAddress ?? '',
     },
   });
 
   const { mutateAsync: updateOrganisation } = trpc.organisation.update.useMutation();
 
-  const onFormSubmit = async ({ name, url }: TOrganisationUpdateFormSchema) => {
+  const onFormSubmit = async ({
+    name,
+    url,
+    vatNumber,
+    billingAddress,
+  }: TOrganisationUpdateFormSchema) => {
     try {
       await updateOrganisation({
         data: {
           name,
           url,
+          vatNumber,
+          billingAddress,
         },
         organisationId: organisation.id,
       });
@@ -76,6 +89,8 @@ export const OrganisationUpdateForm = () => {
       form.reset({
         name,
         url,
+        vatNumber: vatNumber ?? '',
+        billingAddress: billingAddress ?? '',
       });
     } catch (err) {
       const error = AppError.parseError(err);
@@ -140,6 +155,60 @@ export const OrganisationUpdateForm = () => {
                   </span>
                 )}
 
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="vatNumber"
+            render={({ field }) => (
+              <FormItem className="mt-4">
+                <FormLabel>
+                  <Trans>VAT number</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    className="bg-background"
+                    placeholder="4123456789"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                <FormDescription>
+                  <Trans>
+                    Optional. Required if you are a registered vendor and need to claim input VAT on
+                    invoices over R5,000.
+                  </Trans>
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="billingAddress"
+            render={({ field }) => (
+              <FormItem className="mt-4">
+                <FormLabel>
+                  <Trans>Billing address</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Textarea
+                    className="bg-background min-h-24"
+                    placeholder={_(msg`Street address, city, postal code`)}
+                    {...field}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                <FormDescription>
+                  <Trans>
+                    Optional. Full tax invoices need the purchaser address shown on the Bill to
+                    section.
+                  </Trans>
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

@@ -46,6 +46,8 @@ export const updateOrganisationRoute = authenticatedProcedure
       data: {
         name: data.name,
         url: data.url,
+        vatNumber: data.vatNumber,
+        billingAddress: data.billingAddress,
       },
     });
 

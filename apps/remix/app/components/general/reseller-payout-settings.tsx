@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
+import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
 import {
@@ -192,6 +193,7 @@ export const ResellerPayoutSettings = ({
 }: ResellerPayoutSettingsProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
+  const organisation = useCurrentOrganisation();
   const [selectedMode, setSelectedMode] = useState(payoutMode);
   const isOwnPaystackPayoutVisible = isDemoFeatureVisible('OWN_PAYSTACK_PAYOUT');
   const hasSavedBankDetails = Boolean(
@@ -199,6 +201,16 @@ export const ResellerPayoutSettings = ({
   );
   const [isEditingBankDetails, setIsEditingBankDetails] = useState(!hasSavedBankDetails);
   const defaultAccountType = bankAccountType ?? 'personal';
+
+  // Prefill from organisation General settings when reseller profile fields are empty.
+  const organisationBillingAddress = organisation.billingAddress?.trim() || '';
+  const organisationVatNumber = organisation.vatNumber?.trim() || '';
+  const resolvedPhysicalAddress = physicalAddress?.trim() || organisationBillingAddress;
+  const resolvedVatNumber = vatNumber?.trim() || organisationVatNumber;
+  const resolvedVatStatus =
+    vatStatus ??
+    (organisationVatNumber && !vatNumber?.trim() ? 'REGISTERED' : null) ??
+    'NOT_REGISTERED';
 
   useEffect(() => {
     setSelectedMode(payoutMode);
@@ -237,11 +249,11 @@ export const ResellerPayoutSettings = ({
       accountType: defaultAccountType,
       documentType: bankDocumentType ?? getDefaultResellerBankDocumentType(defaultAccountType),
       documentNumber: bankDocumentNumber ?? '',
-      physicalAddress: physicalAddress ?? '',
+      physicalAddress: resolvedPhysicalAddress,
       contactPhone: contactPhone ?? '',
       contactEmail: contactEmail ?? '',
-      vatStatus: vatStatus ?? 'NOT_REGISTERED',
-      vatNumber: vatNumber ?? '',
+      vatStatus: resolvedVatStatus,
+      vatNumber: resolvedVatNumber,
       confirmDetailsAccurate: false,
     },
   });
@@ -853,6 +865,15 @@ export const ResellerPayoutSettings = ({
                       payout compliance.
                     </Trans>
                   </p>
+                  {(!physicalAddress?.trim() && organisationBillingAddress) ||
+                  (!vatNumber?.trim() && organisationVatNumber) ? (
+                    <p className="text-xs text-muted-foreground">
+                      <Trans>
+                        Prefilling address and/or VAT from your organisation General settings. You
+                        can edit these before submitting.
+                      </Trans>
+                    </p>
+                  ) : null}
                 </div>
 
                 <FormField
