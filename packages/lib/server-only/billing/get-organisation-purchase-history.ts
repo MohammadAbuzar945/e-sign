@@ -50,8 +50,14 @@ const RESELLER_HISTORY_STATUSES = [
   ResellerCreditTransactionStatus.PENDING,
 ] as const;
 
-const formatAmount = (currency: string, amountInCents: number) =>
-  `${currency} ${(amountInCents / 100).toFixed(2)}`;
+const formatAmount = (currency: string, amountInCents: number) => {
+  const formatted = (amountInCents / 100).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  return `${currency} ${formatted}`;
+};
 
 const buildNomiaLineItem = ({
   credits,
