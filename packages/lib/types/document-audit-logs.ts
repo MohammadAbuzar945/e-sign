@@ -12,6 +12,7 @@ import { ZRecipientAccessAuthTypesSchema, ZRecipientActionAuthTypesSchema } from
 export const ZDocumentAuditLogTypeSchema = z.enum([
   // Document actions.
   'EMAIL_SENT',
+  'EMAIL_FAILED',
 
   // Document modification events.
   'FIELD_CREATED',
@@ -221,6 +222,18 @@ export const ZDocumentAuditLogEventEmailSentSchema = z.object({
   data: ZBaseRecipientDataSchema.extend({
     emailType: ZDocumentAuditLogEmailTypeSchema,
     isResending: z.boolean(),
+  }),
+});
+
+/**
+ * Event: Email delivery permanently failed (e.g. Mailgun bounce).
+ */
+export const ZDocumentAuditLogEventEmailFailedSchema = z.object({
+  type: z.literal(DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED),
+  data: ZBaseRecipientDataSchema.extend({
+    emailType: ZDocumentAuditLogEmailTypeSchema.optional(),
+    reason: z.string(),
+    mailgunEvent: z.string().optional(),
   }),
 });
 
@@ -778,6 +791,7 @@ export const ZDocumentAuditLogSchema = ZDocumentAuditLogBaseSchema.and(
     ZDocumentAuditLogEventEnvelopeItemCreatedSchema,
     ZDocumentAuditLogEventEnvelopeItemDeletedSchema,
     ZDocumentAuditLogEventEmailSentSchema,
+    ZDocumentAuditLogEventEmailFailedSchema,
     ZDocumentAuditLogEventDocumentCompletedSchema,
     ZDocumentAuditLogEventDocumentCreatedSchema,
     ZDocumentAuditLogEventDocumentDeletedSchema,

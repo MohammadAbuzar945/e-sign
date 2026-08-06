@@ -78,6 +78,8 @@ declare namespace NodeJS {
     NEXT_PRIVATE_SMTP_FROM_NAME?: string;
     NEXT_PRIVATE_SMTP_FROM_ADDRESS?: string;
 
+    NEXT_PRIVATE_MAILGUN_WEBHOOK_SIGNING_KEY?: string;
+
     NEXT_PUBLIC_DISABLE_SIGNUP?: string;
 
     NEXT_PRIVATE_BROWSERLESS_URL?: string;

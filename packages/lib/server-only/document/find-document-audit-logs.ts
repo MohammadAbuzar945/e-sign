@@ -71,6 +71,7 @@ export const findDocumentAuditLogs = async ({
             DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_REJECTED,
             DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_SENT,
             DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_MOVED_TO_TEAM,
+            DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
           ],
         },
       },

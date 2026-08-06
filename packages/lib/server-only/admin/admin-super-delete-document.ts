@@ -4,6 +4,7 @@ import { msg } from '@lingui/core/macro';
 import { DocumentStatus, SendStatus } from '@prisma/client';
 
 import { mailer } from '@documenso/email/mailer';
+import { getMailgunTrackingHeaders } from '@documenso/email/mailgun-headers';
 import DocumentCancelTemplate from '@documenso/email/templates/document-cancel';
 import { prisma } from '@documenso/prisma';
 
@@ -112,6 +113,10 @@ export const adminSuperDeleteDocument = async ({
           subject: i18n._(msg`Document Cancelled`),
           html,
           text,
+          headers: getMailgunTrackingHeaders({
+            envelopeId,
+            recipientId: recipient.id,
+          }),
         });
       }),
     );

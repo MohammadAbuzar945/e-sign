@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 
 import { mailer } from '@documenso/email/mailer';
+import { getMailgunTrackingHeaders } from '@documenso/email/mailgun-headers';
 import { DocumentInviteEmailTemplate } from '@documenso/email/templates/document-invite';
 import {
   RECIPIENT_ROLES_DESCRIPTION,
@@ -209,6 +210,10 @@ export const resendDocument = async ({
               : emailSubject,
             html,
             text,
+            headers: getMailgunTrackingHeaders({
+              envelopeId: envelope.id,
+              recipientId: recipient.id,
+            }),
           });
 
           await tx.documentAuditLog.create({

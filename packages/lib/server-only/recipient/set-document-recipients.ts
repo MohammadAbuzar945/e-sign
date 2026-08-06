@@ -7,6 +7,7 @@ import { SendStatus, SigningStatus } from '@prisma/client';
 import { isDeepEqual } from 'remeda';
 
 import { mailer } from '@documenso/email/mailer';
+import { getMailgunTrackingHeaders } from '@documenso/email/mailgun-headers';
 import RecipientRemovedFromDocumentTemplate from '@documenso/email/templates/recipient-removed-from-document';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import type { TRecipientAccessAuthTypes } from '@documenso/lib/types/document-auth';
@@ -335,6 +336,10 @@ export const setDocumentRecipients = async ({
           subject: i18n._(msg`You have been removed from a document`),
           html,
           text,
+          headers: getMailgunTrackingHeaders({
+            envelopeId: envelope.id,
+            recipientId: recipient.id,
+          }),
         });
       }),
     );

@@ -4,6 +4,7 @@ import { msg } from '@lingui/core/macro';
 import { EnvelopeType, SendStatus, SigningStatus } from '@prisma/client';
 
 import { mailer } from '@documenso/email/mailer';
+import { getMailgunTrackingHeaders } from '@documenso/email/mailgun-headers';
 import DocumentRejectedEmail from '@documenso/email/templates/document-rejected';
 import DocumentRejectionConfirmedEmail from '@documenso/email/templates/document-rejection-confirmed';
 import { isRecipientEmailValidForSending } from '@documenso/lib/utils/recipients';
@@ -115,6 +116,10 @@ export const run = async ({
         subject: i18n._(msg`Document "${envelope.title}" - Rejection Confirmed`),
         html,
         text,
+        headers: getMailgunTrackingHeaders({
+          envelopeId: envelope.id,
+          recipientId: recipient.id,
+        }),
       });
     });
   }

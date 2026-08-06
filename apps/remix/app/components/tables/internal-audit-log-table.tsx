@@ -23,6 +23,7 @@ const getAuditLogIndicatorColor = (type: string) =>
   match(type)
     .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_COMPLETED, () => 'bg-green-500')
     .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_REJECTED, () => 'bg-red-500')
+    .with(DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED, () => 'bg-red-500')
     .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_SENT, () => 'bg-orange-500')
     .with(
       P.union(
@@ -91,7 +92,11 @@ export const InternalAuditLogTable = ({ logs }: AuditLogDataTableProps) => {
                       {log.type.replace(/_/g, ' ')}
                     </div>
 
-                    <div className="text-sm font-medium text-foreground print:text-[8pt]">
+                    <div
+                      className={cn('text-sm font-medium text-foreground print:text-[8pt]', {
+                        'text-destructive': log.type === DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
+                      })}
+                    >
                       {formattedAction.description}
                     </div>
                   </div>

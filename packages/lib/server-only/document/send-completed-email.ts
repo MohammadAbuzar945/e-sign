@@ -4,6 +4,7 @@ import { msg } from '@lingui/core/macro';
 import { DocumentSource, EnvelopeType } from '@prisma/client';
 
 import { mailer } from '@documenso/email/mailer';
+import { getMailgunTrackingHeaders } from '@documenso/email/mailgun-headers';
 import { DocumentCompletedEmailTemplate } from '@documenso/email/templates/document-completed';
 import { prisma } from '@documenso/prisma';
 
@@ -153,6 +154,10 @@ export const sendCompletedEmail = async ({ id, requestMetadata }: SendDocumentOp
       html,
       text,
       attachments: completedDocumentEmailAttachments,
+      headers: getMailgunTrackingHeaders({
+        envelopeId: envelope.id,
+        recipientId: owner.id,
+      }),
     });
 
     await prisma.documentAuditLog.create({
@@ -228,6 +233,10 @@ export const sendCompletedEmail = async ({ id, requestMetadata }: SendDocumentOp
         html,
         text,
         attachments: completedDocumentEmailAttachments,
+        headers: getMailgunTrackingHeaders({
+          envelopeId: envelope.id,
+          recipientId: recipient.id,
+        }),
       });
 
       await prisma.documentAuditLog.create({
