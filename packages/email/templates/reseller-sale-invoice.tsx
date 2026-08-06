@@ -8,15 +8,13 @@ import {
   Head,
   Hr,
   Html,
-  Img,
   Link,
   Preview,
   Section,
   Text,
 } from '../components';
-import { useBranding } from '../providers/branding';
+import { TemplateEmailLogo } from '../template-components/template-email-logo';
 import { TemplateFooter } from '../template-components/template-footer';
-import TemplateImage from '../template-components/template-image';
 
 export type ResellerSaleInvoiceEmailProps = {
   assetBaseUrl: string;
@@ -55,7 +53,6 @@ export const ResellerSaleInvoiceEmailTemplate = ({
   salesHistoryUrl = 'http://localhost:3000',
 }: ResellerSaleInvoiceEmailProps) => {
   const { _ } = useLingui();
-  const branding = useBranding();
 
   return (
     <Html>
@@ -82,36 +79,7 @@ export const ResellerSaleInvoiceEmailTemplate = ({
           }}
         >
           <Section style={{ textAlign: 'center' }}>
-            {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img
-                src={branding.brandingLogo}
-                alt="Nomia"
-                width={120}
-                style={{
-                  margin: '0 auto 12px',
-                  display: 'block',
-                  width: '120px',
-                  maxWidth: '120px',
-                  height: 'auto',
-                  maxHeight: '40px',
-                }}
-              />
-            ) : (
-              <TemplateImage
-                assetBaseUrl={assetBaseUrl}
-                staticAsset="logo.png"
-                alt="Nomia"
-                width={120}
-                style={{
-                  margin: '0 auto 12px',
-                  display: 'block',
-                  width: '120px',
-                  maxWidth: '120px',
-                  height: 'auto',
-                  maxHeight: '40px',
-                }}
-              />
-            )}
+            <TemplateEmailLogo assetBaseUrl={assetBaseUrl} />
 
             <Text
               style={{
