@@ -8,7 +8,6 @@ import { getOrganisationPurchaseInvoice } from './organisation-purchase-invoice'
 const RESELLER_SALE_INVOICE_STATUSES: ResellerCreditTransactionStatus[] = [
   ResellerCreditTransactionStatus.COMPLETED,
   ResellerCreditTransactionStatus.PENDING,
-  ResellerCreditTransactionStatus.REFUNDED,
 ];
 
 /**

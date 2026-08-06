@@ -424,6 +424,7 @@ export const processResellerPaystackWebhook = async ({
 
     // OWN_PAYSTACK hybrid: wait for the Nomia remainder before emailing so both
     // invoices go out in a single mail. Hybrid single-checkout already created both.
+    // sendPurchaseInvoiceEmail also sends the dedicated reseller sale invoice.
     if (!isPartialTwoCheckoutLeg) {
       await sendPurchaseInvoiceEmail({
         organisationId: purchaserOrganisation.id,
@@ -437,17 +438,15 @@ export const processResellerPaystackWebhook = async ({
       }).catch((error) => {
         console.error('[RESELLER]: Failed to send purchase invoice email', error);
       });
+    } else {
+      // Buyer mail deferred until Nomia remainder — still email the reseller for this leg.
+      await sendResellerSaleInvoiceEmail({
+        resellerOrganisationId: profile.organisationId,
+        transactionId: fulfillmentResult.transaction.id,
+      }).catch((error) => {
+        console.error('[RESELLER]: Failed to send reseller sale invoice email', error);
+      });
     }
-
-    // Separate direct email to the reseller (not a CC on the buyer mail).
-    await sendResellerSaleInvoiceEmail({
-      resellerOrganisationId: profile.organisationId,
-      transactionId: fulfillmentResult.transaction.id,
-      recipientEmail: profile.contactEmail || profile.organisation.owner.email,
-      recipientName: profile.organisation.owner.name,
-    }).catch((error) => {
-      console.error('[RESELLER]: Failed to send reseller sale invoice email', error);
-    });
   }
 
   // Sticky attribution on purchase (§8.2) + delinquency balance sync (§12).
