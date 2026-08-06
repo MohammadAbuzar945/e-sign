@@ -81,14 +81,30 @@ export const ResellerInsufficientCreditsEmailTemplate = ({
               <Img
                 src={branding.brandingLogo}
                 alt="Nomia"
-                width={140}
-                style={{ margin: '0 auto 16px', display: 'block', maxHeight: '56px' }}
+                width={120}
+                style={{
+                  margin: '0 auto 12px',
+                  display: 'block',
+                  width: '120px',
+                  maxWidth: '120px',
+                  height: 'auto',
+                  maxHeight: '40px',
+                }}
               />
             ) : (
               <TemplateImage
                 assetBaseUrl={assetBaseUrl}
-                className="mx-auto mb-4"
                 staticAsset="logo.png"
+                alt="Nomia"
+                width={120}
+                style={{
+                  margin: '0 auto 12px',
+                  display: 'block',
+                  width: '120px',
+                  maxWidth: '120px',
+                  height: 'auto',
+                  maxHeight: '40px',
+                }}
               />
             )}
 
