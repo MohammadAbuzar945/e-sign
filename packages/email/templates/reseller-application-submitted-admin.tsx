@@ -52,11 +52,15 @@ export const ResellerApplicationSubmittedAdminEmailTemplate = ({
         <Section className="bg-white text-slate-500">
           <Container className="mx-auto mb-2 mt-8 max-w-xl rounded-lg border border-solid border-slate-200 p-4 backdrop-blur-sm">
             {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
+              <Img
+                src={branding.brandingLogo}
+                alt="Branding Logo"
+                className="mx-auto mb-4 h-20 p-2"
+              />
             ) : (
               <TemplateImage
                 assetBaseUrl={assetBaseUrl}
-                className="mb-4 h-16 p-2"
+                className="mx-auto mb-4 h-16 p-2"
                 staticAsset="logo.png"
               />
             )}
@@ -65,54 +69,54 @@ export const ResellerApplicationSubmittedAdminEmailTemplate = ({
               <Trans>New reseller application</Trans>
             </Text>
 
-            <Text className="mt-4 text-sm">
+            <Text className="mt-4 text-left text-sm">
               <Trans>
                 A new organisation has applied for the Nomia Reseller Programme. Review the details
                 below and take action from the admin panel.
               </Trans>
             </Text>
 
-            <Text className="mt-4 text-sm font-medium text-black">
+            <Text className="mt-4 text-left text-sm font-medium text-black">
               <Trans>Application details</Trans>
             </Text>
 
-            <Text className="mt-2 text-sm">
-              <Trans>Application ID: {applicationId}</Trans>
+            <Text className="mt-2 text-left text-sm">
+              <Trans>Application ID:</Trans> {applicationId}
             </Text>
 
-            <Text className="text-sm">
-              <Trans>Organisation: {organisationName}</Trans>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Organisation:</Trans> {organisationName}
             </Text>
 
-            <Text className="text-sm">
-              <Trans>Applicant: {applicantName}</Trans>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Applicant:</Trans> {applicantName}
             </Text>
 
-            <Text className="text-sm">
-              <Trans>Applicant email: {applicantEmail}</Trans>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Applicant email:</Trans> {applicantEmail}
             </Text>
 
-            <Text className="text-sm">
-              <Trans>Completed documents: {completedDocumentCount}</Trans>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Completed documents:</Trans> {completedDocumentCount}
             </Text>
 
-            <Text className="text-sm">
-              <Trans>Unique signers: {uniqueSignerCount}</Trans>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Unique signers:</Trans> {uniqueSignerCount}
             </Text>
 
-            <Text className="text-sm">
-              <Trans>Organisation users: {organisationUserCount}</Trans>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Organisation users:</Trans> {organisationUserCount}
             </Text>
 
-            <Text className="text-sm">
-              <Trans>Organisation signup date: {organisationSignupDate}</Trans>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Organisation signup date:</Trans> {organisationSignupDate}
             </Text>
 
-            <Text className="mt-4 text-sm">
+            <Text className="mt-4 text-left text-sm">
               <Trans>Review application:</Trans>
             </Text>
 
-            <Link href={adminReviewUrl} className="text-sm text-blue-600">
+            <Link href={adminReviewUrl} className="block text-left text-sm text-blue-600">
               {adminReviewUrl}
             </Link>
           </Container>

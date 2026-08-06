@@ -29,11 +29,15 @@ export const ResellerApplicationRejectedEmailTemplate = ({
         <Section className="bg-white text-slate-500">
           <Container className="mx-auto mb-2 mt-8 max-w-xl rounded-lg border border-solid border-slate-200 p-4 backdrop-blur-sm">
             {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
+              <Img
+                src={branding.brandingLogo}
+                alt="Branding Logo"
+                className="mx-auto mb-4 h-20 p-2"
+              />
             ) : (
               <TemplateImage
                 assetBaseUrl={assetBaseUrl}
-                className="mb-4 h-16 p-2"
+                className="mx-auto mb-4 h-16 p-2"
                 staticAsset="logo.png"
               />
             )}
@@ -42,14 +46,14 @@ export const ResellerApplicationRejectedEmailTemplate = ({
               <Trans>Reseller application update</Trans>
             </Text>
 
-            <Text className="mt-4 text-sm">
+            <Text className="mt-4 text-left text-sm">
               <Trans>
                 Hi {applicantName}, thank you for your interest in the Nomia Reseller Programme for{' '}
                 {organisationName}.
               </Trans>
             </Text>
 
-            <Text className="mt-4 text-sm">
+            <Text className="mt-4 text-left text-sm">
               <Trans>
                 After reviewing your application, we are unable to approve it at this time. You may
                 apply again in the future if your organisation meets the programme requirements.
@@ -57,7 +61,7 @@ export const ResellerApplicationRejectedEmailTemplate = ({
             </Text>
 
             {rejectionReason?.trim() ? (
-              <Text className="mt-4 text-sm">
+              <Text className="mt-4 text-left text-sm">
                 <Trans>Note from our team: {rejectionReason.trim()}</Trans>
               </Text>
             ) : null}
