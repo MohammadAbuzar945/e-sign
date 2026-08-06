@@ -14,7 +14,6 @@ import {
   Loader,
   MoreHorizontal,
   Pencil,
-  Share,
   Trash2,
 } from 'lucide-react';
 import { Link } from 'react-router';
@@ -23,7 +22,6 @@ import { useSession } from '@documenso/lib/client-only/providers/session';
 import type { TDocumentMany as TDocumentRow } from '@documenso/lib/types/document';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
 import { formatDocumentsPath } from '@documenso/lib/utils/teams';
-import { DocumentShareButton } from '@documenso/ui/components/document/document-share-button';
 import {
   DropdownMenu,
   DropdownMenuContent,

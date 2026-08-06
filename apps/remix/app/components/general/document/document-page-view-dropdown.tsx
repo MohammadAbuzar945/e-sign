@@ -10,7 +10,6 @@ import {
   Loader,
   MoreHorizontal,
   ScrollTextIcon,
-  Share,
   Trash2,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
@@ -20,7 +19,6 @@ import type { TEnvelope } from '@documenso/lib/types/envelope';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
 import { mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
 import { formatDocumentsPath } from '@documenso/lib/utils/teams';
-import { DocumentShareButton } from '@documenso/ui/components/document/document-share-button';
 import {
   DropdownMenu,
   DropdownMenuContent,

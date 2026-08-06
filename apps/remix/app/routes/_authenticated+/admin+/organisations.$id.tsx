@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 import { Trans } from '@lingui/react/macro';
-import { ExternalLinkIcon, InfoIcon, Loader } from 'lucide-react';
+import { InfoIcon, Loader } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router';
 import { z } from 'zod';
