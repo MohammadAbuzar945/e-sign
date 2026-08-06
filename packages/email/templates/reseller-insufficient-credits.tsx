@@ -37,11 +37,15 @@ export const ResellerInsufficientCreditsEmailTemplate = ({
         <Section className="bg-white text-slate-500">
           <Container className="mx-auto mb-2 mt-8 max-w-xl rounded-lg border border-solid border-slate-200 p-4 backdrop-blur-sm">
             {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
+              <Img
+                src={branding.brandingLogo}
+                alt="Branding Logo"
+                className="mx-auto mb-4 h-20 p-2"
+              />
             ) : (
               <TemplateImage
                 assetBaseUrl={assetBaseUrl}
-                className="mb-4 h-16 p-2"
+                className="mx-auto mb-4 h-16 p-2"
                 staticAsset="logo.png"
               />
             )}
@@ -50,7 +54,7 @@ export const ResellerInsufficientCreditsEmailTemplate = ({
               <Trans>Manual credit transfer required</Trans>
             </Text>
 
-            <Text className="mt-4 text-sm">
+            <Text className="mt-4 text-left text-sm">
               <Trans>
                 Hi {resellerOrganisationName}, a client completed payment through your affiliate
                 page, but your organisation did not have enough credits available to top up their
@@ -58,36 +62,37 @@ export const ResellerInsufficientCreditsEmailTemplate = ({
               </Trans>
             </Text>
 
-            <Text className="mt-4 text-sm">
-              <Trans>Client details:</Trans>
+            <Text className="mt-4 text-left text-sm font-medium text-black">
+              <Trans>Client details</Trans>
+            </Text>
+            <Text className="mt-2 text-left text-sm">
+              <Trans>Name:</Trans> {purchaserName}
+            </Text>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Email:</Trans> {purchaserEmail}
+            </Text>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Organisation:</Trans> {purchaserOrganisationName}
             </Text>
 
-            <Text className="text-sm">
-              <Trans>
-                Name: {purchaserName}
-                {'\n'}
-                Email: {purchaserEmail}
-                {'\n'}
-                Organisation: {purchaserOrganisationName}
-              </Trans>
+            <Text className="mt-4 text-left text-sm font-medium text-black">
+              <Trans>Credit status</Trans>
+            </Text>
+            <Text className="mt-2 text-left text-sm">
+              <Trans>Credits required:</Trans> {creditsRequired}
+            </Text>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Credits currently available:</Trans> {availableCredits}
             </Text>
 
-            <Text className="mt-4 text-sm">
-              <Trans>
-                Credits required: {creditsRequired}
-                {'\n'}
-                Credits currently available: {availableCredits}
-              </Trans>
-            </Text>
-
-            <Text className="mt-4 text-sm">
+            <Text className="mt-4 text-left text-sm">
               <Trans>
                 Please recharge your account if needed, then manually transfer the required credits
                 to this client from your reseller dashboard.
               </Trans>
             </Text>
 
-            <Link href={resellerSettingsUrl} className="mt-4 block text-sm text-blue-600">
+            <Link href={resellerSettingsUrl} className="mt-4 block text-left text-sm text-blue-600">
               {resellerSettingsUrl}
             </Link>
           </Container>

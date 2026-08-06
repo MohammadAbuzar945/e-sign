@@ -44,11 +44,15 @@ export const ResellerSaleInvoiceEmailTemplate = ({
         <Section className="bg-white text-slate-500">
           <Container className="mx-auto mb-2 mt-8 max-w-xl rounded-lg border border-solid border-slate-200 p-4 backdrop-blur-sm">
             {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
+              <Img
+                src={branding.brandingLogo}
+                alt="Branding Logo"
+                className="mx-auto mb-4 h-20 p-2"
+              />
             ) : (
               <TemplateImage
                 assetBaseUrl={assetBaseUrl}
-                className="mb-4 h-16 p-2"
+                className="mx-auto mb-4 h-16 p-2"
                 staticAsset="logo.png"
               />
             )}
@@ -57,47 +61,47 @@ export const ResellerSaleInvoiceEmailTemplate = ({
               <Trans>Sale invoice</Trans>
             </Text>
 
-            <Text className="mt-4 text-sm">
+            <Text className="mt-4 text-left text-sm">
               <Trans>
                 Hi {resellerOrganisationName}, a client purchased credits through your affiliate
                 page. Your sale invoice is attached to this email.
               </Trans>
             </Text>
 
-            <Text className="mt-4 text-sm">
-              <Trans>Client details:</Trans>
+            <Text className="mt-4 text-left text-sm font-medium text-black">
+              <Trans>Client details</Trans>
+            </Text>
+            <Text className="mt-2 text-left text-sm">
+              <Trans>Name:</Trans> {purchaserName}
+            </Text>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Email:</Trans> {purchaserEmail}
+            </Text>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Organisation:</Trans> {purchaserOrganisationName}
             </Text>
 
-            <Text className="text-sm">
-              <Trans>
-                Name: {purchaserName}
-                {'\n'}
-                Email: {purchaserEmail}
-                {'\n'}
-                Organisation: {purchaserOrganisationName}
-              </Trans>
+            <Text className="mt-4 text-left text-sm font-medium text-black">
+              <Trans>Invoice details</Trans>
+            </Text>
+            <Text className="mt-2 text-left text-sm">
+              <Trans>Invoice:</Trans> {invoiceTitle}
+            </Text>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Invoice #:</Trans> {invoiceId}
+            </Text>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Credits:</Trans> {credits}
+            </Text>
+            <Text className="my-0 text-left text-sm">
+              <Trans>Amount:</Trans> {amountLabel}
             </Text>
 
-            <Section className="mt-4">
-              <Text className="text-sm">
-                <Trans>Invoice:</Trans> {invoiceTitle}
-              </Text>
-              <Text className="text-sm">
-                <Trans>Invoice #:</Trans> {invoiceId}
-              </Text>
-              <Text className="text-sm">
-                <Trans>Credits:</Trans> {credits}
-              </Text>
-              <Text className="text-sm">
-                <Trans>Amount:</Trans> {amountLabel}
-              </Text>
-            </Section>
-
-            <Text className="mt-4 text-sm">
+            <Text className="mt-4 text-left text-sm">
               <Trans>You can also download sale invoices anytime from your sales records:</Trans>
             </Text>
 
-            <Link href={salesHistoryUrl} className="text-sm text-blue-600">
+            <Link href={salesHistoryUrl} className="block text-left text-sm text-blue-600">
               {salesHistoryUrl}
             </Link>
           </Container>

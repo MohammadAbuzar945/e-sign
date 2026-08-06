@@ -31,11 +31,15 @@ export const ResellerWelcomeEmailTemplate = ({
         <Section className="bg-white text-slate-500">
           <Container className="mx-auto mb-2 mt-8 max-w-xl rounded-lg border border-solid border-slate-200 p-4 backdrop-blur-sm">
             {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img src={branding.brandingLogo} alt="Branding Logo" className="mb-4 h-20 p-2" />
+              <Img
+                src={branding.brandingLogo}
+                alt="Branding Logo"
+                className="mx-auto mb-4 h-20 p-2"
+              />
             ) : (
               <TemplateImage
                 assetBaseUrl={assetBaseUrl}
-                className="mb-4 h-16 p-2"
+                className="mx-auto mb-4 h-16 p-2"
                 staticAsset="logo.png"
               />
             )}
@@ -44,7 +48,7 @@ export const ResellerWelcomeEmailTemplate = ({
               <Trans>Welcome to the Nomia Reseller Programme</Trans>
             </Text>
 
-            <Text className="mt-4 text-sm">
+            <Text className="mt-4 text-left text-sm">
               <Trans>
                 Hi {applicantName}, your organisation {organisationName} has been approved as a
                 reseller. You can now configure your reseller settings and share your affiliate link
@@ -52,11 +56,11 @@ export const ResellerWelcomeEmailTemplate = ({
               </Trans>
             </Text>
 
-            <Text className="mt-4 text-sm">
+            <Text className="mt-4 text-left text-sm">
               <Trans>Your affiliate link:</Trans>
             </Text>
 
-            <Link href={affiliateUrl} className="text-sm text-blue-600">
+            <Link href={affiliateUrl} className="block text-left text-sm text-blue-600">
               {affiliateUrl}
             </Link>
           </Container>
