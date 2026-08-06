@@ -140,13 +140,24 @@ export const DocumentPageViewRecentActivity = ({
                         <MailOpen className="h-3 w-3" aria-hidden="true" />
                       </div>
                     ))
+                    .with(DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED, () => (
+                      <div className="rounded-full border border-red-300 bg-widget p-1 dark:border-red-600">
+                        <AlertTriangle className="h-3 w-3 text-destructive" aria-hidden="true" />
+                      </div>
+                    ))
                     .otherwise(() => (
                       <div className="h-1.5 w-1.5 rounded-full bg-widget ring-1 ring-gray-300 dark:ring-neutral-600" />
                     ))}
                 </div>
 
                 <p
-                  className="flex-auto truncate py-0.5 text-xs leading-5 text-muted-foreground dark:text-muted-foreground/70"
+                  className={cn(
+                    'flex-auto truncate py-0.5 text-xs leading-5 text-muted-foreground dark:text-muted-foreground/70',
+                    {
+                      'font-medium text-destructive dark:text-destructive':
+                        auditLog.type === DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
+                    },
+                  )}
                   title={formatDocumentAuditLogAction(i18n, auditLog, userId).description}
                 >
                   {formatDocumentAuditLogAction(i18n, auditLog, userId).description}

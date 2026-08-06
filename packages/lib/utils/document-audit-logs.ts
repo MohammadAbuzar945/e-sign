@@ -563,6 +563,17 @@ export const formatDocumentAuditLogAction = (
         ? msg`${prefix} resent an email to ${data.recipientEmail}`
         : msg`${prefix} sent an email to ${data.recipientEmail}`,
     }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED }, ({ data }) => {
+      const anonymous = msg`Email Sent Failed`;
+      const identified = data.reason
+        ? msg`Email Sent Failed to ${data.recipientEmail}: ${data.reason}`
+        : msg`Email Sent Failed to ${data.recipientEmail}`;
+
+      return {
+        anonymous,
+        identified,
+      };
+    })
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_COMPLETED }, () => ({
       anonymous: msg({
         message: `Document completed`,

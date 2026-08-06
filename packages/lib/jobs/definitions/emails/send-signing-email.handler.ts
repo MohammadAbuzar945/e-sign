@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 
 import { mailer } from '@documenso/email/mailer';
+import { getMailgunTrackingHeaders } from '@documenso/email/mailgun-headers';
 import DocumentInviteEmailTemplate from '@documenso/email/templates/document-invite';
 import { isRecipientEmailValidForSending } from '@documenso/lib/utils/recipients';
 import { prisma } from '@documenso/prisma';
@@ -202,6 +203,10 @@ export const run = async ({
         ),
         html,
         text,
+        headers: getMailgunTrackingHeaders({
+          envelopeId: envelope.id,
+          recipientId: recipient.id,
+        }),
       });
     });
   }

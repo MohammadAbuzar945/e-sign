@@ -1,6 +1,8 @@
-import { EnvelopeType } from '@prisma/client';
+import { EnvelopeType, type Prisma } from '@prisma/client';
 
+import { canViewEmailFailedAuditLogs } from '@documenso/lib/constants/email-failed-audit-log';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { parseDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { unsafeBuildEnvelopeIdQuery } from '@documenso/lib/utils/envelope';
@@ -15,7 +17,7 @@ import {
 export const findDocumentAuditLogsRoute = adminProcedure
   .input(ZFindDocumentAuditLogsRequestSchema)
   .output(ZFindDocumentAuditLogsResponseSchema)
-  .query(async ({ input }) => {
+  .query(async ({ input, ctx }) => {
     const {
       envelopeId,
       page = 1,
@@ -40,9 +42,19 @@ export const findDocumentAuditLogsRoute = adminProcedure
       });
     }
 
+    const whereClause: Prisma.DocumentAuditLogWhereInput = {
+      envelopeId: envelope.id,
+    };
+
+    if (!canViewEmailFailedAuditLogs(ctx.user.email)) {
+      whereClause.type = {
+        not: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
+      };
+    }
+
     const [data, count] = await Promise.all([
       prisma.documentAuditLog.findMany({
-        where: { envelopeId: envelope.id },
+        where: whereClause,
         skip: Math.max(page - 1, 0) * perPage,
         take: perPage,
         orderBy: {
@@ -50,7 +62,7 @@ export const findDocumentAuditLogsRoute = adminProcedure
         },
       }),
       prisma.documentAuditLog.count({
-        where: { envelopeId: envelope.id },
+        where: whereClause,
       }),
     ]);
 

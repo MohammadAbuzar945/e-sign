@@ -4,6 +4,7 @@ import { msg } from '@lingui/core/macro';
 import { EnvelopeType } from '@prisma/client';
 
 import { mailer } from '@documenso/email/mailer';
+import { getMailgunTrackingHeaders } from '@documenso/email/mailgun-headers';
 import { DocumentPendingEmailTemplate } from '@documenso/email/templates/document-pending';
 import { prisma } from '@documenso/prisma';
 
@@ -103,5 +104,9 @@ export const sendPendingEmail = async ({ id, recipientId }: SendPendingEmailOpti
     subject: i18n._(msg`Waiting for others to complete signing.`),
     html,
     text,
+    headers: getMailgunTrackingHeaders({
+      envelopeId: envelope.id,
+      recipientId: recipient.id,
+    }),
   });
 };

@@ -8,6 +8,7 @@
     "templates/",
     "transports/",
     "mailer.ts",
+    "mailgun-headers.ts",
     "render.ts",
     "index.ts"
   ],
