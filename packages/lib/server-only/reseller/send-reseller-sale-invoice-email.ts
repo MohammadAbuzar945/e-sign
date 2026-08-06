@@ -19,7 +19,6 @@ import {
 } from '../billing/build-purchase-invoice';
 import { formatAmount } from '../billing/get-organisation-purchase-history';
 import { getResellerSaleInvoice } from '../billing/get-reseller-sale-invoice';
-import { resolveResellerPurchaseInvoiceId } from '../billing/record-organisation-credit-purchase';
 
 export type SendResellerSaleInvoiceEmailOptions = {
   resellerOrganisationId: string;
@@ -48,7 +47,7 @@ export const sendResellerSaleInvoiceEmail = async ({
   recipientEmail,
   recipientName,
 }: SendResellerSaleInvoiceEmailOptions) => {
-  const invoiceId = resolveResellerPurchaseInvoiceId({ transactionId });
+  const invoiceId = `reseller_${transactionId}`;
 
   const {
     invoice,
@@ -80,18 +79,48 @@ export const sendResellerSaleInvoiceEmail = async ({
     },
   });
 
-  const toEmail =
-    recipientEmail?.trim() ||
-    resellerOrganisation.resellerProfile?.contactEmail?.trim() ||
-    resellerOrganisation.owner.email;
+  // Always deliver to the organisation owner. contactEmail is optional extra.
+  // Do not rely on admin-copy mail — that is skipped when admin email === buyer email.
+  const ownerEmail = resellerOrganisation.owner.email?.trim() || '';
+  const contactEmail = resellerOrganisation.resellerProfile?.contactEmail?.trim() || '';
+  const explicitEmail = recipientEmail?.trim() || '';
 
-  const toName =
-    recipientName?.trim() ||
-    resellerOrganisation.owner.name ||
-    resellerOrganisation.name ||
-    toEmail;
+  const recipientByNormalised = new Map<string, { address: string; name: string }>();
 
-  if (!toEmail) {
+  const addRecipient = (address: string, name: string) => {
+    const normalised = address.trim().toLowerCase();
+
+    if (!normalised || recipientByNormalised.has(normalised)) {
+      return;
+    }
+
+    recipientByNormalised.set(normalised, { address: address.trim(), name });
+  };
+
+  if (ownerEmail) {
+    addRecipient(
+      ownerEmail,
+      resellerOrganisation.owner.name || resellerOrganisation.name || ownerEmail,
+    );
+  }
+
+  if (contactEmail) {
+    addRecipient(contactEmail, resellerOrganisation.name || contactEmail);
+  }
+
+  if (explicitEmail) {
+    addRecipient(
+      explicitEmail,
+      recipientName?.trim() ||
+        resellerOrganisation.owner.name ||
+        resellerOrganisation.name ||
+        explicitEmail,
+    );
+  }
+
+  const resolvedRecipients = [...recipientByNormalised.values()];
+
+  if (resolvedRecipients.length === 0) {
     return { sent: false as const, reason: 'NO_RECIPIENT' as const };
   }
 
@@ -128,35 +157,37 @@ export const sendResellerSaleInvoiceEmail = async ({
   ]);
 
   const i18n = await getI18nInstance('en');
-
-  await mailer.sendMail({
-    to: [
-      {
-        name: toName,
-        address: toEmail,
-      },
-    ],
-    from: {
-      name: env('NEXT_PRIVATE_SMTP_FROM_NAME') || 'Nomia',
-      address: env('NEXT_PRIVATE_SMTP_FROM_ADDRESS') || 'noreply@nomiadocs.com',
+  const from = {
+    name: env('NEXT_PRIVATE_SMTP_FROM_NAME') || 'Nomia',
+    address: env('NEXT_PRIVATE_SMTP_FROM_ADDRESS') || 'noreply@nomiadocs.com',
+  };
+  const subject = i18n._(
+    msg`Sale invoice: ${purchaserOrganisation.name} purchased ${invoice.totalCredits} credits`,
+  );
+  const attachments = [
+    {
+      filename: `reseller-invoice-${invoice.invoiceId}.pdf`,
+      content: Buffer.from(pdf),
+      contentType: 'application/pdf',
     },
-    subject: i18n._(
-      msg`Sale invoice: ${purchaserOrganisation.name} purchased ${invoice.totalCredits} credits`,
-    ),
-    html,
-    text,
-    attachments: [
-      {
-        filename: `reseller-invoice-${invoice.invoiceId}.pdf`,
-        content: Buffer.from(pdf),
-        contentType: 'application/pdf',
-      },
-    ],
-  });
+  ];
+
+  // One direct email per recipient (not CC) so admin+reseller owners always get their own mail.
+  for (const recipient of resolvedRecipients) {
+    await mailer.sendMail({
+      to: [recipient],
+      from,
+      subject,
+      html,
+      text,
+      attachments,
+    });
+  }
 
   return {
     sent: true as const,
     invoiceId: invoice.invoiceId,
-    recipientEmail: toEmail,
+    recipientEmail: resolvedRecipients[0]?.address,
+    recipientEmails: resolvedRecipients.map((recipient) => recipient.address),
   };
 };

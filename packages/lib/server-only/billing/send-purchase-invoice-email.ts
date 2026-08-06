@@ -7,11 +7,13 @@ import { msg } from '@lingui/core/macro';
 
 import { mailer } from '@documenso/email/mailer';
 import PurchaseInvoiceEmailTemplate from '@documenso/email/templates/purchase-invoice';
+import { prisma } from '@documenso/prisma';
 
 import { getI18nInstance } from '../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
 import { env } from '../../utils/env';
 import { renderEmailWithI18N } from '../../utils/render-email-with-i18n';
+import { sendResellerSaleInvoiceEmail } from '../reseller/send-reseller-sale-invoice-email';
 import { getAdminNotificationRecipients } from '../user/get-admin-notification-recipients';
 import {
   buildPurchaseInvoiceHtml,
@@ -145,8 +147,13 @@ export const sendPurchaseInvoiceEmail = async ({
     attachments,
   });
 
+  const buyerEmailNormalised = toEmail.trim().toLowerCase();
+
+  // Platform admin notification (separate from reseller sale invoice).
+  // Skip admins who already received the buyer mail — that must NOT suppress
+  // the dedicated reseller sale email below (admin+reseller owners still get it).
   const adminRecipients = (await getAdminNotificationRecipients()).filter(
-    (admin) => admin.email !== toEmail.trim().toLowerCase(),
+    (admin) => admin.email !== buyerEmailNormalised,
   );
 
   if (adminRecipients.length > 0) {
@@ -173,9 +180,45 @@ export const sendPurchaseInvoiceEmail = async ({
       });
   }
 
+  // Dedicated reseller sale invoice — always, even when the reseller owner is
+  // also an admin (and even when their email matches the buyer / was skipped above).
+  let resellerSaleEmailsSent = 0;
+
+  for (const invoice of invoices) {
+    if (invoice.issuer !== 'RESELLER' || !invoice.invoiceId.startsWith('reseller_')) {
+      continue;
+    }
+
+    const transactionId = invoice.invoiceId.slice('reseller_'.length);
+
+    const transaction = await prisma.resellerCreditTransaction.findUnique({
+      where: { id: transactionId },
+      select: {
+        resellerOrganisationId: true,
+      },
+    });
+
+    if (!transaction?.resellerOrganisationId) {
+      continue;
+    }
+
+    const resellerResult = await sendResellerSaleInvoiceEmail({
+      resellerOrganisationId: transaction.resellerOrganisationId,
+      transactionId,
+    }).catch((error) => {
+      console.error('[INVOICE]: Failed to send reseller sale invoice email', error);
+      return null;
+    });
+
+    if (resellerResult?.sent) {
+      resellerSaleEmailsSent += 1;
+    }
+  }
+
   return {
     sent: true as const,
     invoiceIds: invoices.map((invoice) => invoice.invoiceId),
     adminCopiesSent: adminRecipients.length,
+    resellerSaleEmailsSent,
   };
 };

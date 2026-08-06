@@ -12,7 +12,6 @@ import {
   atomicIncrementOrganisationCredits,
   tryAtomicDecrementOrganisationCredits,
 } from './reseller-credit-transfer';
-import { sendResellerSaleInvoiceEmail } from './send-reseller-sale-invoice-email';
 
 export type CompletePendingResellerTransactionOptions = {
   organisationId: string;
@@ -29,12 +28,6 @@ export const completePendingResellerTransaction = async ({
       organisation: {
         select: {
           ownerUserId: true,
-          owner: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
         },
       },
     },
@@ -107,15 +100,6 @@ export const completePendingResellerTransaction = async ({
     recipientName: completedTransaction.purchaserName,
   }).catch((error) => {
     console.error('[RESELLER]: Failed to send purchase invoice email after manual transfer', error);
-  });
-
-  await sendResellerSaleInvoiceEmail({
-    resellerOrganisationId: profile.organisationId,
-    transactionId: completedTransaction.id,
-    recipientEmail: profile.contactEmail || profile.organisation.owner.email,
-    recipientName: profile.organisation.owner.name,
-  }).catch((error) => {
-    console.error('[RESELLER]: Failed to send reseller sale invoice email after manual transfer', error);
   });
 
   return completedTransaction;
