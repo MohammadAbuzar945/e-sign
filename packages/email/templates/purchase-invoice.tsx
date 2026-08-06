@@ -8,15 +8,13 @@ import {
   Head,
   Hr,
   Html,
-  Img,
   Link,
   Preview,
   Section,
   Text,
 } from '../components';
-import { useBranding } from '../providers/branding';
+import { TemplateEmailLogo } from '../template-components/template-email-logo';
 import { TemplateFooter } from '../template-components/template-footer';
-import TemplateImage from '../template-components/template-image';
 
 export type PurchaseInvoiceEmailLine = {
   invoiceTitle: string;
@@ -63,7 +61,6 @@ export const PurchaseInvoiceEmailTemplate = ({
   purchaseHistoryUrl = 'http://localhost:3000',
 }: PurchaseInvoiceEmailProps) => {
   const { _ } = useLingui();
-  const branding = useBranding();
   const isSplitPurchase = invoices.length > 1;
 
   return (
@@ -95,20 +92,7 @@ export const PurchaseInvoiceEmailTemplate = ({
           }}
         >
           <Section style={{ textAlign: 'center' }}>
-            {branding.brandingEnabled && branding.brandingLogo ? (
-              <Img
-                src={branding.brandingLogo}
-                alt="Nomia"
-                width={140}
-                style={{ margin: '0 auto 16px', display: 'block', maxHeight: '56px' }}
-              />
-            ) : (
-              <TemplateImage
-                assetBaseUrl={assetBaseUrl}
-                className="mx-auto mb-4"
-                staticAsset="logo.png"
-              />
-            )}
+            <TemplateEmailLogo assetBaseUrl={assetBaseUrl} />
 
             <Text
               style={{
