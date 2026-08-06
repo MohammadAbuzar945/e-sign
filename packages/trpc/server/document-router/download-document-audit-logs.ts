@@ -60,6 +60,7 @@ export const downloadDocumentAuditLogsRoute = authenticatedProcedure
         envelope.includeQrCodeInCertificate ?? teamSettings.includeQrCodeInCertificate ?? true,
       pageWidth: PDF_SIZE_A4_72PPI.width,
       pageHeight: PDF_SIZE_A4_72PPI.height,
+      viewerEmail: ctx.user.email,
     });
 
     const result = await certificatePdf.save();

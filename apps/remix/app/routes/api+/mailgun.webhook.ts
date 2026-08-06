@@ -119,24 +119,38 @@ const extractUserVariables = (
   };
 };
 
+const asNonEmptyString = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed || undefined;
+};
+
+/**
+ * Prefer delivery-status details from Mailgun Events API payloads, e.g.:
+ * reason: "suppress-bounce"
+ * delivery-status.message: ""
+ * delivery-status.description: "Not delivering to previously bounced address"
+ */
 const extractFailureReason = (eventData: Record<string, unknown>): string => {
   const deliveryStatus = eventData['delivery-status'] as Record<string, unknown> | undefined;
 
-  const candidates = [
-    deliveryStatus?.message,
-    deliveryStatus?.description,
-    eventData.reason,
-    eventData.description,
-    eventData['error'],
-  ];
+  const deliveryMessage = asNonEmptyString(deliveryStatus?.message);
+  const deliveryDescription = asNonEmptyString(deliveryStatus?.description);
+  const eventReason = asNonEmptyString(eventData.reason);
+  const eventDescription = asNonEmptyString(eventData.description);
+  const eventError = asNonEmptyString(eventData['error']);
 
-  for (const candidate of candidates) {
-    if (typeof candidate === 'string' && candidate.trim()) {
-      return candidate.trim();
-    }
+  const detail = deliveryMessage ?? deliveryDescription ?? eventDescription ?? eventError;
+
+  if (eventReason && detail && eventReason.toLowerCase() !== detail.toLowerCase()) {
+    return `${eventReason}: ${detail}`;
   }
 
-  return 'Permanent delivery failure';
+  return detail ?? eventReason ?? 'Permanent delivery failure';
 };
 
 const parseJsonWebhook = (body: Record<string, unknown>): ParsedMailgunWebhook | null => {
