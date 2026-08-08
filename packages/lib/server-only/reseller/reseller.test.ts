@@ -104,6 +104,7 @@ describe('reseller transaction CSV export', () => {
     expect(csv).toContain('Reseller,"Nomia Creator"');
     expect(csv).toContain('Reseller VAT Number,"4123456789"');
     expect(csv).toContain('Invoice ID');
+    expect(csv).toContain('Paystack Fee');
     expect(csv).toContain('reseller_txn_abc');
     expect(csv).toContain('Jane Buyer');
     expect(csv).toContain('58.70');
@@ -136,7 +137,8 @@ describe('reseller transaction CSV export', () => {
     });
 
     expect(csv).toContain('450.00');
-    expect(csv).toContain(',0.00,450.00,');
+    expect(csv).toContain('Paystack Fee');
+    expect(csv).toContain(',0.00,0.00,450.00,');
   });
 });
 

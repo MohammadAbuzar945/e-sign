@@ -825,6 +825,7 @@ model Organisation {
   @@index([name])
   @@index([ownerUserId])
   @@index([associatedResellerProfileId])
+  @@index([createdAt])
 }
 
 model OrganisationMember {
@@ -1259,10 +1260,12 @@ model OrganisationCreditPurchase {
   completedAt       DateTime?
   purchaseGroupId   String?
 
-  @@index([status])
   @@index([createdAt])
   @@index([purchaseGroupId])
-  @@index([purchaseType])
+  /// Admin global invoice ledger: filter by status, sort by createdAt.
+  @@index([status, createdAt])
+  /// Admin ledger when filtered by kind (PAYG / BULK / SUBSCRIPTION).
+  @@index([purchaseType, status, createdAt])
   /// Covers org history (status + createdAt sort); replaces standalone organisationId index.
   @@index([organisationId, status, createdAt])
 }
@@ -1348,8 +1351,11 @@ model ResellerApplication {
   /// Applicant-supplied DocGen template variable values (variable_name -> value).
   termsVariableValues Json?
 
-  @@index([status])
+  /// Admin applications list: filter by status, sort by appliedAt.
+  @@index([status, appliedAt])
   @@index([applicantUserId])
+  /// DocGen terms completion / rejection callbacks.
+  @@index([externalDocGenRequestId])
 }
 
 model ResellerProfile {
@@ -1550,6 +1556,8 @@ model ResellerCreditTransaction {
   credits      Int
   grossAmount  Int
   vatAmount    Int     @default(0)
+  /// Paystack fee deducted from the reseller subaccount share (cents).
+  paystackFeeAmount Int @default(0)
   /// Snapshot of seller VAT at purchase time (do not re-derive from live profile).
   sellerVatStatus ResellerVatStatus?
   sellerVatNumber String?

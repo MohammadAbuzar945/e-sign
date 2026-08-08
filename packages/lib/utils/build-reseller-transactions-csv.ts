@@ -14,6 +14,7 @@ export type ResellerTransactionCsvRow = {
   credits: number;
   grossAmount: number;
   vatAmount: number;
+  paystackFeeAmount?: number;
   currency: string;
   paystackReference: string | null;
   status: string;
@@ -44,6 +45,7 @@ export const buildResellerTransactionsCsv = ({
     'Client Organisation',
     'Credits',
     'Gross Amount',
+    'Paystack Fee',
     'VAT Amount',
     'Net Amount',
     'Currency',
@@ -75,6 +77,7 @@ export const buildResellerTransactionsCsv = ({
       escapeCsvValue(row.purchaserOrganisationName),
       row.credits.toString(),
       formatCentsAsDecimal(row.grossAmount),
+      formatCentsAsDecimal(row.paystackFeeAmount ?? 0),
       formatCentsAsDecimal(vatAmount),
       formatCentsAsDecimal(netAmount),
       row.currency,
