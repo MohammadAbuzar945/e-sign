@@ -20,7 +20,7 @@ import { putFile } from '@documenso/lib/universal/upload/put-file';
 import { buildResellerTransactionsCsv } from '@documenso/lib/utils/build-reseller-transactions-csv';
 import { hasResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import {
-  calculateResellerNetAmountInCents,
+  calculateResellerAmountAfterFeesInCents,
   formatCentsAsDecimal,
   resolveResellerVatAmountInCents,
 } from '@documenso/lib/utils/reseller-vat';
@@ -947,7 +947,7 @@ export default function OrganisationSettingsResellerPage() {
                     <Trans>VAT</Trans>
                   </TableHead>
                   <TableHead>
-                    <Trans>Net</Trans>
+                    <Trans>After fees</Trans>
                   </TableHead>
                   <TableHead>
                     <Trans>Invoice</Trans>
@@ -978,9 +978,9 @@ export default function OrganisationSettingsResellerPage() {
                     transaction.sellerVatNumber ?? profile.vatNumber,
                     transaction.sellerVatStatus ?? profile.vatStatus,
                   );
-                  const netAmount = calculateResellerNetAmountInCents(
+                  const amountAfterFees = calculateResellerAmountAfterFeesInCents(
                     transaction.grossAmount,
-                    vatAmount,
+                    transaction.paystackFeeAmount ?? 0,
                   );
 
                   return (
@@ -1013,7 +1013,7 @@ export default function OrganisationSettingsResellerPage() {
                         {formatCentsAsDecimal(vatAmount)} {transaction.currency}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">
-                        {formatCentsAsDecimal(netAmount)} {transaction.currency}
+                        {formatCentsAsDecimal(amountAfterFees)} {transaction.currency}
                       </TableCell>
                       <TableCell>
                         {transaction.status === 'PENDING' ? (

@@ -117,6 +117,14 @@ export const calculateResellerNetAmountInCents = (
   return grossAmountInCents - vatAmountInCents;
 };
 
+/** Gross settlement after Paystack fees are deducted from the reseller share. */
+export const calculateResellerAmountAfterFeesInCents = (
+  grossAmountInCents: number,
+  paystackFeeAmountInCents = 0,
+) => {
+  return grossAmountInCents - Math.max(0, paystackFeeAmountInCents);
+};
+
 /** Uses stored VAT when present and seller is VAT registered; otherwise derives or returns 0. */
 export const resolveResellerVatAmountInCents = (
   grossAmountInCents: number,

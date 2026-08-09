@@ -1,5 +1,5 @@
 import {
-  calculateResellerNetAmountInCents,
+  calculateResellerAmountAfterFeesInCents,
   formatCentsAsDecimal,
   resolveResellerVatAmountInCents,
 } from './reseller-vat';
@@ -47,7 +47,7 @@ export const buildResellerTransactionsCsv = ({
     'Gross Amount',
     'Paystack Fee',
     'VAT Amount',
-    'Net Amount',
+    'After Fees',
     'Currency',
     'Paystack Reference',
     'Status',
@@ -66,7 +66,10 @@ export const buildResellerTransactionsCsv = ({
       row.sellerVatNumber ?? resellerVatNumber,
       row.sellerVatStatus ?? resellerVatStatus,
     );
-    const netAmount = calculateResellerNetAmountInCents(row.grossAmount, vatAmount);
+    const amountAfterFees = calculateResellerAmountAfterFeesInCents(
+      row.grossAmount,
+      row.paystackFeeAmount ?? 0,
+    );
     const transactionDate = row.completedAt ?? row.createdAt;
 
     return [
@@ -79,7 +82,7 @@ export const buildResellerTransactionsCsv = ({
       formatCentsAsDecimal(row.grossAmount),
       formatCentsAsDecimal(row.paystackFeeAmount ?? 0),
       formatCentsAsDecimal(vatAmount),
-      formatCentsAsDecimal(netAmount),
+      formatCentsAsDecimal(amountAfterFees),
       row.currency,
       row.paystackReference ?? '',
       row.status,
