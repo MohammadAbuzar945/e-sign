@@ -14,6 +14,7 @@ import { buildResellerApplicationTermsCompletionWhere } from '@documenso/lib/ser
 import { buildResellerTransactionsCsv } from '@documenso/lib/utils/build-reseller-transactions-csv';
 import {
   calculateResellerNetAmountInCents,
+  calculateResellerAmountAfterFeesInCents,
   calculateResellerVatAmountInCents,
   resolveResellerVatAmountInCents,
 } from '@documenso/lib/utils/reseller-vat';
@@ -63,6 +64,8 @@ describe('reseller VAT calculations', () => {
     expect(calculateResellerVatAmountInCents(45000, '4123456789')).toBe(5870);
     expect(calculateResellerVatAmountInCents(45000, null, 'REGISTERED')).toBe(5870);
     expect(calculateResellerNetAmountInCents(45000, 5870)).toBe(39130);
+    expect(calculateResellerAmountAfterFeesInCents(45000, 12622)).toBe(32378);
+    expect(calculateResellerAmountAfterFeesInCents(375000, 12622)).toBe(362378);
   });
 
   it('returns zero VAT when status is not registered even if stored VAT exists', () => {
@@ -104,10 +107,12 @@ describe('reseller transaction CSV export', () => {
     expect(csv).toContain('Reseller,"Nomia Creator"');
     expect(csv).toContain('Reseller VAT Number,"4123456789"');
     expect(csv).toContain('Invoice ID');
+    expect(csv).toContain('Paystack Fee');
+    expect(csv).toContain('After Fees');
     expect(csv).toContain('reseller_txn_abc');
     expect(csv).toContain('Jane Buyer');
     expect(csv).toContain('58.70');
-    expect(csv).toContain('391.30');
+    expect(csv).toContain('450.00');
     expect(csv).toContain('ref_123');
   });
 
@@ -136,7 +141,8 @@ describe('reseller transaction CSV export', () => {
     });
 
     expect(csv).toContain('450.00');
-    expect(csv).toContain(',0.00,450.00,');
+    expect(csv).toContain('Paystack Fee');
+    expect(csv).toContain(',0.00,0.00,450.00,');
   });
 });
 

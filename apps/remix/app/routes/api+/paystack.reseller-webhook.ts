@@ -143,6 +143,7 @@ export async function action({ request }: { request: Request }) {
     metadata,
     amountInCents: Number(amount ?? metadata.expectedAmount ?? 0),
     purchaserEmail: customer?.email ? normaliseEmailFromPaystack(customer.email) : '',
+    chargeData: event.data,
   });
 
   return new Response(JSON.stringify({ success: true }), { status: 200 });
