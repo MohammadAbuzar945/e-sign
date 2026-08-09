@@ -55,7 +55,7 @@ export const buildHybridTransactionCharge = ({
 /**
  * Dynamic Paystack split for hybrid checkout. Nomia keeps `transactionCharge`
  * (via remainder); reseller subaccount gets the rest. Paystack fees are shared
- * by both the main account and the reseller subaccount (`bearer_type: all`).
+ * proportionally to each party's share (`bearer_type: all-proportional`).
  */
 export const buildHybridPaystackSplit = ({
   subaccountCode,
@@ -70,7 +70,7 @@ export const buildHybridPaystackSplit = ({
 
   return {
     type: 'flat' as const,
-    bearer_type: 'all' as const,
+    bearer_type: 'all-proportional' as const,
     subaccounts: [
       {
         subaccount: subaccountCode,

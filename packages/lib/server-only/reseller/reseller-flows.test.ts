@@ -1489,7 +1489,7 @@ describe('initializeResellerPurchase flow', () => {
     );
   });
 
-  it('uses shared fee bearing for hybrid single-checkout splits', async () => {
+  it('uses proportional fee bearing for hybrid single-checkout splits', async () => {
     const { initializeResellerPurchase } = await import('./initialize-reseller-purchase');
 
     prismaMock.resellerProfile.findUnique.mockResolvedValue({
@@ -1540,7 +1540,7 @@ describe('initializeResellerPurchase flow', () => {
         amount: 700000,
         split: {
           type: 'flat',
-          bearer_type: 'all',
+          bearer_type: 'all-proportional',
           subaccounts: [
             {
               subaccount: 'ACCT_test',
