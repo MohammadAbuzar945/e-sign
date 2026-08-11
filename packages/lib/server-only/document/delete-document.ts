@@ -5,6 +5,7 @@ import type { DocumentMeta, Envelope, Recipient, User } from '@prisma/client';
 import { DocumentStatus, EnvelopeType, SendStatus, WebhookTriggerEvents } from '@prisma/client';
 
 import { mailer } from '@documenso/email/mailer';
+import { getMailgunTrackingHeaders } from '@documenso/email/mailgun-headers';
 import DocumentCancelTemplate from '@documenso/email/templates/document-cancel';
 import { prisma } from '@documenso/prisma';
 
@@ -271,6 +272,10 @@ const handleDocumentOwnerDelete = async ({
         subject: i18n._(msg`Document Cancelled`),
         html,
         text,
+        headers: getMailgunTrackingHeaders({
+          envelopeId: envelope.id,
+          recipientId: recipient.id,
+        }),
       });
     }),
   );

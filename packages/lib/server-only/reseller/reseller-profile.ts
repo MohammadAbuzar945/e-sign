@@ -405,6 +405,7 @@ export const findResellerTransactions = async ({
       credits: transaction.credits,
       grossAmount: transaction.grossAmount,
       vatAmount: transaction.vatAmount,
+      paystackFeeAmount: transaction.paystackFeeAmount,
       sellerVatStatus: transaction.sellerVatStatus,
       sellerVatNumber: transaction.sellerVatNumber,
       currency: transaction.currency,

@@ -7,9 +7,11 @@ import { useSearchParams } from 'react-router';
 import { UAParser } from 'ua-parser-js';
 
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
+import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { formatDocumentAuditLogAction } from '@documenso/lib/utils/document-audit-logs';
 import { trpc } from '@documenso/trpc/react';
+import { cn } from '@documenso/ui/lib/utils';
 import type { DataTableColumnDef } from '@documenso/ui/primitives/data-table';
 import { DataTable } from '@documenso/ui/primitives/data-table';
 import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
@@ -90,7 +92,14 @@ export const DocumentLogsTable = ({ documentId, userId }: DocumentLogsTableProps
         header: _(msg`Action`),
         accessorKey: 'type',
         cell: ({ row }) => (
-          <span>{formatDocumentAuditLogAction(i18n, row.original, userId).description}</span>
+          <span
+            className={cn({
+              'font-medium text-destructive':
+                row.original.type === DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
+            })}
+          >
+            {formatDocumentAuditLogAction(i18n, row.original, userId).description}
+          </span>
         ),
       },
       {

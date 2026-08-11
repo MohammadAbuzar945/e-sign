@@ -20,7 +20,7 @@ import { putFile } from '@documenso/lib/universal/upload/put-file';
 import { buildResellerTransactionsCsv } from '@documenso/lib/utils/build-reseller-transactions-csv';
 import { hasResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
 import {
-  calculateResellerNetAmountInCents,
+  calculateResellerAmountAfterFeesInCents,
   formatCentsAsDecimal,
   resolveResellerVatAmountInCents,
 } from '@documenso/lib/utils/reseller-vat';
@@ -857,8 +857,8 @@ export default function OrganisationSettingsResellerPage() {
               </h2>
               <p className="text-sm text-muted-foreground">
                 <Trans>
-                  Filter and export purchaser details, invoice IDs, amounts, VAT, and Paystack
-                  references.
+                  Filter and export purchaser details, invoice IDs, amounts, VAT, Paystack fees,
+                  and Paystack references.
                 </Trans>
               </p>
             </div>
@@ -941,10 +941,13 @@ export default function OrganisationSettingsResellerPage() {
                     <Trans>Gross</Trans>
                   </TableHead>
                   <TableHead>
+                    <Trans>Paystack fee</Trans>
+                  </TableHead>
+                  <TableHead>
                     <Trans>VAT</Trans>
                   </TableHead>
                   <TableHead>
-                    <Trans>Net</Trans>
+                    <Trans>After fees</Trans>
                   </TableHead>
                   <TableHead>
                     <Trans>Invoice</Trans>
@@ -954,7 +957,7 @@ export default function OrganisationSettingsResellerPage() {
               <TableBody>
                 {isTransactionsLoading && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground">
                       <Trans>Loading transactions...</Trans>
                     </TableCell>
                   </TableRow>
@@ -962,7 +965,7 @@ export default function OrganisationSettingsResellerPage() {
 
                 {!isTransactionsLoading && (transactions?.data ?? []).length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground">
                       <Trans>No transactions found for the selected filters.</Trans>
                     </TableCell>
                   </TableRow>
@@ -975,9 +978,9 @@ export default function OrganisationSettingsResellerPage() {
                     transaction.sellerVatNumber ?? profile.vatNumber,
                     transaction.sellerVatStatus ?? profile.vatStatus,
                   );
-                  const netAmount = calculateResellerNetAmountInCents(
+                  const amountAfterFees = calculateResellerAmountAfterFeesInCents(
                     transaction.grossAmount,
-                    vatAmount,
+                    transaction.paystackFeeAmount ?? 0,
                   );
 
                   return (
@@ -1003,10 +1006,14 @@ export default function OrganisationSettingsResellerPage() {
                         {formatCentsAsDecimal(transaction.grossAmount)} {transaction.currency}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">
+                        {formatCentsAsDecimal(transaction.paystackFeeAmount ?? 0)}{' '}
+                        {transaction.currency}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">
                         {formatCentsAsDecimal(vatAmount)} {transaction.currency}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">
-                        {formatCentsAsDecimal(netAmount)} {transaction.currency}
+                        {formatCentsAsDecimal(amountAfterFees)} {transaction.currency}
                       </TableCell>
                       <TableCell>
                         {transaction.status === 'PENDING' ? (

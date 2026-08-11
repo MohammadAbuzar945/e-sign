@@ -9,6 +9,8 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
 
 import { calculateResellerVatAmountInCents } from '@documenso/lib/utils/reseller-vat';
+import { extractResellerSubaccountPaystackFeeInCents } from '@documenso/lib/utils/extract-reseller-paystack-fee';
+import type { PaystackChargeSuccessFeeSource } from '@documenso/lib/utils/extract-reseller-paystack-fee';
 
 import {
   resolveResellerPurchaseInvoiceId,
@@ -62,6 +64,8 @@ export type ProcessResellerPaystackWebhookOptions = {
   amountInCents: number;
   purchaserEmail: string;
   purchaserName?: string;
+  /** Raw charge.success `data` used to attribute Paystack fees to the reseller subaccount. */
+  chargeData?: PaystackChargeSuccessFeeSource;
 };
 
 const buildTransactionRecordData = ({
@@ -83,6 +87,7 @@ const buildTransactionRecordData = ({
   sellerDisplayName,
   sellerPhysicalAddress,
   sellerAffiliateSlug,
+  paystackFeeAmount,
 }: {
   profile: {
     id: string;
@@ -114,6 +119,7 @@ const buildTransactionRecordData = ({
   sellerDisplayName?: string | null;
   sellerPhysicalAddress?: string | null;
   sellerAffiliateSlug?: string | null;
+  paystackFeeAmount: number;
 }) => ({
   resellerProfileId: profile.id,
   resellerOrganisationId: profile.organisationId,
@@ -124,6 +130,7 @@ const buildTransactionRecordData = ({
   credits,
   grossAmount,
   vatAmount,
+  paystackFeeAmount,
   sellerVatStatus: sellerVatStatus ?? null,
   sellerVatNumber: sellerVatNumber?.trim() || null,
   sellerDisplayName: sellerDisplayName?.trim() || null,
@@ -145,6 +152,7 @@ export const processResellerPaystackWebhook = async ({
   amountInCents,
   purchaserEmail,
   purchaserName,
+  chargeData,
 }: ProcessResellerPaystackWebhookOptions) => {
   if (metadata.type !== 'reseller-credit-purchase') {
     return { handled: false as const };
@@ -287,6 +295,10 @@ export const processResellerPaystackWebhook = async ({
     typeof metadata.subaccountCode === 'string'
       ? metadata.subaccountCode
       : profile.paystackSubaccountCode;
+  const paystackFeeAmount = extractResellerSubaccountPaystackFeeInCents(
+    chargeData ?? {},
+    paystackSubaccountCode,
+  );
   const purchaseGroupId =
     typeof metadata.purchaseGroupId === 'string' ? metadata.purchaseGroupId : null;
   const nomiaPurchaseReference = isHybridSingleCheckout
@@ -316,8 +328,17 @@ export const processResellerPaystackWebhook = async ({
           sellerDisplayName: resolveResellerDisplayName(profile),
           sellerPhysicalAddress: profile.physicalAddress,
           sellerAffiliateSlug: profile.affiliateSlug,
+          paystackFeeAmount,
         }),
       }));
+
+    const transactionWithFees =
+      existingTransaction && existingTransaction.paystackFeeAmount !== paystackFeeAmount
+        ? await tx.resellerCreditTransaction.update({
+            where: { id: existingTransaction.id },
+            data: { paystackFeeAmount },
+          })
+        : transactionRecord;
 
     const [fromOrganisation, toOrganisation] = await Promise.all([
       tx.organisation.findUniqueOrThrow({
@@ -339,7 +360,7 @@ export const processResellerPaystackWebhook = async ({
 
     if (!hasTransferredCredits) {
       return {
-        transaction: transactionRecord,
+        transaction: transactionWithFees,
         fulfilled: false as const,
         shouldNotifyReseller: !existingTransaction,
       };
@@ -388,6 +409,7 @@ export const processResellerPaystackWebhook = async ({
         vatAmount,
         credits: resellerCreditsToTransfer,
         grossAmount: resellerGrossAmount,
+        paystackFeeAmount,
         purchaserName: resolvedPurchaserName,
         purchaserEmail,
       },

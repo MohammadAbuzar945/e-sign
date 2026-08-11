@@ -248,7 +248,7 @@ export const initializeResellerPurchase = async ({
       metadata,
       ...(isHybridSingleCheckout
         ? {
-            // Both Nomia and the reseller bear Paystack fees (`bearer_type: all`).
+            // Nomia and the reseller bear Paystack fees by share (`all-proportional`).
             split: buildHybridPaystackSplit({
               subaccountCode: profile.paystackSubaccountCode,
               amountInCents,

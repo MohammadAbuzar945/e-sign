@@ -12,9 +12,9 @@ export const TemplateFooter = ({ isDocument = true }: TemplateFooterProps) => {
   const branding = useBranding();
 
   return (
-    <Section>
+    <Section style={{ textAlign: 'center' }}>
       {isDocument && !branding.brandingHidePoweredBy && (
-        <Text className="my-4 text-base text-slate-400">
+        <Text className="my-4 text-base text-slate-400" style={{ textAlign: 'center' }}>
           <Trans>
             This document was sent using{' '}
             <Link className="text-[#3346b1]" href={env('NEXT_PUBLIC_WEBAPP_URL') ?? 'http://localhost:3000'}>
@@ -26,7 +26,7 @@ export const TemplateFooter = ({ isDocument = true }: TemplateFooterProps) => {
       )}
 
       {branding.brandingEnabled && branding.brandingCompanyDetails && (
-        <Text className="my-8 text-sm text-slate-400">
+        <Text className="my-8 text-sm text-slate-400" style={{ textAlign: 'center' }}>
           {branding.brandingCompanyDetails.split('\n').map((line, idx) => {
             return (
               <>
@@ -39,9 +39,8 @@ export const TemplateFooter = ({ isDocument = true }: TemplateFooterProps) => {
       )}
 
       {!branding.brandingEnabled && (
-        <Text className="my-8 text-sm text-slate-400">
-          Nomia Africa (Pty) Limited.
-          <br />
+        <Text className="my-4 text-sm text-slate-400" style={{ textAlign: 'center', margin: '8px 0' }}>
+          Nomia Africa (Pty) Ltd.
         </Text>
       )}
     </Section>

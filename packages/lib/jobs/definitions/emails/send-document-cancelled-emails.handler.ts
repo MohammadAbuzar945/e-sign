@@ -4,6 +4,7 @@ import { msg } from '@lingui/core/macro';
 import { EnvelopeType, ReadStatus, SendStatus, SigningStatus } from '@prisma/client';
 
 import { mailer } from '@documenso/email/mailer';
+import { getMailgunTrackingHeaders } from '@documenso/email/mailgun-headers';
 import DocumentCancelTemplate from '@documenso/email/templates/document-cancel';
 import { isRecipientEmailValidForSending } from '@documenso/lib/utils/recipients';
 import { prisma } from '@documenso/prisma';
@@ -112,6 +113,10 @@ export const run = async ({
           subject: i18n._(msg`Document "${envelope.title}" Cancelled`),
           html,
           text,
+          headers: getMailgunTrackingHeaders({
+            envelopeId: envelope.id,
+            recipientId: recipient.id,
+          }),
         });
       }),
     );

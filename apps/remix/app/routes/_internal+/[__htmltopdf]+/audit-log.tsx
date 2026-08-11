@@ -61,6 +61,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const { data: auditLogs } = await findDocumentAuditLogs({
     documentId: documentId,
     userId: envelope.userId,
+    userEmail: envelope.user.email,
     teamId: envelope.teamId,
     perPage: 100_000,
   });

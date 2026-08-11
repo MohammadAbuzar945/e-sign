@@ -4,6 +4,7 @@ import { msg } from '@lingui/core/macro';
 import { EnvelopeType } from '@prisma/client';
 
 import { mailer } from '@documenso/email/mailer';
+import { getMailgunTrackingHeaders } from '@documenso/email/mailgun-headers';
 import { AccessAuth2FAEmailTemplate } from '@documenso/email/templates/access-auth-2fa';
 import { isRecipientEmailValidForSending } from '@documenso/lib/utils/recipients';
 import { prisma } from '@documenso/prisma';
@@ -120,6 +121,10 @@ export const send2FATokenEmail = async ({ token, envelopeId }: Send2FATokenEmail
         subject,
         html,
         text,
+        headers: getMailgunTrackingHeaders({
+          envelopeId: envelope.id,
+          recipientId: recipient.id,
+        }),
       });
 
       await tx.documentAuditLog.create({

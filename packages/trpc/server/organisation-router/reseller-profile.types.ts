@@ -130,6 +130,7 @@ export const ZFindResellerTransactionsResponseSchema = z.object({
       credits: z.number(),
       grossAmount: z.number(),
       vatAmount: z.number(),
+      paystackFeeAmount: z.number(),
       sellerVatStatus: z.enum(['NOT_REGISTERED', 'REGISTERED']).nullable(),
       sellerVatNumber: z.string().nullable(),
       currency: z.string(),

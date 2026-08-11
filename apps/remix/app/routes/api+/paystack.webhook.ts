@@ -441,6 +441,7 @@ const processPaystackWebhookEvent = async (event: {
         metadata,
         amountInCents: Number(amount ?? metadata.expectedAmount ?? 0),
         purchaserEmail: customer?.email ? normaliseEmailFromPaystack(customer.email) : '',
+        chargeData: event.data,
       });
 
       return {

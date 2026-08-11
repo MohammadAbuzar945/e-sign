@@ -346,7 +346,8 @@ const renderRow = (options: RenderRowOptions) => {
     text: formatDocumentAuditLogAction(i18n, auditLog).description,
     fontFamily: 'Inter',
     fontSize: textSm,
-    fill: textForeground,
+    fill:
+      auditLog.type === DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED ? '#ef4444' : textForeground,
   });
 
   const auditLogTimestampText = new Konva.Text({
@@ -691,6 +692,7 @@ const getAuditLogIndicatorColor = (type: string) =>
   match(type)
     .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_COMPLETED, () => '#22c55e') // bg-green-500
     .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_REJECTED, () => '#ef4444') // bg-red-500
+    .with(DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED, () => '#ef4444') // bg-red-500
     .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_SENT, () => '#f97316') // bg-orange-500
     .with(
       P.union(
