@@ -21,7 +21,7 @@ export const ZExportResellerTransactionsResponseSchema = z.object({
       credits: z.number(),
       grossAmount: z.number(),
       vatAmount: z.number(),
-      netAmount: z.number(),
+      paystackFeeAmount: z.number(),
       currency: z.string(),
       status: z.string(),
       purchaserName: z.string(),
