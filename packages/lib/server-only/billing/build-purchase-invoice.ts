@@ -36,7 +36,7 @@ export const buildPurchaseInvoiceHtml = ({
   logoUrl?: string;
   resellerLogoUrl?: string | null;
 }) => {
-  const issuedAt = invoice.date.toLocaleString(undefined, {
+  const issuedAt = new Date(invoice.date).toLocaleString('en-ZA', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -434,7 +434,7 @@ export const buildPurchaseInvoicePdf = async ({
 
   try {
     await page.setContent(html, {
-      waitUntil: 'networkidle',
+      waitUntil: 'load',
       timeout: 15_000,
     });
 

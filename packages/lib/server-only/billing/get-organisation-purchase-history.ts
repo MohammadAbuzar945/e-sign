@@ -378,12 +378,30 @@ const mapNomiaPurchaseToHistoryItem = ({
   };
 };
 
-const mapResellerTransactionToHistoryItem = ({
+type ResellerTransactionForInvoice = {
+  id: string;
+  createdAt: Date;
+  completedAt: Date | null;
+  credits: number;
+  grossAmount: number;
+  currency: string;
+  status: string;
+  paystackReference: string | null;
+  purchaseGroupId: string | null;
+  sellerDisplayName: string | null;
+  sellerPhysicalAddress: string | null;
+  sellerAffiliateSlug: string | null;
+  sellerVatStatus: 'NOT_REGISTERED' | 'REGISTERED' | null;
+  sellerVatNumber: string | null;
+  resellerProfile: ResellerTransactionWithRelations['resellerProfile'];
+};
+
+export const mapResellerTransactionToHistoryItem = ({
   transaction,
   buyerVatNumber,
   buyerBillingAddress,
 }: {
-  transaction: ResellerTransactionWithRelations;
+  transaction: ResellerTransactionForInvoice;
   buyerVatNumber: string | null;
   buyerBillingAddress: string | null;
 }): OrganisationPurchaseHistoryItem => {
