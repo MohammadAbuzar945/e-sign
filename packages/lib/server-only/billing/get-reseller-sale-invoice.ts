@@ -3,7 +3,12 @@ import { ResellerCreditTransactionStatus } from '@prisma/client';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
 
-import { getOrganisationPurchaseInvoice } from './organisation-purchase-invoice';
+import {
+  mapResellerTransactionToHistoryItem,
+  resolveBuyerBillingAddressForOrganisation,
+  resolveBuyerVatNumberForOrganisation,
+} from './get-organisation-purchase-history';
+import { resolveResellerInvoiceLogoDataUrl } from './organisation-purchase-invoice';
 
 const RESELLER_SALE_INVOICE_STATUSES: ResellerCreditTransactionStatus[] = [
   ResellerCreditTransactionStatus.COMPLETED,
@@ -11,14 +16,16 @@ const RESELLER_SALE_INVOICE_STATUSES: ResellerCreditTransactionStatus[] = [
 ];
 
 /**
- * Resolve a reseller-issued purchase invoice for the selling organisation.
- * Invoice IDs are `reseller_{transactionId}` and live on the purchaser org ledger.
+ * Resolve a reseller-issued sale invoice for the selling organisation.
+ * Built from the transaction snapshot so a deleted buyer org cannot break download.
  */
 export const getResellerSaleInvoice = async ({
   resellerOrganisationId,
+  resellerProfileId,
   invoiceId,
 }: {
   resellerOrganisationId: string;
+  resellerProfileId?: string | null;
   invoiceId: string;
 }) => {
   if (!invoiceId.startsWith('reseller_')) {
@@ -32,13 +39,53 @@ export const getResellerSaleInvoice = async ({
   const transaction = await prisma.resellerCreditTransaction.findFirst({
     where: {
       id: transactionId,
-      resellerOrganisationId,
       status: { in: RESELLER_SALE_INVOICE_STATUSES },
+      OR: [
+        { resellerOrganisationId },
+        ...(resellerProfileId ? [{ resellerProfileId }] : []),
+      ],
     },
     select: {
+      id: true,
+      createdAt: true,
+      completedAt: true,
+      credits: true,
+      grossAmount: true,
+      currency: true,
+      status: true,
+      paystackReference: true,
+      purchaseGroupId: true,
       purchaserOrganisationId: true,
       purchaserName: true,
       purchaserEmail: true,
+      purchaserOrganisationName: true,
+      sellerDisplayName: true,
+      sellerPhysicalAddress: true,
+      sellerAffiliateSlug: true,
+      sellerVatStatus: true,
+      sellerVatNumber: true,
+      package: {
+        select: {
+          creditAmount: true,
+          catalogPackageId: true,
+        },
+      },
+      resellerProfile: {
+        select: {
+          affiliateSlug: true,
+          brandingEnabled: true,
+          brandingLogo: true,
+          brandingCompanyDetails: true,
+          physicalAddress: true,
+          vatStatus: true,
+          vatNumber: true,
+          organisation: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -48,13 +95,35 @@ export const getResellerSaleInvoice = async ({
     });
   }
 
-  const result = await getOrganisationPurchaseInvoice({
-    organisationId: transaction.purchaserOrganisationId,
-    invoiceId,
+  const [buyerVatNumber, buyerBillingAddress] = await Promise.all([
+    resolveBuyerVatNumberForOrganisation(transaction.purchaserOrganisationId).catch(() => null),
+    resolveBuyerBillingAddressForOrganisation(transaction.purchaserOrganisationId).catch(
+      () => null,
+    ),
+  ]);
+
+  const invoice = mapResellerTransactionToHistoryItem({
+    transaction,
+    buyerVatNumber,
+    buyerBillingAddress,
   });
 
+  const resellerLogoUrl =
+    invoice.resellerSeller?.hasLogo && invoice.resellerSeller.affiliateSlug
+      ? await resolveResellerInvoiceLogoDataUrl(invoice.resellerSeller.affiliateSlug)
+      : null;
+
   return {
-    ...result,
+    invoice,
+    organisation: {
+      name: transaction.purchaserOrganisationName,
+      url: '',
+      owner: {
+        name: transaction.purchaserName,
+        email: transaction.purchaserEmail,
+      },
+    },
+    resellerLogoUrl,
     purchaserName: transaction.purchaserName,
     purchaserEmail: transaction.purchaserEmail,
   };
