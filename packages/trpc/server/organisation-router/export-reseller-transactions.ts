@@ -1,8 +1,5 @@
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
-import {
-  calculateResellerNetAmountInCents,
-  resolveResellerVatAmountInCents,
-} from '@documenso/lib/utils/reseller-vat';
+import { resolveResellerVatAmountInCents } from '@documenso/lib/utils/reseller-vat';
 import { exportResellerTransactions } from '@documenso/lib/server-only/reseller/reseller-profile';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { assertResellerFeatureAccess } from '@documenso/lib/utils/reseller-feature-access';
@@ -60,7 +57,7 @@ export const exportResellerTransactionsRoute = authenticatedProcedure
           credits: transaction.credits,
           grossAmount: transaction.grossAmount,
           vatAmount,
-          netAmount: calculateResellerNetAmountInCents(transaction.grossAmount, vatAmount),
+          paystackFeeAmount: transaction.paystackFeeAmount ?? 0,
           currency: transaction.currency,
           status: transaction.status,
           purchaserName: transaction.purchaserName,
