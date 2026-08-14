@@ -5,7 +5,11 @@ import { prisma } from '@documenso/prisma';
 
 export const NOMIA_INVOICE_NUMBER_PREFIX = 'NOM' as const;
 export const RESELLER_INVOICE_NUMBER_PREFIX = 'RS' as const;
-export const NOMIA_INVOICE_NUMBER_SELLER_KEY = 'nomia' as const;
+
+/** Single platform-wide continuous counter for every invoice (Nomia + all resellers). */
+export const PLATFORM_INVOICE_SEQUENCE_PREFIX = 'INV' as const;
+export const PLATFORM_INVOICE_SEQUENCE_SELLER_KEY = 'platform' as const;
+export const CONTINUOUS_INVOICE_SEQUENCE_DATE_KEY = 'ALL' as const;
 
 export type InvoiceNumberPrefix =
   | typeof NOMIA_INVOICE_NUMBER_PREFIX
@@ -32,26 +36,31 @@ export const formatSequentialInvoiceNumber = ({
 }) => `${prefix}-${dateKey}-${sequence.toString().padStart(3, '0')}`;
 
 /**
- * Atomically allocates the next display invoice number for a seller/day.
- * `nextValue` on the sequence row is the last allocated integer.
+ * Atomically allocates the next display invoice number from the shared
+ * platform counter. Sequence continues across days, issuers, and resellers.
+ * The date segment is the issue date only.
  */
 export const allocateInvoiceNumber = async ({
   prefix,
-  sellerKey,
   issuedAt,
   tx = prisma,
 }: {
   prefix: InvoiceNumberPrefix;
-  sellerKey: string;
   issuedAt: Date;
   tx?: DbClient;
 }) => {
-  const dateKey = formatInvoiceDateKeyUtc(issuedAt);
+  const displayDateKey = formatInvoiceDateKeyUtc(issuedAt);
   const id = `c${nanoid(24)}`;
 
   const rows = await tx.$queryRaw<{ nextValue: number }[]>`
     INSERT INTO "InvoiceNumberSequence" ("id", "prefix", "sellerKey", "dateKey", "nextValue")
-    VALUES (${id}, ${prefix}, ${sellerKey}, ${dateKey}, 1)
+    VALUES (
+      ${id},
+      ${PLATFORM_INVOICE_SEQUENCE_PREFIX},
+      ${PLATFORM_INVOICE_SEQUENCE_SELLER_KEY},
+      ${CONTINUOUS_INVOICE_SEQUENCE_DATE_KEY},
+      1
+    )
     ON CONFLICT ("prefix", "sellerKey", "dateKey")
     DO UPDATE SET "nextValue" = "InvoiceNumberSequence"."nextValue" + 1
     RETURNING "nextValue"
@@ -65,7 +74,7 @@ export const allocateInvoiceNumber = async ({
 
   return formatSequentialInvoiceNumber({
     prefix,
-    dateKey,
+    dateKey: displayDateKey,
     sequence,
   });
 };
@@ -79,23 +88,20 @@ export const allocateNomiaInvoiceNumber = async ({
 }) =>
   allocateInvoiceNumber({
     prefix: NOMIA_INVOICE_NUMBER_PREFIX,
-    sellerKey: NOMIA_INVOICE_NUMBER_SELLER_KEY,
     issuedAt,
     tx,
   });
 
 export const allocateResellerInvoiceNumber = async ({
-  resellerOrganisationId,
   issuedAt,
   tx,
 }: {
-  resellerOrganisationId: string;
+  resellerOrganisationId?: string;
   issuedAt: Date;
   tx?: DbClient;
 }) =>
   allocateInvoiceNumber({
     prefix: RESELLER_INVOICE_NUMBER_PREFIX,
-    sellerKey: resellerOrganisationId,
     issuedAt,
     tx,
   });
