@@ -38,7 +38,11 @@ export const formatSequentialInvoiceNumber = ({
 /**
  * Atomically allocates the next display invoice number from the shared
  * platform counter. Sequence continues across days, issuers, and resellers.
- * The date segment is the issue date only.
+ * The date segment is the issue date only — it does not reset the number.
+ *
+ * Before incrementing, the counter is raised to at least the max sequence
+ * already present on Nomia/reseller invoices (avoids restarting at 001 after
+ * a daily-reset backfill or a missing platform seed row).
  */
 export const allocateInvoiceNumber = async ({
   prefix,
@@ -53,16 +57,44 @@ export const allocateInvoiceNumber = async ({
   const id = `c${nanoid(24)}`;
 
   const rows = await tx.$queryRaw<{ nextValue: number }[]>`
-    INSERT INTO "InvoiceNumberSequence" ("id", "prefix", "sellerKey", "dateKey", "nextValue")
-    VALUES (
-      ${id},
-      ${PLATFORM_INVOICE_SEQUENCE_PREFIX},
-      ${PLATFORM_INVOICE_SEQUENCE_SELLER_KEY},
-      ${CONTINUOUS_INVOICE_SEQUENCE_DATE_KEY},
-      1
+    WITH max_existing AS (
+      SELECT COALESCE(MAX(seq), 0)::int AS max_seq
+      FROM (
+        SELECT CAST(substring("invoiceNumber" FROM 14) AS INTEGER) AS seq
+        FROM "OrganisationCreditPurchase"
+        WHERE "invoiceNumber" IS NOT NULL
+          AND "invoiceNumber" ~ '^NOM-[0-9]{8}-[0-9]+$'
+
+        UNION ALL
+
+        SELECT CAST(substring("invoiceNumber" FROM 13) AS INTEGER) AS seq
+        FROM "ResellerCreditTransaction"
+        WHERE "invoiceNumber" IS NOT NULL
+          AND "invoiceNumber" ~ '^RS-[0-9]{8}-[0-9]+$'
+      ) AS parsed
+    ),
+    ensured AS (
+      INSERT INTO "InvoiceNumberSequence" ("id", "prefix", "sellerKey", "dateKey", "nextValue")
+      SELECT
+        ${id},
+        ${PLATFORM_INVOICE_SEQUENCE_PREFIX},
+        ${PLATFORM_INVOICE_SEQUENCE_SELLER_KEY},
+        ${CONTINUOUS_INVOICE_SEQUENCE_DATE_KEY},
+        (SELECT max_seq FROM max_existing)
+      ON CONFLICT ("prefix", "sellerKey", "dateKey")
+      DO UPDATE SET
+        "nextValue" = GREATEST(
+          "InvoiceNumberSequence"."nextValue",
+          EXCLUDED."nextValue"
+        )
+      RETURNING "id"
     )
-    ON CONFLICT ("prefix", "sellerKey", "dateKey")
-    DO UPDATE SET "nextValue" = "InvoiceNumberSequence"."nextValue" + 1
+    UPDATE "InvoiceNumberSequence"
+    SET "nextValue" = "InvoiceNumberSequence"."nextValue" + 1
+    WHERE "prefix" = ${PLATFORM_INVOICE_SEQUENCE_PREFIX}
+      AND "sellerKey" = ${PLATFORM_INVOICE_SEQUENCE_SELLER_KEY}
+      AND "dateKey" = ${CONTINUOUS_INVOICE_SEQUENCE_DATE_KEY}
+      AND EXISTS (SELECT 1 FROM ensured)
     RETURNING "nextValue"
   `;
 
