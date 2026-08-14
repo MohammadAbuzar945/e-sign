@@ -15,6 +15,10 @@ import type { PaystackChargeSuccessFeeSource } from '@documenso/lib/utils/extrac
 import {
   resolveResellerPurchaseInvoiceId,
 } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
+import {
+  allocateNomiaInvoiceNumber,
+  allocateResellerInvoiceNumber,
+} from '@documenso/lib/server-only/billing/allocate-invoice-number';
 import { sendPurchaseInvoiceEmail } from '@documenso/lib/server-only/billing/send-purchase-invoice-email';
 
 import { associateOrganisationWithReseller, resolveResellerDisplayName } from './reseller-association';
@@ -373,6 +377,21 @@ export const processResellerPaystackWebhook = async ({
     });
 
     if (isHybridSingleCheckout && nomiaPurchaseReference && hybridNomiaCredits) {
+      const nomiaCompletedAt = new Date();
+      const existingNomiaPurchase = await tx.organisationCreditPurchase.findUnique({
+        where: { paystackReference: nomiaPurchaseReference },
+        select: { status: true, invoiceNumber: true },
+      });
+
+      const nomiaInvoiceNumber =
+        existingNomiaPurchase?.status === OrganisationCreditPurchaseStatus.COMPLETED &&
+        existingNomiaPurchase.invoiceNumber
+          ? existingNomiaPurchase.invoiceNumber
+          : await allocateNomiaInvoiceNumber({
+              issuedAt: nomiaCompletedAt,
+              tx,
+            });
+
       await tx.organisationCreditPurchase.upsert({
         where: {
           paystackReference: nomiaPurchaseReference,
@@ -386,7 +405,8 @@ export const processResellerPaystackWebhook = async ({
           currency: pkg.currency,
           purchaseGroupId,
           status: OrganisationCreditPurchaseStatus.COMPLETED,
-          completedAt: new Date(),
+          completedAt: nomiaCompletedAt,
+          invoiceNumber: nomiaInvoiceNumber,
         },
         update: {
           organisationId: purchaserOrganisation.id,
@@ -396,16 +416,25 @@ export const processResellerPaystackWebhook = async ({
           currency: pkg.currency,
           purchaseGroupId,
           status: OrganisationCreditPurchaseStatus.COMPLETED,
-          completedAt: new Date(),
+          completedAt: nomiaCompletedAt,
+          invoiceNumber: nomiaInvoiceNumber,
         },
       });
     }
+
+    const completedAt = new Date();
+    const invoiceNumber = await allocateResellerInvoiceNumber({
+      resellerOrganisationId: profile.organisationId,
+      issuedAt: completedAt,
+      tx,
+    });
 
     const completedTransaction = await tx.resellerCreditTransaction.update({
       where: { id: transactionRecord.id },
       data: {
         status: ResellerCreditTransactionStatus.COMPLETED,
-        completedAt: new Date(),
+        completedAt,
+        invoiceNumber,
         vatAmount,
         credits: resellerCreditsToTransfer,
         grossAmount: resellerGrossAmount,

@@ -55,6 +55,7 @@ export const getResellerSaleInvoice = async ({
       status: true,
       paystackReference: true,
       purchaseGroupId: true,
+      invoiceNumber: true,
       purchaserOrganisationId: true,
       purchaserName: true,
       purchaserEmail: true,

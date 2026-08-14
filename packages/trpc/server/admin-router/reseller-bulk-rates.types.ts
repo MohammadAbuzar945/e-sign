@@ -78,6 +78,7 @@ export const ZFindResellerBulkPurchasesRequestSchema = ZFindSearchParamsSchema.e
 export const ZResellerBulkPurchaseSchema = z.object({
   id: z.string(),
   invoiceId: z.string(),
+  invoiceNumber: z.string().nullable(),
   kind: z.enum(['BULK', 'PAYG', 'SUBSCRIPTION']),
   issuer: z.enum(['NOMIA']),
   createdAt: z.date(),
@@ -123,6 +124,7 @@ export const ZExportResellerBulkPurchasesResponseSchema = z.object({
     z.object({
       id: z.string(),
       invoiceId: z.string(),
+      invoiceNumber: z.string().nullable(),
       kind: z.enum(['BULK', 'PAYG', 'SUBSCRIPTION']),
       createdAt: z.date(),
       completedAt: z.date().nullable(),

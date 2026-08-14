@@ -1,5 +1,6 @@
 export type AdminPurchaseInvoiceCsvRow = {
   invoiceId: string;
+  invoiceNumber?: string | null;
   kind: 'BULK' | 'PAYG' | 'SUBSCRIPTION';
   createdAt: Date;
   completedAt: Date | null;
@@ -40,7 +41,8 @@ export const buildAdminPurchaseInvoicesCsv = ({
 }) => {
   const header = [
     'Date',
-    'Invoice ID',
+    'Invoice Number',
+    'Internal ID',
     'Type',
     'Organisation',
     'Organisation URL',
@@ -59,6 +61,7 @@ export const buildAdminPurchaseInvoicesCsv = ({
 
     return [
       date.toISOString(),
+      row.invoiceNumber ?? '',
       row.invoiceId,
       kindLabel(row.kind),
       escapeCsvValue(row.organisationName),

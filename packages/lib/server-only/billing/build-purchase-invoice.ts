@@ -3,6 +3,7 @@ import type { Browser } from 'playwright';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 
 import { env } from '../../utils/env';
+import { resolveDisplayInvoiceNumber } from './allocate-invoice-number';
 import {
   formatAmount,
   type OrganisationPurchaseHistoryItem,
@@ -161,11 +162,13 @@ export const buildPurchaseInvoiceHtml = ({
     ? `<p class="note">${escapeHtml(policy.requiredNote)}</p>`
     : '';
 
+  const displayInvoiceNumber = resolveDisplayInvoiceNumber(invoice.invoiceNumber);
+
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>${escapeHtml(policy.documentTitle)} ${escapeHtml(invoice.invoiceId)}</title>
+    <title>${escapeHtml(policy.documentTitle)} ${escapeHtml(displayInvoiceNumber)}</title>
     <style>
       @page {
         size: A4;
@@ -352,7 +355,7 @@ export const buildPurchaseInvoiceHtml = ({
           ${buyerVatBlock}
         </div>
         <div class="right">
-          <div><strong>Invoice #</strong> ${escapeHtml(invoice.invoiceId)}</div>
+          <div><strong>Invoice #</strong> ${escapeHtml(displayInvoiceNumber)}</div>
           <div><strong>Date</strong> ${escapeHtml(issuedAt)}</div>
           <div><strong>Status</strong> ${escapeHtml(invoice.status)}</div>
           <div><strong>Type</strong> ${escapeHtml(invoice.kind)}</div>

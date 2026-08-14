@@ -21,6 +21,7 @@ export const ZPurchaseHistoryLineItemSchema = z.object({
 
 export const ZOrganisationPurchaseHistoryItemSchema = z.object({
   invoiceId: z.string(),
+  invoiceNumber: z.string().nullable(),
   purchaseGroupId: z.string().nullable(),
   date: z.date(),
   kind: z.enum(['subscription', 'pay_as_you_go', 'reseller', 'bulk']),
