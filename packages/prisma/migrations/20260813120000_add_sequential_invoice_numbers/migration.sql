@@ -1,5 +1,6 @@
 -- Sequential display invoice numbers (NOM-/RS-YYYYMMDD-NNN).
--- Nomia numbers are globally unique. Reseller numbers are unique per reseller org.
+-- One platform-wide continuous sequence shared by Nomia and all resellers.
+-- Prefix = issuer (NOM|RS); date = issue day; number never resets.
 
 CREATE TABLE "InvoiceNumberSequence" (
     "id" TEXT NOT NULL,
@@ -19,89 +20,62 @@ CREATE UNIQUE INDEX "OrganisationCreditPurchase_invoiceNumber_key"
   ON "OrganisationCreditPurchase"("invoiceNumber");
 
 ALTER TABLE "ResellerCreditTransaction" ADD COLUMN "invoiceNumber" TEXT;
--- Per-seller uniqueness: RS-YYYYMMDD-001 may repeat across different reseller orgs.
-CREATE UNIQUE INDEX "ResellerCreditTransaction_resellerOrganisationId_invoiceNumber_key"
-  ON "ResellerCreditTransaction"("resellerOrganisationId", "invoiceNumber");
+CREATE UNIQUE INDEX "ResellerCreditTransaction_invoiceNumber_key"
+  ON "ResellerCreditTransaction"("invoiceNumber");
 
--- Backfill Nomia completed purchases (platform-wide per UTC day).
-WITH ordered AS (
+-- Number every completed invoice in one continuous platform sequence.
+CREATE TEMP TABLE "_invoice_number_backfill" ON COMMIT DROP AS
+WITH combined AS (
   SELECT
+    'NOM'::text AS prefix,
     id,
-    to_char((COALESCE("completedAt", "createdAt") AT TIME ZONE 'UTC'), 'YYYYMMDD') AS date_key,
-    ROW_NUMBER() OVER (
-      PARTITION BY to_char((COALESCE("completedAt", "createdAt") AT TIME ZONE 'UTC'), 'YYYYMMDD')
-      ORDER BY COALESCE("completedAt", "createdAt"), id
-    ) AS seq
+    COALESCE("completedAt", "createdAt") AS issued_at
   FROM "OrganisationCreditPurchase"
   WHERE status = 'COMPLETED'
     AND "invoiceNumber" IS NULL
+
+  UNION ALL
+
+  SELECT
+    'RS'::text AS prefix,
+    id,
+    COALESCE("completedAt", "createdAt") AS issued_at
+  FROM "ResellerCreditTransaction"
+  WHERE status = 'COMPLETED'
+    AND "invoiceNumber" IS NULL
 )
+SELECT
+  prefix,
+  id,
+  to_char((issued_at AT TIME ZONE 'UTC'), 'YYYYMMDD') AS date_key,
+  ROW_NUMBER() OVER (ORDER BY issued_at, prefix, id) AS seq
+FROM combined;
+
 UPDATE "OrganisationCreditPurchase" AS p
-SET "invoiceNumber" = 'NOM-' || o.date_key || '-' || lpad(o.seq::text, 3, '0')
-FROM ordered AS o
-WHERE p.id = o.id;
+SET "invoiceNumber" = 'NOM-' || b.date_key || '-' || lpad(b.seq::text, 3, '0')
+FROM "_invoice_number_backfill" AS b
+WHERE b.prefix = 'NOM'
+  AND p.id = b.id;
 
--- Backfill reseller completed transactions (per reseller org per UTC day).
-WITH ordered AS (
-  SELECT
-    id,
-    "resellerOrganisationId",
-    to_char((COALESCE("completedAt", "createdAt") AT TIME ZONE 'UTC'), 'YYYYMMDD') AS date_key,
-    ROW_NUMBER() OVER (
-      PARTITION BY
-        "resellerOrganisationId",
-        to_char((COALESCE("completedAt", "createdAt") AT TIME ZONE 'UTC'), 'YYYYMMDD')
-      ORDER BY COALESCE("completedAt", "createdAt"), id
-    ) AS seq
-  FROM "ResellerCreditTransaction"
-  WHERE status = 'COMPLETED'
-    AND "invoiceNumber" IS NULL
-)
 UPDATE "ResellerCreditTransaction" AS t
-SET "invoiceNumber" = 'RS-' || o.date_key || '-' || lpad(o.seq::text, 3, '0')
-FROM ordered AS o
-WHERE t.id = o.id;
+SET "invoiceNumber" = 'RS-' || b.date_key || '-' || lpad(b.seq::text, 3, '0')
+FROM "_invoice_number_backfill" AS b
+WHERE b.prefix = 'RS'
+  AND t.id = b.id;
 
--- Seed sequence counters so new allocations continue after backfill.
+-- Seed the shared platform counter from the highest backfilled sequence.
 INSERT INTO "InvoiceNumberSequence" ("id", "prefix", "sellerKey", "dateKey", "nextValue")
 SELECT
-  'c' || substr(md5(random()::text || clock_timestamp()::text || n.date_key), 1, 24),
-  'NOM',
-  'nomia',
-  n.date_key,
-  n.max_seq
+  'c' || substr(md5(random()::text || clock_timestamp()::text || 'platform'), 1, 24),
+  'INV',
+  'platform',
+  'ALL',
+  m.max_seq
 FROM (
-  SELECT
-    substring("invoiceNumber" FROM 5 FOR 8) AS date_key,
-    MAX(CAST(substring("invoiceNumber" FROM 14) AS INTEGER)) AS max_seq
-  FROM "OrganisationCreditPurchase"
-  WHERE "invoiceNumber" IS NOT NULL
-    AND "invoiceNumber" ~ '^NOM-[0-9]{8}-[0-9]+$'
-  GROUP BY substring("invoiceNumber" FROM 5 FOR 8)
-) AS n
-ON CONFLICT ("prefix", "sellerKey", "dateKey")
-DO UPDATE SET "nextValue" = GREATEST(
-  "InvoiceNumberSequence"."nextValue",
-  EXCLUDED."nextValue"
-);
-
-INSERT INTO "InvoiceNumberSequence" ("id", "prefix", "sellerKey", "dateKey", "nextValue")
-SELECT
-  'c' || substr(md5(random()::text || clock_timestamp()::text || r.seller_key || r.date_key), 1, 24),
-  'RS',
-  r.seller_key,
-  r.date_key,
-  r.max_seq
-FROM (
-  SELECT
-    "resellerOrganisationId" AS seller_key,
-    substring("invoiceNumber" FROM 4 FOR 8) AS date_key,
-    MAX(CAST(substring("invoiceNumber" FROM 13) AS INTEGER)) AS max_seq
-  FROM "ResellerCreditTransaction"
-  WHERE "invoiceNumber" IS NOT NULL
-    AND "invoiceNumber" ~ '^RS-[0-9]{8}-[0-9]+$'
-  GROUP BY "resellerOrganisationId", substring("invoiceNumber" FROM 4 FOR 8)
-) AS r
+  SELECT MAX(seq) AS max_seq
+  FROM "_invoice_number_backfill"
+) AS m
+WHERE m.max_seq IS NOT NULL
 ON CONFLICT ("prefix", "sellerKey", "dateKey")
 DO UPDATE SET "nextValue" = GREATEST(
   "InvoiceNumberSequence"."nextValue",

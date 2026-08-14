@@ -1272,7 +1272,8 @@ model OrganisationCreditPurchase {
   @@index([organisationId, status, createdAt])
 }
 
-/// Atomic daily counters for display invoice numbers (NOM-/RS-YYYYMMDD-NNN).
+/// Atomic continuous counters for display invoice numbers (NOM-/RS-YYYYMMDD-NNN).
+/// Platform-wide sequence uses prefix=INV, sellerKey=platform, dateKey=ALL.
 model InvoiceNumberSequence {
   id        String @id @default(cuid())
   prefix    String
@@ -1591,10 +1592,9 @@ model ResellerCreditTransaction {
   completedAt DateTime?
   purchaseGroupId String?
   /// Human-readable sale invoice number (e.g. RS-20260812-001). Set on COMPLETED.
-  /// Unique per reseller organisation (same day sequence can repeat across sellers).
-  invoiceNumber String?
+  /// Globally unique — shares one continuous platform sequence with Nomia invoices.
+  invoiceNumber String? @unique
 
-  @@unique([resellerOrganisationId, invoiceNumber])
   @@index([resellerOrganisationId])
   @@index([status])
   @@index([createdAt])

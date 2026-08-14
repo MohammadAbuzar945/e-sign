@@ -14,10 +14,9 @@ describe('allocate-invoice-number', () => {
   });
 
   it('formats UTC date keys and padded sequences', async () => {
-    const {
-      formatInvoiceDateKeyUtc,
-      formatSequentialInvoiceNumber,
-    } = await import('./allocate-invoice-number');
+    const { formatInvoiceDateKeyUtc, formatSequentialInvoiceNumber } = await import(
+      './allocate-invoice-number'
+    );
 
     expect(formatInvoiceDateKeyUtc(new Date('2026-08-12T23:30:00.000Z'))).toBe('20260812');
     expect(
@@ -36,32 +35,33 @@ describe('allocate-invoice-number', () => {
     ).toBe('RS-20260812-012');
   });
 
-  it('allocates Nomia and reseller numbers from distinct seller keys', async () => {
-    const {
-      allocateNomiaInvoiceNumber,
-      allocateResellerInvoiceNumber,
-    } = await import('./allocate-invoice-number');
+  it('shares one continuous platform sequence across Nomia and resellers', async () => {
+    const { allocateNomiaInvoiceNumber, allocateResellerInvoiceNumber } = await import(
+      './allocate-invoice-number'
+    );
 
     prismaMock.$queryRaw
       .mockResolvedValueOnce([{ nextValue: 1 }])
-      .mockResolvedValueOnce([{ nextValue: 1 }])
-      .mockResolvedValueOnce([{ nextValue: 2 }]);
+      .mockResolvedValueOnce([{ nextValue: 2 }])
+      .mockResolvedValueOnce([{ nextValue: 3 }]);
 
-    const issuedAt = new Date('2026-08-12T10:00:00.000Z');
+    await expect(
+      allocateNomiaInvoiceNumber({ issuedAt: new Date('2026-08-12T10:00:00.000Z') }),
+    ).resolves.toBe('NOM-20260812-001');
 
-    await expect(allocateNomiaInvoiceNumber({ issuedAt })).resolves.toBe('NOM-20260812-001');
     await expect(
       allocateResellerInvoiceNumber({
         resellerOrganisationId: 'org_reseller_a',
-        issuedAt,
-      }),
-    ).resolves.toBe('RS-20260812-001');
-    await expect(
-      allocateResellerInvoiceNumber({
-        resellerOrganisationId: 'org_reseller_a',
-        issuedAt,
+        issuedAt: new Date('2026-08-12T11:00:00.000Z'),
       }),
     ).resolves.toBe('RS-20260812-002');
+
+    await expect(
+      allocateResellerInvoiceNumber({
+        resellerOrganisationId: 'org_reseller_b',
+        issuedAt: new Date('2026-08-13T09:00:00.000Z'),
+      }),
+    ).resolves.toBe('RS-20260813-003');
 
     expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(3);
   });
