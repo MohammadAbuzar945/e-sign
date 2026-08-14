@@ -1591,8 +1591,10 @@ model ResellerCreditTransaction {
   completedAt DateTime?
   purchaseGroupId String?
   /// Human-readable sale invoice number (e.g. RS-20260812-001). Set on COMPLETED.
-  invoiceNumber String? @unique
+  /// Unique per reseller organisation (same day sequence can repeat across sellers).
+  invoiceNumber String?
 
+  @@unique([resellerOrganisationId, invoiceNumber])
   @@index([resellerOrganisationId])
   @@index([status])
   @@index([createdAt])
