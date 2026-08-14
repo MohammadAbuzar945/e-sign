@@ -220,6 +220,7 @@ export const findResellerBulkPurchases = async ({
             currency: true,
             paystackReference: true,
             purchaseType: true,
+            invoiceNumber: true,
             organisation: {
               select: {
                 id: true,
@@ -400,6 +401,7 @@ export const exportCompletedAdminPurchaseInvoices = async ({
             currency: true,
             paystackReference: true,
             purchaseType: true,
+            invoiceNumber: true,
             organisation: {
               select: {
                 name: true,
