@@ -71,18 +71,12 @@ export const sendResellerSaleInvoiceEmail = async ({
           email: true,
         },
       },
-      resellerProfile: {
-        select: {
-          contactEmail: true,
-        },
-      },
     },
   });
 
-  // Always deliver to the organisation owner. contactEmail is optional extra.
+  // Deliver only to the organisation owner — never the payout contactEmail.
   // Do not rely on admin-copy mail — that is skipped when admin email === buyer email.
   const ownerEmail = resellerOrganisation.owner.email?.trim() || '';
-  const contactEmail = resellerOrganisation.resellerProfile?.contactEmail?.trim() || '';
   const explicitEmail = recipientEmail?.trim() || '';
 
   const recipientByNormalised = new Map<string, { address: string; name: string }>();
@@ -102,10 +96,6 @@ export const sendResellerSaleInvoiceEmail = async ({
       ownerEmail,
       resellerOrganisation.owner.name || resellerOrganisation.name || ownerEmail,
     );
-  }
-
-  if (contactEmail) {
-    addRecipient(contactEmail, resellerOrganisation.name || contactEmail);
   }
 
   if (explicitEmail) {
