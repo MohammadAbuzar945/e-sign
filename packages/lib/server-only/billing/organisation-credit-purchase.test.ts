@@ -10,6 +10,9 @@ const prismaMock = vi.hoisted(() => ({
     findMany: vi.fn(),
     count: vi.fn(),
   },
+  organisation: {
+    findUnique: vi.fn(),
+  },
   subscription: {
     findMany: vi.fn(),
     findFirst: vi.fn(),
@@ -25,6 +28,8 @@ const prismaMock = vi.hoisted(() => ({
   nomiaPricePlan: {
     findMany: vi.fn().mockResolvedValue([]),
   },
+  $queryRaw: vi.fn(),
+  $transaction: vi.fn(),
 }));
 
 vi.mock('@documenso/prisma', () => ({
@@ -38,6 +43,10 @@ vi.mock('@documenso/lib/server-only/subscription/get-subscriptions-by-user-id', 
 describe('record-organisation-credit-purchase', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prismaMock.$transaction.mockImplementation(async (callback: (tx: typeof prismaMock) => unknown) =>
+      callback(prismaMock),
+    );
+    prismaMock.$queryRaw.mockResolvedValue([{ nextValue: 1 }]);
   });
 
   it('creates a pending pay-as-you-go purchase when checkout starts', async () => {
@@ -103,6 +112,7 @@ describe('record-organisation-credit-purchase', () => {
         status: 'COMPLETED',
         credits: 50,
         grossAmount: 45000,
+        invoiceNumber: expect.stringMatching(/^NOM-\d{8}-\d{3}$/),
       }),
     });
   });
@@ -111,7 +121,16 @@ describe('record-organisation-credit-purchase', () => {
 describe('get-organisation-purchase-history pay-as-you-go', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prismaMock.$transaction.mockImplementation(async (callback: (tx: typeof prismaMock) => unknown) =>
+      callback(prismaMock),
+    );
+    prismaMock.$queryRaw.mockResolvedValue([{ nextValue: 1 }]);
     prismaMock.resellerProfile.findUnique.mockResolvedValue(null);
+    prismaMock.organisation.findUnique.mockResolvedValue({
+      vatNumber: null,
+      billingAddress: null,
+      resellerProfile: null,
+    });
     prismaMock.organisationCreditPurchase.count.mockResolvedValue(0);
     prismaMock.resellerCreditTransaction.count.mockResolvedValue(0);
     prismaMock.nomiaPricePlan.findMany.mockResolvedValue([]);
@@ -131,6 +150,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         grossAmount: 45000,
         currency: 'ZAR',
         status: 'COMPLETED',
+        invoiceNumber: 'NOM-20260712-001',
         paystackReference: 'ref_123',
       },
     ]);
@@ -173,6 +193,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         grossAmount: 100000,
         currency: 'ZAR',
         status: 'COMPLETED',
+        invoiceNumber: 'NOM-20260712-001',
         paystackReference: 'ref_nomia_only',
       },
     ]);
@@ -185,6 +206,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
     expect(history.data).toHaveLength(1);
     expect(history.data[0]).toMatchObject({
       invoiceId: 'nomia_purchase_grouped',
+      invoiceNumber: 'NOM-20260712-001',
       purchaseGroupId: 'pur_nomia_only',
       kind: 'pay_as_you_go',
       issuer: 'NOMIA',
@@ -207,6 +229,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         grossAmount: 18000,
         currency: 'ZAR',
         status: 'COMPLETED',
+        invoiceNumber: 'NOM-20260712-001',
         paystackReference: 'ref_nomia_split',
       },
     ]);
@@ -221,6 +244,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         grossAmount: 21000,
         currency: 'ZAR',
         status: 'COMPLETED',
+        invoiceNumber: 'RS-20260715-001',
         paystackReference: 'ref_reseller_split',
         sellerVatStatus: 'NOT_REGISTERED',
         sellerVatNumber: null,
@@ -270,6 +294,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         grossAmount: 35000,
         currency: 'ZAR',
         status: 'COMPLETED',
+        invoiceNumber: 'RS-20260715-001',
         paystackReference: 'ref_reseller_1',
         sellerVatStatus: null,
         sellerVatNumber: null,
@@ -327,6 +352,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         grossAmount: 35000,
         currency: 'ZAR',
         status: 'COMPLETED',
+        invoiceNumber: 'RS-20260715-001',
         paystackReference: 'ref_reseller_detached',
         sellerVatStatus: 'REGISTERED',
         sellerVatNumber: '4123456789',
@@ -375,6 +401,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         grossAmount: 40000,
         currency: 'ZAR',
         status: 'COMPLETED',
+        invoiceNumber: 'NOM-20260712-001',
         paystackReference: 'ref_sub_july',
       },
       {
@@ -387,6 +414,7 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         grossAmount: 40000,
         currency: 'ZAR',
         status: 'COMPLETED',
+        invoiceNumber: 'NOM-20260712-001',
         paystackReference: 'ref_sub_aug',
       },
     ]);
@@ -416,6 +444,7 @@ describe('build-purchase-invoice', () => {
       const html = buildPurchaseInvoiceHtml({
         invoice: {
           invoiceId: 'invoice_1',
+          invoiceNumber: 'NOM-20260715-001',
           purchaseGroupId: null,
           date: new Date('2026-07-15T10:00:00.000Z'),
           kind: 'pay_as_you_go',
@@ -439,8 +468,10 @@ describe('build-purchase-invoice', () => {
       expect(html).toContain('@page');
       expect(html).toContain('size: A4');
       expect(html).toContain('<h1>Tax Invoice</h1>');
+      expect(html).toContain('<strong>Invoice #</strong> NOM-20260715-001');
+      expect(html).not.toContain('invoice_1');
     },
-    15_000,
+    30_000,
   );
 
   it(
@@ -451,6 +482,7 @@ describe('build-purchase-invoice', () => {
     const html = buildPurchaseInvoiceHtml({
       invoice: {
         invoiceId: 'reseller_1',
+        invoiceNumber: 'RS-20260715-001',
         purchaseGroupId: null,
         date: new Date('2026-07-15T10:00:00.000Z'),
         kind: 'reseller',
@@ -496,6 +528,8 @@ describe('build-purchase-invoice', () => {
     expect(html).toContain('seller-logo');
     expect(html).toContain('Price per credit');
     expect(html).toContain('ZAR 7.00');
+    expect(html).toContain('<strong>Invoice #</strong> RS-20260715-001');
+    expect(html).not.toContain('reseller_1');
   },
   15_000,
   );
@@ -508,6 +542,7 @@ describe('build-purchase-invoice', () => {
     const html = buildPurchaseInvoiceHtml({
       invoice: {
         invoiceId: 'reseller_2',
+        invoiceNumber: 'RS-20260715-001',
         purchaseGroupId: null,
         date: new Date('2026-07-15T10:00:00.000Z'),
         kind: 'reseller',

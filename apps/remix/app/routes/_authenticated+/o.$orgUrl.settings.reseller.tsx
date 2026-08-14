@@ -991,7 +991,7 @@ export default function OrganisationSettingsResellerPage() {
                         ).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="max-w-[180px] truncate font-mono text-xs">
-                        {transaction.invoiceId}
+                        {transaction.invoiceNumber ?? '—'}
                       </TableCell>
                       <TableCell>
                         <div>

@@ -1640,6 +1640,10 @@ describe('initializeResellerPurchase flow', () => {
 });
 
 describe('processResellerPaystackWebhook flow', () => {
+  beforeEach(() => {
+    prismaMock.$queryRaw.mockResolvedValue([{ nextValue: 1 }]);
+  });
+
   const baseMetadata = {
     type: 'reseller-credit-purchase' as const,
     resellerProfileId: 'profile_1',
@@ -1695,6 +1699,7 @@ describe('processResellerPaystackWebhook flow', () => {
       .mockResolvedValueOnce({ id: 'credits_reseller', credits: 100 })
       .mockResolvedValueOnce({ id: 'credits_buyer', credits: 20 });
     prismaMock.userCredits.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.$queryRaw.mockResolvedValue([{ nextValue: 1 }]);
     prismaMock.resellerCreditTransaction.create.mockResolvedValue({
       id: 'txn_1',
       status: ResellerCreditTransactionStatus.PENDING,
@@ -1702,6 +1707,12 @@ describe('processResellerPaystackWebhook flow', () => {
     prismaMock.resellerCreditTransaction.update.mockResolvedValue({
       id: 'txn_1',
       status: ResellerCreditTransactionStatus.COMPLETED,
+      invoiceNumber: 'RS-20260812-001',
+      purchaseGroupId: null,
+      credits: 50,
+      purchaserOrganisationId: 'buyer_org',
+      purchaserEmail: 'buyer@example.com',
+      purchaserName: 'Buyer Name',
     });
     prismaMock.userCredits.update.mockResolvedValue({ id: 'credits_buyer', credits: 70 });
   };
@@ -2063,9 +2074,11 @@ describe('completePendingResellerTransaction flow', () => {
     });
 
     prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
+    prismaMock.$queryRaw.mockResolvedValue([{ nextValue: 1 }]);
     prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue({
       id: 'txn_pending_manual',
       resellerProfileId: 'profile_1',
+      resellerOrganisationId: 'reseller_org',
       purchaserOrganisationId: 'buyer_org',
       credits: 50,
       status: ResellerCreditTransactionStatus.PENDING,
@@ -2080,6 +2093,7 @@ describe('completePendingResellerTransaction flow', () => {
       id: 'txn_pending_manual',
       status: ResellerCreditTransactionStatus.COMPLETED,
       completedAt: new Date('2026-07-13T10:00:00.000Z'),
+      invoiceNumber: 'RS-20260713-001',
     });
 
     const result = await completePendingResellerTransaction({
@@ -2088,6 +2102,14 @@ describe('completePendingResellerTransaction flow', () => {
     });
 
     expect(result.status).toBe(ResellerCreditTransactionStatus.COMPLETED);
+    expect(prismaMock.resellerCreditTransaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: ResellerCreditTransactionStatus.COMPLETED,
+          invoiceNumber: expect.stringMatching(/^RS-\d{8}-\d{3}$/),
+        }),
+      }),
+    );
     expect(prismaMock.userCredits.updateMany).toHaveBeenCalled();
     expect(prismaMock.userCredits.update).toHaveBeenCalledWith(
       expect.objectContaining({

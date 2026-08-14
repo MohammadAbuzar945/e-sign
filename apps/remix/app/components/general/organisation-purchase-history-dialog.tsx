@@ -243,16 +243,21 @@ export const OrganisationPurchaseHistoryDialog = ({
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link
-                            to={`/o/${orgUrl}/purchase-invoice/${encodeURIComponent(item.invoiceId)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <DownloadIcon className="mr-2 h-4 w-4" />
-                            <Trans>Download</Trans>
-                          </Link>
-                        </Button>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {item.invoiceNumber ?? '—'}
+                          </span>
+                          <Button variant="outline" size="sm" asChild>
+                            <Link
+                              to={`/o/${orgUrl}/purchase-invoice/${encodeURIComponent(item.invoiceId)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <DownloadIcon className="mr-2 h-4 w-4" />
+                              <Trans>Download</Trans>
+                            </Link>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

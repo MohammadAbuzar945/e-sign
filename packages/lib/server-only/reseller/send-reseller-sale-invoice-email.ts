@@ -144,7 +144,7 @@ export const sendResellerSaleInvoiceEmail = async ({
     purchaserName: purchaserName || purchaserOrganisation.owner.name || purchaserEmail,
     purchaserEmail: purchaserEmail || purchaserOrganisation.owner.email,
     purchaserOrganisationName: purchaserOrganisation.name,
-    invoiceId: invoice.invoiceId,
+    invoiceId: invoice.invoiceNumber ?? '—',
     invoiceTitle: invoice.title,
     credits: invoice.totalCredits,
     amountLabel,
@@ -166,7 +166,7 @@ export const sendResellerSaleInvoiceEmail = async ({
   );
   const attachments = [
     {
-      filename: `reseller-invoice-${invoice.invoiceId}.pdf`,
+      filename: `reseller-invoice-${invoice.invoiceNumber ?? invoice.invoiceId}.pdf`,
       content: Buffer.from(pdf),
       contentType: 'application/pdf',
     },

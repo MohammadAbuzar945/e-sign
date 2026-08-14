@@ -2,6 +2,8 @@ import { OrganisationCreditPurchaseStatus, OrganisationCreditPurchaseType } from
 
 import { prisma } from '@documenso/prisma';
 
+import { allocateNomiaInvoiceNumber } from './allocate-invoice-number';
+
 export type CreatePendingOrganisationCreditPurchaseOptions = {
   paystackReference: string;
   organisationId: string;
@@ -36,6 +38,7 @@ export type CompleteOrganisationCreditPurchaseResult = {
     purchaseGroupId: string | null;
     purchaseType: OrganisationCreditPurchaseType;
     status: OrganisationCreditPurchaseStatus;
+    invoiceNumber: string | null;
   };
   isNewlyCompleted: boolean;
 };
@@ -75,6 +78,7 @@ export const createPendingOrganisationCreditPurchase = async ({
       purchaseType,
       status: OrganisationCreditPurchaseStatus.PENDING,
       completedAt: null,
+      invoiceNumber: null,
     },
   });
 };
@@ -106,43 +110,47 @@ export const completeOrganisationCreditPurchase = async ({
   const resolvedPurchaseType =
     purchaseType ?? existingPurchase?.purchaseType ?? OrganisationCreditPurchaseType.PAYG;
 
-  if (existingPurchase) {
-    const purchase = await prisma.organisationCreditPurchase.update({
-      where: {
-        id: existingPurchase.id,
-      },
+  const purchase = await prisma.$transaction(async (tx) => {
+    const invoiceNumber = await allocateNomiaInvoiceNumber({
+      issuedAt: completedAt,
+      tx,
+    });
+
+    if (existingPurchase) {
+      return await tx.organisationCreditPurchase.update({
+        where: {
+          id: existingPurchase.id,
+        },
+        data: {
+          organisationId,
+          userId,
+          credits,
+          grossAmount,
+          currency,
+          purchaseGroupId: purchaseGroupId ?? existingPurchase.purchaseGroupId,
+          purchaseType: resolvedPurchaseType,
+          status: OrganisationCreditPurchaseStatus.COMPLETED,
+          completedAt,
+          invoiceNumber,
+        },
+      });
+    }
+
+    return await tx.organisationCreditPurchase.create({
       data: {
+        paystackReference,
         organisationId,
         userId,
         credits,
         grossAmount,
         currency,
-        purchaseGroupId: purchaseGroupId ?? existingPurchase.purchaseGroupId,
+        purchaseGroupId,
         purchaseType: resolvedPurchaseType,
         status: OrganisationCreditPurchaseStatus.COMPLETED,
         completedAt,
+        invoiceNumber,
       },
     });
-
-    return {
-      purchase,
-      isNewlyCompleted: true,
-    };
-  }
-
-  const purchase = await prisma.organisationCreditPurchase.create({
-    data: {
-      paystackReference,
-      organisationId,
-      userId,
-      credits,
-      grossAmount,
-      currency,
-      purchaseGroupId,
-      purchaseType: resolvedPurchaseType,
-      status: OrganisationCreditPurchaseStatus.COMPLETED,
-      completedAt,
-    },
   });
 
   return {

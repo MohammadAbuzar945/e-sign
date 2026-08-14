@@ -91,7 +91,7 @@ export const sendPurchaseInvoiceEmail = async ({
       const pdf = await buildPurchaseInvoicePdf({ html: htmlDocument });
 
       return {
-        filename: `${invoice.issuer === 'RESELLER' ? 'reseller' : 'nomia'}-invoice-${invoice.invoiceId}.pdf`,
+        filename: `${invoice.issuer === 'RESELLER' ? 'reseller' : 'nomia'}-invoice-${invoice.invoiceNumber ?? invoice.invoiceId}.pdf`,
         content: Buffer.from(pdf),
         contentType: 'application/pdf',
       };
@@ -110,7 +110,7 @@ export const sendPurchaseInvoiceEmail = async ({
     organisationName: organisation.name,
     invoices: invoices.map((invoice) => ({
       invoiceTitle: invoice.title,
-      invoiceId: invoice.invoiceId,
+      invoiceId: invoice.invoiceNumber ?? '—',
       credits: invoice.totalCredits,
       amountLabel: formatAmount(invoice.currency, invoice.totalGrossAmount),
     })),
