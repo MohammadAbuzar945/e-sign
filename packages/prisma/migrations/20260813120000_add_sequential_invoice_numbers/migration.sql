@@ -1,4 +1,5 @@
 -- Sequential display invoice numbers (NOM-/RS-YYYYMMDD-NNN).
+-- Nomia numbers are globally unique. Reseller numbers are unique per reseller org.
 
 CREATE TABLE "InvoiceNumberSequence" (
     "id" TEXT NOT NULL,
@@ -18,8 +19,9 @@ CREATE UNIQUE INDEX "OrganisationCreditPurchase_invoiceNumber_key"
   ON "OrganisationCreditPurchase"("invoiceNumber");
 
 ALTER TABLE "ResellerCreditTransaction" ADD COLUMN "invoiceNumber" TEXT;
-CREATE UNIQUE INDEX "ResellerCreditTransaction_invoiceNumber_key"
-  ON "ResellerCreditTransaction"("invoiceNumber");
+-- Per-seller uniqueness: RS-YYYYMMDD-001 may repeat across different reseller orgs.
+CREATE UNIQUE INDEX "ResellerCreditTransaction_resellerOrganisationId_invoiceNumber_key"
+  ON "ResellerCreditTransaction"("resellerOrganisationId", "invoiceNumber");
 
 -- Backfill Nomia completed purchases (platform-wide per UTC day).
 WITH ordered AS (
