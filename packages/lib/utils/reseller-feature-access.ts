@@ -3,11 +3,11 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 /**
  * TEMPORARY email gate for the reseller programme.
  *
- * To reverse / open to everyone: set `RESELLER_EMAIL_GATE_ENABLED` to `false`.
- * No other call-site changes needed — UI and API already go through
+ * Currently open to everyone (`false`). Set to `true` to restrict again
+ * using the allowlists below. UI and API already go through
  * `hasResellerFeatureAccess` / `assertResellerFeatureAccess`.
  */
-export const RESELLER_EMAIL_GATE_ENABLED = true;
+export const RESELLER_EMAIL_GATE_ENABLED = false;
 
 /** Exact emails allowed while the gate is on (lowercase). */
 export const RESELLER_FEATURE_ALLOWED_EMAILS = [

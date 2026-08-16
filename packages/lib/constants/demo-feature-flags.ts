@@ -35,9 +35,9 @@ export const DEMO_FEATURE_VISIBILITY = {
   /**
    * When true, credits-used and signup-tenure eligibility checks are bypassed
    * for every signed-in user (testing only). Active application / existing profile
-   * still block re-apply.
+   * still block re-apply. Keep `false` in production so eligibility is enforced.
    */
-  RESELLER_ELIGIBILITY_BYPASS: true,
+  RESELLER_ELIGIBILITY_BYPASS: false,
 } as const;
 
 export type DemoFeatureFlag = keyof typeof DEMO_FEATURE_VISIBILITY;

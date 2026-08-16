@@ -35,22 +35,24 @@ describe('reseller credits helpers', () => {
 });
 
 describe('reseller feature access', () => {
-  it('allows exact emails, mdmacdonald.com domain, and emails containing abuzar', async () => {
+  it('opens the programme to every signed-in user while the email gate is off', async () => {
     const {
       hasResellerFeatureAccess,
       isResellerFeatureAllowedEmail,
       RESELLER_EMAIL_GATE_ENABLED,
     } = await import('@documenso/lib/utils/reseller-feature-access');
 
-    expect(RESELLER_EMAIL_GATE_ENABLED).toBe(true);
+    expect(RESELLER_EMAIL_GATE_ENABLED).toBe(false);
+    expect(hasResellerFeatureAccess('other@example.com')).toBe(true);
+    expect(hasResellerFeatureAccess('nomiadeveloper@gmail.com')).toBe(true);
+    expect(hasResellerFeatureAccess(null)).toBe(true);
+
     expect(isResellerFeatureAllowedEmail('nomiadeveloper@gmail.com')).toBe(true);
     expect(isResellerFeatureAllowedEmail('NomiaCreator@gmail.com')).toBe(true);
     expect(isResellerFeatureAllowedEmail('anyone@mdmacdonald.com')).toBe(true);
     expect(isResellerFeatureAllowedEmail('abuzarmohammad945@gmail.com')).toBe(true);
     expect(isResellerFeatureAllowedEmail('test.abuzar@example.com')).toBe(true);
     expect(isResellerFeatureAllowedEmail('other@example.com')).toBe(false);
-    expect(hasResellerFeatureAccess('other@example.com')).toBe(false);
-    expect(hasResellerFeatureAccess('nomiadeveloper@gmail.com')).toBe(true);
   });
 });
 
