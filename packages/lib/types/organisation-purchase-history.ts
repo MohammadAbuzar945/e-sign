@@ -23,6 +23,8 @@ export type PurchaseInvoiceResellerSeller = {
 
 export type OrganisationPurchaseHistoryItem = {
   invoiceId: string;
+  /** Human-readable sequential number (NOM-/RS-YYYYMMDD-NNN). Null while pending. */
+  invoiceNumber: string | null;
   purchaseGroupId: string | null;
   date: Date;
   kind: 'subscription' | 'pay_as_you_go' | 'reseller' | 'bulk';

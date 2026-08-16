@@ -1259,6 +1259,8 @@ model OrganisationCreditPurchase {
   purchaseType      OrganisationCreditPurchaseType @default(PAYG)
   completedAt       DateTime?
   purchaseGroupId   String?
+  /// Human-readable tax invoice number (e.g. NOM-20260812-001). Set on COMPLETED.
+  invoiceNumber     String?  @unique
 
   @@index([createdAt])
   @@index([purchaseGroupId])
@@ -1268,6 +1270,18 @@ model OrganisationCreditPurchase {
   @@index([purchaseType, status, createdAt])
   /// Covers org history (status + createdAt sort); replaces standalone organisationId index.
   @@index([organisationId, status, createdAt])
+}
+
+/// Atomic continuous counters for display invoice numbers (NOM-/RS-YYYYMMDD-NNN).
+/// Platform-wide sequence uses prefix=INV, sellerKey=platform, dateKey=ALL.
+model InvoiceNumberSequence {
+  id        String @id @default(cuid())
+  prefix    String
+  sellerKey String
+  dateKey   String
+  nextValue Int    @default(1)
+
+  @@unique([prefix, sellerKey, dateKey])
 }
 
 enum ResellerApplicationStatus {
@@ -1577,6 +1591,9 @@ model ResellerCreditTransaction {
 
   completedAt DateTime?
   purchaseGroupId String?
+  /// Human-readable sale invoice number (e.g. RS-20260812-001). Set on COMPLETED.
+  /// Globally unique — shares one continuous platform sequence with Nomia invoices.
+  invoiceNumber String? @unique
 
   @@index([resellerOrganisationId])
   @@index([status])

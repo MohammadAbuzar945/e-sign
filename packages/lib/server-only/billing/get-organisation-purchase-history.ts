@@ -352,6 +352,7 @@ const mapNomiaPurchaseToHistoryItem = ({
 
   return {
     invoiceId: resolveNomiaPurchaseInvoiceId({ purchaseId: purchase.id }),
+    invoiceNumber: purchase.invoiceNumber,
     purchaseGroupId: purchase.purchaseGroupId,
     date: purchase.completedAt ?? purchase.createdAt,
     kind,
@@ -388,6 +389,7 @@ type ResellerTransactionForInvoice = {
   status: string;
   paystackReference: string | null;
   purchaseGroupId: string | null;
+  invoiceNumber: string | null;
   sellerDisplayName: string | null;
   sellerPhysicalAddress: string | null;
   sellerAffiliateSlug: string | null;
@@ -409,6 +411,7 @@ export const mapResellerTransactionToHistoryItem = ({
 
   return {
     invoiceId: resolveResellerPurchaseInvoiceId({ transactionId: transaction.id }),
+    invoiceNumber: transaction.invoiceNumber,
     purchaseGroupId: transaction.purchaseGroupId,
     date: transaction.completedAt ?? transaction.createdAt,
     kind: 'reseller',
@@ -457,6 +460,7 @@ const mapLegacySubscriptionToHistoryItem = ({
 
   return {
     invoiceId: `subscription_${subscription.id}`,
+    invoiceNumber: null,
     purchaseGroupId: null,
     date: subscription.updatedAt,
     kind: 'subscription',

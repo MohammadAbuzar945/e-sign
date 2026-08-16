@@ -8,6 +8,7 @@ describe('buildAdminPurchaseInvoicesCsv', () => {
       rows: [
         {
           invoiceId: 'nomia_purchase_1',
+          invoiceNumber: 'NOM-20260703-001',
           kind: 'BULK',
           createdAt: new Date('2026-07-03T10:00:00.000Z'),
           completedAt: new Date('2026-07-03T10:05:00.000Z'),
@@ -25,7 +26,9 @@ describe('buildAdminPurchaseInvoicesCsv', () => {
       ],
     });
 
-    expect(csv).toContain('Invoice ID');
+    expect(csv).toContain('Invoice Number');
+    expect(csv).toContain('Internal ID');
+    expect(csv).toContain('NOM-20260703-001');
     expect(csv).toContain('nomia_purchase_1');
     expect(csv).toContain('Bulk inventory');
     expect(csv).toContain('Acme Corp');

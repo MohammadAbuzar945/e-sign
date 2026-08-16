@@ -140,10 +140,10 @@ export const AdminResellerBulkPurchasesTable = () => {
       },
       {
         header: _(msg`Invoice`),
-        accessorKey: 'invoiceId',
+        accessorKey: 'invoiceNumber',
         cell: ({ row }) => (
           <p className="max-w-[160px] truncate font-mono text-xs text-muted-foreground">
-            {row.original.invoiceId}
+            {row.original.invoiceNumber ?? '—'}
           </p>
         ),
       },

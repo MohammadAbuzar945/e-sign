@@ -400,6 +400,7 @@ export const findResellerTransactions = async ({
     data: data.map((transaction) => ({
       id: transaction.id,
       invoiceId: resolveResellerPurchaseInvoiceId({ transactionId: transaction.id }),
+      invoiceNumber: transaction.invoiceNumber,
       createdAt: transaction.createdAt,
       completedAt: transaction.completedAt,
       credits: transaction.credits,

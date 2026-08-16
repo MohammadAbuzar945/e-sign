@@ -97,7 +97,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     return new Response(Buffer.from(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="reseller-invoice-${invoice.invoiceId}.pdf"`,
+        'Content-Disposition': `attachment; filename="reseller-invoice-${invoice.invoiceNumber ?? invoice.invoiceId}.pdf"`,
         'Cache-Control': 'no-store',
       },
     });

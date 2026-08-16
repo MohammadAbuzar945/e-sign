@@ -220,6 +220,7 @@ export const findResellerBulkPurchases = async ({
             currency: true,
             paystackReference: true,
             purchaseType: true,
+            invoiceNumber: true,
             organisation: {
               select: {
                 id: true,
@@ -278,6 +279,7 @@ export const findResellerBulkPurchases = async ({
     nomiaRows.map(async (row) => ({
       id: row.id,
       invoiceId: resolveNomiaPurchaseInvoiceId({ purchaseId: row.id }),
+      invoiceNumber: row.invoiceNumber,
       kind: mapNomiaPurchaseKind(row.purchaseType),
       issuer: 'NOMIA' as const,
       createdAt: row.createdAt,
@@ -311,6 +313,7 @@ export const findResellerBulkPurchases = async ({
       return {
         id: String(row.id),
         invoiceId: `subscription_${row.id}`,
+        invoiceNumber: null as string | null,
         kind: 'SUBSCRIPTION' as const,
         issuer: 'NOMIA' as const,
         createdAt: row.createdAt,
@@ -398,6 +401,7 @@ export const exportCompletedAdminPurchaseInvoices = async ({
             currency: true,
             paystackReference: true,
             purchaseType: true,
+            invoiceNumber: true,
             organisation: {
               select: {
                 name: true,
@@ -421,6 +425,7 @@ export const exportCompletedAdminPurchaseInvoices = async ({
   const nomiaMapped = nomiaRows.map((row) => ({
     id: row.id,
     invoiceId: resolveNomiaPurchaseInvoiceId({ purchaseId: row.id }),
+    invoiceNumber: row.invoiceNumber,
     kind: mapNomiaPurchaseKind(row.purchaseType),
     createdAt: row.createdAt,
     completedAt: row.completedAt,

@@ -4,6 +4,7 @@ import {
 } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { allocateResellerInvoiceNumber } from '@documenso/lib/server-only/billing/allocate-invoice-number';
 import { resolveResellerPurchaseInvoiceId } from '@documenso/lib/server-only/billing/record-organisation-credit-purchase';
 import { sendPurchaseInvoiceEmail } from '@documenso/lib/server-only/billing/send-purchase-invoice-email';
 import { prisma } from '@documenso/prisma';
@@ -80,11 +81,19 @@ export const completePendingResellerTransaction = async ({
       amount: transaction.credits,
     });
 
+    const completedAt = new Date();
+    const invoiceNumber = await allocateResellerInvoiceNumber({
+      resellerOrganisationId: transaction.resellerOrganisationId,
+      issuedAt: completedAt,
+      tx,
+    });
+
     return tx.resellerCreditTransaction.update({
       where: { id: transaction.id },
       data: {
         status: ResellerCreditTransactionStatus.COMPLETED,
-        completedAt: new Date(),
+        completedAt,
+        invoiceNumber,
       },
     });
   });

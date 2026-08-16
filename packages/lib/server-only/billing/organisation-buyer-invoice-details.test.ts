@@ -86,6 +86,7 @@ describe('buildPurchaseInvoiceHtml Bill to', () => {
     const html = buildPurchaseInvoiceHtml({
       invoice: {
         invoiceId: 'nomia_abc',
+        invoiceNumber: 'NOM-20260715-001',
         purchaseGroupId: null,
         date: new Date('2026-08-01T12:00:00.000Z'),
         kind: 'pay_as_you_go',
@@ -117,12 +118,15 @@ describe('buildPurchaseInvoiceHtml Bill to', () => {
     expect(html).toContain('Buyer VAT number — 4123456789');
     expect(html).toContain('10 Long Street<br />Cape Town<br />8001');
     expect(html).toContain("Abuzar's Org");
+    expect(html).toContain('<strong>Invoice #</strong> NOM-20260715-001');
+    expect(html).not.toContain('nomia_abc');
   });
 
   it('renders purchaser VAT and billing address on reseller invoices', () => {
     const html = buildPurchaseInvoiceHtml({
       invoice: {
         invoiceId: 'reseller_abc',
+        invoiceNumber: 'RS-20260715-001',
         purchaseGroupId: null,
         date: new Date('2026-08-01T12:00:00.000Z'),
         kind: 'reseller',
@@ -162,5 +166,7 @@ describe('buildPurchaseInvoiceHtml Bill to', () => {
     expect(html).toContain('Buyer VAT number — 4123456789');
     expect(html).toContain('10 Long Street<br />Cape Town<br />8001');
     expect(html).toContain('Acme Trading');
+    expect(html).toContain('<strong>Invoice #</strong> RS-20260715-001');
+    expect(html).not.toContain('reseller_abc');
   });
 });
