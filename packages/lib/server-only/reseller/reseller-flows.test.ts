@@ -225,7 +225,7 @@ describe('reseller demo extras access', () => {
 });
 
 describe('getResellerEligibility flow', () => {
-  it('bypasses credits/tenure for all users when RESELLER_ELIGIBILITY_BYPASS is on', async () => {
+  it('enforces credits and tenure eligibility for all users', async () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     setupOrganisationMetrics({
@@ -242,8 +242,13 @@ describe('getResellerEligibility flow', () => {
       userEmail: 'other@example.com',
     });
 
-    expect(eligibility.isEligible).toBe(true);
-    expect(eligibility.reasons).toHaveLength(0);
+    expect(eligibility.isEligible).toBe(false);
+    expect(eligibility.reasons).toContain(
+      'You must have used at least 50 e-sign credits before applying.',
+    );
+    expect(eligibility.reasons).toContain(
+      'Your organisation must have been signed up for at least 2 months.',
+    );
     expect(prismaMock.envelope.count).toHaveBeenCalled();
   });
 
@@ -406,12 +411,7 @@ describe('getResellerEligibility flow', () => {
     expect(eligibility.requiredSubscriptionMonths).toBe(6);
   });
 
-  it('blocks eligibility against custom thresholds when bypass is disabled', async () => {
-    const demoFlags = await import('@documenso/lib/constants/demo-feature-flags');
-    const isDemoFeatureVisibleSpy = vi
-      .spyOn(demoFlags, 'isDemoFeatureVisible')
-      .mockImplementation((feature) => feature !== 'RESELLER_ELIGIBILITY_BYPASS');
-
+  it('blocks eligibility against custom thresholds', async () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     getResellerSiteSettingsMock.mockResolvedValue({
@@ -439,8 +439,6 @@ describe('getResellerEligibility flow', () => {
     expect(eligibility.reasons).toContain(
       'Your organisation must have been signed up for at least 6 months.',
     );
-
-    isDemoFeatureVisibleSpy.mockRestore();
   });
 });
 
