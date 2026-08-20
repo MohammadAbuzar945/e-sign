@@ -2,6 +2,7 @@ import { Trans, msg } from '@lingui/macro';
 import { useLingui } from '@lingui/react';
 
 import { Body, Container, Head, Html, Preview, Section, Text } from '../components';
+import { TemplateEmailLogo } from '../template-components/template-email-logo';
 import { TemplateFooter } from '../template-components/template-footer';
 
 export interface BulkResendCompleteEmailProps {
@@ -21,6 +22,7 @@ export const BulkResendCompleteEmail = ({
   skippedCount,
   failedCount,
   failedIds,
+  assetBaseUrl = 'http://localhost:3000',
 }: BulkResendCompleteEmailProps) => {
   const { _ } = useLingui();
 
@@ -31,6 +33,10 @@ export const BulkResendCompleteEmail = ({
       <Body className="mx-auto my-auto bg-white font-sans">
         <Section>
           <Container className="mx-auto mb-2 mt-8 max-w-xl rounded-lg border border-solid border-slate-200 p-4 backdrop-blur-sm">
+            <Section style={{ textAlign: 'center' }}>
+              <TemplateEmailLogo assetBaseUrl={assetBaseUrl} />
+            </Section>
+
             <Section>
               <Text className="text-sm">
                 <Trans>Hi {userName},</Trans>
