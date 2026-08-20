@@ -53,6 +53,9 @@ export const bulkRedistributeEnvelopesRoute = authenticatedProcedure
       },
     });
 
+    const isPrismaTransactionTimeout = (err: unknown) =>
+      typeof err === 'object' && err !== null && 'code' in err && err.code === 'P2028';
+
     const results = await pMap(
       envelopes,
       async (envelope) => {
@@ -63,32 +66,47 @@ export const bulkRedistributeEnvelopesRoute = authenticatedProcedure
           return { outcome: 'skipped' as const, envelopeId };
         }
 
-        try {
-          await resendDocument({
-            id: {
-              type: 'envelopeId',
-              id: envelopeId,
-            },
-            userId: user.id,
-            teamId,
-            requestMetadata: ctx.metadata,
-          });
+        const maxAttempts = 3;
 
-          return { outcome: 'resent' as const, envelopeId };
-        } catch (err) {
-          ctx.logger.warn(
-            {
-              envelopeId,
-              error: err,
-            },
-            'Failed to resend envelope during bulk redistribute',
-          );
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            await resendDocument({
+              id: {
+                type: 'envelopeId',
+                id: envelopeId,
+              },
+              userId: user.id,
+              teamId,
+              requestMetadata: ctx.metadata,
+            });
 
-          return { outcome: 'failed' as const, envelopeId };
+            return { outcome: 'resent' as const, envelopeId };
+          } catch (err) {
+            const shouldRetry = isPrismaTransactionTimeout(err) && attempt < maxAttempts;
+
+            ctx.logger.warn(
+              {
+                envelopeId,
+                attempt,
+                willRetry: shouldRetry,
+                error: err,
+              },
+              'Failed to resend envelope during bulk redistribute',
+            );
+
+            if (!shouldRetry) {
+              return { outcome: 'failed' as const, envelopeId };
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+          }
         }
+
+        return { outcome: 'failed' as const, envelopeId };
       },
       {
-        concurrency: 10,
+        // Keep this low so reminder mail + audit writes cannot starve the pool.
+        concurrency: 2,
         stopOnError: false,
       },
     );
