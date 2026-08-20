@@ -809,6 +809,8 @@ model Organisation {
 
   subscriptions Subscription[]
   creditPurchases OrganisationCreditPurchase[]
+  creditUsage     OrganisationCreditUsage[]
+  pendingCreditReseals PendingCreditReseal[]
 
   resellerApplication ResellerApplication?
   resellerProfile     ResellerProfile?
@@ -1226,6 +1228,41 @@ model UserCredits {
   @@index([organisationId])
   @@index([organisationId, isActive])
   @@index([isActive])
+}
+
+model OrganisationCreditUsage {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  /// Snapshot values kept without FKs so usage survives team/document moves or deletes.
+  teamId     Int
+  documentId String
+  credits    Int
+
+  @@unique([documentId])
+  @@index([organisationId, createdAt])
+  @@index([teamId, createdAt])
+}
+
+model PendingCreditReseal {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  /// Legacy numeric document id used by the seal job trigger.
+  documentId      Int @unique
+  teamId          Int
+  creditsRequired Int
+  lastRetriedAt   DateTime?
+  lastError       String?
+
+  @@index([organisationId, createdAt])
 }
 
 enum OrganisationCreditPurchaseStatus {

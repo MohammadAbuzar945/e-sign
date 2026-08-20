@@ -12,6 +12,7 @@ import {
   DO_NOT_INVALIDATE_QUERY_ON_MUTATION,
   SKIP_QUERY_BATCH_META,
 } from '@documenso/lib/constants/trpc';
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TDocument } from '@documenso/lib/types/document';
 import { ZDocumentAccessAuthTypesSchema } from '@documenso/lib/types/document-auth';
 import { trpc } from '@documenso/trpc/react';
@@ -400,9 +401,16 @@ export const DocumentEditForm = ({
     } catch (err) {
       console.error(err);
 
+      const error = AppError.parseError(err);
+
       toast({
         title: _(msg`Error`),
-        description: _(msg`An error occurred while sending the document.`),
+        description:
+          error.code === AppErrorCode.LIMIT_EXCEEDED
+            ? _(
+                msg`You do not have enough credits to send this document. Please purchase more credits.`,
+              )
+            : _(msg`An error occurred while sending the document.`),
         variant: 'destructive',
       });
     }

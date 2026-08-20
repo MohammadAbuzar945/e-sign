@@ -25,6 +25,9 @@ const prismaMock = vi.hoisted(() => ({
     findMany: vi.fn(),
     findFirst: vi.fn(),
   },
+  organisationCreditUsage: {
+    aggregate: vi.fn(),
+  },
   subscription: {
     findFirst: vi.fn(),
   },
@@ -173,20 +176,22 @@ import { sendResellerTerms } from './send-reseller-terms';
 const TEST_EMAIL = 'nomiadeveloper@gmail.com';
 
 const setupOrganisationMetrics = ({
-  completedDocumentCount = 60,
   creditsConsumed = 60,
   uniqueSignerCount = 10,
   orgUserCount = 3,
 }: {
-  completedDocumentCount?: number;
   creditsConsumed?: number;
   uniqueSignerCount?: number;
   orgUserCount?: number;
 } = {}) => {
-  prismaMock.envelope.count.mockResolvedValue(completedDocumentCount);
   prismaMock.$queryRaw.mockResolvedValue([{ count: BigInt(uniqueSignerCount) }]);
   prismaMock.organisationMember.count.mockResolvedValue(orgUserCount);
   prismaMock.team.findMany.mockResolvedValue([{ creditConsumed: creditsConsumed }]);
+  prismaMock.organisationCreditUsage.aggregate.mockResolvedValue({
+    _sum: {
+      credits: creditsConsumed,
+    },
+  });
 };
 
 const setupOrganisationSignup = (monthsAgo = 3) => {
@@ -208,7 +213,7 @@ beforeEach(() => {
 
   getResellerSiteSettingsMock.mockResolvedValue(null);
 
-  prismaMock.$transaction.mockImplementation(async (callback: (tx: typeof prismaMock) => unknown) => {
+  prismaMock.$transaction.mockImplementation((callback: (tx: typeof prismaMock) => unknown) => {
     return callback(prismaMock);
   });
 });
@@ -229,7 +234,6 @@ describe('getResellerEligibility flow', () => {
     const { getResellerEligibility } = await import('./get-reseller-eligibility');
 
     setupOrganisationMetrics({
-      completedDocumentCount: 0,
       uniqueSignerCount: 0,
       orgUserCount: 1,
       creditsConsumed: 0,
@@ -419,7 +423,6 @@ describe('getResellerEligibility flow', () => {
       minSignupMonths: 6,
     });
     setupOrganisationMetrics({
-      completedDocumentCount: 60,
       creditsConsumed: 60,
     });
     setupOrganisationSignup(3);
@@ -447,7 +450,6 @@ describe('createResellerApplication flow', () => {
     const { createResellerApplication } = await import('./create-reseller-application');
 
     setupOrganisationMetrics({
-      completedDocumentCount: 75,
       creditsConsumed: 55,
       uniqueSignerCount: 12,
       orgUserCount: 4,
@@ -475,7 +477,7 @@ describe('createResellerApplication flow', () => {
       snapshotOrgName: 'Acme Corp',
       snapshotApplicantName: 'Jane Applicant',
       snapshotApplicantEmail: TEST_EMAIL,
-      snapshotCompletedDocCount: 75,
+      snapshotCompletedDocCount: 55,
       snapshotUniqueSignerCount: 12,
       snapshotOrgUserCount: 4,
       snapshotOrgSignupDate: orgCreatedAt,
@@ -498,7 +500,7 @@ describe('createResellerApplication flow', () => {
         snapshotOrgName: 'Acme Corp',
         snapshotApplicantName: 'Jane Applicant',
         snapshotApplicantEmail: TEST_EMAIL,
-        snapshotCompletedDocCount: 75,
+        snapshotCompletedDocCount: 55,
         snapshotUniqueSignerCount: 12,
         snapshotOrgUserCount: 4,
         snapshotOrgSignupDate: orgCreatedAt,
@@ -509,7 +511,7 @@ describe('createResellerApplication flow', () => {
       organisationName: 'Acme Corp',
       applicantName: 'Jane Applicant',
       applicantEmail: TEST_EMAIL,
-      completedDocumentCount: 75,
+      completedDocumentCount: 55,
       uniqueSignerCount: 12,
       organisationUserCount: 4,
       organisationSignupDate: orgCreatedAt,
@@ -520,7 +522,6 @@ describe('createResellerApplication flow', () => {
     const { createResellerApplication } = await import('./create-reseller-application');
 
     setupOrganisationMetrics({
-      completedDocumentCount: 80,
       creditsConsumed: 60,
       uniqueSignerCount: 15,
       orgUserCount: 5,
@@ -559,7 +560,7 @@ describe('createResellerApplication flow', () => {
       snapshotOrgName: 'Acme Corp',
       snapshotApplicantName: 'Jane Applicant',
       snapshotApplicantEmail: TEST_EMAIL,
-      snapshotCompletedDocCount: 80,
+      snapshotCompletedDocCount: 60,
       snapshotUniqueSignerCount: 15,
       snapshotOrgUserCount: 5,
       snapshotOrgSignupDate: orgCreatedAt,
@@ -583,7 +584,7 @@ describe('createResellerApplication flow', () => {
         rejectedAt: null,
         termsSentAt: null,
         termsEnvelopeId: null,
-        snapshotCompletedDocCount: 80,
+        snapshotCompletedDocCount: 60,
       }),
     });
     expect(sendResellerApplicationAdminNotificationMock).toHaveBeenCalled();
@@ -716,7 +717,7 @@ describe('activateResellerFromTermsCompletion flow', () => {
     );
 
     prismaMock.resellerApplication.findFirst.mockResolvedValue(application);
-    prismaMock.resellerProfile.findUnique.mockImplementation(async ({ where }) => {
+    prismaMock.resellerProfile.findUnique.mockImplementation(({ where }) => {
       if ('affiliateSlug' in where && where.affiliateSlug === 'acme-corp') {
         return { organisationId: 'other_org' };
       }
@@ -2071,7 +2072,7 @@ describe('completePendingResellerTransaction flow', () => {
       },
     });
 
-    prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
+    prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
     prismaMock.$queryRaw.mockResolvedValue([{ nextValue: 1 }]);
     prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue({
       id: 'txn_pending_manual',
@@ -2134,7 +2135,7 @@ describe('completePendingResellerTransaction flow', () => {
       },
     });
 
-    prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
+    prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
     prismaMock.resellerCreditTransaction.findUnique.mockResolvedValue({
       id: 'txn_pending_manual',
       resellerProfileId: 'profile_1',

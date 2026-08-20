@@ -528,6 +528,12 @@ const processPaystackWebhookEvent = async (event: {
           where: { id: userCreditsRecord.id },
           data: { credits: Number(userCreditsRecord.credits) + creditsToAdd },
         });
+
+        const { triggerPendingCreditResealsForOrganisation } = await import(
+          '@documenso/lib/server-only/billing/pending-credit-reseals'
+        );
+
+        await triggerPendingCreditResealsForOrganisation(organisation.id);
       }
 
       let purchaseId: string | null = null;
@@ -699,6 +705,12 @@ const processPaystackWebhookEvent = async (event: {
         console.log('User credits updated:', userCredits);
         creditsAfter = Number(userCredits.credits);
         creditsAdded = newPlanCredits;
+
+        const { triggerPendingCreditResealsForOrganisation } = await import(
+          '@documenso/lib/server-only/billing/pending-credit-reseals'
+        );
+
+        await triggerPendingCreditResealsForOrganisation(organisationId);
       }
 
       let invoiceEmailSent = false;

@@ -99,6 +99,7 @@ export const findTeams = async ({
     return {
       ...team,
       currentTeamRole: getHighestTeamRoleInGroup(team.teamGroups),
+      // Durable usage counter — incremented on seal, never reduced when documents are deleted.
       completedDocumentCount: team.creditConsumed,
     };
   });

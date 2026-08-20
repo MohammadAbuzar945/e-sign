@@ -13,6 +13,12 @@ import path from 'node:path';
 import { groupBy } from 'remeda';
 
 import { deductOrganisationCredits, getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
+import {
+  clearPendingCreditReseal,
+  markPendingCreditResealRetry,
+  upsertPendingCreditReseal,
+} from '@documenso/lib/server-only/billing/pending-credit-reseals';
+import { recordOrganisationCreditUsage } from '@documenso/lib/server-only/billing/organisation-credit-usage';
 import { organisationAllowsNegativeCredits } from '@documenso/lib/server-only/reseller/organisation-allows-negative-credits';
 import { addRejectionStampToPdf } from '@documenso/lib/server-only/pdf/add-rejection-stamp-to-pdf';
 import { generateAuditLogPdf } from '@documenso/lib/server-only/pdf/generate-audit-log-pdf';
@@ -55,7 +61,8 @@ export const run = async ({
 }) => {
   const { documentId, sendEmail = true, isResealing = false, requestMetadata } = payload;
 
-  const { envelopeId, envelopeStatus, isRejected, rejectionReason } = await io.runTask('seal-document', async () => {
+  try {
+    const { envelopeId, envelopeStatus, isRejected, rejectionReason } = await io.runTask('seal-document', async () => {
     const envelope = await prisma.envelope.findFirstOrThrow({
       where: {
         type: EnvelopeType.DOCUMENT,
@@ -188,6 +195,13 @@ export const run = async ({
       const userCredits = await getOrganisationCredits(organisationId);
 
       if (!allowNegativeCredits && userCredits < creditsToConsume) {
+        await upsertPendingCreditReseal({
+          organisationId,
+          teamId: envelope.teamId,
+          documentId,
+          creditsRequired: creditsToConsume,
+        });
+
         throw new AppError(AppErrorCode.INVALID_REQUEST, {
           message: 'Insufficient credits to seal document',
           userMessage: `You do not have enough credits to complete this document. This envelope requires ${creditsToConsume} credit(s). Please purchase more credits.`,
@@ -350,6 +364,14 @@ export const run = async ({
           SET "creditConsumed" = "creditConsumed" + ${creditsToConsume}
           WHERE id = ${envelope.teamId}
         `;
+
+        await recordOrganisationCreditUsage({
+          organisationId,
+          teamId: envelope.teamId,
+          documentId: envelope.id,
+          credits: creditsToConsume,
+          tx,
+        });
       }
 
       await tx.documentAuditLog.create({
@@ -376,13 +398,15 @@ export const run = async ({
       });
     }
 
+    await clearPendingCreditReseal(documentId);
+
     return {
       envelopeId: envelope.id,
       envelopeStatus: envelope.status,
       isRejected,
       rejectionReason,
     };
-  });
+    });
 
   await io.runTask('send-completed-email', async () => {
     let shouldSendCompletedEmail = sendEmail && !isResealing && !isRejected;
@@ -475,6 +499,18 @@ export const run = async ({
 
 
 
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown reseal error';
+
+    if (!errorMessage.includes('Insufficient credits to seal document')) {
+      await markPendingCreditResealRetry({
+        documentId,
+        lastError: errorMessage,
+      });
+    }
+
+    throw error;
+  }
 };
 
 type DecorateAndSignPdfOptions = {
