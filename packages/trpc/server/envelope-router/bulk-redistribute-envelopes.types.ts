@@ -24,11 +24,14 @@ export const ZBulkRedistributeEnvelopesRequestSchema = z.object({
 });
 
 export const ZBulkRedistributeEnvelopesResponseSchema = z.object({
-  resentCount: z.number().describe('The number of envelopes reminders were resent for.'),
+  queuedCount: z
+    .number()
+    .describe('The number of envelopes queued to have their reminders resent in the background.'),
   skippedCount: z
     .number()
-    .describe('The number of envelopes that were skipped because they were not pending.'),
-  failedIds: z.array(z.string()).describe('The IDs of the envelopes that could not be resent.'),
+    .describe(
+      'The number of envelopes that were skipped because they were not pending or not accessible.',
+    ),
 });
 
 export type TBulkRedistributeEnvelopesRequest = z.infer<

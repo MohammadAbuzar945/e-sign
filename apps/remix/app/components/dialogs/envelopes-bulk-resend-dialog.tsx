@@ -39,16 +39,22 @@ export const EnvelopesBulkResendDialog = ({
       onSuccess: async (result) => {
         await trpcUtils.document.findDocumentsInternal.invalidate();
 
-        if (result.failedIds.length > 0 || result.skippedCount > 0) {
+        if (result.queuedCount === 0) {
           toast({
-            title: t`Reminders partially sent`,
-            description: t`Reminders sent for ${result.resentCount} document(s). ${result.failedIds.length + result.skippedCount} document(s) were skipped or failed.`,
+            title: t`No reminders sent`,
+            description: t`None of the selected document(s) were eligible for a reminder.`,
             variant: 'destructive',
+          });
+        } else if (result.skippedCount > 0) {
+          toast({
+            title: t`Reminders are being sent`,
+            description: t`Reminders are being sent for ${result.queuedCount} document(s) in the background. ${result.skippedCount} document(s) were skipped. You'll get an email summary once it's done.`,
+            variant: 'default',
           });
         } else {
           toast({
-            title: t`Reminders sent`,
-            description: t`Reminders have been sent for ${result.resentCount} document(s).`,
+            title: t`Reminders are being sent`,
+            description: t`Reminders are being sent for ${result.queuedCount} document(s) in the background. You'll get an email summary once it's done.`,
             variant: 'default',
           });
         }
