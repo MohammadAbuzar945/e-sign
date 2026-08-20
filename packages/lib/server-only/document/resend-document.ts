@@ -35,7 +35,11 @@ import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 export type ResendDocumentOptions = {
   id: EnvelopeIdOptions;
   userId: number;
-  recipients: number[];
+  /**
+   * The recipient IDs to remind. When omitted, all recipients who have not
+   * signed yet will be reminded (used for bulk resends).
+   */
+  recipients?: number[];
   teamId: number;
   requestMetadata: ApiRequestMetadata;
 };
@@ -97,7 +101,8 @@ export const resendDocument = async ({
 
   const recipientsToRemind = envelope.recipients.filter(
     (recipient) =>
-      recipients.includes(recipient.id) && recipient.signingStatus === SigningStatus.NOT_SIGNED,
+      recipient.signingStatus === SigningStatus.NOT_SIGNED &&
+      (recipients === undefined || recipients.includes(recipient.id)),
   );
 
   const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(

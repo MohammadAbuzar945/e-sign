@@ -294,15 +294,16 @@ async function getOrganisationSummary(
     .select(sql<number>`count(id)`.as('count'))
     .executeTakeFirst();
 
+  // Current inventory excludes soft-deleted docs; lifetime completed volume includes them
+  // so deleting a completed document does not reduce historical usage metrics.
   const envelopeStatsQuery = kyselyPrisma.$kysely
     .selectFrom('Envelope as e')
     .innerJoin('Team as t', 't.id', 'e.teamId')
     .where('t.organisationId', '=', organisationId)
-    .where('e.deletedAt', 'is', null)
     .where('e.type', '=', sql.lit(EnvelopeType.DOCUMENT))
     .select([
-      sql<number>`count(e.id)`.as('totalDocuments'),
-      sql<number>`count(case when e.status in ('DRAFT', 'PENDING') then 1 end)`.as(
+      sql<number>`count(case when e."deletedAt" is null then 1 end)`.as('totalDocuments'),
+      sql<number>`count(case when e."deletedAt" is null and e.status in ('DRAFT', 'PENDING') then 1 end)`.as(
         'activeDocuments',
       ),
       sql<number>`count(case when e.status = 'COMPLETED' then 1 end)`.as('completedDocuments'),

@@ -234,7 +234,7 @@ export const AdminResellerApplicationActionsPanel = ({
               </p>
               <div className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-3 text-xs">
                 <p>
-                  <Trans>Completed docs: {application.liveCompletedDocCount ?? 0}</Trans>
+                  <Trans>Credits used: {application.liveCompletedDocCount ?? 0}</Trans>
                 </p>
                 <p>
                   <Trans>Unique signers: {application.liveUniqueSignerCount ?? 0}</Trans>

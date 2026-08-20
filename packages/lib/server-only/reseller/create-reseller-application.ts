@@ -59,7 +59,7 @@ export const createResellerApplication = async ({
     snapshotOrgName: organisation.name,
     snapshotApplicantName: applicant.name ?? applicant.email,
     snapshotApplicantEmail: applicant.email,
-    snapshotCompletedDocCount: metrics.completedDocumentCount,
+    snapshotCompletedDocCount: metrics.creditsConsumed,
     snapshotUniqueSignerCount: metrics.uniqueSignerCount,
     snapshotOrgUserCount: metrics.orgUserCount,
     snapshotOrgSignupDate: organisation.createdAt,

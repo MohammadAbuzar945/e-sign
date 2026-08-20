@@ -11,6 +11,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import * as z from 'zod';
 
+import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
 import { APP_DOCUMENT_UPLOAD_SIZE_LIMIT } from '@documenso/lib/constants/app';
 import {
   TEMPLATE_RECIPIENT_EMAIL_PLACEHOLDER_REGEX,
@@ -20,11 +21,12 @@ import {
   DO_NOT_INVALIDATE_QUERY_ON_MUTATION,
   SKIP_QUERY_BATCH_META,
 } from '@documenso/lib/constants/trpc';
-import { AppError } from '@documenso/lib/errors/app-error';
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { ZRecipientEmailSchema } from '@documenso/lib/types/recipient';
 import { putPdfFile } from '@documenso/lib/universal/upload/put-file';
 import { trpc } from '@documenso/trpc/react';
 import { cn } from '@documenso/ui/lib/utils';
+import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import {
@@ -98,6 +100,7 @@ export function TemplateUseDialog({
   const { _ } = useLingui();
 
   const navigate = useNavigate();
+  const { remaining, allowNegativeCredits } = useLimits();
 
   const [open, setOpen] = useState(false);
 
@@ -114,6 +117,11 @@ export function TemplateUseDialog({
   );
 
   const envelopeItems = response?.data ?? [];
+
+  const creditsRequired = Math.max(envelopeItems.length, 1);
+  const hasInsufficientCredits =
+    !allowNegativeCredits &&
+    (typeof remaining.documents !== 'number' || remaining.documents < creditsRequired);
 
   const generateDefaultFormValues = () => {
     return {
@@ -208,6 +216,12 @@ export function TemplateUseDialog({
         variant: 'destructive',
       };
 
+      if (error.code === AppErrorCode.LIMIT_EXCEEDED) {
+        toastPayload.description = _(
+          msg`You do not have enough credits to send this document. Please purchase more credits.`,
+        );
+      }
+
       if (error.code === 'DOCUMENT_SEND_FAILED') {
         toastPayload.description = _(
           msg`The document was created but could not be sent to recipients.`,
@@ -228,6 +242,12 @@ export function TemplateUseDialog({
       form.reset(generateDefaultFormValues());
     }
   }, [open, form]);
+
+  useEffect(() => {
+    if (hasInsufficientCredits && form.getValues('distributeDocument')) {
+      form.setValue('distributeDocument', false);
+    }
+  }, [form, hasInsufficientCredits]);
 
   useEffect(() => {
     if (envelopeItems.length > 0 && localCustomDocumentData.length === 0) {
@@ -343,7 +363,18 @@ export function TemplateUseDialog({
                 ))}
 
                 {recipients.length > 0 && (
-                  <div className="mt-4 flex flex-row items-center">
+                  <div className="mt-4 flex flex-col gap-2">
+                    {hasInsufficientCredits && (
+                      <Alert variant="warning">
+                        <AlertDescription>
+                          <Trans>
+                            You do not have enough credits to send this document. You can still
+                            create it as a draft.
+                          </Trans>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     <FormField
                       control={form.control}
                       name="distributeDocument"
@@ -354,6 +385,7 @@ export function TemplateUseDialog({
                               id="distributeDocument"
                               className="h-5 w-5"
                               checked={field.value}
+                              disabled={hasInsufficientCredits}
                               onCheckedChange={field.onChange}
                             />
 

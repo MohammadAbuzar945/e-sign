@@ -83,7 +83,7 @@ export const ResellerApplicationSubmittedAdminEmailTemplate = ({
             </Text>
 
             <Text className="my-0 text-left text-sm">
-              <Trans>Completed documents:</Trans> {completedDocumentCount}
+              <Trans>Credits used:</Trans> {completedDocumentCount}
             </Text>
 
             <Text className="my-0 text-left text-sm">
