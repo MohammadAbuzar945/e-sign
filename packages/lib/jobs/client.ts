@@ -10,6 +10,7 @@ import { SEND_SIGNING_EMAIL_JOB_DEFINITION } from './definitions/emails/send-sig
 import { SEND_TEAM_DELETED_EMAIL_JOB_DEFINITION } from './definitions/emails/send-team-deleted-email';
 import { SEND_TEAM_AUDIT_LOGS_EXPORT_EMAIL_JOB_DEFINITION } from './definitions/emails/send-team-audit-logs-export-email';
 import { BACKPORT_SUBSCRIPTION_CLAIM_JOB_DEFINITION } from './definitions/internal/backport-subscription-claims';
+import { BULK_RESEND_ENVELOPES_JOB_DEFINITION } from './definitions/internal/bulk-resend-envelopes';
 import { BULK_SEND_TEMPLATE_JOB_DEFINITION } from './definitions/internal/bulk-send-template';
 import { EXPORT_TEAM_AUDIT_LOGS_CSV_JOB_DEFINITION } from './definitions/internal/export-team-audit-logs-csv';
 import { EXECUTE_WEBHOOK_JOB_DEFINITION } from './definitions/internal/execute-webhook';
@@ -34,6 +35,7 @@ export const jobsClient = new JobClient([
   SEND_DOCUMENT_CANCELLED_EMAILS_JOB_DEFINITION,
   BACKPORT_SUBSCRIPTION_CLAIM_JOB_DEFINITION,
   BULK_SEND_TEMPLATE_JOB_DEFINITION,
+  BULK_RESEND_ENVELOPES_JOB_DEFINITION,
   EXECUTE_WEBHOOK_JOB_DEFINITION,
 ] as const);
 
