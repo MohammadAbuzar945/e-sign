@@ -18,7 +18,7 @@ const ZDocumentIdSchema = z.string().regex(/^document_\d+$/);
 const ZTemplateIdSchema = z.string().regex(/^template_\d+$/);
 const ZEnvelopeIdSchema = z.string().regex(/^envelope_.{2,}$/);
 
-const MAX_ENVELOPE_IDS_PER_REQUEST = 20;
+export const MAX_ENVELOPE_IDS_PER_REQUEST = 20;
 
 export type EnvelopeIdOptions =
   | {

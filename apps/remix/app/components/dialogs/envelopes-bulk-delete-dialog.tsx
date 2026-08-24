@@ -3,6 +3,7 @@ import { Trans } from '@lingui/react/macro';
 import { EnvelopeType } from '@prisma/client';
 import type * as DialogPrimitive from '@radix-ui/react-dialog';
 
+import { AppError } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
@@ -15,6 +16,12 @@ import {
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+
+import {
+  EnvelopesBulkSelectionLimitAlert,
+  isBulkSelectionOverLimit,
+  MAX_ENVELOPE_IDS_PER_REQUEST,
+} from '~/components/dialogs/envelopes-bulk-selection-limit-alert';
 
 export type EnvelopesBulkDeleteDialogProps = {
   envelopeIds: string[];
@@ -38,6 +45,7 @@ export const EnvelopesBulkDeleteDialog = ({
   const trpcUtils = trpc.useUtils();
 
   const isDocument = envelopeType === EnvelopeType.DOCUMENT;
+  const isOverLimit = isBulkSelectionOverLimit(envelopeIds.length);
 
   const { mutateAsync: bulkDeleteEnvelopes, isPending } = trpc.envelope.bulk.delete.useMutation({
     onSuccess: async (result) => {
@@ -69,10 +77,14 @@ export const EnvelopesBulkDeleteDialog = ({
       onSuccess?.();
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (err) => {
+      const error = AppError.parseError(err);
+
       toast({
-        title: t`Error`,
-        description: t`An error occurred while deleting the items.`,
+        title: t`Too many items selected`,
+        description: isBulkSelectionOverLimit(envelopeIds.length)
+          ? t`You can only delete up to ${MAX_ENVELOPE_IDS_PER_REQUEST} items at a time. Please deselect some items and try again.`
+          : error.message || t`An error occurred while deleting the items.`,
         variant: 'destructive',
       });
     },
@@ -103,6 +115,9 @@ export const EnvelopesBulkDeleteDialog = ({
           </DialogDescription>
         </DialogHeader>
 
+        <EnvelopesBulkSelectionLimitAlert selectedCount={envelopeIds.length} />
+
+        {!isOverLimit && (
         <Alert variant="warning">
           <AlertDescription>
             <p>
@@ -141,6 +156,7 @@ export const EnvelopesBulkDeleteDialog = ({
             </ul>
           </AlertDescription>
         </Alert>
+        )}
 
         <DialogFooter>
         <Button
@@ -159,6 +175,7 @@ export const EnvelopesBulkDeleteDialog = ({
             }}
             loading={isPending}
             variant="destructive"
+            disabled={isOverLimit}
           >
             <Trans>Delete</Trans>
           </Button>
