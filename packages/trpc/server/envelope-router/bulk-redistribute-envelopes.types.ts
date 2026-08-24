@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { MAX_ENVELOPE_IDS_PER_REQUEST } from '@documenso/lib/utils/envelope';
+
 // READ ME: IF YOU UNCOMMENT THIS THEN ADD THE MATCHING API ACCESS TEST.
 // Keeping this as a private API for a little while until we're sure it's stable and the request/response schemas are finalized.
 // export const bulkRedistributeEnvelopesMeta: TrpcRouteMeta = {
@@ -17,9 +19,9 @@ export const ZBulkRedistributeEnvelopesRequestSchema = z.object({
   envelopeIds: z
     .array(z.string())
     .min(1)
-    .max(100)
+    .max(MAX_ENVELOPE_IDS_PER_REQUEST)
     .describe(
-      'The IDs of the envelopes to redistribute. The maximum number of envelopes you can redistribute at once is 100.',
+      `The IDs of the envelopes to redistribute. The maximum number of envelopes you can redistribute at once is ${MAX_ENVELOPE_IDS_PER_REQUEST}.`,
     ),
 });
 

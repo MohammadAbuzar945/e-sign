@@ -3,6 +3,7 @@ import { Trans } from '@lingui/react/macro';
 import type * as DialogPrimitive from '@radix-ui/react-dialog';
 import { SendIcon } from 'lucide-react';
 
+import { AppError } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
 import {
@@ -14,6 +15,12 @@ import {
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+
+import {
+  EnvelopesBulkSelectionLimitAlert,
+  isBulkSelectionOverLimit,
+  MAX_ENVELOPE_IDS_PER_REQUEST,
+} from '~/components/dialogs/envelopes-bulk-selection-limit-alert';
 
 export type EnvelopesBulkResendDialogProps = {
   envelopeIds: string[];
@@ -33,6 +40,8 @@ export const EnvelopesBulkResendDialog = ({
   const { toast } = useToast();
 
   const trpcUtils = trpc.useUtils();
+
+  const isOverLimit = isBulkSelectionOverLimit(envelopeIds.length);
 
   const { mutateAsync: bulkRedistributeEnvelopes, isPending } =
     trpc.envelope.bulk.redistribute.useMutation({
@@ -62,10 +71,14 @@ export const EnvelopesBulkResendDialog = ({
         onSuccess?.();
         onOpenChange(false);
       },
-      onError: () => {
+      onError: (err) => {
+        const error = AppError.parseError(err);
+
         toast({
-          title: t`Error`,
-          description: t`An error occurred while sending the reminders.`,
+          title: t`Too many items selected`,
+          description: isBulkSelectionOverLimit(envelopeIds.length)
+            ? t`You can only resend up to ${MAX_ENVELOPE_IDS_PER_REQUEST} documents at a time. Please deselect some items and try again.`
+            : error.message || t`An error occurred while sending the reminders.`,
           variant: 'destructive',
         });
       },
@@ -88,12 +101,16 @@ export const EnvelopesBulkResendDialog = ({
           </DialogDescription>
         </DialogHeader>
 
+        <EnvelopesBulkSelectionLimitAlert selectedCount={envelopeIds.length} />
+
+        {!isOverLimit && (
         <p className="text-sm text-muted-foreground">
           <Trans>
             A reminder invitation will be sent to every recipient who has not completed signing yet.
             Recipients who have already signed will not be emailed.
           </Trans>
         </p>
+        )}
 
         <DialogFooter>
           <Button
@@ -112,6 +129,7 @@ export const EnvelopesBulkResendDialog = ({
               void bulkRedistributeEnvelopes({ envelopeIds });
             }}
             loading={isPending}
+            disabled={isOverLimit}
           >
             <SendIcon className="mr-2 h-4 w-4" />
             <Trans>Send reminders</Trans>

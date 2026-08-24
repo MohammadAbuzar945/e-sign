@@ -1,11 +1,8 @@
 import { DocumentStatus, EnvelopeType } from '@prisma/client';
 
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { jobs } from '@documenso/lib/jobs/client';
 import { getMultipleEnvelopeWhereInput } from '@documenso/lib/server-only/envelope/get-envelopes-by-ids';
-import { canUserBulkResend } from '@documenso/lib/utils/bulk-resend-access';
 import { prisma } from '@documenso/prisma';
-
 import { authenticatedProcedure } from '../trpc';
 import {
   ZBulkRedistributeEnvelopesRequestSchema,
@@ -25,12 +22,6 @@ export const bulkRedistributeEnvelopesRoute = authenticatedProcedure
         envelopeIds,
       },
     });
-
-    if (!canUserBulkResend(user.email)) {
-      throw new AppError(AppErrorCode.UNAUTHORIZED, {
-        message: 'You do not have access to bulk resend documents.',
-      });
-    }
 
     const { envelopeWhereInput } = await getMultipleEnvelopeWhereInput({
       ids: {

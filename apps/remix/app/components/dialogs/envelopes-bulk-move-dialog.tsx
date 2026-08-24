@@ -32,6 +32,12 @@ import {
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
+import {
+  EnvelopesBulkSelectionLimitAlert,
+  isBulkSelectionOverLimit,
+  MAX_ENVELOPE_IDS_PER_REQUEST,
+} from '~/components/dialogs/envelopes-bulk-selection-limit-alert';
+
 export type EnvelopesBulkMoveDialogProps = {
   envelopeIds: string[];
   envelopeType: EnvelopeType;
@@ -69,6 +75,7 @@ export const EnvelopesBulkMoveDialog = ({
   });
 
   const isDocument = envelopeType === EnvelopeType.DOCUMENT;
+  const isOverLimit = isBulkSelectionOverLimit(envelopeIds.length);
 
   const { data: folders, isLoading: isFoldersLoading } = trpc.folder.findFoldersInternal.useQuery(
     {
@@ -124,10 +131,17 @@ export const EnvelopesBulkMoveDialog = ({
           () => t`The folder you are trying to move the items to does not exist.`,
         )
         .with(AppErrorCode.UNAUTHORIZED, () => t`You are not allowed to move these items.`)
-        .with(AppErrorCode.INVALID_BODY, () => t`All items must be of the same type.`)
+        .with(AppErrorCode.INVALID_BODY, () => {
+          if (isBulkSelectionOverLimit(envelopeIds.length)) {
+            return t`You can only move up to ${MAX_ENVELOPE_IDS_PER_REQUEST} items at a time. Please deselect some items and try again.`;
+          }
+
+          return t`All items must be of the same type.`;
+        })
         .otherwise(() => t`An error occurred while moving the items.`);
 
       toast({
+        title: isBulkSelectionOverLimit(envelopeIds.length) ? t`Too many items selected` : t`Error`,
         description: errorMessage,
         variant: 'destructive',
       });
@@ -167,6 +181,10 @@ export const EnvelopesBulkMoveDialog = ({
           </DialogDescription>
         </DialogHeader>
 
+        <EnvelopesBulkSelectionLimitAlert selectedCount={envelopeIds.length} />
+
+        {!isOverLimit && (
+        <>
         <div className="relative">
           <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
           <Input
@@ -242,7 +260,7 @@ export const EnvelopesBulkMoveDialog = ({
 
               <Button
                 type="submit"
-                disabled={isFoldersLoading || form.formState.isSubmitting}
+                disabled={isFoldersLoading || form.formState.isSubmitting || isOverLimit}
                 loading={form.formState.isSubmitting}
               >
                 <Trans>Move</Trans>
@@ -250,6 +268,16 @@ export const EnvelopesBulkMoveDialog = ({
             </DialogFooter>
           </form>
         </Form>
+        </>
+        )}
+
+        {isOverLimit && (
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+              <Trans>Cancel</Trans>
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

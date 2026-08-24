@@ -11,7 +11,6 @@ import { useSessionStorage } from '@documenso/lib/client-only/hooks/use-session-
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
-import { canUserBulkResend } from '@documenso/lib/utils/bulk-resend-access';
 import { parseToIntegerArray } from '@documenso/lib/utils/params';
 import { formatDocumentsPath } from '@documenso/lib/utils/teams';
 import { ExtendedDocumentStatus } from '@documenso/prisma/types/extended-document-status';
@@ -97,7 +96,7 @@ export default function DocumentsPage() {
   // Only allow bulk resend when every selected (and loaded) document is pending.
   // The server additionally enforces pending-only, so this is purely a UX gate.
   const canBulkResend = useMemo(() => {
-    if (selectedEnvelopeIds.length === 0 || !data?.data || !canUserBulkResend(user.email)) {
+    if (selectedEnvelopeIds.length === 0 || !data?.data) {
       return false;
     }
 
@@ -108,7 +107,7 @@ export default function DocumentsPage() {
     return selectedEnvelopeIds.every(
       (id) => statusByEnvelopeId.get(id) === ExtendedDocumentStatus.PENDING,
     );
-  }, [selectedEnvelopeIds, data?.data, user.email]);
+  }, [selectedEnvelopeIds, data?.data]);
 
   const isOrganisationOwner = organisation.ownerUserId === user.id;
   const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
