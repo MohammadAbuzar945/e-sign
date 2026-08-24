@@ -558,7 +558,9 @@ export const formatDocumentAuditLogAction = (
       };
     })
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_SENT }, ({ data }) => ({
-      anonymous: data.isResending ? msg`Email resent` : msg`Email sent`,
+      anonymous: data.isResending
+        ? msg`Email resent (${data.recipientEmail})`
+        : msg`Email sent (${data.recipientEmail})`,
       identified: data.isResending
         ? msg`${prefix} resent an email to ${data.recipientEmail}`
         : msg`${prefix} sent an email to ${data.recipientEmail}`,
