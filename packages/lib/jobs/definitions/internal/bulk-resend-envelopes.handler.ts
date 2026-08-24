@@ -30,6 +30,17 @@ export const run = async ({
 }) => {
   const { userId, teamId, envelopeIds, requestMetadata } = payload;
 
+  const actingUser = await prisma.user.findFirst({
+    where: {
+      id: userId,
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+    },
+  });
+
   const { envelopeWhereInput } = await getMultipleEnvelopeWhereInput({
     ids: {
       type: 'envelopeId',
@@ -77,6 +88,13 @@ export const run = async ({
               source: 'app',
               auth: 'session',
               requestMetadata: requestMetadata || {},
+              auditUser: actingUser
+                ? {
+                    id: actingUser.id,
+                    email: actingUser.email,
+                    name: actingUser.name,
+                  }
+                : undefined,
             },
           });
 

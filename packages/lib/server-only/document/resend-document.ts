@@ -226,6 +226,7 @@ export const resendDocument = async ({
       data: createDocumentAuditLogData({
         type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_SENT,
         envelopeId: envelope.id,
+        user,
         metadata: requestMetadata,
         data: {
           emailType: recipientEmailType,
