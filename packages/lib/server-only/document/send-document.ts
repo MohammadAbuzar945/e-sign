@@ -11,6 +11,7 @@ import {
   WebhookTriggerEvents,
 } from '@prisma/client';
 
+import { getServerLimits } from '@documenso/ee/server-only/limits/server';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
@@ -134,6 +135,20 @@ export const sendDocument = async ({
 
   if (envelope.envelopeItems.length === 0) {
     throw new Error('Missing envelope items');
+  }
+
+  const creditsRequired = envelope.envelopeItems.length;
+  const { remaining, allowNegativeCredits } = await getServerLimits({
+    userId,
+    teamId,
+  });
+
+  if (!allowNegativeCredits && remaining.documents < creditsRequired) {
+    throw new AppError(AppErrorCode.LIMIT_EXCEEDED, {
+      message: 'Insufficient credits to send document',
+      userMessage: `You do not have enough credits to send this document. This envelope requires ${creditsRequired} credit(s). Please purchase more credits.`,
+      statusCode: 400,
+    });
   }
 
   if (envelope.formValues) {

@@ -24,6 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 import { DocumentMoveToFolderDialog } from '~/components/dialogs/document-move-to-folder-dialog';
 import { EnvelopesBulkDeleteDialog } from '~/components/dialogs/envelopes-bulk-delete-dialog';
 import { EnvelopesBulkMoveDialog } from '~/components/dialogs/envelopes-bulk-move-dialog';
+import { EnvelopesBulkResendDialog } from '~/components/dialogs/envelopes-bulk-resend-dialog';
 import { DocumentSearch } from '~/components/general/document/document-search';
 import { DocumentStatus } from '~/components/general/document/document-status';
 import { EnvelopeDropZoneWrapper } from '~/components/general/envelope/envelope-drop-zone-wrapper';
@@ -67,6 +68,7 @@ export default function DocumentsPage() {
   );
   const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [isBulkResendDialogOpen, setIsBulkResendDialogOpen] = useState(false);
 
   const selectedEnvelopeIds = useMemo(() => {
     return Object.keys(rowSelection).filter((id) => rowSelection[id]);
@@ -90,6 +92,22 @@ export default function DocumentsPage() {
     ...findDocumentSearchParams,
     folderId,
   });
+
+  // Only allow bulk resend when every selected (and loaded) document is pending.
+  // The server additionally enforces pending-only, so this is purely a UX gate.
+  const canBulkResend = useMemo(() => {
+    if (selectedEnvelopeIds.length === 0 || !data?.data) {
+      return false;
+    }
+
+    const statusByEnvelopeId = new Map(
+      data.data.map((document) => [document.envelopeId, document.status]),
+    );
+
+    return selectedEnvelopeIds.every(
+      (id) => statusByEnvelopeId.get(id) === ExtendedDocumentStatus.PENDING,
+    );
+  }, [selectedEnvelopeIds, data?.data]);
 
   const isOrganisationOwner = organisation.ownerUserId === user.id;
   const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
@@ -265,8 +283,10 @@ export default function DocumentsPage() {
 
         <EnvelopesTableBulkActionBar
           selectedCount={selectedEnvelopeIds.length}
+          canResend={canBulkResend}
           onMoveClick={() => setIsBulkMoveDialogOpen(true)}
           onDeleteClick={() => setIsBulkDeleteDialogOpen(true)}
+          onResendClick={() => setIsBulkResendDialogOpen(true)}
           onClearSelection={() => setRowSelection({})}
         />
 
@@ -284,6 +304,13 @@ export default function DocumentsPage() {
           envelopeType={EnvelopeType.DOCUMENT}
           open={isBulkDeleteDialogOpen}
           onOpenChange={setIsBulkDeleteDialogOpen}
+          onSuccess={() => setRowSelection({})}
+        />
+
+        <EnvelopesBulkResendDialog
+          envelopeIds={selectedEnvelopeIds}
+          open={isBulkResendDialogOpen}
+          onOpenChange={setIsBulkResendDialogOpen}
           onSuccess={() => setRowSelection({})}
         />
       </div>

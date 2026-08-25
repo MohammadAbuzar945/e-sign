@@ -9,9 +9,11 @@ import { Input } from '@documenso/ui/primitives/input';
 
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
+import { canDownloadCreditUsage } from '@documenso/lib/utils/credit-usage-download-access';
 import { OrganisationMemberRole, OrganisationType } from '@documenso/prisma/generated/types';
 
 import { TeamCreateDialog } from '~/components/dialogs/team-create-dialog';
+import { OrganisationCreditUsageDownloadButton } from '~/components/general/organisation-credit-usage-download-button';
 import { SettingsHeader } from '~/components/general/settings-header';
 import { OrganisationTeamsTable } from '~/components/tables/organisation-teams-table';
 
@@ -51,7 +53,17 @@ export default function OrganisationSettingsTeamsPage() {
   return (
     <div>
       <SettingsHeader title={t`Teams`} subtitle={t`Manage the teams in this organisation.`}>
-        {canCreateTeam && <TeamCreateDialog />}
+        {(canDownloadCreditUsage(user.email) || canCreateTeam) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {canDownloadCreditUsage(user.email) && (
+              <OrganisationCreditUsageDownloadButton
+                organisationId={organisation.id}
+                organisationUrl={organisation.url}
+              />
+            )}
+            {canCreateTeam && <TeamCreateDialog />}
+          </div>
+        )}
       </SettingsHeader>
 
       <p

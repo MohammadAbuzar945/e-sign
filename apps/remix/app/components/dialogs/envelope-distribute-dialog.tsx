@@ -16,8 +16,10 @@ import { useNavigate } from 'react-router';
 import { match } from 'ts-pattern';
 import * as z from 'zod';
 
+import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { getRecipientsWithMissingFields } from '@documenso/lib/utils/recipients';
@@ -87,6 +89,7 @@ export const EnvelopeDistributeDialog = ({
   onDistribute,
 }: EnvelopeDistributeDialogProps) => {
   const organisation = useCurrentOrganisation();
+  const { remaining, allowNegativeCredits } = useLimits();
 
   const { envelope, syncEnvelope, isAutosaving, autosaveError } = useCurrentEnvelopeEditor();
 
@@ -201,6 +204,11 @@ export const EnvelopeDistributeDialog = ({
     return false;
   }, [envelope.authOptions, envelope.recipients, kbaConfig]);
 
+  const creditsRequired = envelope.envelopeItems.length;
+  const hasInsufficientCredits =
+    !allowNegativeCredits &&
+    (typeof remaining.documents !== 'number' || remaining.documents < creditsRequired);
+
   const invalidEnvelopeCode = useMemo(() => {
     if (recipientsMissingSignatureFields.length > 0) {
       return 'MISSING_SIGNATURES';
@@ -218,9 +226,14 @@ export const EnvelopeDistributeDialog = ({
       return 'KBA_INCOMPLETE';
     }
 
+    if (hasInsufficientCredits) {
+      return 'INSUFFICIENT_CREDITS';
+    }
+
     return null;
   }, [
     envelope.recipients,
+    hasInsufficientCredits,
     isKbaSendBlocked,
     recipientsMissingRequiredEmail,
     recipientsMissingSignatureFields,
@@ -244,9 +257,14 @@ export const EnvelopeDistributeDialog = ({
 
       setIsOpen(false);
     } catch (err) {
+      const error = AppError.parseError(err);
+
       toast({
         title: t`Something went wrong`,
-        description: t`This envelope could not be distributed at this time. Please try again.`,
+        description:
+          error.code === AppErrorCode.LIMIT_EXCEEDED
+            ? t`You do not have enough credits to send this document. Please purchase more credits.`
+            : t`This envelope could not be distributed at this time. Please try again.`,
         variant: 'destructive',
         duration: 7500,
       });
@@ -519,6 +537,14 @@ export const EnvelopeDistributeDialog = ({
                       Security question (KBA) is turned on for this document, but the question,
                       answer, or multiple-choice options are not saved yet. Open Document Settings,
                       go to Security, finish KBA setup, then try sending again.
+                    </Trans>
+                  </AlertDescription>
+                ))
+                .with('INSUFFICIENT_CREDITS', () => (
+                  <AlertDescription>
+                    <Trans>
+                      You do not have enough credits to send this document. Please purchase more
+                      credits before sending.
                     </Trans>
                   </AlertDescription>
                 ))

@@ -35,7 +35,11 @@ import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 export type ResendDocumentOptions = {
   id: EnvelopeIdOptions;
   userId: number;
-  recipients: number[];
+  /**
+   * The recipient IDs to remind. When omitted, all recipients who have not
+   * signed yet will be reminded (used for bulk resends).
+   */
+  recipients?: number[];
   teamId: number;
   requestMetadata: ApiRequestMetadata;
 };
@@ -97,7 +101,8 @@ export const resendDocument = async ({
 
   const recipientsToRemind = envelope.recipients.filter(
     (recipient) =>
-      recipients.includes(recipient.id) && recipient.signingStatus === SigningStatus.NOT_SIGNED,
+      recipient.signingStatus === SigningStatus.NOT_SIGNED &&
+      (recipients === undefined || recipients.includes(recipient.id)),
   );
 
   const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
@@ -118,124 +123,122 @@ export const resendDocument = async ({
       meta: envelope.documentMeta,
     });
 
-  await Promise.all(
-    recipientsToRemind.map(async (recipient) => {
-      if (recipient.role === RecipientRole.CC || !isRecipientEmailValidForSending(recipient)) {
-        return;
-      }
+  // Send reminders one recipient at a time, and never hold a DB transaction
+  // open while talking to the mailer. Interactive transactions wait on the
+  // connection pool (`P2028` if they cannot start in time); wrapping SMTP
+  // inside `$transaction` plus bulk concurrency exhausts the pool.
+  for (const recipient of recipientsToRemind) {
+    if (recipient.role === RecipientRole.CC || !isRecipientEmailValidForSending(recipient)) {
+      continue;
+    }
 
-      const i18n = await getI18nInstance(emailLanguage);
+    const i18n = await getI18nInstance(emailLanguage);
 
-      const recipientEmailType = RECIPIENT_ROLE_TO_EMAIL_TYPE[recipient.role];
+    const recipientEmailType = RECIPIENT_ROLE_TO_EMAIL_TYPE[recipient.role];
 
-      const { email, name } = recipient;
-      const selfSigner = email === user.email;
+    const { email, name } = recipient;
+    const selfSigner = email === user.email;
 
-      const recipientActionVerb = i18n
-        ._(RECIPIENT_ROLES_DESCRIPTION[recipient.role].actionVerb)
-        .toLowerCase();
+    const recipientActionVerb = i18n
+      ._(RECIPIENT_ROLES_DESCRIPTION[recipient.role].actionVerb)
+      .toLowerCase();
 
-      let emailMessage = envelope.documentMeta.message || '';
-      let emailSubject = i18n._(msg`Reminder: Please ${recipientActionVerb} this document`);
+    let emailMessage = envelope.documentMeta.message || '';
+    let emailSubject = i18n._(msg`Reminder: Please ${recipientActionVerb} this document`);
 
-      if (selfSigner) {
-        emailMessage = i18n._(
-          msg`You have initiated the document ${`"${envelope.title}"`} that requires you to ${recipientActionVerb} it.`,
-        );
-        emailSubject = i18n._(msg`Reminder: Please ${recipientActionVerb} your document`);
-      }
-
-      if (organisationType === OrganisationType.ORGANISATION) {
-        emailSubject = i18n._(
-          msg`Reminder: ${envelope.team.name} invited you to ${recipientActionVerb} a document`,
-        );
-        emailMessage =
-          envelope.documentMeta.message ||
-          i18n._(
-            msg`${user.name || user.email} on behalf of "${envelope.team.name}" has invited you to ${recipientActionVerb} the document "${envelope.title}".`,
-          );
-      }
-
-      const customEmailTemplate = {
-        'signer.name': name,
-        'signer.email': email,
-        'document.name': envelope.title,
-      };
-
-      const assetBaseUrl = NEXT_PUBLIC_WEBAPP_URL() || 'http://localhost:3000';
-      const signDocumentLink = `${NEXT_PUBLIC_WEBAPP_URL()}/sign/${recipient.token}`;
-
-      const template = createElement(DocumentInviteEmailTemplate, {
-        documentName: envelope.title,
-        inviterName: user.name || undefined,
-        inviterEmail:
-          organisationType === OrganisationType.ORGANISATION
-            ? envelope.team?.teamEmail?.email || user.email
-            : user.email,
-        assetBaseUrl,
-        signDocumentLink,
-        customBody: renderCustomEmailTemplate(emailMessage, customEmailTemplate),
-        role: recipient.role,
-        selfSigner,
-        organisationType,
-        teamName: envelope.team?.name,
-      });
-
-      const [html, text] = await Promise.all([
-        renderEmailWithI18N(template, {
-          lang: emailLanguage,
-          branding,
-        }),
-        renderEmailWithI18N(template, {
-          lang: emailLanguage,
-          branding,
-          plainText: true,
-        }),
-      ]);
-
-      await prisma.$transaction(
-        async (tx) => {
-          await mailer.sendMail({
-            to: {
-              address: email,
-              name,
-            },
-            from: senderEmail,
-            replyTo: replyToEmail,
-            subject: envelope.documentMeta.subject
-              ? renderCustomEmailTemplate(
-                  i18n._(msg`Reminder: ${envelope.documentMeta.subject}`),
-                  customEmailTemplate,
-                )
-              : emailSubject,
-            html,
-            text,
-            headers: getMailgunTrackingHeaders({
-              envelopeId: envelope.id,
-              recipientId: recipient.id,
-            }),
-          });
-
-          await tx.documentAuditLog.create({
-            data: createDocumentAuditLogData({
-              type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_SENT,
-              envelopeId: envelope.id,
-              metadata: requestMetadata,
-              data: {
-                emailType: recipientEmailType,
-                recipientEmail: recipient.email,
-                recipientName: recipient.name,
-                recipientRole: recipient.role,
-                recipientId: recipient.id,
-                isResending: true,
-              },
-            }),
-          });
-        },
-        { timeout: 30_000 },
+    if (selfSigner) {
+      emailMessage = i18n._(
+        msg`You have initiated the document ${`"${envelope.title}"`} that requires you to ${recipientActionVerb} it.`,
       );
-    }),
-  );
+      emailSubject = i18n._(msg`Reminder: Please ${recipientActionVerb} your document`);
+    }
+
+    if (organisationType === OrganisationType.ORGANISATION) {
+      emailSubject = i18n._(
+        msg`Reminder: ${envelope.team.name} invited you to ${recipientActionVerb} a document`,
+      );
+      emailMessage =
+        envelope.documentMeta.message ||
+        i18n._(
+          msg`${user.name || user.email} on behalf of "${envelope.team.name}" has invited you to ${recipientActionVerb} the document "${envelope.title}".`,
+        );
+    }
+
+    const customEmailTemplate = {
+      'signer.name': name,
+      'signer.email': email,
+      'document.name': envelope.title,
+    };
+
+    const assetBaseUrl = NEXT_PUBLIC_WEBAPP_URL() || 'http://localhost:3000';
+    const signDocumentLink = `${NEXT_PUBLIC_WEBAPP_URL()}/sign/${recipient.token}`;
+
+    const template = createElement(DocumentInviteEmailTemplate, {
+      documentName: envelope.title,
+      inviterName: user.name || undefined,
+      inviterEmail:
+        organisationType === OrganisationType.ORGANISATION
+          ? envelope.team?.teamEmail?.email || user.email
+          : user.email,
+      assetBaseUrl,
+      signDocumentLink,
+      customBody: renderCustomEmailTemplate(emailMessage, customEmailTemplate),
+      role: recipient.role,
+      selfSigner,
+      organisationType,
+      teamName: envelope.team?.name,
+    });
+
+    const [html, text] = await Promise.all([
+      renderEmailWithI18N(template, {
+        lang: emailLanguage,
+        branding,
+      }),
+      renderEmailWithI18N(template, {
+        lang: emailLanguage,
+        branding,
+        plainText: true,
+      }),
+    ]);
+
+    await mailer.sendMail({
+      to: {
+        address: email,
+        name,
+      },
+      from: senderEmail,
+      replyTo: replyToEmail,
+      subject: envelope.documentMeta.subject
+        ? renderCustomEmailTemplate(
+            i18n._(msg`Reminder: ${envelope.documentMeta.subject}`),
+            customEmailTemplate,
+          )
+        : emailSubject,
+      html,
+      text,
+      headers: getMailgunTrackingHeaders({
+        envelopeId: envelope.id,
+        recipientId: recipient.id,
+      }),
+    });
+
+    await prisma.documentAuditLog.create({
+      data: createDocumentAuditLogData({
+        type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_SENT,
+        envelopeId: envelope.id,
+        user,
+        metadata: requestMetadata,
+        data: {
+          emailType: recipientEmailType,
+          recipientEmail: recipient.email,
+          recipientName: recipient.name,
+          recipientRole: recipient.role,
+          recipientId: recipient.id,
+          isResending: true,
+        },
+      }),
+    });
+  }
 
   return envelope;
 };

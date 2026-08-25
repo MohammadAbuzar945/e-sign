@@ -1,10 +1,15 @@
-import { DocumentStatus, EnvelopeType, ResellerApplicationStatus } from '@prisma/client';
+import type { ResellerApplicationStatus } from '@prisma/client';
 
 import { isDemoFeatureVisible } from '@documenso/lib/constants/demo-feature-flags';
+import { getOrganisationCreditUsageTotal } from '@documenso/lib/server-only/billing/organisation-credit-usage';
 import { getResellerEligibilityThresholds } from '@documenso/lib/server-only/site-settings/get-reseller-site-settings';
 import { prisma } from '@documenso/prisma';
 
 export type OrganisationResellerMetrics = {
+  /**
+   * Durable credits used across the organisation.
+   * Kept as `completedDocumentCount` for existing snapshot/admin field names.
+   */
   completedDocumentCount: number;
   uniqueSignerCount: number;
   orgUserCount: number;
@@ -14,17 +19,9 @@ export type OrganisationResellerMetrics = {
 export const getOrganisationResellerMetrics = async (
   organisationId: string,
 ): Promise<OrganisationResellerMetrics> => {
-  const [completedDocumentCount, uniqueSignerResult, orgUserCount, teams] = await Promise.all([
-    prisma.envelope.count({
-      where: {
-        type: EnvelopeType.DOCUMENT,
-        status: DocumentStatus.COMPLETED,
-        deletedAt: null,
-        team: {
-          organisationId,
-        },
-      },
-    }),
+  // New source of truth is the immutable organisation usage ledger.
+  // Keep the historical team counter as a compatibility fallback until old usage is backfilled.
+  const [uniqueSignerResult, orgUserCount, teams, ledgerCreditsConsumed] = await Promise.all([
     prisma.$queryRaw<{ count: bigint }[]>`
       SELECT COUNT(DISTINCT LOWER(r.email)) as count
       FROM "Recipient" r
@@ -33,7 +30,6 @@ export const getOrganisationResellerMetrics = async (
       WHERE t."organisationId" = ${organisationId}
         AND e.type = 'DOCUMENT'
         AND e.status = 'COMPLETED'
-        AND e."deletedAt" IS NULL
     `,
     prisma.organisationMember.count({
       where: { organisationId },
@@ -42,13 +38,15 @@ export const getOrganisationResellerMetrics = async (
       where: { organisationId },
       select: { creditConsumed: true },
     }),
+    getOrganisationCreditUsageTotal(organisationId),
   ]);
 
   const uniqueSignerCount = Number(uniqueSignerResult[0]?.count ?? 0);
-  const creditsConsumed = teams.reduce((sum, team) => sum + team.creditConsumed, 0);
+  const teamCreditsConsumed = teams.reduce((sum, team) => sum + team.creditConsumed, 0);
+  const creditsConsumed = Math.max(ledgerCreditsConsumed, teamCreditsConsumed);
 
   return {
-    completedDocumentCount,
+    completedDocumentCount: creditsConsumed,
     uniqueSignerCount,
     orgUserCount,
     creditsConsumed,
@@ -124,7 +122,8 @@ export const getResellerEligibility = async ({
     ? (Date.now() - accountCreatedAt.getTime()) / (1000 * 60 * 60 * 24 * 30)
     : 0;
 
-  const creditsUsed = Math.max(metrics.creditsConsumed, metrics.completedDocumentCount);
+  // Durable Team.creditConsumed across all teams — never reduced when documents are deleted.
+  const creditsUsed = metrics.creditsConsumed;
   const hasCreditsRequirement = creditsUsed >= minCreditsUsed;
   const hasSignupTenure = monthsSinceSignup >= minSignupMonths;
 

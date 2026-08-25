@@ -138,7 +138,7 @@ export const findResellerApplications = async ({
           ...application,
           termsVariableValues: parseResellerTermsVariableValues(application.termsVariableValues),
           resellerProfile: null,
-          liveCompletedDocCount: metrics.completedDocumentCount,
+          liveCompletedDocCount: metrics.creditsConsumed,
           liveUniqueSignerCount: metrics.uniqueSignerCount,
           liveOrgUserCount: metrics.orgUserCount,
         };
@@ -192,7 +192,7 @@ export const findResellerApplications = async ({
             blockingReason: payoutReadiness.blockingReason ?? null,
           },
         },
-        liveCompletedDocCount: metrics.completedDocumentCount,
+        liveCompletedDocCount: metrics.creditsConsumed,
         liveUniqueSignerCount: metrics.uniqueSignerCount,
         liveOrgUserCount: metrics.orgUserCount,
       };

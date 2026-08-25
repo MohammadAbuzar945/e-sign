@@ -1,5 +1,7 @@
 import { prisma } from '@documenso/prisma';
-import type { UserCredits } from '@prisma/client';
+
+import { triggerPendingCreditResealsForOrganisation } from '@documenso/lib/server-only/billing/pending-credit-reseals';
+
 export const INITIAL_USER_CREDITS = 10;
 
 /**
@@ -121,6 +123,10 @@ export const updateOrganisationCredits = async (organisationId: string, credits:
     },
   });
 
+  if (updated.credits > userCredits.credits) {
+    await triggerPendingCreditResealsForOrganisation(organisationId);
+  }
+
   return updated;
 };
 
@@ -148,7 +154,7 @@ export const transferOrganisationCredits = async ({
     throw new Error('Cannot transfer credits to the same organisation');
   }
 
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const fromOrganisation = await tx.organisation.findUnique({
       where: { id: fromOrganisationId },
       select: { ownerUserId: true },
@@ -219,11 +225,19 @@ export const transferOrganisationCredits = async ({
       },
     });
 
-    return {
+    const result = {
       fromCredits: updatedFrom,
       toCredits: updatedTo,
     };
+
+    return result;
   });
+
+  if (result.toCredits.credits > 0) {
+    await triggerPendingCreditResealsForOrganisation(toOrganisationId);
+  }
+
+  return result;
 };
 
 /**

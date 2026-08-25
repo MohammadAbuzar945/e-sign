@@ -33,12 +33,14 @@ export type HeaderProps = HTMLAttributes<HTMLDivElement>;
 export const Header = ({ className, ...props }: HeaderProps) => {
   const params = useParams();
 
-  const { organisations } = useSession();
+  const { organisations, user } = useSession();
   const organisation = useOptionalCurrentOrganisation();
 
   const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
   const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+
+  const isOrganisationOwner = organisation?.ownerUserId === user.id;
 
   const { data: unreadCountData } = trpc.document.inbox.getCount.useQuery(
     {
@@ -107,33 +109,55 @@ export const Header = ({ className, ...props }: HeaderProps) => {
 
         <AppNavDesktop setIsCommandMenuOpen={setIsCommandMenuOpen} />
 
-        {organisation && creditsPurchasePath && (
+        {organisation && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  asChild
-                  variant="outline"
-                  className={cn(
-                    'hidden h-8 shrink-0 gap-1 rounded-md border px-2 shadow-none md:flex',
-                    hasNegativeCredits
-                      ? 'border-yellow-300 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:text-yellow-900'
-                      : hasZeroCredits
-                        ? 'border-red-300 bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800'
-                        : 'border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary',
-                  )}
-                >
-                  <Link to={creditsPurchasePath}>
+                {isOrganisationOwner && creditsPurchasePath ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className={cn(
+                      'hidden h-8 shrink-0 gap-1 rounded-md border px-2 shadow-none md:flex',
+                      hasNegativeCredits
+                        ? 'border-yellow-300 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:text-yellow-900'
+                        : hasZeroCredits
+                          ? 'border-red-300 bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800'
+                          : 'border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary',
+                    )}
+                  >
+                    <Link to={creditsPurchasePath}>
+                      <CoinsIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="text-xs font-medium tabular-nums">{availableCredits}</span>
+                    </Link>
+                  </Button>
+                ) : (
+                  <div
+                    className={cn(
+                      'hidden h-8 shrink-0 cursor-default items-center gap-1 rounded-md border px-2 md:flex',
+                      hasNegativeCredits
+                        ? 'border-yellow-300 bg-yellow-100 text-yellow-800'
+                        : hasZeroCredits
+                          ? 'border-red-300 bg-red-100 text-red-700'
+                          : 'border-primary/20 bg-primary/10 text-primary',
+                    )}
+                  >
                     <CoinsIcon className="h-3.5 w-3.5 flex-shrink-0" />
                     <span className="text-xs font-medium tabular-nums">{availableCredits}</span>
-                  </Link>
-                </Button>
+                  </div>
+                )}
               </TooltipTrigger>
               <TooltipContent>
-                {hasZeroCredits || hasNegativeCredits ? (
-                  <Trans>Credits unavailable. Click to buy more</Trans>
+                {isOrganisationOwner ? (
+                  hasZeroCredits || hasNegativeCredits ? (
+                    <Trans>Credits unavailable. Click to buy more</Trans>
+                  ) : (
+                    <Trans>Credits available. Click to buy more</Trans>
+                  )
+                ) : hasZeroCredits || hasNegativeCredits ? (
+                  <Trans>Credits unavailable</Trans>
                 ) : (
-                  <Trans>Credits available. Click to buy more</Trans>
+                  <Trans>Credits available</Trans>
                 )}
               </TooltipContent>
             </Tooltip>
