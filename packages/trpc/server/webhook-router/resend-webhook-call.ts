@@ -52,7 +52,7 @@ export const resendWebhookCallRoute = authenticatedProcedure
       body: JSON.stringify(webhookCall.requestBody),
       headers: {
         'Content-Type': 'application/json',
-        'X-Documenso-Secret': webhook.secret ?? '',
+        'X-Nomia-Secret': webhook.secret ?? '',
       },
     });
 

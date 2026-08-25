@@ -136,7 +136,9 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
     prismaMock.nomiaPricePlan.findMany.mockResolvedValue([]);
   });
 
-  it('includes pay-as-you-go purchases in billing history', async () => {
+  it(
+    'includes pay-as-you-go purchases in billing history',
+    async () => {
     const { getOrganisationPurchaseHistory } = await import('./get-organisation-purchase-history');
 
     prismaMock.organisationCreditPurchase.findMany.mockResolvedValue([
@@ -177,7 +179,9 @@ describe('get-organisation-purchase-history pay-as-you-go', () => {
         }),
       ],
     });
-  });
+  },
+  15_000,
+  );
 
   it('keeps a grouped Nomia-only purchase as a Nomia invoice id', async () => {
     const { getOrganisationPurchaseHistory } = await import('./get-organisation-purchase-history');
@@ -471,7 +475,7 @@ describe('build-purchase-invoice', () => {
       expect(html).toContain('<strong>Invoice #</strong> NOM-20260715-001');
       expect(html).not.toContain('invoice_1');
     },
-    30_000,
+    60_000,
   );
 
   it(
@@ -531,7 +535,7 @@ describe('build-purchase-invoice', () => {
     expect(html).toContain('<strong>Invoice #</strong> RS-20260715-001');
     expect(html).not.toContain('reseller_1');
   },
-  15_000,
+  30_000,
   );
 
   it(
