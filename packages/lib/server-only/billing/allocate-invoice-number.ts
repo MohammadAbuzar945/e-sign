@@ -56,6 +56,9 @@ export const allocateInvoiceNumber = async ({
   const displayDateKey = formatInvoiceDateKeyUtc(issuedAt);
   const id = `c${nanoid(24)}`;
 
+  // Single INSERT … ON CONFLICT … RETURNING. Do not split ensure + increment across a
+  // CTE and outer UPDATE: Postgres WITH clauses share one snapshot, so an outer UPDATE
+  // cannot see a row inserted in the CTE and returns zero rows when the seed is missing.
   const rows = await tx.$queryRaw<{ nextValue: number }[]>`
     WITH max_existing AS (
       SELECT COALESCE(MAX(seq), 0)::int AS max_seq
@@ -72,35 +75,26 @@ export const allocateInvoiceNumber = async ({
         WHERE "invoiceNumber" IS NOT NULL
           AND "invoiceNumber" ~ '^RS-[0-9]{8}-[0-9]+$'
       ) AS parsed
-    ),
-    ensured AS (
-      INSERT INTO "InvoiceNumberSequence" ("id", "prefix", "sellerKey", "dateKey", "nextValue")
-      SELECT
-        ${id},
-        ${PLATFORM_INVOICE_SEQUENCE_PREFIX},
-        ${PLATFORM_INVOICE_SEQUENCE_SELLER_KEY},
-        ${CONTINUOUS_INVOICE_SEQUENCE_DATE_KEY},
-        (SELECT max_seq FROM max_existing)
-      ON CONFLICT ("prefix", "sellerKey", "dateKey")
-      DO UPDATE SET
-        "nextValue" = GREATEST(
-          "InvoiceNumberSequence"."nextValue",
-          EXCLUDED."nextValue"
-        )
-      RETURNING "id"
     )
-    UPDATE "InvoiceNumberSequence"
-    SET "nextValue" = "InvoiceNumberSequence"."nextValue" + 1
-    WHERE "prefix" = ${PLATFORM_INVOICE_SEQUENCE_PREFIX}
-      AND "sellerKey" = ${PLATFORM_INVOICE_SEQUENCE_SELLER_KEY}
-      AND "dateKey" = ${CONTINUOUS_INVOICE_SEQUENCE_DATE_KEY}
-      AND EXISTS (SELECT 1 FROM ensured)
+    INSERT INTO "InvoiceNumberSequence" ("id", "prefix", "sellerKey", "dateKey", "nextValue")
+    SELECT
+      ${id},
+      ${PLATFORM_INVOICE_SEQUENCE_PREFIX},
+      ${PLATFORM_INVOICE_SEQUENCE_SELLER_KEY},
+      ${CONTINUOUS_INVOICE_SEQUENCE_DATE_KEY},
+      (SELECT max_seq FROM max_existing) + 1
+    ON CONFLICT ("prefix", "sellerKey", "dateKey")
+    DO UPDATE SET
+      "nextValue" = GREATEST(
+        "InvoiceNumberSequence"."nextValue",
+        (SELECT max_seq FROM max_existing)
+      ) + 1
     RETURNING "nextValue"
   `;
 
-  const sequence = rows[0]?.nextValue;
+  const sequence = Number(rows[0]?.nextValue ?? 0);
 
-  if (!sequence || sequence < 1) {
+  if (!Number.isFinite(sequence) || sequence < 1) {
     throw new Error('Failed to allocate invoice number');
   }
 

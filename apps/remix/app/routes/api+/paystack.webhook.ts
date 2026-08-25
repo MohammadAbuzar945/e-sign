@@ -521,23 +521,10 @@ const processPaystackWebhookEvent = async (event: {
 
       const creditsToAdd = Number(refferCredits);
       const grossAmount = Number(amount ?? 0);
-      const userCreditsRecord = await ensureOrganisationCredits(organisation.id, user.id);
-
-      if (userCreditsRecord && !Number.isNaN(creditsToAdd) && creditsToAdd > 0) {
-        await prisma.userCredits.update({
-          where: { id: userCreditsRecord.id },
-          data: { credits: Number(userCreditsRecord.credits) + creditsToAdd },
-        });
-
-        const { triggerPendingCreditResealsForOrganisation } = await import(
-          '@documenso/lib/server-only/billing/pending-credit-reseals'
-        );
-
-        await triggerPendingCreditResealsForOrganisation(organisation.id);
-      }
 
       let purchaseId: string | null = null;
       let isNewlyCompleted = false;
+      let creditsAdded = 0;
 
       if (reference && !Number.isNaN(creditsToAdd) && creditsToAdd > 0 && grossAmount > 0) {
         const {
@@ -545,6 +532,9 @@ const processPaystackWebhookEvent = async (event: {
           resolveNomiaPurchaseInvoiceId,
         } = await import('@documenso/lib/server-only/billing/record-organisation-credit-purchase');
 
+        // Complete the purchase (and allocate invoice) before mutating balances so a
+        // failed invoice allocation does not leave orphan credits, and so webhook
+        // retries do not double-credit after a partial success.
         const { purchase, isNewlyCompleted: newlyCompleted } =
           await completeOrganisationCreditPurchase({
             paystackReference: reference,
@@ -562,6 +552,23 @@ const processPaystackWebhookEvent = async (event: {
         isNewlyCompleted = newlyCompleted;
 
         if (newlyCompleted) {
+          const userCreditsRecord = await ensureOrganisationCredits(organisation.id, user.id);
+
+          if (userCreditsRecord) {
+            await prisma.userCredits.update({
+              where: { id: userCreditsRecord.id },
+              data: { credits: Number(userCreditsRecord.credits) + creditsToAdd },
+            });
+
+            creditsAdded = creditsToAdd;
+
+            const { triggerPendingCreditResealsForOrganisation } = await import(
+              '@documenso/lib/server-only/billing/pending-credit-reseals'
+            );
+
+            await triggerPendingCreditResealsForOrganisation(organisation.id);
+          }
+
           const { sendPurchaseInvoiceEmail } = await import(
             '@documenso/lib/server-only/billing/send-purchase-invoice-email'
           );
@@ -596,7 +603,7 @@ const processPaystackWebhookEvent = async (event: {
               : 'payg_credits_added',
           organisationId: organisation.id,
           userId: user.id,
-          creditsAdded: !Number.isNaN(creditsToAdd) && creditsToAdd > 0 ? creditsToAdd : 0,
+          creditsAdded,
           reference: reference ?? null,
           purchaseId,
           isNewlyCompleted,
