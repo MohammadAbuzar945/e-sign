@@ -39,7 +39,7 @@ To create a new webhook subscription, you need to provide the following informat
 
 - Enter the webhook URL that will receive the event payload.
 - Select the event(s) you want to subscribe to: `document.created`, `document.sent`, `document.opened`, `document.signed`, `document.completed`, `document.rejected`, `document.cancelled`.
-- Optionally, you can provide a secret key that will be used to sign the payload. For new webhooks this key is sent in the `X-Nomia-Secret` header.
+- Optionally, you can provide a secret key that will be used to sign the payload. This key is sent in the `X-Nomia-Secret` header.
 
 ![A screenshot of the Create Webhook modal that shows the URL input field and the event checkboxes](/webhook-images/create-webhook-dialog.webp)
 
