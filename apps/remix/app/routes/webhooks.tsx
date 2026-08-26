@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
@@ -15,6 +15,7 @@ import { Link } from 'react-router';
 
 import { useCopyToClipboard } from '@documenso/lib/client-only/hooks/use-copy-to-clipboard';
 import { WEBHOOK_SECRET_HEADER } from '@documenso/lib/constants/webhook-secret-header';
+import { cn } from '@documenso/ui/lib/utils';
 import {
   Accordion,
   AccordionContent,
@@ -592,12 +593,18 @@ const CopyCodeBlock = ({ code }: { code: string }) => {
   return (
     <div className="bg-muted/40 relative overflow-hidden rounded-lg border">
       <div className="absolute right-2 top-2 z-10">
-        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={handleCopy}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={handleCopy}
+          aria-label={hasCopied ? _(msg`Copied`) : _(msg`Copy`)}
+        >
           {hasCopied ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
-          {hasCopied ? <Trans>Copied</Trans> : <Trans>Copy</Trans>}
         </Button>
       </div>
-      <pre className="max-h-[28rem] overflow-auto p-4 pt-12 text-xs leading-relaxed">
+      <pre className="max-h-[28rem] overflow-auto p-4 pr-12 text-xs leading-relaxed">
         <code>{code}</code>
       </pre>
     </div>
@@ -607,6 +614,50 @@ const CopyCodeBlock = ({ code }: { code: string }) => {
 export default function WebhooksDocumentationPage() {
   const { _ } = useLingui();
   const [openExample, setOpenExample] = useState(eventAnchorId('document.created'));
+  const [activeSectionId, setActiveSectionId] = useState(SECTION_LINKS[0].id);
+
+  useEffect(() => {
+    const sectionIds = SECTION_LINKS.map((section) => section.id);
+    const elements = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter((element): element is HTMLElement => element !== null);
+
+    if (elements.length === 0) {
+      return;
+    }
+
+    const visibleSectionIds = new Set<string>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            visibleSectionIds.add(entry.target.id);
+          } else {
+            visibleSectionIds.delete(entry.target.id);
+          }
+        }
+
+        const nextActiveSectionId = sectionIds.find((id) => visibleSectionIds.has(id));
+
+        if (nextActiveSectionId) {
+          setActiveSectionId(nextActiveSectionId);
+        }
+      },
+      {
+        rootMargin: '-20% 0px -65% 0px',
+        threshold: [0, 0.25, 0.5, 1],
+      },
+    );
+
+    for (const element of elements) {
+      observer.observe(element);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   const handleOpenExample = (event: (typeof WEBHOOK_EVENTS)[number]) => {
     const anchorId = eventAnchorId(event);
@@ -659,7 +710,13 @@ export default function WebhooksDocumentationPage() {
               <a
                 key={section.id}
                 href={`#${section.id}`}
-                className="text-muted-foreground hover:bg-muted hover:text-foreground block rounded-md px-3 py-1.5 text-sm transition-colors"
+                onClick={() => setActiveSectionId(section.id)}
+                className={cn(
+                  'block rounded-md px-3 py-1.5 text-sm transition-colors',
+                  activeSectionId === section.id
+                    ? 'bg-muted text-foreground font-medium'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
               >
                 {_(section.label)}
               </a>
