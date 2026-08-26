@@ -1,5 +1,6 @@
 import { Prisma, WebhookCallStatus } from '@prisma/client';
 
+import { getWebhookSecretHeaderName } from '@documenso/lib/constants/webhook-secret-header';
 import { prisma } from '@documenso/prisma';
 
 import type { JobRunIO } from '../../client/_internal/job';
@@ -20,7 +21,8 @@ export const run = async ({
     },
   });
 
-  const { webhookUrl: url, secret } = webhook;
+  const { webhookUrl: url, secret, createdAt } = webhook;
+  const secretHeaderName = getWebhookSecretHeaderName(createdAt);
 
   const payloadData = {
     event,
@@ -34,7 +36,7 @@ export const run = async ({
     body: JSON.stringify(payloadData),
     headers: {
       'Content-Type': 'application/json',
-      'X-Nomia-Secret': secret ?? '',
+      [secretHeaderName]: secret ?? '',
     },
   });
 

@@ -1,133 +1,34 @@
----
-title: Webhooks
-description: Learn how to use webhooks to receive real-time notifications about your documents.
----
+import { Trans } from '@lingui/react/macro';
+import { Link } from 'react-router';
 
-# Webhooks
+import {
+  LEGACY_WEBHOOK_SECRET_HEADER,
+  WEBHOOK_SECRET_HEADER,
+  WEBHOOK_SECRET_HEADER_CUTOFF,
+} from '@documenso/lib/constants/webhook-secret-header';
 
-Webhooks are HTTP callbacks triggered by specific events. When you subscribe to a specific event and that event occurs, the webhook makes an HTTP request to the URL you provide. The request can be a simple notification or carry a payload with more information about the event.
+import { BrandingLogo } from '~/components/general/branding-logo';
+import { appMetaTags } from '~/utils/meta';
 
-Some of the common use cases for webhooks include:
+export function meta() {
+  return appMetaTags('Webhooks');
+}
 
-1. **Real-time Data Syncing**: Webhooks provide a way to keep data in sync across different platforms. For example, you can keep your system up-to-date with your Nomia documents by subscribing to events like document creation or signing.
-2. **Automating Workflows**: They can trigger automated workflows that start when an event occurs. For example, the webhook could trigger an email when a document is signed.
-3. **Integrating Third-Party Services**: Webhooks can be used to integrate Nomia with third-party services. For example, you could use a webhook to send data to a CRM system when a document is signed.
+const WEBHOOK_EVENTS = [
+  'document.created',
+  'document.sent',
+  'document.opened',
+  'document.signed',
+  'document.completed',
+  'document.rejected',
+  'document.cancelled',
+] as const;
 
-Nomia supports Webhooks and allows you to subscribe to the following events:
-
-- `document.created`
-- `document.sent`
-- `document.opened`
-- `document.signed`
-- `document.completed`
-- `document.rejected`
-- `document.cancelled`
-
-## Create a webhook subscription
-
-You can create a webhook subscription from the team settings page. Click your avatar in the top right corner of the dashboard and select "Team settings" from the dropdown menu.
-
-![A screenshot of the Nomia's dashboard that shows the dropdown menu when you click on your user avatar](/webhook-images/documenso-main-page.webp)
-
-Then, navigate to the "Webhooks" tab, which takes you to the webhooks main page.
-
-![A screenshot of the Nomia's team settings page that shows the Webhooks tab and the Create Webhook button](/webhook-images/webhooks-main-page.webp)
-
-Clicking on the "**Create Webhook**" button opens a modal to create a new webhook subscription.
-
-To create a new webhook subscription, you need to provide the following information:
-
-- Enter the webhook URL that will receive the event payload.
-- Select the event(s) you want to subscribe to: `document.created`, `document.sent`, `document.opened`, `document.signed`, `document.completed`, `document.rejected`, `document.cancelled`.
-- Optionally, you can provide a secret key that will be used to sign the payload. For new webhooks this key is sent in the `X-Nomia-Secret` header.
-
-![A screenshot of the Create Webhook modal that shows the URL input field and the event checkboxes](/webhook-images/create-webhook-dialog.webp)
-
-After you have filled in the required information, click on the "**Create Webhook**" button to save your subscription.
-
-The screenshot below illustrates a newly created webhook subscription.
-
-![A screenshot of the Nomia's user settings page that shows the newly created webhook subscription](/webhook-images/webhooks-page.webp)
-
-You can edit, view the logs, or delete your webhook subscriptions by clicking the three dots (...) under the "Action" column. You can also access the webhook logs by clicking on the webhook subscription directly.
-
-![A screenshot of the Nomia's team settings page that shows the webhook logs](/webhook-images/webhook-detail-page.webp)
-
-You can go even further and check the execution details of each call by clicking on a specific webhook call.
-
-![A screenshot of the Nomia's team settings page that shows the webhook call details](/webhook-images/webhook-run-page.webp)
-
-This page shows the details of the webhook call such as:
-
-- status
-- event
-- date when the webhook was sent
-- response code
-- request body
-- response body and headers
-
-## Webhook fields
-
-The payload sent to the webhook URL contains the following fields:
-
-| Field                                        | Type      | Description                                           |
-| -------------------------------------------- | --------- | ----------------------------------------------------- |
-| `event`                                      | string    | The type of event that triggered the webhook.         |
-| `payload.id`                                 | number    | The id of the document.                               |
-| `payload.externalId`                         | string?   | External identifier for the document.                 |
-| `payload.userId`                             | number    | The id of the user who owns the document.             |
-| `payload.authOptions`                        | json?     | Authentication options for the document.              |
-| `payload.formValues`                         | json?     | Form values for the document.                         |
-| `payload.visibility`                         | string    | Document visibility (e.g., EVERYONE).                 |
-| `payload.title`                              | string    | The title of the document.                            |
-| `payload.status`                             | string    | The current status of the document.                   |
-| `payload.documentDataId`                     | string    | The identifier for the document data.                 |
-| `payload.createdAt`                          | datetime  | The creation date and time of the document.           |
-| `payload.updatedAt`                          | datetime  | The last update date and time of the document.        |
-| `payload.completedAt`                        | datetime? | The completion date and time of the document.         |
-| `payload.deletedAt`                          | datetime? | The deletion date and time of the document.           |
-| `payload.teamId`                             | number?   | The id of the team if document belongs to a team.     |
-| `payload.templateId`                         | number?   | The id of the template if created from template.      |
-| `payload.source`                             | string    | The source of the document (e.g., DOCUMENT, TEMPLATE) |
-| `payload.documentMeta.id`                    | string    | The id of the document metadata.                      |
-| `payload.documentMeta.subject`               | string?   | The subject of the document.                          |
-| `payload.documentMeta.message`               | string?   | The message associated with the document.             |
-| `payload.documentMeta.timezone`              | string    | The timezone setting for the document.                |
-| `payload.documentMeta.password`              | string?   | The password protection if set.                       |
-| `payload.documentMeta.dateFormat`            | string    | The date format used in the document.                 |
-| `payload.documentMeta.redirectUrl`           | string?   | The URL to redirect after signing.                    |
-| `payload.documentMeta.signingOrder`          | string    | The signing order (e.g., PARALLEL, SEQUENTIAL).       |
-| `payload.documentMeta.typedSignatureEnabled` | boolean   | Whether typed signatures are enabled.                 |
-| `payload.documentMeta.language`              | string    | The language of the document.                         |
-| `payload.documentMeta.distributionMethod`    | string    | The method of distributing the document.              |
-| `payload.documentMeta.emailSettings`         | json?     | Email notification settings.                          |
-| `payload.Recipient[].id`                     | number    | The id of the recipient.                              |
-| `payload.Recipient[].documentId`             | number?   | The id of the document for this recipient.            |
-| `payload.Recipient[].templateId`             | number?   | The template id if from a template.                   |
-| `payload.Recipient[].email`                  | string    | The email address of the recipient.                   |
-| `payload.Recipient[].name`                   | string    | The name of the recipient.                            |
-| `payload.Recipient[].token`                  | string    | The unique token for this recipient.                  |
-| `payload.Recipient[].documentDeletedAt`      | datetime? | When the document was deleted for this recipient.     |
-| `payload.Recipient[].expired`                | datetime? | When the recipient's access expired.                  |
-| `payload.Recipient[].signedAt`               | datetime? | When the recipient signed the document.               |
-| `payload.Recipient[].authOptions`            | json?     | Authentication options for this recipient.            |
-| `payload.Recipient[].signingOrder`           | number?   | The order in which this recipient should sign.        |
-| `payload.Recipient[].rejectionReason`        | string?   | The reason if the recipient rejected the document.    |
-| `payload.Recipient[].role`                   | string    | The role of the recipient (e.g., SIGNER, VIEWER).     |
-| `payload.Recipient[].readStatus`             | string    | Whether the recipient has read the document.          |
-| `payload.Recipient[].signingStatus`          | string    | The signing status of this recipient.                 |
-| `payload.Recipient[].sendStatus`             | string    | The sending status for this recipient.                |
-| `createdAt`                                  | datetime  | The creation date and time of the webhook event.      |
-| `webhookEndpoint`                            | string    | The endpoint URL where the webhook is sent.           |
-
-## Example payloads
-
-Below are examples of the payloads that are sent for each of the supported events. The payloads are sent as JSON data in the body of the POST request.
-
-Example payload for the `document.created` event:
-
-```json
-{
+const WEBHOOK_PAYLOAD_EXAMPLES: Array<{ event: (typeof WEBHOOK_EVENTS)[number]; payload: string }> =
+  [
+    {
+      event: 'document.created',
+      payload: `{
   "event": "DOCUMENT_CREATED",
   "payload": {
     "id": 10,
@@ -136,7 +37,7 @@ Example payload for the `document.created` event:
     "authOptions": null,
     "formValues": null,
     "visibility": "EVERYONE",
-    "title": "documenso.pdf",
+    "title": "nomia.pdf",
     "status": "DRAFT",
     "documentDataId": "hs8qz1ktr9204jn7mg6c5dxy0",
     "createdAt": "2024-04-22T11:44:43.341Z",
@@ -183,13 +84,11 @@ Example payload for the `document.created` event:
   },
   "createdAt": "2024-04-22T11:44:44.779Z",
   "webhookEndpoint": "https://mywebhooksite.com/mywebhook"
-}
-```
-
-Example payload for the `document.sent` event:
-
-```json
-{
+}`,
+    },
+    {
+      event: 'document.sent',
+      payload: `{
   "event": "DOCUMENT_SENT",
   "payload": {
     "id": 10,
@@ -198,7 +97,7 @@ Example payload for the `document.sent` event:
     "authOptions": null,
     "formValues": null,
     "visibility": "EVERYONE",
-    "title": "documenso.pdf",
+    "title": "nomia.pdf",
     "status": "PENDING",
     "documentDataId": "hs8qz1ktr9204jn7mg6c5dxy0",
     "createdAt": "2024-04-22T11:44:43.341Z",
@@ -263,13 +162,11 @@ Example payload for the `document.sent` event:
   },
   "createdAt": "2024-04-22T11:48:07.945Z",
   "webhookEndpoint": "https://mywebhooksite.com/mywebhook"
-}
-```
-
-Example payload for the `document.opened` event:
-
-```json
-{
+}`,
+    },
+    {
+      event: 'document.opened',
+      payload: `{
   "event": "DOCUMENT_OPENED",
   "payload": {
     "id": 10,
@@ -278,7 +175,7 @@ Example payload for the `document.opened` event:
     "authOptions": null,
     "formValues": null,
     "visibility": "EVERYONE",
-    "title": "documenso.pdf",
+    "title": "nomia.pdf",
     "status": "PENDING",
     "documentDataId": "hs8qz1ktr9204jn7mg6c5dxy0",
     "createdAt": "2024-04-22T11:44:43.341Z",
@@ -325,13 +222,11 @@ Example payload for the `document.opened` event:
   },
   "createdAt": "2024-04-22T11:50:26.174Z",
   "webhookEndpoint": "https://mywebhooksite.com/mywebhook"
-}
-```
-
-Example payload for the `document.signed` event:
-
-```json
-{
+}`,
+    },
+    {
+      event: 'document.signed',
+      payload: `{
   "event": "DOCUMENT_SIGNED",
   "payload": {
     "id": 10,
@@ -340,7 +235,7 @@ Example payload for the `document.signed` event:
     "authOptions": null,
     "formValues": null,
     "visibility": "EVERYONE",
-    "title": "documenso.pdf",
+    "title": "nomia.pdf",
     "status": "COMPLETED",
     "documentDataId": "hs8qz1ktr9204jn7mg6c5dxy0",
     "createdAt": "2024-04-22T11:44:43.341Z",
@@ -390,13 +285,11 @@ Example payload for the `document.signed` event:
   },
   "createdAt": "2024-04-22T11:52:18.577Z",
   "webhookEndpoint": "https://mywebhooksite.com/mywebhook"
-}
-```
-
-Example payload for the `document.completed` event:
-
-```json
-{
+}`,
+    },
+    {
+      event: 'document.completed',
+      payload: `{
   "event": "DOCUMENT_COMPLETED",
   "payload": {
     "id": 10,
@@ -405,7 +298,7 @@ Example payload for the `document.completed` event:
     "authOptions": null,
     "formValues": null,
     "visibility": "EVERYONE",
-    "title": "documenso.pdf",
+    "title": "nomia.pdf",
     "status": "COMPLETED",
     "documentDataId": "hs8qz1ktr9204jn7mg6c5dxy0",
     "createdAt": "2024-04-22T11:44:43.341Z",
@@ -476,13 +369,11 @@ Example payload for the `document.completed` event:
   },
   "createdAt": "2024-04-22T11:52:18.277Z",
   "webhookEndpoint": "https://mywebhooksite.com/mywebhook"
-}
-```
-
-Example payload for the `document.rejected` event:
-
-```json
-{
+}`,
+    },
+    {
+      event: 'document.rejected',
+      payload: `{
   "event": "DOCUMENT_REJECTED",
   "payload": {
     "id": 10,
@@ -491,7 +382,7 @@ Example payload for the `document.rejected` event:
     "authOptions": null,
     "formValues": null,
     "visibility": "EVERYONE",
-    "title": "documenso.pdf",
+    "title": "nomia.pdf",
     "status": "PENDING",
     "documentDataId": "hs8qz1ktr9204jn7mg6c5dxy0",
     "createdAt": "2024-04-22T11:44:43.341Z",
@@ -541,13 +432,11 @@ Example payload for the `document.rejected` event:
   },
   "createdAt": "2024-04-22T11:48:07.945Z",
   "webhookEndpoint": "https://mywebhooksite.com/mywebhook"
-}
-```
-
-Example payload for the `document.cancelled` event:
-
-```json
-{
+}`,
+    },
+    {
+      event: 'document.cancelled',
+      payload: `{
   "event": "DOCUMENT_CANCELLED",
   "payload": {
     "id": 7,
@@ -556,7 +445,7 @@ Example payload for the `document.cancelled` event:
     "authOptions": null,
     "formValues": null,
     "visibility": "EVERYONE",
-    "title": "documenso.pdf",
+    "title": "nomia.pdf",
     "status": "PENDING",
     "documentDataId": "cm6exvn93006hi02ru90a265a",
     "createdAt": "2025-01-27T11:02:14.393Z",
@@ -593,8 +482,8 @@ Example payload for the `document.cancelled` event:
         "id": 7,
         "documentId": 7,
         "templateId": null,
-        "email": "mybirihix@mailinator.com",
-        "name": "Zorita Baird",
+        "email": "signer@nomiadocs.com",
+        "name": "Signer",
         "token": "XkKx1HCs6Znm2UBJA2j6o",
         "documentDeletedAt": null,
         "expired": null,
@@ -631,29 +520,174 @@ Example payload for the `document.cancelled` event:
   },
   "createdAt": "2025-01-27T11:03:27.730Z",
   "webhookEndpoint": "https://mywebhooksite.com/mywebhook"
+}`,
+    },
+  ];
+
+export default function WebhooksDocumentationPage() {
+  const cutoffLabel = WEBHOOK_SECRET_HEADER_CUTOFF.toISOString().slice(0, 10);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="border-b bg-card px-6 py-4">
+        <div className="mx-auto flex max-w-3xl items-center gap-4">
+          <Link to="/">
+            <BrandingLogo className="h-8 w-auto" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              <Trans>Webhooks</Trans>
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              <Trans>Real-time document event notifications for your integrations</Trans>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <article className="prose dark:prose-invert mx-auto max-w-3xl px-6 py-10">
+        <p>
+          <Trans>
+            Webhooks are HTTP callbacks triggered by document events. When you subscribe to an event
+            and that event occurs, Nomia POSTs a JSON payload to the URL you provide.
+          </Trans>
+        </p>
+
+        <h2>
+          <Trans>Supported events</Trans>
+        </h2>
+        <ul>
+          {WEBHOOK_EVENTS.map((event) => (
+            <li key={event}>
+              <a href={`#${event.replace('.', '-')}`}>
+                <code>{event}</code>
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <h2>
+          <Trans>Create a webhook subscription</Trans>
+        </h2>
+        <ol>
+          <li>
+            <Trans>Open your team settings and go to the Webhooks tab.</Trans>
+          </li>
+          <li>
+            <Trans>Click Create Webhook and enter the callback URL.</Trans>
+          </li>
+          <li>
+            <Trans>Select the events you want to receive.</Trans>
+          </li>
+          <li>
+            <Trans>
+              Optionally set a secret. Nomia includes that value in a request header so you can
+              verify the callback is genuine.
+            </Trans>
+          </li>
+        </ol>
+
+        <h2>
+          <Trans>Verifying callbacks</Trans>
+        </h2>
+        <p>
+          <Trans>
+            When a secret is configured, Nomia sends it as a header on every webhook POST. Compare
+            the header value to the secret you stored for that webhook.
+          </Trans>
+        </p>
+        <ul>
+          <li>
+            <Trans>
+              New webhooks (created on or after {cutoffLabel}) use the{' '}
+              <code>{WEBHOOK_SECRET_HEADER}</code> header.
+            </Trans>
+          </li>
+          <li>
+            <Trans>
+              Existing webhooks created before that date continue to use the legacy{' '}
+              <code>{LEGACY_WEBHOOK_SECRET_HEADER}</code> header so current integrations keep
+              working.
+            </Trans>
+          </li>
+        </ul>
+        <p>
+          <Trans>
+            The secret is sent as the header value itself. It is not an HMAC signature of the body.
+          </Trans>
+        </p>
+
+        <h2>
+          <Trans>Request format</Trans>
+        </h2>
+        <ul>
+          <li>
+            <Trans>
+              Method: <code>POST</code>
+            </Trans>
+          </li>
+          <li>
+            <Trans>
+              Content-Type: <code>application/json</code>
+            </Trans>
+          </li>
+          <li>
+            <Trans>
+              Body fields: <code>event</code>, <code>payload</code> (document + recipients),{' '}
+              <code>createdAt</code>, <code>webhookEndpoint</code>
+            </Trans>
+          </li>
+        </ul>
+
+        <h2>
+          <Trans>Example payloads</Trans>
+        </h2>
+        <p>
+          <Trans>
+            Below are examples of the payloads sent for each supported event. Payloads are JSON in
+            the body of the POST request.
+          </Trans>
+        </p>
+
+        {WEBHOOK_PAYLOAD_EXAMPLES.map(({ event, payload }) => (
+          <section key={event} id={event.replace('.', '-')} className="scroll-mt-8">
+            <h3>
+              <Trans>
+                Example payload for the <code>{event}</code> event
+              </Trans>
+            </h3>
+            <pre>
+              <code>{payload}</code>
+            </pre>
+          </section>
+        ))}
+
+        <h2>
+          <Trans>Testing and resending</Trans>
+        </h2>
+        <p>
+          <Trans>
+            From a webhook&apos;s detail page you can send a test event or open call logs. Failed or
+            successful deliveries can be resent from the call detail view.
+          </Trans>
+        </p>
+
+        <h2>
+          <Trans>Availability</Trans>
+        </h2>
+        <p>
+          <Trans>Webhooks are available on teams.</Trans>
+        </p>
+
+        <p className="not-prose mt-10">
+          <Link
+            to="/reference"
+            className="text-primary text-sm font-medium underline underline-offset-4"
+          >
+            <Trans>View API Reference</Trans>
+          </Link>
+        </p>
+      </article>
+    </div>
+  );
 }
-```
-
-## Webhook events testing
-
-You can trigger test webhook events to test the webhook functionality. To do so, navigate to the webhook subscription details page and click the "Test" button.
-
-![A screenshot of the Nomia's team settings page that shows the webhook logs](/webhook-images/webhook-detail-page.webp)
-
-This opens a dialog where you can select the event type to test.
-
-![Nomia's individual webhook page](/webhook-images/webhook-test-trigger.webp)
-
-Choose the event you want to test and click "Send". You’ll then receive a test payload from Nomia with sample data.
-
-## Webhook events resending
-
-To resend a webhook call, you need to navigate to the webhook call page and click the "Resend" button.
-
-![A screenshot of the Nomia's team settings page that shows the webhook call details](/webhook-images/webhook-run-page.webp)
-
-This will send the webhook event to the webhook URL again.
-
-## Availability
-
-Webhooks are available to teams only.
