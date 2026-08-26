@@ -1,11 +1,36 @@
+import { useState } from 'react';
+
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
+import {
+  BookOpenIcon,
+  CheckIcon,
+  CopyIcon,
+  ExternalLinkIcon,
+  ShieldCheckIcon,
+  WebhookIcon,
+} from 'lucide-react';
 import { Link } from 'react-router';
 
+import { useCopyToClipboard } from '@documenso/lib/client-only/hooks/use-copy-to-clipboard';
+import { WEBHOOK_SECRET_HEADER } from '@documenso/lib/constants/webhook-secret-header';
 import {
-  LEGACY_WEBHOOK_SECRET_HEADER,
-  WEBHOOK_SECRET_HEADER,
-  WEBHOOK_SECRET_HEADER_CUTOFF,
-} from '@documenso/lib/constants/webhook-secret-header';
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@documenso/ui/primitives/accordion';
+import { Badge } from '@documenso/ui/primitives/badge';
+import { Button } from '@documenso/ui/primitives/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@documenso/ui/primitives/card';
+import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { BrandingLogo } from '~/components/general/branding-logo';
 import { appMetaTags } from '~/utils/meta';
@@ -22,6 +47,16 @@ const WEBHOOK_EVENTS = [
   'document.completed',
   'document.rejected',
   'document.cancelled',
+] as const;
+
+const SECTION_LINKS = [
+  { id: 'overview', label: msg`Overview` },
+  { id: 'events', label: msg`Events` },
+  { id: 'setup', label: msg`Setup` },
+  { id: 'verification', label: msg`Verification` },
+  { id: 'request-format', label: msg`Request format` },
+  { id: 'examples', label: msg`Payload examples` },
+  { id: 'testing', label: msg`Testing` },
 ] as const;
 
 const WEBHOOK_PAYLOAD_EXAMPLES: Array<{ event: (typeof WEBHOOK_EVENTS)[number]; payload: string }> =
@@ -524,170 +559,326 @@ const WEBHOOK_PAYLOAD_EXAMPLES: Array<{ event: (typeof WEBHOOK_EVENTS)[number]; 
     },
   ];
 
-export default function WebhooksDocumentationPage() {
-  const cutoffLabel = WEBHOOK_SECRET_HEADER_CUTOFF.toISOString().slice(0, 10);
+const eventAnchorId = (event: string) => event.replace('.', '-');
+
+const CopyCodeBlock = ({ code }: { code: string }) => {
+  const { _ } = useLingui();
+  const { toast } = useToast();
+  const [, copy] = useCopyToClipboard();
+  const [hasCopied, setHasCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const didCopy = await copy(code);
+
+    if (!didCopy) {
+      toast({
+        title: _(msg`Unable to copy`),
+        description: _(msg`Please copy the code manually.`),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setHasCopied(true);
+    toast({
+      title: _(msg`Copied to clipboard`),
+    });
+
+    window.setTimeout(() => {
+      setHasCopied(false);
+    }, 2000);
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b bg-card px-6 py-4">
-        <div className="mx-auto flex max-w-3xl items-center gap-4">
-          <Link to="/">
-            <BrandingLogo className="h-8 w-auto" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              <Trans>Webhooks</Trans>
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              <Trans>Real-time document event notifications for your integrations</Trans>
-            </p>
-          </div>
-        </div>
+    <div className="bg-muted/40 relative overflow-hidden rounded-lg border">
+      <div className="absolute right-2 top-2 z-10">
+        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={handleCopy}>
+          {hasCopied ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
+          {hasCopied ? <Trans>Copied</Trans> : <Trans>Copy</Trans>}
+        </Button>
       </div>
+      <pre className="max-h-[28rem] overflow-auto p-4 pt-12 text-xs leading-relaxed">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+};
 
-      <article className="prose dark:prose-invert mx-auto max-w-3xl px-6 py-10">
-        <p>
-          <Trans>
-            Webhooks are HTTP callbacks triggered by document events. When you subscribe to an event
-            and that event occurs, Nomia POSTs a JSON payload to the URL you provide.
-          </Trans>
-        </p>
+export default function WebhooksDocumentationPage() {
+  const { _ } = useLingui();
+  const [openExample, setOpenExample] = useState(eventAnchorId('document.created'));
 
-        <h2>
-          <Trans>Supported events</Trans>
-        </h2>
-        <ul>
-          {WEBHOOK_EVENTS.map((event) => (
-            <li key={event}>
-              <a href={`#${event.replace('.', '-')}`}>
-                <code>{event}</code>
+  const handleOpenExample = (event: (typeof WEBHOOK_EVENTS)[number]) => {
+    const anchorId = eventAnchorId(event);
+    setOpenExample(anchorId);
+  };
+
+  return (
+    <div className="bg-background min-h-screen">
+      <header className="bg-card/95 supports-[backdrop-filter]:bg-card/80 sticky top-0 z-20 border-b backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Link to="/" className="shrink-0">
+              <BrandingLogo className="h-8 w-auto" />
+            </Link>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <WebhookIcon className="text-muted-foreground hidden h-4 w-4 sm:block" />
+                <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">
+                  <Trans>Webhooks</Trans>
+                </h1>
+              </div>
+              <p className="text-muted-foreground mt-0.5 text-sm">
+                <Trans>Real-time document event notifications for your integrations</Trans>
+              </p>
+            </div>
+          </div>
+
+          <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Link to="/reference">
+              <BookOpenIcon className="mr-1.5 h-4 w-4" />
+              <span className="hidden sm:inline">
+                <Trans>API Reference</Trans>
+              </span>
+              <span className="sm:hidden">
+                <Trans>API</Trans>
+              </span>
+              <ExternalLinkIcon className="ml-1.5 h-3.5 w-3.5 opacity-60" />
+            </Link>
+          </Button>
+        </div>
+      </header>
+
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="hidden lg:block">
+          <nav className="sticky top-28 space-y-1">
+            <p className="text-muted-foreground mb-3 text-xs font-medium uppercase tracking-wide">
+              <Trans>On this page</Trans>
+            </p>
+            {SECTION_LINKS.map((section) => (
+              <a
+                key={section.id}
+                href={`#${section.id}`}
+                className="text-muted-foreground hover:bg-muted hover:text-foreground block rounded-md px-3 py-1.5 text-sm transition-colors"
+              >
+                {_(section.label)}
               </a>
-            </li>
-          ))}
-        </ul>
+            ))}
+          </nav>
+        </aside>
 
-        <h2>
-          <Trans>Create a webhook subscription</Trans>
-        </h2>
-        <ol>
-          <li>
-            <Trans>Open your team settings and go to the Webhooks tab.</Trans>
-          </li>
-          <li>
-            <Trans>Click Create Webhook and enter the callback URL.</Trans>
-          </li>
-          <li>
-            <Trans>Select the events you want to receive.</Trans>
-          </li>
-          <li>
-            <Trans>
-              Optionally set a secret. Nomia includes that value in a request header so you can
-              verify the callback is genuine.
-            </Trans>
-          </li>
-        </ol>
-
-        <h2>
-          <Trans>Verifying callbacks</Trans>
-        </h2>
-        <p>
-          <Trans>
-            When a secret is configured, Nomia sends it as a header on every webhook POST. Compare
-            the header value to the secret you stored for that webhook.
-          </Trans>
-        </p>
-        <ul>
-          <li>
-            <Trans>
-              New webhooks (created on or after {cutoffLabel}) use the{' '}
-              <code>{WEBHOOK_SECRET_HEADER}</code> header.
-            </Trans>
-          </li>
-          <li>
-            <Trans>
-              Existing webhooks created before that date continue to use the legacy{' '}
-              <code>{LEGACY_WEBHOOK_SECRET_HEADER}</code> header so current integrations keep
-              working.
-            </Trans>
-          </li>
-        </ul>
-        <p>
-          <Trans>
-            The secret is sent as the header value itself. It is not an HMAC signature of the body.
-          </Trans>
-        </p>
-
-        <h2>
-          <Trans>Request format</Trans>
-        </h2>
-        <ul>
-          <li>
-            <Trans>
-              Method: <code>POST</code>
-            </Trans>
-          </li>
-          <li>
-            <Trans>
-              Content-Type: <code>application/json</code>
-            </Trans>
-          </li>
-          <li>
-            <Trans>
-              Body fields: <code>event</code>, <code>payload</code> (document + recipients),{' '}
-              <code>createdAt</code>, <code>webhookEndpoint</code>
-            </Trans>
-          </li>
-        </ul>
-
-        <h2>
-          <Trans>Example payloads</Trans>
-        </h2>
-        <p>
-          <Trans>
-            Below are examples of the payloads sent for each supported event. Payloads are JSON in
-            the body of the POST request.
-          </Trans>
-        </p>
-
-        {WEBHOOK_PAYLOAD_EXAMPLES.map(({ event, payload }) => (
-          <section key={event} id={event.replace('.', '-')} className="scroll-mt-8">
-            <h3>
+        <main className="min-w-0 space-y-10">
+          <section id="overview" className="scroll-mt-28 space-y-3">
+            <h2 className="text-xl font-semibold tracking-tight">
+              <Trans>Overview</Trans>
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed sm:text-base">
               <Trans>
-                Example payload for the <code>{event}</code> event
+                Webhooks are HTTP callbacks triggered by document events. When you subscribe to an
+                event and that event occurs, Nomia POSTs a JSON payload to the URL you provide.
               </Trans>
-            </h3>
-            <pre>
-              <code>{payload}</code>
-            </pre>
+            </p>
           </section>
-        ))}
 
-        <h2>
-          <Trans>Testing and resending</Trans>
-        </h2>
-        <p>
-          <Trans>
-            From a webhook&apos;s detail page you can send a test event or open call logs. Failed or
-            successful deliveries can be resent from the call detail view.
-          </Trans>
-        </p>
+          <section id="events" className="scroll-mt-28 space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">
+                <Trans>Supported events</Trans>
+              </h2>
+              <p className="text-muted-foreground mt-1 text-sm">
+                <Trans>Jump to a payload example for any event below.</Trans>
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {WEBHOOK_EVENTS.map((event) => (
+                <a
+                  key={event}
+                  href={`#${eventAnchorId(event)}`}
+                  onClick={() => handleOpenExample(event)}
+                >
+                  <Badge
+                    variant="neutral"
+                    className="hover:bg-muted cursor-pointer px-2.5 py-1 font-mono text-xs transition-colors"
+                  >
+                    {event}
+                  </Badge>
+                </a>
+              ))}
+            </div>
+          </section>
 
-        <h2>
-          <Trans>Availability</Trans>
-        </h2>
-        <p>
-          <Trans>Webhooks are available on teams.</Trans>
-        </p>
+          <section id="setup" className="scroll-mt-28 space-y-4">
+            <h2 className="text-xl font-semibold tracking-tight">
+              <Trans>Create a webhook subscription</Trans>
+            </h2>
+            <ol className="grid gap-3 sm:grid-cols-2">
+              {[
+                msg`Open your team settings and go to the Webhooks tab.`,
+                msg`Click Create Webhook and enter the callback URL.`,
+                msg`Select the events you want to receive.`,
+                msg`Optionally set a secret so you can verify each callback.`,
+              ].map((step, index) => (
+                <li key={index}>
+                  <Card className="h-full">
+                    <CardContent className="flex gap-3 p-4">
+                      <span className="bg-primary/10 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+                        {index + 1}
+                      </span>
+                      <p className="text-sm leading-relaxed">{_(step)}</p>
+                    </CardContent>
+                  </Card>
+                </li>
+              ))}
+            </ol>
+          </section>
 
-        <p className="not-prose mt-10">
-          <Link
-            to="/reference"
-            className="text-primary text-sm font-medium underline underline-offset-4"
-          >
-            <Trans>View API Reference</Trans>
-          </Link>
-        </p>
-      </article>
+          <section id="verification" className="scroll-mt-28">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 text-primary rounded-lg p-2">
+                    <ShieldCheckIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">
+                      <Trans>Verifying callbacks</Trans>
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      <Trans>
+                        When a secret is configured, Nomia sends it as a header on every webhook
+                        POST. Compare the header value to the secret you stored for that webhook.
+                      </Trans>
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-0">
+                <div className="bg-muted/50 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2.5">
+                  <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+                    <Trans>Header</Trans>
+                  </span>
+                  <code className="bg-background rounded-md border px-2 py-1 font-mono text-sm font-medium">
+                    {WEBHOOK_SECRET_HEADER}
+                  </code>
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  <Trans>
+                    The secret is sent as the header value itself. It is not an HMAC signature of
+                    the body.
+                  </Trans>
+                </p>
+              </CardContent>
+            </Card>
+          </section>
+
+          <section id="request-format" className="scroll-mt-28 space-y-4">
+            <h2 className="text-xl font-semibold tracking-tight">
+              <Trans>Request format</Trans>
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>
+                    <Trans>Method</Trans>
+                  </CardDescription>
+                  <CardTitle className="font-mono text-base">POST</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>
+                    <Trans>Content-Type</Trans>
+                  </CardDescription>
+                  <CardTitle className="font-mono text-base">application/json</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>
+                    <Trans>Body fields</Trans>
+                  </CardDescription>
+                  <CardTitle className="text-base leading-snug">
+                    <code className="text-sm">event</code>, <code className="text-sm">payload</code>
+                    , <code className="text-sm">createdAt</code>,{' '}
+                    <code className="text-sm">webhookEndpoint</code>
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+          </section>
+
+          <section id="examples" className="scroll-mt-28 space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">
+                <Trans>Example payloads</Trans>
+              </h2>
+              <p className="text-muted-foreground mt-1 text-sm">
+                <Trans>
+                  Expand an event to inspect or copy its JSON payload. Payloads are sent in the body
+                  of the POST request.
+                </Trans>
+              </p>
+            </div>
+
+            <Accordion
+              type="single"
+              collapsible
+              value={openExample}
+              onValueChange={setOpenExample}
+              className="rounded-xl border"
+            >
+              {WEBHOOK_PAYLOAD_EXAMPLES.map(({ event, payload }) => (
+                <AccordionItem
+                  key={event}
+                  value={eventAnchorId(event)}
+                  id={eventAnchorId(event)}
+                  className="scroll-mt-28 px-4"
+                >
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="flex items-center gap-2 text-left">
+                      <Badge variant="neutral" className="font-mono text-xs">
+                        {event}
+                      </Badge>
+                      <span className="text-muted-foreground hidden text-sm font-normal sm:inline">
+                        <Trans>Example payload</Trans>
+                      </span>
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <CopyCodeBlock code={payload} />
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </section>
+
+          <section id="testing" className="scroll-mt-28 grid gap-4 sm:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  <Trans>Testing and resending</Trans>
+                </CardTitle>
+                <CardDescription>
+                  <Trans>
+                    From a webhook&apos;s detail page you can send a test event or open call logs.
+                    Failed or successful deliveries can be resent from the call detail view.
+                  </Trans>
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  <Trans>Availability</Trans>
+                </CardTitle>
+                <CardDescription>
+                  <Trans>Webhooks are available on teams.</Trans>
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </section>
+        </main>
+      </div>
     </div>
   );
 }
