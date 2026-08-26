@@ -60,6 +60,8 @@ const SECTION_LINKS = [
   { id: 'testing', label: msg`Testing` },
 ] as const;
 
+type SectionId = (typeof SECTION_LINKS)[number]['id'];
+
 const WEBHOOK_PAYLOAD_EXAMPLES: Array<{ event: (typeof WEBHOOK_EVENTS)[number]; payload: string }> =
   [
     {
@@ -614,7 +616,7 @@ const CopyCodeBlock = ({ code }: { code: string }) => {
 export default function WebhooksDocumentationPage() {
   const { _ } = useLingui();
   const [openExample, setOpenExample] = useState(eventAnchorId('document.created'));
-  const [activeSectionId, setActiveSectionId] = useState(SECTION_LINKS[0].id);
+  const [activeSectionId, setActiveSectionId] = useState<SectionId>(SECTION_LINKS[0].id);
 
   useEffect(() => {
     const sectionIds = SECTION_LINKS.map((section) => section.id);
