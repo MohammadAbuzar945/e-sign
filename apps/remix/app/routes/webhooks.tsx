@@ -1,16 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import {
-  BookOpenIcon,
-  CheckIcon,
-  CopyIcon,
-  ExternalLinkIcon,
-  ShieldCheckIcon,
-  WebhookIcon,
-} from 'lucide-react';
+import { CheckIcon, CopyIcon } from 'lucide-react';
 import { Link } from 'react-router';
 
 import { useCopyToClipboard } from '@documenso/lib/client-only/hooks/use-copy-to-clipboard';
@@ -22,15 +15,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@documenso/ui/primitives/accordion';
-import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@documenso/ui/primitives/card';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 import { BrandingLogo } from '~/components/general/branding-logo';
@@ -564,6 +549,8 @@ const WEBHOOK_PAYLOAD_EXAMPLES: Array<{ event: (typeof WEBHOOK_EVENTS)[number]; 
 
 const eventAnchorId = (event: string) => event.replace('.', '-');
 
+const HEADER_OFFSET_PX = 96;
+
 const CopyCodeBlock = ({ code }: { code: string }) => {
   const { _ } = useLingui();
   const { toast } = useToast();
@@ -593,20 +580,18 @@ const CopyCodeBlock = ({ code }: { code: string }) => {
   };
 
   return (
-    <div className="bg-muted/40 relative overflow-hidden rounded-lg border">
-      <div className="absolute right-2 top-2 z-10">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={handleCopy}
-          aria-label={hasCopied ? _(msg`Copied`) : _(msg`Copy`)}
-        >
-          {hasCopied ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
-        </Button>
-      </div>
-      <pre className="max-h-[28rem] overflow-auto p-4 pr-12 text-xs leading-relaxed">
+    <div className="bg-muted/30 relative overflow-hidden rounded-md border">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="absolute right-1.5 top-1.5 z-10 h-7 w-7 p-0"
+        onClick={handleCopy}
+        aria-label={hasCopied ? _(msg`Copied`) : _(msg`Copy`)}
+      >
+        {hasCopied ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
+      </Button>
+      <pre className="max-h-[28rem] overflow-auto p-4 pr-11 text-xs leading-relaxed">
         <code>{code}</code>
       </pre>
     </div>
@@ -617,6 +602,22 @@ export default function WebhooksDocumentationPage() {
   const { _ } = useLingui();
   const [openExample, setOpenExample] = useState(eventAnchorId('document.created'));
   const [activeSectionId, setActiveSectionId] = useState<SectionId>(SECTION_LINKS[0].id);
+  const isProgrammaticScrollRef = useRef(false);
+
+  const scrollToId = (elementId: string) => {
+    const element = document.getElementById(elementId);
+
+    if (!element) {
+      return;
+    }
+
+    const top = element.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET_PX;
+
+    window.scrollTo({
+      top: Math.max(top, 0),
+      behavior: 'smooth',
+    });
+  };
 
   useEffect(() => {
     const sectionIds = SECTION_LINKS.map((section) => section.id);
@@ -632,6 +633,10 @@ export default function WebhooksDocumentationPage() {
 
     const observer = new IntersectionObserver(
       (entries) => {
+        if (isProgrammaticScrollRef.current) {
+          return;
+        }
+
         for (const entry of entries) {
           if (entry.isIntersecting) {
             visibleSectionIds.add(entry.target.id);
@@ -656,68 +661,96 @@ export default function WebhooksDocumentationPage() {
       observer.observe(element);
     }
 
+    const hash = window.location.hash.replace('#', '');
+
+    if (hash) {
+      const matchedSection = sectionIds.find((id) => id === hash);
+      const matchedEvent = WEBHOOK_EVENTS.find((event) => eventAnchorId(event) === hash);
+
+      if (matchedSection) {
+        setActiveSectionId(matchedSection);
+        window.requestAnimationFrame(() => scrollToId(matchedSection));
+      }
+
+      if (matchedEvent) {
+        setOpenExample(eventAnchorId(matchedEvent));
+        window.requestAnimationFrame(() => scrollToId(eventAnchorId(matchedEvent)));
+      }
+    }
+
     return () => {
       observer.disconnect();
     };
   }, []);
 
-  const handleOpenExample = (event: (typeof WEBHOOK_EVENTS)[number]) => {
-    const anchorId = eventAnchorId(event);
+  const handleSectionClick = (event: MouseEvent<HTMLAnchorElement>, sectionId: SectionId) => {
+    event.preventDefault();
+
+    isProgrammaticScrollRef.current = true;
+    setActiveSectionId(sectionId);
+    window.history.replaceState(null, '', `#${sectionId}`);
+    scrollToId(sectionId);
+
+    window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 900);
+  };
+
+  const handleOpenExample = (
+    mouseEvent: MouseEvent<HTMLAnchorElement>,
+    eventName: (typeof WEBHOOK_EVENTS)[number],
+  ) => {
+    mouseEvent.preventDefault();
+
+    const anchorId = eventAnchorId(eventName);
     setOpenExample(anchorId);
+    setActiveSectionId('examples');
+    window.history.replaceState(null, '', `#${anchorId}`);
+
+    window.setTimeout(() => {
+      scrollToId(anchorId);
+    }, 50);
   };
 
   return (
     <div className="bg-background min-h-screen">
-      <header className="bg-card/95 supports-[backdrop-filter]:bg-card/80 sticky top-0 z-20 border-b backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3 sm:gap-4">
+      <header className="bg-background sticky top-0 z-20 border-b">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3">
             <Link to="/" className="shrink-0">
-              <BrandingLogo className="h-8 w-auto" />
+              <BrandingLogo className="h-7 w-auto" />
             </Link>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <WebhookIcon className="text-muted-foreground hidden h-4 w-4 sm:block" />
-                <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">
-                  <Trans>Webhooks</Trans>
-                </h1>
-              </div>
-              <p className="text-muted-foreground mt-0.5 text-sm">
-                <Trans>Real-time document event notifications for your integrations</Trans>
-              </p>
-            </div>
+            <div className="bg-border h-5 w-px" />
+            <h1 className="text-base font-medium">
+              <Trans>Webhooks</Trans>
+            </h1>
           </div>
 
-          <Button asChild variant="outline" size="sm" className="shrink-0">
-            <Link to="/reference">
-              <BookOpenIcon className="mr-1.5 h-4 w-4" />
-              <span className="hidden sm:inline">
-                <Trans>API Reference</Trans>
-              </span>
-              <span className="sm:hidden">
-                <Trans>API</Trans>
-              </span>
-              <ExternalLinkIcon className="ml-1.5 h-3.5 w-3.5 opacity-60" />
-            </Link>
-          </Button>
+          <Link
+            to="/reference"
+            className="text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline"
+          >
+            <Trans>API Reference</Trans>
+          </Link>
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-5xl gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[180px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
-          <nav className="sticky top-28 space-y-1">
-            <p className="text-muted-foreground mb-3 text-xs font-medium uppercase tracking-wide">
+          <nav className="sticky top-24 space-y-0.5">
+            <p className="text-muted-foreground mb-2 text-xs">
               <Trans>On this page</Trans>
             </p>
             {SECTION_LINKS.map((section) => (
               <a
                 key={section.id}
                 href={`#${section.id}`}
-                onClick={() => setActiveSectionId(section.id)}
+                onClick={(event) => handleSectionClick(event, section.id)}
                 className={cn(
-                  'block rounded-md px-3 py-1.5 text-sm transition-colors',
+                  'block border-l-2 py-1.5 pl-3 text-sm transition-colors',
                   activeSectionId === section.id
-                    ? 'bg-muted text-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    ? 'border-foreground text-foreground font-medium'
+                    : 'text-muted-foreground hover:text-foreground border-transparent',
                 )}
               >
                 {_(section.label)}
@@ -726,156 +759,112 @@ export default function WebhooksDocumentationPage() {
           </nav>
         </aside>
 
-        <main className="min-w-0 space-y-10">
+        <main className="min-w-0 space-y-12 text-sm leading-relaxed sm:text-[15px]">
           <section id="overview" className="scroll-mt-28 space-y-3">
-            <h2 className="text-xl font-semibold tracking-tight">
+            <h2 className="text-lg font-semibold">
               <Trans>Overview</Trans>
             </h2>
-            <p className="text-muted-foreground text-sm leading-relaxed sm:text-base">
+            <p className="text-muted-foreground">
               <Trans>
-                Webhooks are HTTP callbacks triggered by document events. When you subscribe to an
-                event and that event occurs, Nomia POSTs a JSON payload to the URL you provide.
+                Webhooks notify your app when something happens to a document. Subscribe to an event,
+                and Nomia will POST a JSON payload to your URL whenever that event fires.
               </Trans>
             </p>
           </section>
 
-          <section id="events" className="scroll-mt-28 space-y-4">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">
-                <Trans>Supported events</Trans>
-              </h2>
-              <p className="text-muted-foreground mt-1 text-sm">
-                <Trans>Jump to a payload example for any event below.</Trans>
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
+          <section id="events" className="scroll-mt-28 space-y-3">
+            <h2 className="text-lg font-semibold">
+              <Trans>Supported events</Trans>
+            </h2>
+            <ul className="text-muted-foreground space-y-1.5">
               {WEBHOOK_EVENTS.map((event) => (
-                <a
-                  key={event}
-                  href={`#${eventAnchorId(event)}`}
-                  onClick={() => handleOpenExample(event)}
-                >
-                  <Badge
-                    variant="neutral"
-                    className="hover:bg-muted cursor-pointer px-2.5 py-1 font-mono text-xs transition-colors"
+                <li key={event}>
+                  <a
+                    href={`#${eventAnchorId(event)}`}
+                    onClick={(mouseEvent) => handleOpenExample(mouseEvent, event)}
+                    className="text-foreground font-mono text-[13px] underline-offset-4 hover:underline"
                   >
                     {event}
-                  </Badge>
-                </a>
-              ))}
-            </div>
-          </section>
-
-          <section id="setup" className="scroll-mt-28 space-y-4">
-            <h2 className="text-xl font-semibold tracking-tight">
-              <Trans>Create a webhook subscription</Trans>
-            </h2>
-            <ol className="grid gap-3 sm:grid-cols-2">
-              {[
-                msg`Open your team settings and go to the Webhooks tab.`,
-                msg`Click Create Webhook and enter the callback URL.`,
-                msg`Select the events you want to receive.`,
-                msg`Optionally set a secret so you can verify each callback.`,
-              ].map((step, index) => (
-                <li key={index}>
-                  <Card className="h-full">
-                    <CardContent className="flex gap-3 p-4">
-                      <span className="bg-primary/10 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                        {index + 1}
-                      </span>
-                      <p className="text-sm leading-relaxed">{_(step)}</p>
-                    </CardContent>
-                  </Card>
+                  </a>
                 </li>
               ))}
+            </ul>
+          </section>
+
+          <section id="setup" className="scroll-mt-28 space-y-3">
+            <h2 className="text-lg font-semibold">
+              <Trans>Create a webhook subscription</Trans>
+            </h2>
+            <ol className="text-muted-foreground list-decimal space-y-2 pl-5">
+              <li>
+                <Trans>Open team settings and go to Webhooks.</Trans>
+              </li>
+              <li>
+                <Trans>Create a webhook and enter your callback URL.</Trans>
+              </li>
+              <li>
+                <Trans>Select the events you want to receive.</Trans>
+              </li>
+              <li>
+                <Trans>Optionally add a secret to verify incoming requests.</Trans>
+              </li>
             </ol>
           </section>
 
-          <section id="verification" className="scroll-mt-28">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-start gap-3">
-                  <div className="bg-primary/10 text-primary rounded-lg p-2">
-                    <ShieldCheckIcon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">
-                      <Trans>Verifying callbacks</Trans>
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      <Trans>
-                        When a secret is configured, Nomia sends it as a header on every webhook
-                        POST. Compare the header value to the secret you stored for that webhook.
-                      </Trans>
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <div className="bg-muted/50 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2.5">
-                  <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-                    <Trans>Header</Trans>
-                  </span>
-                  <code className="bg-background rounded-md border px-2 py-1 font-mono text-sm font-medium">
-                    {WEBHOOK_SECRET_HEADER}
-                  </code>
-                </div>
-                <p className="text-muted-foreground text-sm">
-                  <Trans>
-                    The secret is sent as the header value itself. It is not an HMAC signature of
-                    the body.
-                  </Trans>
-                </p>
-              </CardContent>
-            </Card>
+          <section id="verification" className="scroll-mt-28 space-y-3">
+            <h2 className="text-lg font-semibold">
+              <Trans>Verifying callbacks</Trans>
+            </h2>
+            <p className="text-muted-foreground">
+              <Trans>
+                If you set a secret, Nomia includes it on every webhook POST. Compare that header
+                value with the secret you stored.
+              </Trans>
+            </p>
+            <p>
+              <span className="text-muted-foreground">
+                <Trans>Header:</Trans>{' '}
+              </span>
+              <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-[13px]">
+                {WEBHOOK_SECRET_HEADER}
+              </code>
+            </p>
           </section>
 
-          <section id="request-format" className="scroll-mt-28 space-y-4">
-            <h2 className="text-xl font-semibold tracking-tight">
+          <section id="request-format" className="scroll-mt-28 space-y-3">
+            <h2 className="text-lg font-semibold">
               <Trans>Request format</Trans>
             </h2>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>
-                    <Trans>Method</Trans>
-                  </CardDescription>
-                  <CardTitle className="font-mono text-base">POST</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>
-                    <Trans>Content-Type</Trans>
-                  </CardDescription>
-                  <CardTitle className="font-mono text-base">application/json</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>
-                    <Trans>Body fields</Trans>
-                  </CardDescription>
-                  <CardTitle className="text-base leading-snug">
-                    <code className="text-sm">event</code>, <code className="text-sm">payload</code>
-                    , <code className="text-sm">createdAt</code>,{' '}
-                    <code className="text-sm">webhookEndpoint</code>
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-            </div>
+            <ul className="text-muted-foreground space-y-1.5">
+              <li>
+                <Trans>
+                  Method: <code className="text-foreground font-mono text-[13px]">POST</code>
+                </Trans>
+              </li>
+              <li>
+                <Trans>
+                  Content-Type:{' '}
+                  <code className="text-foreground font-mono text-[13px]">application/json</code>
+                </Trans>
+              </li>
+              <li>
+                <Trans>
+                  Body: <code className="text-foreground font-mono text-[13px]">event</code>,{' '}
+                  <code className="text-foreground font-mono text-[13px]">payload</code>,{' '}
+                  <code className="text-foreground font-mono text-[13px]">createdAt</code>,{' '}
+                  <code className="text-foreground font-mono text-[13px]">webhookEndpoint</code>
+                </Trans>
+              </li>
+            </ul>
           </section>
 
           <section id="examples" className="scroll-mt-28 space-y-4">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">
                 <Trans>Example payloads</Trans>
               </h2>
-              <p className="text-muted-foreground mt-1 text-sm">
-                <Trans>
-                  Expand an event to inspect or copy its JSON payload. Payloads are sent in the body
-                  of the POST request.
-                </Trans>
+              <p className="text-muted-foreground">
+                <Trans>JSON bodies sent for each supported event.</Trans>
               </p>
             </div>
 
@@ -884,24 +873,17 @@ export default function WebhooksDocumentationPage() {
               collapsible
               value={openExample}
               onValueChange={setOpenExample}
-              className="rounded-xl border"
+              className="border-t"
             >
               {WEBHOOK_PAYLOAD_EXAMPLES.map(({ event, payload }) => (
                 <AccordionItem
                   key={event}
                   value={eventAnchorId(event)}
                   id={eventAnchorId(event)}
-                  className="scroll-mt-28 px-4"
+                  className="scroll-mt-28"
                 >
-                  <AccordionTrigger className="hover:no-underline">
-                    <span className="flex items-center gap-2 text-left">
-                      <Badge variant="neutral" className="font-mono text-xs">
-                        {event}
-                      </Badge>
-                      <span className="text-muted-foreground hidden text-sm font-normal sm:inline">
-                        <Trans>Example payload</Trans>
-                      </span>
-                    </span>
+                  <AccordionTrigger className="py-3 text-left text-sm hover:no-underline">
+                    <code className="font-mono text-[13px]">{event}</code>
                   </AccordionTrigger>
                   <AccordionContent>
                     <CopyCodeBlock code={payload} />
@@ -911,30 +893,27 @@ export default function WebhooksDocumentationPage() {
             </Accordion>
           </section>
 
-          <section id="testing" className="scroll-mt-28 grid gap-4 sm:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  <Trans>Testing and resending</Trans>
-                </CardTitle>
-                <CardDescription>
-                  <Trans>
-                    From a webhook&apos;s detail page you can send a test event or open call logs.
-                    Failed or successful deliveries can be resent from the call detail view.
-                  </Trans>
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  <Trans>Availability</Trans>
-                </CardTitle>
-                <CardDescription>
-                  <Trans>Webhooks are available on teams.</Trans>
-                </CardDescription>
-              </CardHeader>
-            </Card>
+          <section id="testing" className="scroll-mt-28 space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">
+                <Trans>Testing and resending</Trans>
+              </h2>
+              <p className="text-muted-foreground">
+                <Trans>
+                  On a webhook&apos;s detail page you can send a test event and review call logs.
+                  You can also resend a delivery from the call detail view.
+                </Trans>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">
+                <Trans>Availability</Trans>
+              </h2>
+              <p className="text-muted-foreground">
+                <Trans>Webhooks are available on teams.</Trans>
+              </p>
+            </div>
           </section>
         </main>
       </div>
