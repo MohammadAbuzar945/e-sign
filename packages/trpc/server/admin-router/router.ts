@@ -14,6 +14,8 @@ import { findDocumentsRoute } from './find-documents';
 import { findPaystackWebhookEventsRoute } from './find-paystack-webhook-events';
 import { findSubscriptionClaimsRoute } from './find-subscription-claims';
 import { getAdminOrganisationRoute } from './get-admin-organisation';
+import { getAdminOrganisationPendingInvitesRoute } from './get-admin-organisation-pending-invites';
+import { sendAdminOrganisationInviteRemindersRoute } from './send-admin-organisation-invite-reminders';
 import { getPaystackWebhookEventRoute } from './get-paystack-webhook-event';
 import { getUserRoute } from './get-user';
 import { promoteMemberToOwnerRoute } from './promote-member-to-owner';
@@ -75,6 +77,10 @@ export const adminRouter = router({
   organisationMember: {
     promoteToOwner: promoteMemberToOwnerRoute,
     updateRole: updateOrganisationMemberRoleRoute,
+  },
+  organisationMemberInvite: {
+    getPending: getAdminOrganisationPendingInvitesRoute,
+    sendReminders: sendAdminOrganisationInviteRemindersRoute,
   },
   claims: {
     find: findSubscriptionClaimsRoute,
