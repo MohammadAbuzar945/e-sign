@@ -110,7 +110,20 @@ export default function WebhookPage() {
     <div>
       <SettingsHeader
         title={t`Webhooks`}
-        subtitle={t`On this page, you can create new Webhooks and manage the existing ones.`}
+        subtitle={
+          <Trans>
+            On this page, you can create new Webhooks and manage the existing ones. See our{' '}
+            <a
+              className="text-primary underline"
+              href="/webhooks"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Webhooks documentation
+            </a>{' '}
+            for more information.
+          </Trans>
+        }
       >
         <WebhookCreateDialog />
       </SettingsHeader>

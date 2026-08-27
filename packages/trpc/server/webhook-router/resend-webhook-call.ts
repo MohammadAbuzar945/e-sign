@@ -1,8 +1,8 @@
-import { Prisma, WebhookCallStatus, WebhookTriggerEvents } from '@prisma/client';
+import { Prisma, WebhookCallStatus } from '@prisma/client';
 
+import { getWebhookSecretHeaderName } from '@documenso/lib/constants/webhook-secret-header';
 import { TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { buildTeamWhereQuery } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
 
@@ -45,6 +45,7 @@ export const resendWebhookCallRoute = authenticatedProcedure
     }
 
     const { webhook } = webhookCall;
+    const secretHeaderName = getWebhookSecretHeaderName(webhook.createdAt);
 
     // Note: This is duplicated in `execute-webhook.handler.ts`.
     const response = await fetch(webhookCall.url, {
@@ -52,7 +53,7 @@ export const resendWebhookCallRoute = authenticatedProcedure
       body: JSON.stringify(webhookCall.requestBody),
       headers: {
         'Content-Type': 'application/json',
-        'X-Documenso-Secret': webhook.secret ?? '',
+        [secretHeaderName]: webhook.secret ?? '',
       },
     });
 
