@@ -94,3 +94,21 @@ export const mapRecipientToLegacyRecipient = (
 export const isRecipientEmailValidForSending = (recipient: Pick<Recipient, 'email'>) => {
   return z.string().email().safeParse(recipient.email).success;
 };
+
+export const isRecipientNameValidForSending = (recipient: Pick<Recipient, 'name'>) => {
+  return recipient.name.trim().length > 0;
+};
+
+/**
+ * Returns recipients who cannot receive a document because their contact details are incomplete.
+ */
+export const getRecipientsWithMissingContactInfo = <
+  T extends Pick<Recipient, 'id' | 'name' | 'email'>,
+>(
+  recipients: T[],
+): T[] => {
+  return recipients.filter(
+    (recipient) =>
+      !isRecipientNameValidForSending(recipient) || !isRecipientEmailValidForSending(recipient),
+  );
+};

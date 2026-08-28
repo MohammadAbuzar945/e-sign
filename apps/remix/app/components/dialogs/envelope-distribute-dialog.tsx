@@ -22,7 +22,10 @@ import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/org
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
-import { getRecipientsWithMissingFields } from '@documenso/lib/utils/recipients';
+import {
+  getRecipientsWithMissingContactInfo,
+  getRecipientsWithMissingFields,
+} from '@documenso/lib/utils/recipients';
 import { trpc, trpc as trpcReact } from '@documenso/trpc/react';
 import { DocumentSendEmailMessageHelper } from '@documenso/ui/components/document/document-send-email-message-helper';
 import { cn } from '@documenso/ui/lib/utils';
@@ -146,26 +149,15 @@ export const EnvelopeDistributeDialog = ({
     [envelope.recipients],
   );
 
+  const recipientsMissingContactInfo = useMemo(
+    () => getRecipientsWithMissingContactInfo(recipientsWithIndex),
+    [recipientsWithIndex],
+  );
+
   const recipientsMissingSignatureFields = useMemo(
     () => getRecipientsWithMissingFields(recipientsWithIndex, envelope.fields),
     [recipientsWithIndex, envelope.fields],
   );
-
-  /**
-   * List of recipients who must have an email due to having auth enabled.
-   */
-  const recipientsMissingRequiredEmail = useMemo(() => {
-    return recipientsWithIndex.filter((recipient) => {
-      const auth = extractDocumentAuthMethods({
-        documentAuth: envelope.authOptions,
-        recipientAuth: recipient.authOptions,
-      });
-
-      return (
-        (auth.recipientAccessAuthRequired || auth.recipientActionAuthRequired) && !recipient.email
-      );
-    });
-  }, [recipientsWithIndex, envelope.authOptions]);
 
   const isKbaSendBlocked = useMemo(() => {
     const auth = extractDocumentAuthMethods({
@@ -183,10 +175,7 @@ export const EnvelopeDistributeDialog = ({
     if (kbaConfig.settings.mode === 'PER_ENVELOPE') {
       const challenge = kbaConfig.envelopeChallenge;
 
-      return (
-        !challenge?.question?.trim() ||
-        challenge.isAnswerConfigured !== true
-      );
+      return !challenge?.question?.trim() || challenge.isAnswerConfigured !== true;
     }
 
     const recipientsNeedingChallenges = envelope.recipients.filter(
@@ -210,16 +199,16 @@ export const EnvelopeDistributeDialog = ({
     (typeof remaining.documents !== 'number' || remaining.documents < creditsRequired);
 
   const invalidEnvelopeCode = useMemo(() => {
-    if (recipientsMissingSignatureFields.length > 0) {
-      return 'MISSING_SIGNATURES';
-    }
-
     if (envelope.recipients.length === 0) {
       return 'MISSING_RECIPIENTS';
     }
 
-    if (recipientsMissingRequiredEmail.length > 0) {
-      return 'MISSING_REQUIRED_EMAIL';
+    if (recipientsMissingContactInfo.length > 0) {
+      return 'MISSING_CONTACT_INFO';
+    }
+
+    if (recipientsMissingSignatureFields.length > 0) {
+      return 'MISSING_SIGNATURES';
     }
 
     if (isKbaSendBlocked) {
@@ -235,7 +224,7 @@ export const EnvelopeDistributeDialog = ({
     envelope.recipients,
     hasInsufficientCredits,
     isKbaSendBlocked,
-    recipientsMissingRequiredEmail,
+    recipientsMissingContactInfo,
     recipientsMissingSignatureFields,
   ]);
 
@@ -505,25 +494,25 @@ export const EnvelopeDistributeDialog = ({
                     <Trans>You need at least one recipient to send a document</Trans>
                   </AlertDescription>
                 ))
+                .with('MISSING_CONTACT_INFO', () => (
+                  <AlertDescription>
+                    <Trans>The following recipients need a name and valid email address:</Trans>
+
+                    <ul className="ml-2 mt-1 list-inside list-disc">
+                      {recipientsMissingContactInfo.map((recipient) => (
+                        <li key={recipient.id}>
+                          {recipient.name || recipient.email || t`Recipient ${recipient.index + 1}`}
+                        </li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                ))
                 .with('MISSING_SIGNATURES', () => (
                   <AlertDescription>
                     <Trans>The following signers are missing signature fields:</Trans>
 
                     <ul className="ml-2 mt-1 list-inside list-disc">
                       {recipientsMissingSignatureFields.map((recipient) => (
-                        <li key={recipient.id}>
-                          {recipient.email || recipient.name || t`Recipient ${recipient.index + 1}`}
-                        </li>
-                      ))}
-                    </ul>
-                  </AlertDescription>
-                ))
-                .with('MISSING_REQUIRED_EMAIL', () => (
-                  <AlertDescription>
-                    <Trans>The following recipients require an email address:</Trans>
-
-                    <ul className="ml-2 mt-1 list-inside list-disc">
-                      {recipientsMissingRequiredEmail.map((recipient) => (
                         <li key={recipient.id}>
                           {recipient.email || recipient.name || t`Recipient ${recipient.index + 1}`}
                         </li>
