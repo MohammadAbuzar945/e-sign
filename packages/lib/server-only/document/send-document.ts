@@ -19,8 +19,10 @@ import { prisma } from '@documenso/prisma';
 import { checkboxValidationSigns } from '@documenso/ui/primitives/document-flow/field-items-advanced-settings/constants';
 
 import { validateCheckboxLength } from '../../advanced-fields-validation/validate-checkbox';
+import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { jobs } from '../../jobs/client';
+import { DocumentAuth } from '../../types/document-auth';
 import { extractDerivedDocumentEmailSettings } from '../../types/document-email';
 import {
   FIELD_META_DEFAULT_VALUES,
@@ -38,11 +40,11 @@ import {
 import { getFileServerSide } from '../../universal/upload/get-file.server';
 import { putNormalizedPdfFileServerSide } from '../../universal/upload/put-file.server';
 import { isDocumentCompleted } from '../../utils/document';
-import { DocumentAuth } from '../../types/document-auth';
 import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import { type EnvelopeIdOptions, mapSecondaryIdToDocumentId } from '../../utils/envelope';
 import { toCheckboxCustomText, toRadioCustomText } from '../../utils/fields';
 import {
+  getRecipientsWithMissingContactInfo,
   getRecipientsWithMissingFields,
   isRecipientEmailValidForSending,
 } from '../../utils/recipients';
@@ -50,7 +52,6 @@ import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { isPersistedKbaChallengeCompleteForSend } from '../kba/kba';
 import { insertFormValuesInPdf } from '../pdf/insert-form-values-in-pdf';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
-import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
 
 export type SendDocumentOptions = {
   id: EnvelopeIdOptions;
@@ -114,6 +115,18 @@ export const sendDocument = async ({
 
   if (isDocumentCompleted(envelope.status)) {
     throw new Error('Can not send completed document');
+  }
+
+  const recipientsWithMissingContactInfo = getRecipientsWithMissingContactInfo(envelope.recipients);
+
+  if (recipientsWithMissingContactInfo.length > 0) {
+    const missingRecipientIds = recipientsWithMissingContactInfo
+      .map((recipient) => recipient.id)
+      .join(', ');
+
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: `The following recipients must have a name and valid email address: ${missingRecipientIds}`,
+    });
   }
 
   const legacyDocumentId = mapSecondaryIdToDocumentId(envelope.secondaryId);
@@ -192,7 +205,8 @@ export const sendDocument = async ({
       for (const recipient of recipientsNeedingKba) {
         const recipientChallenge = activeChallenges.find(
           (challenge) =>
-            challenge.scopeType === KbaScopeType.RECIPIENT && challenge.recipientId === recipient.id,
+            challenge.scopeType === KbaScopeType.RECIPIENT &&
+            challenge.recipientId === recipient.id,
         );
 
         if (!isPersistedKbaChallengeCompleteForSend(recipientChallenge)) {
@@ -404,8 +418,6 @@ export const sendDocument = async ({
       body: JSON.stringify(payloadData),
     });
   }
-
-
 
   return updatedEnvelope;
 };
