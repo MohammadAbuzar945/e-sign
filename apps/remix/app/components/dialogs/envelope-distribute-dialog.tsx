@@ -11,7 +11,7 @@ import {
 } from '@prisma/client';
 import { AnimatePresence, motion } from 'framer-motion';
 import { InfoIcon } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import { match } from 'ts-pattern';
 import * as z from 'zod';
@@ -94,7 +94,8 @@ export const EnvelopeDistributeDialog = ({
   const organisation = useCurrentOrganisation();
   const { remaining, allowNegativeCredits } = useLimits();
 
-  const { envelope, syncEnvelope, isAutosaving, autosaveError } = useCurrentEnvelopeEditor();
+  const { envelope, syncEnvelope, isAutosaving, autosaveError, editorFields, editorRecipients } =
+    useCurrentEnvelopeEditor();
 
   const { toast } = useToast();
   const { t } = useLingui();
@@ -140,13 +141,19 @@ export const EnvelopeDistributeDialog = ({
 
   const distributionMethod = watch('meta.distributionMethod');
 
+  const watchedRecipients = useWatch({
+    control: editorRecipients.form.control,
+    name: 'signers',
+  });
+
   const recipientsWithIndex = useMemo(
     () =>
-      envelope.recipients.map((recipient, index) => ({
+      watchedRecipients.map((recipient, index) => ({
         ...recipient,
+        id: recipient.id ?? index,
         index,
       })),
-    [envelope.recipients],
+    [watchedRecipients],
   );
 
   const recipientsMissingContactInfo = useMemo(
@@ -155,8 +162,8 @@ export const EnvelopeDistributeDialog = ({
   );
 
   const recipientsMissingSignatureFields = useMemo(
-    () => getRecipientsWithMissingFields(recipientsWithIndex, envelope.fields),
-    [recipientsWithIndex, envelope.fields],
+    () => getRecipientsWithMissingFields(recipientsWithIndex, editorFields.localFields),
+    [recipientsWithIndex, editorFields.localFields],
   );
 
   const isKbaSendBlocked = useMemo(() => {
@@ -199,7 +206,7 @@ export const EnvelopeDistributeDialog = ({
     (typeof remaining.documents !== 'number' || remaining.documents < creditsRequired);
 
   const invalidEnvelopeCode = useMemo(() => {
-    if (envelope.recipients.length === 0) {
+    if (recipientsWithIndex.length === 0) {
       return 'MISSING_RECIPIENTS';
     }
 
@@ -221,11 +228,11 @@ export const EnvelopeDistributeDialog = ({
 
     return null;
   }, [
-    envelope.recipients,
     hasInsufficientCredits,
     isKbaSendBlocked,
     recipientsMissingContactInfo,
     recipientsMissingSignatureFields,
+    recipientsWithIndex.length,
   ]);
 
   const onFormSubmit = async ({ meta }: TEnvelopeDistributeFormSchema) => {
@@ -319,7 +326,7 @@ export const EnvelopeDistributeDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        {!invalidEnvelopeCode || isSyncing ? (
+        {!invalidEnvelopeCode ? (
           <Form {...form}>
             <form onSubmit={handleSubmit(onFormSubmit)}>
               <fieldset disabled={isSubmitting}>
