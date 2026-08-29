@@ -49,6 +49,12 @@ export const RecipientAutoCompleteInput = React.forwardRef<HTMLInputElement, Com
       onSearchQueryChange(value);
     };
 
+    const handleInputFocus = () => {
+      if (value.length > 0) {
+        setIsOpen(true);
+      }
+    };
+
     const handleSelectItem = (option: RecipientAutoCompleteOption) => {
       setIsOpen(false);
       onSelect(option);
@@ -64,6 +70,7 @@ export const RecipientAutoCompleteInput = React.forwardRef<HTMLInputElement, Com
               placeholder={placeholder}
               value={value}
               disabled={disabled}
+              onFocus={handleInputFocus}
               onChange={(e) => onValueChange(e.target.value)}
               {...props}
             />
@@ -94,6 +101,7 @@ export const RecipientAutoCompleteInput = React.forwardRef<HTMLInputElement, Com
                     key={`${index}-${option.email}`}
                     value={`${option.email}`}
                     className="cursor-pointer"
+                    onMouseDown={(event) => event.preventDefault()}
                     onSelect={() => handleSelectItem(option)}
                   >
                     {option.name} ({option.email})
