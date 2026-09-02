@@ -60,7 +60,7 @@ export const SearchableSelect = ({
   };
 
   return (
-    <Popover open={open && !loading && !disabled} onOpenChange={setOpen}>
+    <Popover modal open={open && !loading && !disabled} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -93,6 +93,12 @@ export const SearchableSelect = ({
       <PopoverContent
         className={cn('z-[1001] w-[var(--radix-popover-trigger-width)] p-0', contentClassName)}
         align="start"
+        onWheel={(event) => {
+          event.stopPropagation();
+        }}
+        onTouchMove={(event) => {
+          event.stopPropagation();
+        }}
       >
         <Command>
           <CommandInput placeholder={searchPlaceholderText} />
