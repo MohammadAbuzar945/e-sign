@@ -54,7 +54,7 @@ import {
 } from '../../utils/document-auth';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { mapSecondaryIdToTemplateId } from '../../utils/envelope';
-import { buildTeamWhereQuery } from '../../utils/teams';
+import { resolveTeamFolderId } from '../folder/resolve-team-folder-id';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { processExternalId } from '../envelope/create-envelope';
 import { incrementDocumentId } from '../envelope/increment-id';
@@ -341,21 +341,12 @@ export const createDocumentFromTemplate = async ({
     });
   }
 
-  if (folderId) {
-    const folder = await prisma.folder.findUnique({
-      where: {
-        id: folderId,
-        type: FolderType.DOCUMENT,
-        team: buildTeamWhereQuery({ teamId, userId }),
-      },
-    });
-
-    if (!folder) {
-      throw new AppError(AppErrorCode.NOT_FOUND, {
-        message: 'Folder not found',
-      });
-    }
-  }
+  const resolvedFolderId = await resolveTeamFolderId({
+    folderId,
+    userId,
+    teamId,
+    type: FolderType.DOCUMENT,
+  });
 
   const legacyTemplateId = mapSecondaryIdToTemplateId(template.secondaryId);
   const finalEnvelopeTitle = override?.title || template.title;
@@ -541,7 +532,7 @@ export const createDocumentFromTemplate = async ({
         fromNomia,
         templateId: legacyTemplateId, // The template this envelope was created from.
         userId,
-        folderId,
+        folderId: resolvedFolderId,
         teamId: template.teamId,
         title: finalEnvelopeTitle,
         envelopeItems: {
