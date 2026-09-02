@@ -14,11 +14,13 @@ import { motion } from 'framer-motion';
 import { GripVerticalIcon, HelpCircleIcon, PlusIcon, TrashIcon } from 'lucide-react';
 import { useFieldArray, useWatch } from 'react-hook-form';
 import { useRevalidator, useSearchParams } from 'react-router';
-import { isDeepEqual } from 'remeda';
 
 import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
-import { ZEditorRecipientsFormSchema } from '@documenso/lib/client-only/hooks/use-editor-recipients';
+import {
+  type TEditorRecipientsFormSchema,
+  ZEditorRecipientsFormSchema,
+} from '@documenso/lib/client-only/hooks/use-editor-recipients';
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
@@ -61,6 +63,20 @@ import { useToast } from '@documenso/ui/primitives/use-toast';
 import { AiFeaturesEnableDialog } from '~/components/dialogs/ai-features-enable-dialog';
 import { AiRecipientDetectionDialog } from '~/components/dialogs/ai-recipient-detection-dialog';
 import { useCurrentTeam } from '~/providers/team';
+
+const getCompleteSignersSyncKey = (signers: TEditorRecipientsFormSchema['signers']) => {
+  return JSON.stringify(
+    signers
+      .filter((signer) => signer.email.trim() !== '')
+      .map((signer) => ({
+        email: signer.email.trim().toLowerCase(),
+        name: signer.name,
+        role: signer.role,
+        signingOrder: signer.signingOrder ?? null,
+        actionAuth: [...(signer.actionAuth ?? [])].sort(),
+      })),
+  );
+};
 
 export const EnvelopeEditorRecipientForm = () => {
   const { envelope, setRecipientsDebounced, updateEnvelope, editorRecipients } =
@@ -125,6 +141,8 @@ export const EnvelopeEditorRecipientForm = () => {
 
   const $sensorApi = useRef<SensorAPI | null>(null);
   const isFirstRender = useRef(true);
+  const lastSyncedSignersKeyRef = useRef<string | null>(null);
+  const lastSyncedMetaKeyRef = useRef<string | null>(null);
   const { recipients, fields } = envelope;
 
   const { data: recipientSuggestionsData, isLoading } = trpc.recipient.suggestions.find.useQuery(
@@ -321,17 +339,16 @@ export const EnvelopeEditorRecipientForm = () => {
       return;
     }
 
-    const formStateIndex = form.getValues('signers').findIndex((s) => s.formId === signer.formId);
-    if (formStateIndex !== -1) {
-      removeSigner(formStateIndex);
+    const updatedSigners = form
+      .getValues('signers')
+      .filter((currentSigner) => currentSigner.formId !== signer.formId);
 
-      const updatedSigners = form.getValues('signers').filter((s) => s.formId !== signer.formId);
+    removeSigner(index);
 
-      form.setValue('signers', normalizeSigningOrders(updatedSigners), {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-    }
+    form.setValue('signers', normalizeSigningOrders(updatedSigners), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
   };
 
   const onAddSelfSigner = () => {
@@ -525,11 +542,6 @@ export const EnvelopeEditorRecipientForm = () => {
 
   // Dupecode/Inefficient: Done because native isValid won't work for our usecase.
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
     const validatedFormValues = ZEditorRecipientsFormSchema.safeParse(formValues);
 
     if (!validatedFormValues.success) {
@@ -537,54 +549,42 @@ export const EnvelopeEditorRecipientForm = () => {
     }
 
     const { data } = validatedFormValues;
+    const completeSigners = data.signers.filter((signer) => signer.email.trim() !== '');
+    const signersKey = getCompleteSignersSyncKey(completeSigners);
+    const metaKey = `${data.signingOrder}:${data.allowDictateNextSigner}`;
+
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      lastSyncedSignersKeyRef.current = signersKey;
+      lastSyncedMetaKeyRef.current = metaKey;
+      return;
+    }
 
     // Weird edge case where the whole envelope is created via API
     // with no signing order. If they come to this page it will show an error
     // since they aren't equal and the recipient is no longer editable.
-    const envelopeRecipients = data.signers.map((recipient) => {
+    const envelopeRecipients = completeSigners.map((recipient) => {
       if (!canRecipientBeModified(recipient.id)) {
         return {
           ...recipient,
           signingOrder: recipient.signingOrder,
         };
       }
+
       return recipient;
     });
 
-    const hasSigningOrderChanged = envelope.documentMeta.signingOrder !== data.signingOrder;
-    const hasAllowDictateNextSignerChanged =
-      envelope.documentMeta.allowDictateNextSigner !== data.allowDictateNextSigner;
-
-    const hasSignersChanged =
-      envelopeRecipients.length !== recipients.length ||
-      envelopeRecipients.some((signer) => {
-        const recipient = recipients.find((recipient) => recipient.id === signer.id);
-
-        if (!recipient) {
-          return true;
-        }
-
-        const signerActionAuth = signer.actionAuth;
-        const recipientActionAuth = recipient.authOptions?.actionAuth || [];
-
-        return (
-          signer.email !== recipient.email ||
-          signer.name !== recipient.name ||
-          signer.role !== recipient.role ||
-          signer.signingOrder !== recipient.signingOrder ||
-          !isDeepEqual(signerActionAuth, recipientActionAuth)
-        );
-      });
-
-    if (hasSignersChanged) {
+    if (signersKey !== lastSyncedSignersKeyRef.current) {
+      lastSyncedSignersKeyRef.current = signersKey;
       setRecipientsDebounced(envelopeRecipients);
     }
 
-    if (hasSigningOrderChanged || hasAllowDictateNextSignerChanged) {
+    if (metaKey !== lastSyncedMetaKeyRef.current) {
+      lastSyncedMetaKeyRef.current = metaKey;
       updateEnvelope({
         meta: {
-          signingOrder: validatedFormValues.data.signingOrder,
-          allowDictateNextSigner: validatedFormValues.data.allowDictateNextSigner,
+          signingOrder: data.signingOrder,
+          allowDictateNextSigner: data.allowDictateNextSigner,
         },
       });
     }

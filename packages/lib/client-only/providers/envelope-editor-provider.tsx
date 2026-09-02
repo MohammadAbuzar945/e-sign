@@ -3,6 +3,7 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import { useLingui } from '@lingui/react/macro';
 import { EnvelopeType } from '@prisma/client';
 
+import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { trpc } from '@documenso/trpc/react';
 import type { TSetEnvelopeRecipientsRequest } from '@documenso/trpc/server/envelope-router/set-envelope-recipients.types';
 import type { TUpdateEnvelopeRequest } from '@documenso/trpc/server/envelope-router/update-envelope.types';
@@ -108,6 +109,7 @@ export const EnvelopeEditorProvider = ({
   });
 
   const envelopeUpdateMutationQuery = trpc.envelope.update.useMutation({
+    ...DO_NOT_INVALIDATE_QUERY_ON_MUTATION,
     onSuccess: (response, input) => {
       setEnvelope({
         ...envelope,
@@ -138,6 +140,7 @@ export const EnvelopeEditorProvider = ({
   });
 
   const envelopeFieldSetMutationQuery = trpc.envelope.field.set.useMutation({
+    ...DO_NOT_INVALIDATE_QUERY_ON_MUTATION,
     onSuccess: ({ data: fields }) => {
       setEnvelope((prev) => ({
         ...prev,
@@ -161,6 +164,7 @@ export const EnvelopeEditorProvider = ({
   });
 
   const envelopeRecipientSetMutationQuery = trpc.envelope.recipient.set.useMutation({
+    ...DO_NOT_INVALIDATE_QUERY_ON_MUTATION,
     onSuccess: ({ data: recipients }) => {
       const recipientIds = new Set(recipients.map((recipient) => recipient.id));
 
@@ -170,9 +174,7 @@ export const EnvelopeEditorProvider = ({
         fields: prev.fields.filter((field) => recipientIds.has(field.recipientId)),
       }));
 
-      editorRecipients.resetForm({
-        recipients,
-      });
+      editorRecipients.applySavedRecipients(recipients);
 
       // Keep unsaved local edits and only drop fields for removed recipients.
       editorFields.resetForm(
@@ -249,7 +251,7 @@ export const EnvelopeEditorProvider = ({
     setEnvelope((prev) => ({
       ...prev,
       ...envelopeUpdates.data,
-      meta: {
+      documentMeta: {
         ...prev.documentMeta,
         ...envelopeUpdates.meta,
       },
