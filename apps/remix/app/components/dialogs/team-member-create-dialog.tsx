@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Trans, useLingui } from '@lingui/react/macro';
+import { msg } from '@lingui/core/macro';
 import { TeamMemberRole } from '@prisma/client';
 import type * as DialogPrimitive from '@radix-ui/react-dialog';
 import { InfoIcon, UserPlusIcon } from 'lucide-react';
@@ -110,6 +111,10 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
   }, [organisationMemberQuery.data?.data, teamMemberQuery.data?.data]);
 
   const hasNoAvailableMembers = !isLoadingMembers && avaliableOrganisationMembers.length === 0;
+
+  const totalOrganisationMembers = organisationMemberQuery.data?.count ?? 0;
+  const totalTeamMembers = teamMemberQuery.data?.count ?? 0;
+  const availableMemberCount = avaliableOrganisationMembers.length;
 
   const onFormSubmit = async ({ members }: TAddTeamMembersFormSchema) => {
     if (members.length === 0) {
@@ -291,12 +296,14 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
                           ) : (
                             <MultiSelectCombobox
                               options={avaliableOrganisationMembers.map((member) => ({
-                                label: member.name
-                                  ? `${member.name} (${member.email})`
-                                  : member.email,
+                                label: member.name || member.email,
+                                description: member.name ? member.email : undefined,
+                                keywords: `${member.name ?? ''} ${member.email}`.trim(),
                                 value: member.id,
                               }))}
                               loading={isLoadingMembers}
+                              enableClearAllButton={true}
+                              inputPlaceholder={msg`Search members by name or email...`}
                               selectedValues={field.value.map(
                                 (member) => member.organisationMemberId,
                               )}
@@ -321,7 +328,17 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
                         {!hasNoAvailableMembers && (
                           <>
                             <FormDescription>
-                              <Trans>Select members to add to this team</Trans>
+                              {totalTeamMembers > 0 ? (
+                                <Trans>
+                                  {availableMemberCount} available to add · {totalTeamMembers} already
+                                  on this team
+                                </Trans>
+                              ) : (
+                                <Trans>
+                                  {availableMemberCount} of {totalOrganisationMembers} organisation
+                                  members available to add
+                                </Trans>
+                              )}
                             </FormDescription>
 
                             <Alert
