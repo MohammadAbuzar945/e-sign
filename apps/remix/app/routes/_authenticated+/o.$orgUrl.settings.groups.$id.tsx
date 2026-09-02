@@ -55,6 +55,8 @@ export default function OrganisationGroupSettingsPage({ params }: Route.Componen
 
   const { data: members, isLoading: isLoadingMembers } = trpc.organisation.member.find.useQuery({
     organisationId: organisation.id,
+    page: 1,
+    perPage: 100,
   });
 
   const { data: groupData, isLoading: isLoadingGroup } = trpc.organisation.group.find.useQuery(

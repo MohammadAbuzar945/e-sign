@@ -63,6 +63,8 @@ const ZAddTeamMembersFormSchema = z.object({
 
 type TAddTeamMembersFormSchema = z.infer<typeof ZAddTeamMembersFormSchema>;
 
+const MEMBER_SELECTION_PER_PAGE = 100;
+
 export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDialogProps) => {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<'SELECT' | 'MEMBERS'>('SELECT');
@@ -86,11 +88,17 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
 
   const organisationMemberQuery = trpc.organisation.member.find.useQuery({
     organisationId: team.organisationId,
+    page: 1,
+    perPage: MEMBER_SELECTION_PER_PAGE,
   });
 
   const teamMemberQuery = trpc.team.member.find.useQuery({
     teamId: team.id,
+    page: 1,
+    perPage: MEMBER_SELECTION_PER_PAGE,
   });
+
+  const isLoadingMembers = organisationMemberQuery.isLoading || teamMemberQuery.isLoading;
 
   const avaliableOrganisationMembers = useMemo(() => {
     const organisationMembers = organisationMemberQuery.data?.data ?? [];
@@ -99,10 +107,9 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
     return organisationMembers.filter(
       (member) => !teamMembers.some((teamMember) => teamMember.id === member.id),
     );
-  }, [organisationMemberQuery, teamMemberQuery]);
+  }, [organisationMemberQuery.data?.data, teamMemberQuery.data?.data]);
 
-  const hasNoAvailableMembers =
-    !organisationMemberQuery.isLoading && avaliableOrganisationMembers.length === 0;
+  const hasNoAvailableMembers = !isLoadingMembers && avaliableOrganisationMembers.length === 0;
 
   const onFormSubmit = async ({ members }: TAddTeamMembersFormSchema) => {
     if (members.length === 0) {
@@ -129,6 +136,11 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
         teamId: team.id,
         organisationMembers: members,
       });
+
+      await Promise.all([
+        utils.team.member.find.invalidate({ teamId: team.id }),
+        utils.organisation.member.find.invalidate({ organisationId: team.organisationId }),
+      ]);
 
       toast({
         title: t`Success`,
@@ -279,10 +291,12 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
                           ) : (
                             <MultiSelectCombobox
                               options={avaliableOrganisationMembers.map((member) => ({
-                                label: member.name,
+                                label: member.name
+                                  ? `${member.name} (${member.email})`
+                                  : member.email,
                                 value: member.id,
                               }))}
-                              loading={organisationMemberQuery.isLoading}
+                              loading={isLoadingMembers}
                               selectedValues={field.value.map(
                                 (member) => member.organisationMemberId,
                               )}
