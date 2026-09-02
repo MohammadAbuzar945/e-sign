@@ -299,19 +299,18 @@ export const AddSignersFormPartial = ({
       return;
     }
 
-    const formStateIndex = form.getValues('signers').findIndex((s) => s.formId === signer.formId);
-    if (formStateIndex !== -1) {
-      removeSigner(formStateIndex);
+    const updatedSigners = form
+      .getValues('signers')
+      .filter((currentSigner) => currentSigner.formId !== signer.formId);
 
-      const updatedSigners = form.getValues('signers').filter((s) => s.formId !== signer.formId);
+    removeSigner(index);
 
-      form.setValue('signers', normalizeSigningOrders(updatedSigners), {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
+    form.setValue('signers', normalizeSigningOrders(updatedSigners), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
 
-      void handleAutoSave();
-    }
+    void handleAutoSave();
   };
 
   const onAddSelfSigner = () => {

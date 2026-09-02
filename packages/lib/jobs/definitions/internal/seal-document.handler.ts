@@ -15,6 +15,7 @@ import { groupBy } from 'remeda';
 import { deductOrganisationCredits, getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
 import {
   clearPendingCreditReseal,
+  isRetryablePendingCreditResealError,
   markPendingCreditResealRetry,
   upsertPendingCreditReseal,
 } from '@documenso/lib/server-only/billing/pending-credit-reseals';
@@ -502,7 +503,7 @@ export const run = async ({
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown reseal error';
 
-    if (!errorMessage.includes('Insufficient credits to seal document')) {
+    if (!isRetryablePendingCreditResealError(errorMessage)) {
       await markPendingCreditResealRetry({
         documentId,
         lastError: errorMessage,
