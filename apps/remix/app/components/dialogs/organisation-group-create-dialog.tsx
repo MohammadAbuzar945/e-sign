@@ -80,6 +80,8 @@ export const OrganisationGroupCreateDialog = ({
   const { data: membersFindResult, isLoading: isLoadingMembers } =
     trpc.organisation.member.find.useQuery({
       organisationId: organisation.id,
+      page: 1,
+      perPage: 100,
     });
 
   const members = membersFindResult?.data ?? [];
@@ -211,7 +213,9 @@ export const OrganisationGroupCreateDialog = ({
                     <FormControl>
                       <MultiSelectCombobox
                         options={members.map((member) => ({
-                          label: member.name,
+                          label: member.name
+                            ? `${member.name} (${member.email})`
+                            : member.email,
                           value: member.id,
                         }))}
                         loading={isLoadingMembers}
