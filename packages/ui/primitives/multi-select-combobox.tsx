@@ -1,9 +1,9 @@
 import * as React from 'react';
 
 import type { MessageDescriptor } from '@lingui/core';
-import { t } from '@lingui/core/macro';
+import { msg, t } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui as useLinguiMacro } from '@lingui/react/macro';
 import { AnimatePresence } from 'framer-motion';
 import { Check, ChevronsUpDown, Loader, XIcon } from 'lucide-react';
 
@@ -11,7 +11,14 @@ import { AnimateGenericFadeInOut } from '@documenso/ui/components/animate/animat
 
 import { cn } from '../lib/utils';
 import { Button } from './button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from './command';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from './command';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 
 type OptionValue = string | number | boolean | null;
@@ -20,6 +27,10 @@ type ComboBoxOption<T = OptionValue> = {
   label: string;
   value: T;
   disabled?: boolean;
+  /** Additional text used for search matching. Defaults to the label. */
+  keywords?: string;
+  /** Optional secondary line shown below the label. */
+  description?: string;
 };
 
 type MultiSelectComboboxProps<T = OptionValue> = {
@@ -57,6 +68,7 @@ export function MultiSelectCombobox<T = OptionValue>({
   testId,
 }: MultiSelectComboboxProps<T>) {
   const { _ } = useLingui();
+  const { t: translate } = useLinguiMacro();
 
   const [open, setOpen] = React.useState(false);
 
@@ -100,10 +112,16 @@ export function MultiSelectCombobox<T = OptionValue>({
       return emptySelectionPlaceholder;
     }
 
-    return selectedOptions.map((option) => option.label).join(', ');
-  }, [selectedOptions, emptySelectionPlaceholder, loading]);
+    if (selectedOptions.length === 1) {
+      return selectedOptions[0].label;
+    }
+
+    return translate`${selectedOptions.length} selected`;
+  }, [selectedOptions, emptySelectionPlaceholder, loading, translate]);
 
   const showClearButton = enableClearAllButton && selectedValues.length > 0;
+  const searchPlaceholder =
+    inputPlaceholder !== undefined ? _(inputPlaceholder) : _(msg`Search...`);
 
   return (
     <Popover open={open && !loading} onOpenChange={setOpen}>
@@ -114,7 +132,7 @@ export function MultiSelectCombobox<T = OptionValue>({
             role="combobox"
             disabled={loading}
             aria-expanded={open}
-            className={cn('w-[200px] px-3', className)}
+            className={cn('h-auto min-h-10 w-[200px] px-3 py-2', className)}
             data-testid={testId}
           >
             <AnimatePresence>
@@ -124,7 +142,7 @@ export function MultiSelectCombobox<T = OptionValue>({
                 </div>
               ) : (
                 <AnimateGenericFadeInOut className="flex w-full justify-between">
-                  <span className="truncate">{buttonLabel}</span>
+                  <span className="truncate text-left font-normal">{buttonLabel}</span>
 
                   <div
                     className={cn('ml-2 flex flex-row items-center', {
@@ -143,6 +161,7 @@ export function MultiSelectCombobox<T = OptionValue>({
         {showClearButton && !loading && (
           <div className="absolute bottom-0 right-8 top-0 flex items-center justify-center">
             <button
+              type="button"
               className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-300 dark:bg-neutral-700"
               onClick={() => onChange([])}
             >
@@ -152,25 +171,51 @@ export function MultiSelectCombobox<T = OptionValue>({
         )}
       </div>
 
-      <PopoverContent className={cn('z-[50000000] w-full p-0', contentClassName)}>
+      <PopoverContent
+        align="start"
+        className={cn(
+          'z-[50000000] w-[var(--radix-popover-trigger-width)] p-0',
+          contentClassName,
+        )}
+      >
         <Command>
-          {enableSearch && <CommandInput placeholder={inputPlaceholder && _(inputPlaceholder)} />}
-          <CommandEmpty>
-            <Trans>No value found.</Trans>
-          </CommandEmpty>
-          <CommandGroup>
-            {options.map((option, i) => (
-              <CommandItem key={i} onSelect={() => handleSelect(option.value)}>
-                <Check
-                  className={cn(
-                    'mr-2 h-4 w-4',
-                    selectedValues.includes(option.value) ? 'opacity-100' : 'opacity-0',
-                  )}
-                />
-                {option.label}
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          {enableSearch && <CommandInput placeholder={searchPlaceholder} />}
+          <CommandList>
+            <CommandEmpty>
+              <Trans>No results found.</Trans>
+            </CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => {
+                const searchValue = option.keywords ?? option.label;
+
+                return (
+                  <CommandItem
+                    key={String(option.value)}
+                    disabled={option.disabled}
+                    value={`${searchValue} ${String(option.value)}`}
+                    onSelect={() => handleSelect(option.value)}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4 shrink-0',
+                        selectedValues.includes(option.value) ? 'opacity-100' : 'opacity-0',
+                      )}
+                    />
+                    {option.description ? (
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate">{option.label}</span>
+                        <span className="text-muted-foreground truncate text-xs">
+                          {option.description}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="truncate">{option.label}</span>
+                    )}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
