@@ -9,7 +9,6 @@ import type { CreateDocumentAuditLogDataResponse } from '@documenso/lib/utils/do
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
 
-import { TEAM_DOCUMENT_VISIBILITY_MAP } from '../../constants/teams';
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type {
   TDocumentAccessAuthTypes,
@@ -19,7 +18,8 @@ import { ZDocumentAuthOptionsSchema } from '../../types/document-auth';
 import { ZClaimFlagsSchema } from '../../types/subscription';
 import { createDocumentAuthOptions, extractDocumentAuthMethods } from '../../utils/document-auth';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
-import { buildTeamWhereQuery, canAccessTeamDocument } from '../../utils/teams';
+import { canAccessTeamDocument } from '../../utils/teams';
+import { resolveTeamFolderId } from '../folder/resolve-team-folder-id';
 import { getEnvelopeWhereInput } from './get-envelope-by-id';
 
 export type UpdateEnvelopeOptions = {
@@ -169,33 +169,26 @@ export const updateEnvelope = async ({
 
   let folderUpdateQuery: Prisma.FolderUpdateOneWithoutEnvelopesNestedInput | undefined = undefined;
 
-  // Validate folder ID.
+  // Validate folder ID. Invalid or inaccessible folders fall back to team root.
   if (data.folderId) {
-    const folder = await prisma.folder.findFirst({
-      where: {
-        id: data.folderId,
-        team: buildTeamWhereQuery({
-          teamId,
-          userId,
-        }),
-        type: envelope.type === EnvelopeType.TEMPLATE ? FolderType.TEMPLATE : FolderType.DOCUMENT,
-        visibility: {
-          in: TEAM_DOCUMENT_VISIBILITY_MAP[team.currentTeamRole],
-        },
-      },
+    const resolvedFolderId = await resolveTeamFolderId({
+      folderId: data.folderId,
+      userId,
+      teamId,
+      type: envelope.type === EnvelopeType.TEMPLATE ? FolderType.TEMPLATE : FolderType.DOCUMENT,
     });
 
-    if (!folder) {
-      throw new AppError(AppErrorCode.NOT_FOUND, {
-        message: 'Folder not found',
-      });
+    if (resolvedFolderId) {
+      folderUpdateQuery = {
+        connect: {
+          id: resolvedFolderId,
+        },
+      };
+    } else {
+      folderUpdateQuery = {
+        disconnect: true,
+      };
     }
-
-    folderUpdateQuery = {
-      connect: {
-        id: data.folderId,
-      },
-    };
   }
 
   // Move to root folder if folderId is null.

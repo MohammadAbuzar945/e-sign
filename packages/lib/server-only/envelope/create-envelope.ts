@@ -40,6 +40,7 @@ import { putPdfFileServerSide } from '../../universal/upload/put-file.server';
 import { extractDerivedDocumentMeta } from '../../utils/document';
 import { createDocumentAuthOptions, createRecipientAuthOptions } from '../../utils/document-auth';
 import { normalizeStoredKbaSettings } from '../../utils/kba-settings';
+import { resolveTeamFolderId } from '../folder/resolve-team-folder-id';
 import { buildTeamWhereQuery, extractDerivedTeamSettings } from '../../utils/teams';
 import { incrementDocumentId, incrementTemplateId } from '../envelope/increment-id';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
@@ -184,22 +185,12 @@ export const createEnvelope = async ({
     team.teamGlobalSettings,
   );
 
-  // Verify that the folder exists and is associated with the team.
-  if (folderId) {
-    const folder = await prisma.folder.findUnique({
-      where: {
-        id: folderId,
-        type: data.type === EnvelopeType.TEMPLATE ? FolderType.TEMPLATE : FolderType.DOCUMENT,
-        team: buildTeamWhereQuery({ teamId, userId }),
-      },
-    });
-
-    if (!folder) {
-      throw new AppError(AppErrorCode.NOT_FOUND, {
-        message: 'Folder not found',
-      });
-    }
-  }
+  const resolvedFolderId = await resolveTeamFolderId({
+    folderId,
+    userId,
+    teamId,
+    type: data.type === EnvelopeType.TEMPLATE ? FolderType.TEMPLATE : FolderType.DOCUMENT,
+  });
 
   if (data.envelopeItems.length !== 1 && internalVersion === 1) {
     throw new AppError(AppErrorCode.INVALID_BODY, {
@@ -392,7 +383,7 @@ export const createEnvelope = async ({
         authOptions,
         includeQrCodeInCertificate: includeQrCodeInCertificate ?? null,
         visibility,
-        folderId,
+        folderId: resolvedFolderId,
         formValues,
         source: type === EnvelopeType.DOCUMENT ? DocumentSource.DOCUMENT : DocumentSource.TEMPLATE,
         documentMetaId: documentMeta.id,

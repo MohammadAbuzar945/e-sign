@@ -1,6 +1,19 @@
 import { jobs } from '@documenso/lib/jobs/client';
 import { prisma } from '@documenso/prisma';
 
+const RETRYABLE_PENDING_CREDIT_RESEAL_ERROR_PATTERNS = [
+  'Insufficient credits to seal document',
+  'Task exceeded retries',
+] as const;
+
+export const isRetryablePendingCreditResealError = (errorMessage: string) =>
+  RETRYABLE_PENDING_CREDIT_RESEAL_ERROR_PATTERNS.some((pattern) =>
+    errorMessage.includes(pattern),
+  );
+
+export const isEligibleForPendingCreditResealRetry = (lastError: string | null) =>
+  lastError === null || isRetryablePendingCreditResealError(lastError);
+
 type UpsertPendingCreditResealOptions = {
   organisationId: string;
   teamId: number;
@@ -67,7 +80,6 @@ export const triggerPendingCreditResealsForOrganisation = async (organisationId:
     prisma.pendingCreditReseal.findMany({
       where: {
         organisationId,
-        lastError: null,
       },
       orderBy: {
         createdAt: 'asc',
@@ -84,9 +96,13 @@ export const triggerPendingCreditResealsForOrganisation = async (organisationId:
     }),
   ]);
 
+  const eligiblePendingDocuments = pendingDocuments.filter((pendingDocument) =>
+    isEligibleForPendingCreditResealRetry(pendingDocument.lastError),
+  );
+
   let remainingCredits = Math.max(creditsRecord?.credits ?? 0, 0);
 
-  for (const pendingDocument of pendingDocuments) {
+  for (const pendingDocument of eligiblePendingDocuments) {
     if (remainingCredits < pendingDocument.creditsRequired) {
       break;
     }
