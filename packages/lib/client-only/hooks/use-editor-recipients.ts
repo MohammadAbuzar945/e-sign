@@ -44,9 +44,12 @@ type ResetFormOptions = {
   documentMeta?: TEnvelope['documentMeta'];
 };
 
+type SavedRecipient = Pick<Recipient, 'id' | 'email'>;
+
 type UseEditorRecipientsResponse = {
   form: UseFormReturn<TEditorRecipientsFormSchema>;
   resetForm: (options?: ResetFormOptions) => void;
+  applySavedRecipients: (savedRecipients: SavedRecipient[]) => void;
 };
 
 export const useEditorRecipients = ({
@@ -90,8 +93,64 @@ export const useEditorRecipients = ({
     form.reset(generateDefaultValues(options));
   };
 
+  const applySavedRecipients = (savedRecipients: SavedRecipient[]) => {
+    const currentSigners = form.getValues('signers');
+    const unusedSavedRecipients = [...savedRecipients];
+
+    const signersWithExistingIds = currentSigners.map((signer) => {
+      if (!signer.id) {
+        return signer;
+      }
+
+      const savedIndex = unusedSavedRecipients.findIndex((recipient) => recipient.id === signer.id);
+
+      if (savedIndex === -1) {
+        return signer;
+      }
+
+      unusedSavedRecipients.splice(savedIndex, 1);
+
+      return signer;
+    });
+
+    const nextSigners = signersWithExistingIds.map((signer) => {
+      if (signer.id || signer.email.trim() === '') {
+        return signer;
+      }
+
+      const savedIndex = unusedSavedRecipients.findIndex(
+        (recipient) => recipient.email.toLowerCase() === signer.email.toLowerCase(),
+      );
+
+      if (savedIndex === -1) {
+        return signer;
+      }
+
+      const [savedRecipient] = unusedSavedRecipients.splice(savedIndex, 1);
+
+      return {
+        ...signer,
+        id: savedRecipient.id,
+      };
+    });
+
+    const hasAssignedIds = nextSigners.some(
+      (signer, index) => signer.id !== currentSigners[index]?.id,
+    );
+
+    if (!hasAssignedIds) {
+      return;
+    }
+
+    form.setValue('signers', nextSigners, {
+      shouldValidate: false,
+      shouldDirty: false,
+    });
+  };
+
   return {
     form,
     resetForm,
+    applySavedRecipients,
   };
 };
