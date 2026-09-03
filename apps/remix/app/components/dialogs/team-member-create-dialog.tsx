@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Trans, useLingui } from '@lingui/react/macro';
+import { msg } from '@lingui/core/macro';
 import { TeamMemberRole } from '@prisma/client';
 import type * as DialogPrimitive from '@radix-ui/react-dialog';
 import { InfoIcon, UserPlusIcon } from 'lucide-react';
@@ -63,6 +64,8 @@ const ZAddTeamMembersFormSchema = z.object({
 
 type TAddTeamMembersFormSchema = z.infer<typeof ZAddTeamMembersFormSchema>;
 
+const MEMBER_SELECTION_PER_PAGE = 100;
+
 export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDialogProps) => {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<'SELECT' | 'MEMBERS'>('SELECT');
@@ -86,11 +89,17 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
 
   const organisationMemberQuery = trpc.organisation.member.find.useQuery({
     organisationId: team.organisationId,
+    page: 1,
+    perPage: MEMBER_SELECTION_PER_PAGE,
   });
 
   const teamMemberQuery = trpc.team.member.find.useQuery({
     teamId: team.id,
+    page: 1,
+    perPage: MEMBER_SELECTION_PER_PAGE,
   });
+
+  const isLoadingMembers = organisationMemberQuery.isLoading || teamMemberQuery.isLoading;
 
   const avaliableOrganisationMembers = useMemo(() => {
     const organisationMembers = organisationMemberQuery.data?.data ?? [];
@@ -99,10 +108,13 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
     return organisationMembers.filter(
       (member) => !teamMembers.some((teamMember) => teamMember.id === member.id),
     );
-  }, [organisationMemberQuery, teamMemberQuery]);
+  }, [organisationMemberQuery.data?.data, teamMemberQuery.data?.data]);
 
-  const hasNoAvailableMembers =
-    !organisationMemberQuery.isLoading && avaliableOrganisationMembers.length === 0;
+  const hasNoAvailableMembers = !isLoadingMembers && avaliableOrganisationMembers.length === 0;
+
+  const totalOrganisationMembers = organisationMemberQuery.data?.count ?? 0;
+  const totalTeamMembers = teamMemberQuery.data?.count ?? 0;
+  const availableMemberCount = avaliableOrganisationMembers.length;
 
   const onFormSubmit = async ({ members }: TAddTeamMembersFormSchema) => {
     if (members.length === 0) {
@@ -129,6 +141,11 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
         teamId: team.id,
         organisationMembers: members,
       });
+
+      await Promise.all([
+        utils.team.member.find.invalidate({ teamId: team.id }),
+        utils.organisation.member.find.invalidate({ organisationId: team.organisationId }),
+      ]);
 
       toast({
         title: t`Success`,
@@ -279,10 +296,14 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
                           ) : (
                             <MultiSelectCombobox
                               options={avaliableOrganisationMembers.map((member) => ({
-                                label: member.name,
+                                label: member.name || member.email,
+                                description: member.name ? member.email : undefined,
+                                keywords: `${member.name ?? ''} ${member.email}`.trim(),
                                 value: member.id,
                               }))}
-                              loading={organisationMemberQuery.isLoading}
+                              loading={isLoadingMembers}
+                              enableClearAllButton={true}
+                              inputPlaceholder={msg`Search members by name or email...`}
                               selectedValues={field.value.map(
                                 (member) => member.organisationMemberId,
                               )}
@@ -307,7 +328,17 @@ export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDi
                         {!hasNoAvailableMembers && (
                           <>
                             <FormDescription>
-                              <Trans>Select members to add to this team</Trans>
+                              {totalTeamMembers > 0 ? (
+                                <Trans>
+                                  {availableMemberCount} available to add · {totalTeamMembers} already
+                                  on this team
+                                </Trans>
+                              ) : (
+                                <Trans>
+                                  {availableMemberCount} of {totalOrganisationMembers} organisation
+                                  members available to add
+                                </Trans>
+                              )}
                             </FormDescription>
 
                             <Alert
