@@ -325,7 +325,7 @@ export default function EnvelopeEditor() {
               open={isDeleteDialogOpen}
               onOpenChange={setDeleteDialogOpen}
               onDelete={async () => {
-                await navigate(relativePath.documentRootPath);
+                await navigate(relativePath.basePath);
               }}
             />
           ) : (
@@ -334,7 +334,7 @@ export default function EnvelopeEditor() {
               open={isDeleteDialogOpen}
               onOpenChange={setDeleteDialogOpen}
               onDelete={async () => {
-                await navigate(relativePath.templateRootPath);
+                await navigate(relativePath.basePath);
               }}
             />
           )}
