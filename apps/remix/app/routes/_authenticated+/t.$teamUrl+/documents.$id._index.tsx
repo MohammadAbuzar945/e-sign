@@ -104,6 +104,7 @@ export default function DocumentPage({ params }: Route.ComponentProps) {
   }
 
   const documentRootPath = formatDocumentsPath(team.url);
+  const documentsListPath = formatDocumentsPath(team.url, envelope.folderId);
 
   const isMultiEnvelopeItem = envelope.envelopeItems.length > 1 && envelope.internalVersion === 2;
 
@@ -113,7 +114,7 @@ export default function DocumentPage({ params }: Route.ComponentProps) {
         <DocumentRecipientLinkCopyDialog recipients={envelope.recipients} />
       )}
 
-      <Link to={documentRootPath} className="flex items-center text-documenso-700 hover:opacity-80">
+      <Link to={documentsListPath} className="flex items-center text-documenso-700 hover:opacity-80">
         <ChevronLeft className="mr-2 inline-block h-5 w-5" />
         <Trans>Documents</Trans>
       </Link>

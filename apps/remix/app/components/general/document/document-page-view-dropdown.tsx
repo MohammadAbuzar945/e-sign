@@ -61,6 +61,7 @@ export const DocumentPageViewDropdown = ({ envelope }: DocumentPageViewDropdownP
   const canManageDocument = Boolean(isOwner || isCurrentTeamDocument);
 
   const documentsPath = formatDocumentsPath(team.url);
+  const documentsListPath = formatDocumentsPath(team.url, envelope.folderId);
 
   const nonSignedRecipients = envelope.recipients.filter((item) => item.signingStatus !== 'SIGNED');
 
@@ -167,7 +168,7 @@ export const DocumentPageViewDropdown = ({ envelope }: DocumentPageViewDropdownP
         canManageDocument={canManageDocument}
         onOpenChange={setDeleteDialogOpen}
         onDelete={() => {
-          void navigate(documentsPath);
+          void navigate(documentsListPath);
         }}
       />
 
