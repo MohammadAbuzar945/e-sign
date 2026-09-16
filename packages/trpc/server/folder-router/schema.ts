@@ -111,6 +111,7 @@ export type TFindFoldersResponse = z.infer<typeof ZFindFoldersResponseSchema>;
 export const ZGetTeamFoldersRequestSchema = z.void();
 
 export const ZGetTeamFoldersResponseSchema = z.object({
+  teamUrl: z.string().describe('The URL slug of the team that owns these folders'),
   folders: z.array(
     z.object({
       id: z.string().describe('The unique ID of the folder'),
