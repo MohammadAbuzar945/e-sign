@@ -275,7 +275,8 @@ export const folderRouter = router({
         method: 'GET',
         path: '/team/folders',
         summary: 'Get team folders',
-        description: 'Returns the ID and name of all folders belonging to the team. Requires a team API token.',
+        description:
+          'Returns the team URL slug and the ID and name of all folders belonging to the team. Requires a team API token.',
         tags: ['Folder'],
       },
     })
@@ -296,8 +297,6 @@ export const folderRouter = router({
         },
       });
 
-      const folders = await getTeamFolders({ teamId });
-
-      return { folders };
+      return await getTeamFolders({ teamId });
     }),
 });

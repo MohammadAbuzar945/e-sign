@@ -336,16 +336,23 @@ export const EnvelopeEditorProvider = ({
     const documentRootPath = formatDocumentsPath(envelope.team.url);
     const templateRootPath = formatTemplatesPath(envelope.team.url);
 
-    const basePath = envelope.type === EnvelopeType.DOCUMENT ? documentRootPath : templateRootPath;
+    const entityRootPath =
+      envelope.type === EnvelopeType.DOCUMENT ? documentRootPath : templateRootPath;
+
+    // Folder-aware list path for "return to documents/templates" navigation.
+    const basePath =
+      envelope.type === EnvelopeType.DOCUMENT
+        ? formatDocumentsPath(envelope.team.url, envelope.folderId)
+        : formatTemplatesPath(envelope.team.url, envelope.folderId);
 
     return {
       basePath,
-      envelopePath: `${basePath}/${envelope.id}`,
-      editorPath: `${basePath}/${envelope.id}/edit`,
+      envelopePath: `${entityRootPath}/${envelope.id}`,
+      editorPath: `${entityRootPath}/${envelope.id}/edit`,
       documentRootPath,
       templateRootPath,
     };
-  }, [envelope.type, envelope.id]);
+  }, [envelope.type, envelope.id, envelope.folderId, envelope.team.url]);
 
   const flushAutosave = async (): Promise<void> => {
     await setRecipientsAsync();

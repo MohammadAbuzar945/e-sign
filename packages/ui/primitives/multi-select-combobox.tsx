@@ -124,7 +124,7 @@ export function MultiSelectCombobox<T = OptionValue>({
     inputPlaceholder !== undefined ? _(inputPlaceholder) : _(msg`Search...`);
 
   return (
-    <Popover open={open && !loading} onOpenChange={setOpen}>
+    <Popover modal open={open && !loading} onOpenChange={setOpen}>
       <div className="relative">
         <PopoverTrigger asChild>
           <Button
@@ -177,10 +177,16 @@ export function MultiSelectCombobox<T = OptionValue>({
           'z-[50000000] w-[var(--radix-popover-trigger-width)] p-0',
           contentClassName,
         )}
+        onWheel={(event) => {
+          event.stopPropagation();
+        }}
+        onTouchMove={(event) => {
+          event.stopPropagation();
+        }}
       >
         <Command>
           {enableSearch && <CommandInput placeholder={searchPlaceholder} />}
-          <CommandList>
+          <CommandList className="max-h-[min(300px,50vh)]">
             <CommandEmpty>
               <Trans>No results found.</Trans>
             </CommandEmpty>

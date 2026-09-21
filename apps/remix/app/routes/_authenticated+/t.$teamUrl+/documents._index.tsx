@@ -129,11 +129,7 @@ export default function DocumentsPage() {
       params.delete('page');
     }
 
-    let path = formatDocumentsPath(team.url);
-
-    if (folderId) {
-      path += `/f/${folderId}`;
-    }
+    let path = formatDocumentsPath(team.url, folderId);
 
     if (params.toString()) {
       path += `?${params.toString()}`;

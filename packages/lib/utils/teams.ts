@@ -33,12 +33,16 @@ export const formatTeamUrl = (teamUrl: string, baseUrl?: string) => {
   return `${formattedBaseUrl}/t/${teamUrl}`;
 };
 
-export const formatDocumentsPath = (teamUrl: string) => {
-  return `/t/${teamUrl}/documents`;
+export const formatDocumentsPath = (teamUrl: string, folderId?: string | null) => {
+  const basePath = `/t/${teamUrl}/documents`;
+
+  return folderId ? `${basePath}/f/${folderId}` : basePath;
 };
 
-export const formatTemplatesPath = (teamUrl: string) => {
-  return `/t/${teamUrl}/templates`;
+export const formatTemplatesPath = (teamUrl: string, folderId?: string | null) => {
+  const basePath = `/t/${teamUrl}/templates`;
+
+  return folderId ? `${basePath}/f/${folderId}` : basePath;
 };
 
 /**

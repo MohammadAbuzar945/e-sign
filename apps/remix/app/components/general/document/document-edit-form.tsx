@@ -388,7 +388,9 @@ export const DocumentEditForm = ({
           duration: 5000,
         });
 
-        await navigate(documentRootPath);
+        await navigate(
+          document.folderId ? `${documentRootPath}/f/${document.folderId}` : documentRootPath,
+        );
       } else if (document.status === DocumentStatus.DRAFT) {
         toast({
           title: _(msg`Links Generated`),
