@@ -1,6 +1,5 @@
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { findOrganisationCreditUsage } from '@documenso/lib/server-only/billing/organisation-credit-usage';
-import { canDownloadCreditUsage } from '@documenso/lib/utils/credit-usage-download-access';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
 
@@ -15,12 +14,6 @@ export const exportOrganisationCreditUsageRoute = authenticatedProcedure
   .output(ZExportOrganisationCreditUsageResponseSchema)
   .mutation(async ({ input, ctx }) => {
     const { organisationId } = input;
-
-    if (!canDownloadCreditUsage(ctx.user.email)) {
-      throw new AppError(AppErrorCode.UNAUTHORIZED, {
-        message: 'Credit usage download is not available for this account',
-      });
-    }
 
     const organisation = await prisma.organisation.findFirst({
       where: buildOrganisationWhereQuery({
