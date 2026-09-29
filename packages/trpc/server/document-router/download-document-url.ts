@@ -3,8 +3,8 @@ import { DocumentDataType, EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getPresignGetUrl } from '@documenso/lib/universal/upload/server-actions';
-import { unsafeBuildEnvelopeIdQuery } from '@documenso/lib/utils/envelope';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
+import { unsafeBuildEnvelopeIdQuery } from '@documenso/lib/utils/envelope';
 import { prisma } from '@documenso/prisma';
 
 import { procedure } from '../trpc';
@@ -13,6 +13,34 @@ import {
   ZDownloadDocumentUrlResponseSchema,
   downloadDocumentUrlMeta,
 } from './download-document-url.types';
+
+const buildFilename = (title: string, version: 'original' | 'signed') => {
+  const baseTitle = title.replace(/\.pdf$/, '');
+  const suffix = version === 'signed' ? '_signed.pdf' : '.pdf';
+
+  return `${baseTitle}${suffix}`;
+};
+
+const getDownloadUrlForItem = async ({
+  documentData,
+  version,
+}: {
+  documentData: DocumentData;
+  version: 'original' | 'signed';
+}) => {
+  if (documentData.type !== DocumentDataType.S3_PATH) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Document is not stored in S3 and cannot be downloaded via URL.',
+    });
+  }
+
+  const data =
+    version === 'original' ? documentData.initialData || documentData.data : documentData.data;
+
+  const { url } = await getPresignGetUrl(data);
+
+  return url;
+};
 
 export const downloadDocumentUrlRoute = procedure
   .meta(downloadDocumentUrlMeta)
@@ -54,18 +82,11 @@ export const downloadDocumentUrlRoute = procedure
       });
     }
 
-    const documentData: DocumentData | undefined = envelope.envelopeItems[0]?.documentData;
+    const { envelopeItems } = envelope;
 
-    if (envelope.envelopeItems.length !== 1 || !documentData) {
-      throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message:
-          'This endpoint only supports documents with a single item. Use envelopes API instead.',
-      });
-    }
-
-    if (documentData.type !== DocumentDataType.S3_PATH) {
-      throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message: 'Document is not stored in S3 and cannot be downloaded via URL.',
+    if (envelopeItems.length === 0) {
+      throw new AppError(AppErrorCode.NOT_FOUND, {
+        message: 'Document has no items to download',
       });
     }
 
@@ -76,21 +97,41 @@ export const downloadDocumentUrlRoute = procedure
     }
 
     try {
-      const data =
-        version === 'original' ? documentData.initialData || documentData.data : documentData.data;
+      if (envelopeItems.length === 1) {
+        const [envelopeItem] = envelopeItems;
 
-      const { url } = await getPresignGetUrl(data);
+        const downloadUrl = await getDownloadUrlForItem({
+          documentData: envelopeItem.documentData,
+          version,
+        });
 
-      const baseTitle = envelope.title.replace(/\.pdf$/, '');
-      const suffix = version === 'signed' ? '_signed.pdf' : '.pdf';
-      const filename = `${baseTitle}${suffix}`;
+        return {
+          downloadUrl,
+          filename: buildFilename(envelope.title, version),
+          contentType: 'application/pdf',
+        };
+      }
 
-      return {
-        downloadUrl: url,
-        filename,
-        contentType: 'application/pdf',
-      };
+      return await Promise.all(
+        envelopeItems.map(async (envelopeItem) => {
+          const downloadUrl = await getDownloadUrlForItem({
+            documentData: envelopeItem.documentData,
+            version,
+          });
+
+          return {
+            envelopeItemId: envelopeItem.id,
+            downloadUrl,
+            filename: buildFilename(envelopeItem.title, version),
+            contentType: 'application/pdf',
+          };
+        }),
+      );
     } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+
       ctx.logger.error({
         error,
         message: 'Failed to generate download URL',
@@ -103,4 +144,3 @@ export const downloadDocumentUrlRoute = procedure
       });
     }
   });
-
