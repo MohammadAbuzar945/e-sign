@@ -2,22 +2,16 @@ import { type DocumentAuditLog, EnvelopeType, type Prisma } from '@prisma/client
 
 import { prisma } from '@documenso/prisma';
 
-import { canViewEmailFailedAuditLogs } from '../../constants/email-failed-audit-log';
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '../../types/document-audit-logs';
 import type { FindResultResponse } from '../../types/search-params';
 import { parseDocumentAuditLogData } from '../../utils/document-audit-logs';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 
-export interface FindDocumentAuditLogsOptions {
+export type FindDocumentAuditLogsOptions = {
   userId: number;
   teamId: number;
   documentId: number;
-  /**
-   * Viewer email used to gate EMAIL_FAILED audit logs.
-   * When omitted, EMAIL_FAILED entries are hidden.
-   */
-  userEmail?: string | null;
   page?: number;
   perPage?: number;
   orderBy?: {
@@ -26,13 +20,12 @@ export interface FindDocumentAuditLogsOptions {
   };
   cursor?: string;
   filterForRecentActivity?: boolean;
-}
+};
 
 export const findDocumentAuditLogs = async ({
   userId,
   teamId,
   documentId,
-  userEmail,
   page = 1,
   perPage = 30,
   orderBy,
@@ -41,7 +34,6 @@ export const findDocumentAuditLogs = async ({
 }: FindDocumentAuditLogsOptions) => {
   const orderByColumn = orderBy?.column ?? 'createdAt';
   const orderByDirection = orderBy?.direction ?? 'desc';
-  const canViewEmailFailed = canViewEmailFailedAuditLogs(userEmail);
 
   const { envelopeWhereInput } = await getEnvelopeWhereInput({
     id: {
@@ -67,22 +59,20 @@ export const findDocumentAuditLogs = async ({
 
   // Filter events down to what we consider recent activity.
   if (filterForRecentActivity) {
-    const recentActivityTypes = [
-      DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_COMPLETED,
-      DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_CREATED,
-      DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_DELETED,
-      DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_OPENED,
-      DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_COMPLETED,
-      DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_REJECTED,
-      DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_SENT,
-      DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_MOVED_TO_TEAM,
-      ...(canViewEmailFailed ? [DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED] : []),
-    ];
-
     whereClause.OR = [
       {
         type: {
-          in: recentActivityTypes,
+          in: [
+            DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_COMPLETED,
+            DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_CREATED,
+            DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_DELETED,
+            DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_OPENED,
+            DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_COMPLETED,
+            DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_REJECTED,
+            DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_SENT,
+            DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_MOVED_TO_TEAM,
+            DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
+          ],
         },
       },
       {
@@ -93,10 +83,6 @@ export const findDocumentAuditLogs = async ({
         },
       },
     ];
-  } else if (!canViewEmailFailed) {
-    whereClause.type = {
-      not: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
-    };
   }
 
   const [data, count] = await Promise.all([
