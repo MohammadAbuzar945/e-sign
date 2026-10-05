@@ -30,7 +30,6 @@ export const findDocumentAuditLogsRoute = authenticatedProcedure
 
     return await findDocumentAuditLogs({
       userId: ctx.user.id,
-      userEmail: ctx.user.email,
       teamId,
       page,
       perPage,
