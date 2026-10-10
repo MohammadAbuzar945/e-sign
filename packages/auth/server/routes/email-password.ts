@@ -118,10 +118,11 @@ export const emailPasswordRoute = new Hono<HonoAuthContext>()
         userId: user.id,
       });
 
+      // Resend only when there is no valid token, or the last one is older than 5 minutes.
       if (
         !mostRecentToken ||
         mostRecentToken.expires.valueOf() <= Date.now() ||
-        DateTime.fromJSDate(mostRecentToken.createdAt).diffNow('minutes').minutes > -5
+        DateTime.fromJSDate(mostRecentToken.createdAt).diffNow('minutes').minutes < -5
       ) {
         await jobsClient.triggerJob({
           name: 'send.signup.confirmation.email',
