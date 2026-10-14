@@ -23,6 +23,7 @@ import { TemplateUseDialog } from '~/components/dialogs/template-use-dialog';
 import { BrandingLogo } from '~/components/general/branding-logo';
 import { DocumentAttachmentsPopover } from '~/components/general/document/document-attachments-popover';
 import { EnvelopeEditorSettingsDialog } from '~/components/general/envelope-editor/envelope-editor-settings-dialog';
+import { OrganisationCreditsChip } from '~/components/general/organisation-credits-chip';
 
 import { TemplateDirectLinkBadge } from '../template/template-direct-link-badge';
 import { EnvelopeItemTitleInput } from './envelope-editor-title-input';
@@ -127,6 +128,8 @@ export default function EnvelopeEditorHeader() {
         </div>
 
         <div className="flex items-center space-x-2">
+          <OrganisationCreditsChip className="inline-flex" />
+
           <DocumentAttachmentsPopover envelopeId={envelope.id} buttonSize="sm" />
 
           <EnvelopeEditorSettingsDialog
