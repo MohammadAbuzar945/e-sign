@@ -1,6 +1,7 @@
 import { Trans } from '@lingui/react/macro';
 import { InboxIcon } from 'lucide-react';
 
+import { OrganisationCreditsChip } from '~/components/general/organisation-credits-chip';
 import { OrganisationInvitations } from '~/components/general/organisations/organisation-invitations';
 import { InboxTable } from '~/components/tables/inbox-table';
 import { appMetaTags } from '~/utils/meta';
@@ -13,14 +14,20 @@ export default function InboxPage() {
   return (
     <div className="mx-auto w-full max-w-screen-xl px-4 md:px-8">
       <div className="mb-8">
-        <h1 className="flex flex-row items-center gap-2 text-3xl font-bold">
-          <InboxIcon className="text-muted-foreground h-8 w-8" />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="flex flex-row items-center gap-2 text-3xl font-bold">
+              <InboxIcon className="h-8 w-8 text-muted-foreground" />
 
-          <Trans>Personal Inbox</Trans>
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          <Trans>Any documents that you have been invited to will appear here</Trans>
-        </p>
+              <Trans>Personal Inbox</Trans>
+            </h1>
+            <p className="mt-1 text-muted-foreground">
+              <Trans>Any documents that you have been invited to will appear here</Trans>
+            </p>
+          </div>
+
+          <OrganisationCreditsChip />
+        </div>
 
         <OrganisationInvitations className="mt-4" />
       </div>
