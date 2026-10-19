@@ -2,7 +2,7 @@ import { type HTMLAttributes, useEffect, useState } from 'react';
 
 import { OrganisationMemberInviteStatus, ReadStatus } from '@prisma/client';
 import { InboxIcon, MenuIcon, SearchIcon } from 'lucide-react';
-import { Link, useLocation, useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
@@ -24,7 +24,6 @@ export type HeaderProps = HTMLAttributes<HTMLDivElement>;
 
 export const Header = ({ className, ...props }: HeaderProps) => {
   const params = useParams();
-  const { pathname } = useLocation();
 
   const { organisations } = useSession();
 
@@ -82,7 +81,7 @@ export const Header = ({ className, ...props }: HeaderProps) => {
         <AppNavDesktop setIsCommandMenuOpen={setIsCommandMenuOpen} />
 
         <div className="ml-auto flex items-center gap-x-4 md:ml-0">
-          {pathname !== '/inbox' && <OrganisationCreditsChip />}
+          <OrganisationCreditsChip />
 
           <Button
             asChild

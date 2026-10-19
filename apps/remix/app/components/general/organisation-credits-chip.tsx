@@ -7,9 +7,7 @@ import { Link } from 'react-router';
 import { useOptionalCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { resolveOrganisationBillingPath } from '@documenso/lib/utils/organisation-billing-path';
-import { OrganisationType } from '@documenso/prisma/generated/types';
 import { trpc } from '@documenso/trpc/react';
-import type { TGetOrganisationSessionResponse } from '@documenso/trpc/server/organisation-router/get-organisation-session.types';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 import {
@@ -19,36 +17,11 @@ import {
   TooltipTrigger,
 } from '@documenso/ui/primitives/tooltip';
 
-const findFallbackOrganisation = (
-  organisations: TGetOrganisationSessionResponse,
-  userId: number,
-) => {
-  const ownedOrganisations = organisations.filter(
-    (organisation) => organisation.ownerUserId === userId,
-  );
-
-  const personalOrganisation = ownedOrganisations.find(
-    (organisation) => organisation.type === OrganisationType.PERSONAL,
-  );
-
-  if (personalOrganisation) {
-    return personalOrganisation;
-  }
-
-  if (ownedOrganisations.length > 0) {
-    return ownedOrganisations[0];
-  }
-
-  return organisations[0] ?? null;
-};
-
 export type OrganisationCreditsChipProps = HTMLAttributes<HTMLDivElement>;
 
 export const OrganisationCreditsChip = ({ className, ...props }: OrganisationCreditsChipProps) => {
-  const { organisations, user } = useSession();
-  const currentOrganisation = useOptionalCurrentOrganisation();
-
-  const organisation = currentOrganisation ?? findFallbackOrganisation(organisations, user.id);
+  const { user } = useSession();
+  const organisation = useOptionalCurrentOrganisation();
 
   const isOrganisationOwner = organisation?.ownerUserId === user.id;
   const availableCredits = organisation?.credits ?? 0;
@@ -116,14 +89,14 @@ export const OrganisationCreditsChip = ({ className, ...props }: OrganisationCre
         <TooltipContent>
           {isOrganisationOwner ? (
             hasZeroCredits || hasNegativeCredits ? (
-              <Trans>{organisation.name} credits unavailable. Click to buy more</Trans>
+              <Trans>Credits unavailable. Click to buy more</Trans>
             ) : (
-              <Trans>{organisation.name} credits available. Click to buy more</Trans>
+              <Trans>Credits available. Click to buy more</Trans>
             )
           ) : hasZeroCredits || hasNegativeCredits ? (
-            <Trans>{organisation.name} credits unavailable</Trans>
+            <Trans>Credits unavailable</Trans>
           ) : (
-            <Trans>{organisation.name} credits available</Trans>
+            <Trans>Credits available</Trans>
           )}
         </TooltipContent>
       </Tooltip>
