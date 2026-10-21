@@ -9,6 +9,7 @@ import { ExtendedDocumentStatus } from '@documenso/prisma/types/extended-documen
 import { DocumentVisibility } from '../../types/document-visibility';
 import { type FindResultResponse } from '../../types/search-params';
 import { maskRecipientTokensForDocument } from '../../utils/mask-recipient-tokens-for-document';
+import { envelopeIdSearchFilter } from '../envelope/envelope-id-search';
 import { getTeamById } from '../team/get-team';
 
 export type PeriodSelectorValue = '' | '7d' | '14d' | '30d';
@@ -69,12 +70,15 @@ export const findDocuments = async ({
   const orderByDirection = orderBy?.direction ?? 'desc';
   const teamMemberRole = team?.currentTeamRole ?? null;
 
+  const envelopeIdFilter = envelopeIdSearchFilter(query);
+
   const searchFilter: Prisma.EnvelopeWhereInput = {
     OR: [
       { title: { contains: query, mode: 'insensitive' } },
       { externalId: { contains: query, mode: 'insensitive' } },
       { recipients: { some: { name: { contains: query, mode: 'insensitive' } } } },
       { recipients: { some: { email: { contains: query, mode: 'insensitive' } } } },
+      ...(envelopeIdFilter ? [envelopeIdFilter] : []),
     ],
   };
 

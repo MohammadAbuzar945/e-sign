@@ -12,6 +12,7 @@ import { TEAM_DOCUMENT_VISIBILITY_MAP } from '../../constants/teams';
 import type { FindResultResponse } from '../../types/search-params';
 import { maskRecipientTokensForDocument } from '../../utils/mask-recipient-tokens-for-document';
 import { getTeamById } from '../team/get-team';
+import { envelopeIdSearchFilter } from './envelope-id-search';
 
 export type FindEnvelopesOptions = {
   userId: number;
@@ -62,6 +63,8 @@ export const findEnvelopes = async ({
   const orderByColumn = orderBy?.column ?? 'createdAt';
   const orderByDirection = orderBy?.direction ?? 'desc';
 
+  const envelopeIdFilter = envelopeIdSearchFilter(query);
+
   const searchFilter: Prisma.EnvelopeWhereInput = query
     ? {
         OR: [
@@ -69,6 +72,7 @@ export const findEnvelopes = async ({
           { externalId: { contains: query, mode: 'insensitive' } },
           { recipients: { some: { name: { contains: query, mode: 'insensitive' } } } },
           { recipients: { some: { email: { contains: query, mode: 'insensitive' } } } },
+          ...(envelopeIdFilter ? [envelopeIdFilter] : []),
         ],
       }
     : {};

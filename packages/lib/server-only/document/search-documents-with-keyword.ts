@@ -11,6 +11,7 @@ import {
 import { prisma } from '@documenso/prisma';
 
 import { mapSecondaryIdToDocumentId } from '../../utils/envelope';
+import { envelopeIdSearchFilter } from '../envelope/envelope-id-search';
 
 export type SearchDocumentsWithKeywordOptions = {
   query: string;
@@ -28,6 +29,42 @@ export const searchDocumentsWithKeyword = async ({
       id: userId,
     },
   });
+
+  const envelopeIdFilter = envelopeIdSearchFilter(query);
+
+  const envelopeIdAccessFilters = envelopeIdFilter
+    ? [
+        {
+          ...envelopeIdFilter,
+          userId,
+          deletedAt: null,
+        },
+        {
+          ...envelopeIdFilter,
+          status: DocumentStatus.COMPLETED,
+          recipients: {
+            some: {
+              email: user.email,
+            },
+          },
+        },
+        {
+          ...envelopeIdFilter,
+          status: DocumentStatus.PENDING,
+          recipients: {
+            some: {
+              email: user.email,
+            },
+          },
+          deletedAt: null,
+        },
+        {
+          ...envelopeIdFilter,
+          team: buildTeamWhereQuery({ teamId: undefined, userId }),
+          deletedAt: null,
+        },
+      ]
+    : [];
 
   const envelopes = await prisma.envelope.findMany({
     where: {
@@ -102,6 +139,7 @@ export const searchDocumentsWithKeyword = async ({
           team: buildTeamWhereQuery({ teamId: undefined, userId }),
           deletedAt: null,
         },
+        ...envelopeIdAccessFilters,
       ],
     },
     include: {

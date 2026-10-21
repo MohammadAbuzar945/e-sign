@@ -3,6 +3,7 @@ import { EnvelopeType, type Prisma } from '@prisma/client';
 import { prisma } from '@documenso/prisma';
 
 import type { FindResultResponse } from '../../types/search-params';
+import { envelopeIdSearchFilter } from '../envelope/envelope-id-search';
 
 export interface AdminFindDocumentsOptions {
   query?: string;
@@ -24,12 +25,12 @@ export const adminFindDocuments = async ({
         },
       };
 
-  if (query && query.startsWith('envelope_')) {
-    termFilters = {
-      id: {
-        equals: query,
-      },
-    };
+  if (query?.toLowerCase().startsWith('envelope_')) {
+    const envelopeIdFilter = envelopeIdSearchFilter(query);
+
+    if (envelopeIdFilter) {
+      termFilters = envelopeIdFilter;
+    }
   }
 
   if (query && query.startsWith('document_')) {
