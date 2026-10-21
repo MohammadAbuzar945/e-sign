@@ -55,6 +55,10 @@ export const findDocumentAuditLogs = async ({
 
   const whereClause: Prisma.DocumentAuditLogWhereInput = {
     envelopeId: envelope.id,
+    // Email delivery failures are internal/admin-only and must not appear for team users.
+    type: {
+      not: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
+    },
   };
 
   // Filter events down to what we consider recent activity.
@@ -71,7 +75,6 @@ export const findDocumentAuditLogs = async ({
             DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_REJECTED,
             DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_SENT,
             DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_MOVED_TO_TEAM,
-            DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
           ],
         },
       },
