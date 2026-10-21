@@ -4,6 +4,7 @@ import { i18n } from '@lingui/core';
 import { prisma } from '@documenso/prisma';
 
 import { ZSupportedLanguageCodeSchema } from '../../constants/i18n';
+import { DOCUMENT_AUDIT_LOG_TYPE } from '../../types/document-audit-logs';
 import { parseDocumentAuditLogData } from '../../utils/document-audit-logs';
 import { getTranslations } from '../../utils/i18n';
 import { parseClaimFlags } from '../../utils/parse-claim-flags';
@@ -53,6 +54,10 @@ const getAuditLogs = async (envelopeId: string) => {
   const auditLogs = await prisma.documentAuditLog.findMany({
     where: {
       envelopeId,
+      // Email delivery failures are internal/admin-only and must not appear for team users.
+      type: {
+        not: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
+      },
     },
     orderBy: {
       createdAt: 'desc',
