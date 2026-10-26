@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import {
+  ArrowRightLeftIcon,
+  ExternalLinkIcon,
   MoreHorizontalIcon,
   SettingsIcon,
   UserIcon,
@@ -10,6 +11,7 @@ import {
 import { Link, useSearchParams } from 'react-router';
 
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
+import { SUBSCRIPTION_STATUS_MAP } from '@documenso/lib/constants/billing';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { trpc } from '@documenso/trpc/react';
 import { Badge } from '@documenso/ui/primitives/badge';
@@ -25,17 +27,6 @@ import {
 } from '@documenso/ui/primitives/dropdown-menu';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
-import { Trans, useLingui } from '@lingui/react/macro';
-import {
-  ArrowRightLeftIcon,
-  CreditCardIcon,
-  ExternalLinkIcon,
-  MoreHorizontalIcon,
-  SettingsIcon,
-  UserIcon,
-} from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
 
 import { AdminSwapSubscriptionDialog } from '~/components/dialogs/admin-swap-subscription-dialog';
 

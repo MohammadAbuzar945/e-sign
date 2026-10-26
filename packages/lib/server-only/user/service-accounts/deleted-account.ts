@@ -2,6 +2,13 @@ import { prisma } from '@documenso/prisma';
 
 const LEGACY_DELETED_ACCOUNT_EMAIL = 'deleted-account@documenso.com';
 
+/** Email of the Nomia service account used for deleted-user data. */
+export const DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL =
+  'abuzarmohammad945+service-account@gmail.com' as const;
+
+/** Additional Nomia internal email excluded from admin user lists. */
+export const DELETED_ACCOUNT_EMAIL = 'abuzarmohammad945+deleted-account@gmail.com' as const;
+
 export const deletedServiceAccountEmail = () => {
   try {
     // eslint-disable-next-line turbo/no-undeclared-env-vars
@@ -17,6 +24,14 @@ export const deletedServiceAccountEmail = () => {
     return LEGACY_DELETED_ACCOUNT_EMAIL;
   }
 };
+
+/** All emails hidden from the admin panel users list. */
+export const ADMIN_HIDDEN_USER_EMAILS = [
+  deletedServiceAccountEmail(),
+  LEGACY_DELETED_ACCOUNT_EMAIL,
+  DELETED_ACCOUNT_SERVICE_ACCOUNT_EMAIL,
+  DELETED_ACCOUNT_EMAIL,
+] as const;
 
 export const deletedAccountServiceAccount = async () => {
   const serviceAccount = await prisma.user.findFirst({

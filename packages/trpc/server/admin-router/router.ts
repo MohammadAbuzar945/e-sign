@@ -1,9 +1,7 @@
 import { router } from '../trpc';
 import { adminSearchRoute } from './admin-search';
 import { cancelResellerApplicationRoute } from './cancel-reseller-application';
-import { checkResellerAffiliateSlugRoute } from './check-reseller-affiliate-slug';
 import { clearResellerDelinquencyRoute } from './clear-reseller-delinquency';
-import { completePendingResellerTransactionRoute } from './complete-pending-reseller-transaction';
 import { createAdminOrganisationRoute } from './create-admin-organisation';
 import { createStripeCustomerRoute } from './create-stripe-customer';
 import { createSubscriptionClaimRoute } from './create-subscription-claim';
@@ -25,7 +23,6 @@ import { findEmailTransportsRoute } from './email-transport/find-email-transport
 import { sendTestEmailTransportRoute } from './email-transport/send-test-email-transport';
 import { updateEmailTransportRoute } from './email-transport/update-email-transport';
 import { enableUserRoute } from './enable-user';
-import { exportResellerTransactionsRoute } from './export-reseller-transactions';
 import { findAdminOrganisationsRoute } from './find-admin-organisations';
 import { findDocumentAuditLogsRoute } from './find-document-audit-logs';
 import { findDocumentJobsRoute } from './find-document-jobs';
@@ -75,42 +72,12 @@ import {
   replaceGlobalResellerBulkRatesRoute,
   replaceResellerBulkRatesRoute,
 } from './reseller-bulk-rates';
-import {
-  getAffiliateResellerRoute,
-  initializeResellerPurchaseRoute,
-} from './reseller-purchase';
-import {
-  getEffectiveResellerBulkRatesRoute,
-  initializeResellerBulkPurchaseRoute,
-} from './reseller-bulk-purchase';
-import {
-  associateOrganisationWithResellerRoute,
-  clearOrganisationResellerAssociationRoute,
-  getOrganisationBillingAttributionRoute,
-  initializeAttributedPaygPurchaseRoute,
-  resolveOrganisationPaygBillingRoute,
-  setOrganisationStickyBillingOptInRoute,
-} from './reseller-attribution';
-import {
-  listPaystackBanksRoute,
-  refreshResellerSubaccountStatusRoute,
-  resolvePaystackBankAccountRoute,
-  updateResellerBankDetailsRoute,
-  updateResellerPayoutModeRoute,
-} from './reseller-payout';
-import {
-  findResellerTransactionsRoute,
-  getResellerProfileRoute,
-  updateResellerPackagesRoute,
-  updateResellerProfileRoute,
-} from './reseller-profile';
 import { sendAdminOrganisationInviteRemindersRoute } from './send-admin-organisation-invite-reminders';
 import { swapOrganisationSubscriptionRoute } from './swap-organisation-subscription';
 import { syncOrganisationSubscriptionRoute } from './sync-organisation-subscription';
 import { updateAdminOrganisationRoute } from './update-admin-organisation';
 import { updateAdminOrganisationCreditsRoute } from './update-admin-organisation-credits';
 import { updateOrganisationMemberRoleRoute } from './update-organisation-member-role';
-import { updateResellerAffiliateSlugRoute } from './update-reseller-affiliate-slug';
 import { updateResellerAllowNegativeCreditsRoute } from './update-reseller-allow-negative-credits';
 import { updateRecipientRoute } from './update-recipient';
 import { updateSiteSettingRoute } from './update-site-setting';
@@ -172,29 +139,6 @@ export const adminRouter = router({
     getNotifyRecipients: getResellerNotifyRecipientsRoute,
     previewNotify: previewResellerNotifyRoute,
     notify: notifyResellersRoute,
-    checkAffiliateSlug: checkResellerAffiliateSlugRoute,
-    updateAffiliateSlug: updateResellerAffiliateSlugRoute,
-    getProfile: getResellerProfileRoute,
-    updateProfile: updateResellerProfileRoute,
-    updatePackages: updateResellerPackagesRoute,
-    findTransactions: findResellerTransactionsRoute,
-    exportTransactions: exportResellerTransactionsRoute,
-    completePendingTransaction: completePendingResellerTransactionRoute,
-    updatePayoutMode: updateResellerPayoutModeRoute,
-    updateBankDetails: updateResellerBankDetailsRoute,
-    listBanks: listPaystackBanksRoute,
-    resolveBankAccount: resolvePaystackBankAccountRoute,
-    refreshSubaccountStatus: refreshResellerSubaccountStatusRoute,
-    getAffiliate: getAffiliateResellerRoute,
-    initializePurchase: initializeResellerPurchaseRoute,
-    getBillingAttribution: getOrganisationBillingAttributionRoute,
-    resolvePaygBilling: resolveOrganisationPaygBillingRoute,
-    associateReseller: associateOrganisationWithResellerRoute,
-    clearResellerAssociation: clearOrganisationResellerAssociationRoute,
-    setStickyBillingOptIn: setOrganisationStickyBillingOptInRoute,
-    initializeAttributedPayg: initializeAttributedPaygPurchaseRoute,
-    getEffectiveBulkRates: getEffectiveResellerBulkRatesRoute,
-    initializeBulkPurchase: initializeResellerBulkPurchaseRoute,
   },
   resellerBulkRates: {
     listGlobal: listGlobalResellerBulkRatesRoute,

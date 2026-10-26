@@ -33,7 +33,7 @@ import { msg } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { OrganisationMemberRole, SubscriptionStatus } from '@prisma/client';
 import { ExternalLinkIcon, InfoIcon, Loader } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router';
 import { match } from 'ts-pattern';
@@ -404,7 +404,7 @@ export default function OrganisationGroupSettingsPage({ params, loaderData }: Ro
             </Button>
           </div>
         )}
-      </Alert> */}
+      </Alert>
 
       <OrganisationAdminForm organisation={organisation} licenseFlags={licenseFlags} />
 

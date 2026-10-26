@@ -3,7 +3,15 @@ import { useMemo, useTransition } from 'react';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { AlertTriangle, Globe2Icon, InfoIcon, Link2Icon, Loader, LockIcon } from 'lucide-react';
+import {
+  AlertTriangle,
+  Building2Icon,
+  Globe2Icon,
+  InfoIcon,
+  Link2Icon,
+  Loader,
+  LockIcon,
+} from 'lucide-react';
 import { DateTime } from 'luxon';
 import { Link } from 'react-router';
 
@@ -20,12 +28,6 @@ import { DataTablePagination } from '@documenso/ui/primitives/data-table-paginat
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { AlertTriangle, Building2Icon, Globe2Icon, InfoIcon, Link2Icon, Loader, LockIcon } from 'lucide-react';
-import { useMemo, useTransition } from 'react';
-import { Link } from 'react-router';
 
 import { TemplateType } from '~/components/general/template/template-type';
 import { useCurrentTeam } from '~/providers/team';

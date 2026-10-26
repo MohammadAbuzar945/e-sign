@@ -1,5 +1,5 @@
 import { Trans } from '@lingui/react/macro';
-import { DocumentStatus, FieldType, SigningStatus } from '@prisma/client';
+import { FieldType, SigningStatus } from '@prisma/client';
 import { DownloadIcon, XCircle } from 'lucide-react';
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
@@ -15,10 +15,6 @@ import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
-import { Trans } from '@lingui/react/macro';
-import { FieldType } from '@prisma/client';
-import { XCircle } from 'lucide-react';
-import { Link } from 'react-router';
 
 import { EnvelopeDownloadDialog } from '~/components/dialogs/envelope-download-dialog';
 import { DocumentSigningAuthPageView } from '~/components/general/document-signing/document-signing-auth-page';

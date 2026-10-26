@@ -1,6 +1,7 @@
 import { env } from '@documenso/lib/utils/env';
 
 import { AzureBlobProvider } from './azure-blob-provider';
+import { GcsProvider } from './gcs-provider';
 import { S3Provider } from './s3-provider';
 import type { StorageProvider } from './storage-provider';
 
@@ -19,10 +20,15 @@ export const getStorageProvider = (): StorageProvider => {
     case 's3':
       cached = new S3Provider();
       return cached;
+    case 'gcs':
+      cached = new GcsProvider();
+      return cached;
     case 'azure-blob':
       cached = new AzureBlobProvider();
       return cached;
     default:
-      throw new Error(`Invalid object storage transport: "${transport}". Expected "s3" or "azure-blob".`);
+      throw new Error(
+        `Invalid object storage transport: "${transport}". Expected "s3", "gcs", or "azure-blob".`,
+      );
   }
 };

@@ -74,6 +74,7 @@ export default defineConfig({
       '@napi-rs/canvas',
       '@node-rs/bcrypt',
       '@prisma/client',
+      '@documenso/skia-canvas',
       '@documenso/tailwind-config',
       'playwright',
       'playwright-core',
@@ -81,6 +82,7 @@ export default defineConfig({
       'pdfjs-dist',
       '@google-cloud/kms',
       '@google-cloud/secret-manager',
+      '@google-cloud/storage',
     ],
   },
   optimizeDeps: {
@@ -96,6 +98,7 @@ export default defineConfig({
       'node_modules',
       '@napi-rs/canvas',
       '@node-rs/bcrypt',
+      '@documenso/skia-canvas',
       'sharp',
       'playwright',
       'playwright-core',
@@ -110,6 +113,8 @@ export default defineConfig({
       '.prisma/client/default': path.resolve(__dirname, '../../node_modules/.prisma/client/default.js'),
       '.prisma/client/index-browser': path.resolve(__dirname, '../../node_modules/.prisma/client/index-browser.js'),
       canvas: path.resolve(__dirname, './app/types/empty-module.ts'),
+      // Konva / legacy imports expect bare `skia-canvas`; we ship `@documenso/skia-canvas`.
+      'skia-canvas': path.resolve(__dirname, '../../node_modules/@documenso/skia-canvas'),
     },
   },
   /**
@@ -125,6 +130,7 @@ export default defineConfig({
         '@aws-sdk/cloudfront-signer',
         '@google-cloud/kms',
         '@google-cloud/secret-manager',
+        '@google-cloud/storage',
         'nodemailer',
         /playwright/,
         '@playwright/browser-chromium',

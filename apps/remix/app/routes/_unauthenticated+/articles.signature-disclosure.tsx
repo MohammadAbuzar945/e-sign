@@ -3,8 +3,6 @@ import { Button } from '@documenso/ui/primitives/button';
 import { Trans } from '@lingui/react/macro';
 import { Link } from 'react-router';
 
-import { Button } from '@documenso/ui/primitives/button';
-
 export default function SignatureDisclosure() {
   return (
     <div>
