@@ -5,40 +5,150 @@ import { z } from 'zod';
  * Generic application error codes.
  */
 export enum AppErrorCode {
-  'ALREADY_EXISTS' = 'ALREADY_EXISTS',
-  'EXPIRED_CODE' = 'EXPIRED_CODE',
-  'INVALID_BODY' = 'INVALID_BODY',
-  'INVALID_REQUEST' = 'INVALID_REQUEST',
-  'LIMIT_EXCEEDED' = 'LIMIT_EXCEEDED',
-  'NOT_FOUND' = 'NOT_FOUND',
-  'NOT_SETUP' = 'NOT_SETUP',
-  'UNAUTHORIZED' = 'UNAUTHORIZED',
-  'UNKNOWN_ERROR' = 'UNKNOWN_ERROR',
-  'RETRY_EXCEPTION' = 'RETRY_EXCEPTION',
-  'SCHEMA_FAILED' = 'SCHEMA_FAILED',
-  'TOO_MANY_REQUESTS' = 'TOO_MANY_REQUESTS',
-  'TWO_FACTOR_AUTH_FAILED' = 'TWO_FACTOR_AUTH_FAILED',
-  'KBA_AUTH_FAILED' = 'KBA_AUTH_FAILED',
-  'KBA_AUTH_LOCKED' = 'KBA_AUTH_LOCKED',
+  ALREADY_EXISTS = 'ALREADY_EXISTS',
+  EXPIRED_CODE = 'EXPIRED_CODE',
+  INVALID_BODY = 'INVALID_BODY',
+  INVALID_REQUEST = 'INVALID_REQUEST',
+  RECIPIENT_EXPIRED = 'RECIPIENT_EXPIRED',
+  LIMIT_EXCEEDED = 'LIMIT_EXCEEDED',
+  NOT_FOUND = 'NOT_FOUND',
+  NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
+  NOT_SETUP = 'NOT_SETUP',
+  MISSING_ENV_VAR = 'MISSING_ENV_VAR',
+  INVALID_CAPTCHA = 'INVALID_CAPTCHA',
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  FORBIDDEN = 'FORBIDDEN',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+  RETRY_EXCEPTION = 'RETRY_EXCEPTION',
+  SCHEMA_FAILED = 'SCHEMA_FAILED',
+  TOO_MANY_REQUESTS = 'TOO_MANY_REQUESTS',
+  TWO_FACTOR_AUTH_FAILED = 'TWO_FACTOR_AUTH_FAILED',
+  TWO_FACTOR_SETUP_REQUIRED = 'TWO_FACTOR_SETUP_REQUIRED',
+  TWO_FACTOR_MISSING_SECRET = 'TWO_FACTOR_MISSING_SECRET',
+  TWO_FACTOR_MISSING_CREDENTIALS = 'TWO_FACTOR_MISSING_CREDENTIALS',
+  INCORRECT_TWO_FACTOR_CODE = 'INCORRECT_TWO_FACTOR_CODE',
+  NO_PASSWORD = 'NO_PASSWORD',
+  INCORRECT_PASSWORD = 'INCORRECT_PASSWORD',
+  SAME_PASSWORD = 'SAME_PASSWORD',
+  WEBHOOK_INVALID_REQUEST = 'WEBHOOK_INVALID_REQUEST',
+  ENVELOPE_DRAFT = 'ENVELOPE_DRAFT',
+  ENVELOPE_COMPLETED = 'ENVELOPE_COMPLETED',
+  ENVELOPE_REJECTED = 'ENVELOPE_REJECTED',
+  ENVELOPE_CANCELLED = 'ENVELOPE_CANCELLED',
+  ENVELOPE_LEGACY = 'ENVELOPE_LEGACY',
+  /**
+   * Authoring mutation rejected because the envelope is an AES/QES envelope
+   * past DRAFT — the TSP mutation lock fires at distribution to preserve
+   * WYSIWYS. SES envelopes never hit this code.
+   */
+  ENVELOPE_TSP_LOCKED = 'ENVELOPE_TSP_LOCKED',
+
+  /**
+   * Recipient action on an envelope whose sender's account is disabled.
+   * Distinct from `ACCOUNT_DISABLED` so the UI can show a "sender disabled"
+   * page rather than treating the recipient's own account as disabled.
+   */
+  SENDER_DISABLED = 'SENDER_DISABLED',
+
+  /**
+   * A completion request was made for a recipient that has already signed.
+   * Thrown for retried, stale or concurrent duplicate submissions so callers
+   * can resolve them idempotently instead of surfacing an error.
+   */
+  RECIPIENT_ALREADY_SIGNED = 'RECIPIENT_ALREADY_SIGNED',
+
+  /**
+   * A completion request was made for a recipient that still has required
+   * fields which have not been inserted. Usually indicates the client's field
+   * state is out of sync with the server (e.g. a field insert failed to
+   * persist before submission).
+   */
+  RECIPIENT_HAS_UNSIGNED_FIELDS = 'RECIPIENT_HAS_UNSIGNED_FIELDS',
+
+  /**
+   * A completion request was made by a recipient in a sequential signing flow
+   * before the preceding recipients have signed.
+   */
+  RECIPIENT_OUT_OF_TURN = 'RECIPIENT_OUT_OF_TURN',
+
+  /**
+   * A signer recipient does not have a signature field assigned. Thrown when
+   * distributing an envelope or using a direct template where at least one
+   * signer has no signature field.
+   */
+  MISSING_SIGNATURE_FIELD = 'MISSING_SIGNATURE_FIELD',
+
+  // KBA (Knowledge-Based Authentication) error codes.
+  KBA_AUTH_FAILED = 'KBA_AUTH_FAILED',
+  KBA_AUTH_LOCKED = 'KBA_AUTH_LOCKED',
+
+  /**
+   * CSC (Cloud Signature Consortium) error codes. See the CSC QES V1 spec
+   * for the recovery taxonomy.
+   */
+  CSC_INSTANCE_MODE_MISMATCH = 'CSC_INSTANCE_MODE_MISMATCH',
+  CSC_UNLICENSED = 'CSC_UNLICENSED',
+  CSC_PROVIDER_INFO_FAILED = 'CSC_PROVIDER_INFO_FAILED',
+  CSC_PROVIDER_NO_TSA = 'CSC_PROVIDER_NO_TSA',
+  CSC_CREDENTIAL_LIST_EMPTY = 'CSC_CREDENTIAL_LIST_EMPTY',
+  CSC_CERT_INVALID = 'CSC_CERT_INVALID',
+  CSC_ALGORITHM_REFUSED = 'CSC_ALGORITHM_REFUSED',
+  CSC_SAD_EXPIRED_PRE_SIGN = 'CSC_SAD_EXPIRED_PRE_SIGN',
+  CSC_TSP_TIMEOUT = 'CSC_TSP_TIMEOUT',
+  CSC_EMBED_FAILED = 'CSC_EMBED_FAILED',
+  CSC_BASE_DOCUMENT_MUTATED = 'CSC_BASE_DOCUMENT_MUTATED',
+  /**
+   * Generic catch-all for CSC HTTP transport failures — network error, non-2xx
+   * response without a more specific semantic match, malformed JSON, or
+   * response schema mismatch. Carries the TSP's HTTP status in `statusCode`
+   * and the TSP's `error` / `error_description` in the message when available.
+   */
+  CSC_REQUEST_FAILED = 'CSC_REQUEST_FAILED',
 }
 
-export const genericErrorCodeToTrpcErrorCodeMap: Record<string, { code: string; status: number }> =
-  {
-    [AppErrorCode.ALREADY_EXISTS]: { code: 'BAD_REQUEST', status: 400 },
-    [AppErrorCode.EXPIRED_CODE]: { code: 'BAD_REQUEST', status: 400 },
-    [AppErrorCode.INVALID_BODY]: { code: 'BAD_REQUEST', status: 400 },
-    [AppErrorCode.INVALID_REQUEST]: { code: 'BAD_REQUEST', status: 400 },
-    [AppErrorCode.NOT_FOUND]: { code: 'NOT_FOUND', status: 404 },
-    [AppErrorCode.NOT_SETUP]: { code: 'BAD_REQUEST', status: 400 },
-    [AppErrorCode.UNAUTHORIZED]: { code: 'UNAUTHORIZED', status: 401 },
-    [AppErrorCode.UNKNOWN_ERROR]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
-    [AppErrorCode.RETRY_EXCEPTION]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
-    [AppErrorCode.SCHEMA_FAILED]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
-    [AppErrorCode.TOO_MANY_REQUESTS]: { code: 'TOO_MANY_REQUESTS', status: 429 },
-    [AppErrorCode.TWO_FACTOR_AUTH_FAILED]: { code: 'UNAUTHORIZED', status: 401 },
-    [AppErrorCode.KBA_AUTH_FAILED]: { code: 'UNAUTHORIZED', status: 401 },
-    [AppErrorCode.KBA_AUTH_LOCKED]: { code: 'UNAUTHORIZED', status: 401 },
-  };
+export const genericErrorCodeToTrpcErrorCodeMap: Record<string, { code: string; status: number }> = {
+  [AppErrorCode.ALREADY_EXISTS]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.RECIPIENT_EXPIRED]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.EXPIRED_CODE]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.INVALID_BODY]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.INVALID_REQUEST]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.INVALID_CAPTCHA]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.NOT_FOUND]: { code: 'NOT_FOUND', status: 404 },
+  [AppErrorCode.NOT_IMPLEMENTED]: { code: 'INTERNAL_SERVER_ERROR', status: 501 },
+  [AppErrorCode.NOT_SETUP]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.MISSING_ENV_VAR]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
+  [AppErrorCode.UNAUTHORIZED]: { code: 'UNAUTHORIZED', status: 401 },
+  [AppErrorCode.FORBIDDEN]: { code: 'FORBIDDEN', status: 403 },
+  [AppErrorCode.UNKNOWN_ERROR]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
+  [AppErrorCode.RETRY_EXCEPTION]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
+  [AppErrorCode.SCHEMA_FAILED]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
+  [AppErrorCode.TOO_MANY_REQUESTS]: { code: 'TOO_MANY_REQUESTS', status: 429 },
+  [AppErrorCode.TWO_FACTOR_AUTH_FAILED]: { code: 'UNAUTHORIZED', status: 401 },
+  [AppErrorCode.KBA_AUTH_FAILED]: { code: 'UNAUTHORIZED', status: 401 },
+  [AppErrorCode.KBA_AUTH_LOCKED]: { code: 'UNAUTHORIZED', status: 401 },
+  [AppErrorCode.ENVELOPE_DRAFT]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.ENVELOPE_COMPLETED]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.ENVELOPE_REJECTED]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.ENVELOPE_CANCELLED]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.ENVELOPE_LEGACY]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.ENVELOPE_TSP_LOCKED]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.SENDER_DISABLED]: { code: 'FORBIDDEN', status: 403 },
+  [AppErrorCode.MISSING_SIGNATURE_FIELD]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.RECIPIENT_HAS_UNSIGNED_FIELDS]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.RECIPIENT_OUT_OF_TURN]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.CSC_INSTANCE_MODE_MISMATCH]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.CSC_UNLICENSED]: { code: 'FORBIDDEN', status: 403 },
+  [AppErrorCode.CSC_PROVIDER_INFO_FAILED]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
+  [AppErrorCode.CSC_PROVIDER_NO_TSA]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
+  [AppErrorCode.CSC_CREDENTIAL_LIST_EMPTY]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.CSC_CERT_INVALID]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.CSC_ALGORITHM_REFUSED]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.CSC_SAD_EXPIRED_PRE_SIGN]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.CSC_TSP_TIMEOUT]: { code: 'TIMEOUT', status: 408 },
+  [AppErrorCode.CSC_EMBED_FAILED]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.CSC_BASE_DOCUMENT_MUTATED]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
+  [AppErrorCode.CSC_REQUEST_FAILED]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
+};
 
 export const ZAppErrorJsonSchema = z.object({
   code: z.string(),
@@ -66,6 +176,11 @@ type AppErrorOptions = {
    * Mainly used for API -> Frontend communication and logging filtering.
    */
   statusCode?: number;
+
+  /**
+   * Optional headers to include when this error is returned in an API response.
+   */
+  headers?: Record<string, string>;
 };
 
 export class AppError extends Error {
@@ -84,6 +199,8 @@ export class AppError extends Error {
    */
   statusCode?: number;
 
+  headers?: Record<string, string>;
+
   name = 'AppError';
 
   /**
@@ -99,6 +216,7 @@ export class AppError extends Error {
     this.code = errorCode;
     this.userMessage = options?.userMessage;
     this.statusCode = options?.statusCode;
+    this.headers = options?.headers;
   }
 
   /**
@@ -207,15 +325,41 @@ export class AppError extends Error {
   }
 
   static toRestAPIError(err: unknown): {
-    status: 400 | 401 | 404 | 500;
+    status: 400 | 401 | 403 | 404 | 500 | 501;
     body: { message: string };
   } {
     const error = AppError.parseError(err);
 
     const status = match(error.code)
-      .with(AppErrorCode.INVALID_BODY, AppErrorCode.INVALID_REQUEST, () => 400 as const)
+      .with(
+        AppErrorCode.INVALID_BODY,
+        AppErrorCode.INVALID_REQUEST,
+        AppErrorCode.ENVELOPE_DRAFT,
+        AppErrorCode.ENVELOPE_COMPLETED,
+        AppErrorCode.ENVELOPE_REJECTED,
+        AppErrorCode.ENVELOPE_CANCELLED,
+        AppErrorCode.ENVELOPE_LEGACY,
+        AppErrorCode.ENVELOPE_TSP_LOCKED,
+        AppErrorCode.MISSING_SIGNATURE_FIELD,
+        AppErrorCode.RECIPIENT_HAS_UNSIGNED_FIELDS,
+        AppErrorCode.RECIPIENT_OUT_OF_TURN,
+        AppErrorCode.CSC_INSTANCE_MODE_MISMATCH,
+        AppErrorCode.CSC_CREDENTIAL_LIST_EMPTY,
+        AppErrorCode.CSC_CERT_INVALID,
+        AppErrorCode.CSC_ALGORITHM_REFUSED,
+        AppErrorCode.CSC_SAD_EXPIRED_PRE_SIGN,
+        AppErrorCode.CSC_EMBED_FAILED,
+        () => 400 as const,
+      )
       .with(AppErrorCode.UNAUTHORIZED, () => 401 as const)
+      .with(
+        AppErrorCode.FORBIDDEN,
+        AppErrorCode.SENDER_DISABLED,
+        AppErrorCode.CSC_UNLICENSED,
+        () => 403 as const,
+      )
       .with(AppErrorCode.NOT_FOUND, () => 404 as const)
+      .with(AppErrorCode.NOT_IMPLEMENTED, () => 501 as const)
       .otherwise(() => 500 as const);
 
     return {

@@ -1,8 +1,6 @@
-import { EnvelopeType, Prisma } from '@prisma/client';
-
-import { isRecipientEmailValidForSending } from '@documenso/lib/utils/recipients';
 import { buildTeamWhereQuery } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType, Prisma } from '@prisma/client';
 
 export type GetRecipientSuggestionsOptions = {
   userId: number;
@@ -10,11 +8,7 @@ export type GetRecipientSuggestionsOptions = {
   query: string;
 };
 
-export const getRecipientSuggestions = async ({
-  userId,
-  teamId,
-  query,
-}: GetRecipientSuggestionsOptions) => {
+export const getRecipientSuggestions = async ({ userId, teamId, query }: GetRecipientSuggestionsOptions) => {
   const trimmedQuery = query.trim();
 
   const nameEmailFilter = trimmedQuery
@@ -62,8 +56,6 @@ export const getRecipientSuggestions = async ({
     take: 5,
   });
 
-  const validRecipients = recipients.filter(isRecipientEmailValidForSending);
-
   if (teamId) {
     const teamMembers = await prisma.organisationMember.findMany({
       where: {
@@ -92,11 +84,7 @@ export const getRecipientSuggestions = async ({
       take: 5,
     });
 
-    const uniqueTeamMember = teamMembers
-      .filter((member) => isRecipientEmailValidForSending(member.user))
-      .find(
-        (member) => !validRecipients.some((r) => r.email === member.user.email),
-      );
+    const uniqueTeamMember = teamMembers.find((member) => !recipients.some((r) => r.email === member.user.email));
 
     if (uniqueTeamMember) {
       const teamMemberSuggestion = {
@@ -104,11 +92,11 @@ export const getRecipientSuggestions = async ({
         name: uniqueTeamMember.user.name,
       };
 
-      const allSuggestions = [...validRecipients.slice(0, 4), teamMemberSuggestion];
+      const allSuggestions = [...recipients.slice(0, 4), teamMemberSuggestion];
 
       return allSuggestions;
     }
   }
 
-  return validRecipients;
+  return recipients;
 };

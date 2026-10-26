@@ -1,14 +1,7 @@
-import { TeamMemberRole } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
-import { normalizeStoredKbaSettings } from '../../utils/kba-settings';
-import {
-  buildTeamWhereQuery,
-  extractDerivedTeamSettings,
-  getHighestTeamRoleInGroup,
-} from '../../utils/teams';
+import { buildTeamWhereQuery, extractDerivedTeamSettings, getHighestTeamRoleInGroup } from '../../utils/teams';
 
 export type GetTeamByIdOptions = {
   userId: number;
@@ -42,13 +35,7 @@ export const getTeamByUrl = async ({ userId, teamUrl }: GetTeamByUrlOptions) => 
 /**
  * Get a team by its ID or URL.
  */
-export const getTeam = async ({
-  teamReference,
-  userId,
-}: {
-  teamReference: number | string;
-  userId: number;
-}) => {
+export const getTeam = async ({ teamReference, userId }: { teamReference: number | string; userId: number }) => {
   const team = await prisma.team.findFirst({
     where: {
       ...buildTeamWhereQuery({ teamId: undefined, userId }),
@@ -88,16 +75,10 @@ export const getTeam = async ({
   const organisationSettings = team.organisation.organisationGlobalSettings;
   const teamSettings = team.teamGlobalSettings;
 
-  const isOrganisationOwner = team.organisation.ownerUserId === userId;
-  const currentTeamRole = isOrganisationOwner
-    ? TeamMemberRole.ADMIN
-    : getHighestTeamRoleInGroup(team.teamGroups);
-
   return {
     ...team,
-    currentTeamRole,
+    currentTeamRole: getHighestTeamRoleInGroup(team.teamGroups),
     teamSettings,
     derivedSettings: extractDerivedTeamSettings(organisationSettings, teamSettings),
-    organisationKbaSettings: normalizeStoredKbaSettings(organisationSettings.kbaSettings),
   };
 };

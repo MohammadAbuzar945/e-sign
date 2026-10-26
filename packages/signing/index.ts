@@ -1,13 +1,12 @@
-import type { Signer } from '@libpdf/core';
-import type { PDF } from '@libpdf/core';
-import { match } from 'ts-pattern';
-
 import {
+  NEXT_PRIVATE_SIGNING_REASON,
+  NEXT_PRIVATE_SIGNING_TRANSPORT,
   NEXT_PRIVATE_USE_LEGACY_SIGNING_SUBFILTER,
   NEXT_PUBLIC_SIGNING_CONTACT_INFO,
   NEXT_PUBLIC_WEBAPP_URL,
 } from '@documenso/lib/constants/app';
-import { env } from '@documenso/lib/utils/env';
+import type { PDF, Signer } from '@libpdf/core';
+import { match } from 'ts-pattern';
 
 import { getTimestampAuthority } from './helpers/tsa';
 import { createGoogleCloudSigner } from './transports/google-cloud';
@@ -24,7 +23,7 @@ const getSigner = async () => {
     return signer;
   }
 
-  const transport = env('NEXT_PRIVATE_SIGNING_TRANSPORT') || 'local';
+  const transport = NEXT_PRIVATE_SIGNING_TRANSPORT();
 
   // eslint-disable-next-line require-atomic-updates
   signer = await match(transport)
@@ -38,16 +37,6 @@ const getSigner = async () => {
 };
 
 export const signPdf = async ({ pdf }: SignOptions) => {
-
-
-  const nodeEnv = String(NEXT_PUBLIC_WEBAPP_URL()).includes('https://sign.nomiadocs.com');
-
-  // In test environments we skip cryptographic signing to avoid requiring
-  // HSM/local certificate configuration. Return the original PDF bytes instead.
-  if (nodeEnv) {
-    return await pdf.save({ useXRefStream: true });
-  }
-
   const signer = await getSigner();
 
   const tsa = getTimestampAuthority();
@@ -57,12 +46,15 @@ export const signPdf = async ({ pdf }: SignOptions) => {
     reason: 'Signed by Nomia',
     location: NEXT_PUBLIC_WEBAPP_URL(),
     contactInfo: NEXT_PUBLIC_SIGNING_CONTACT_INFO(),
-    subFilter: NEXT_PRIVATE_USE_LEGACY_SIGNING_SUBFILTER()
-      ? 'adbe.pkcs7.detached'
-      : 'ETSI.CAdES.detached',
+    subFilter: NEXT_PRIVATE_USE_LEGACY_SIGNING_SUBFILTER() ? 'adbe.pkcs7.detached' : 'ETSI.CAdES.detached',
     timestampAuthority: tsa ?? undefined,
     longTermValidation: !!tsa,
     archivalTimestamp: !!tsa,
+    // A B-LTA signature (signer chain + RFC 3161 timestamp token + LTV
+    // revocation data) can exceed the 12288-byte default placeholder,
+    // depending on the signing certificate chain and the TSA responder.
+    // The unused portion is zero-padding, so over-reserving is cheap.
+    estimatedSize: tsa ? 32768 : undefined,
   });
 
   return bytes;

@@ -1,11 +1,10 @@
-import { DocumentSource, EnvelopeType, SubscriptionStatus } from '@prisma/client';
-import { DateTime } from 'luxon';
-
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
-import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
-import { ZClaimFlagsSchema } from '@documenso/lib/types/subscription';
+import { organisationAllowsNegativeCredits } from '@documenso/lib/server-only/reseller/organisation-allows-negative-credits';
 import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
+import { INTERNAL_CLAIM_ID, ZClaimFlagsSchema } from '@documenso/lib/types/subscription';
+import { isOrganisationPendingPayment } from '@documenso/lib/utils/billing';
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType, SubscriptionStatus } from '@prisma/client';
 
 import {
   FREE_PLAN_LIMITS,
@@ -15,9 +14,7 @@ import {
 } from './constants';
 import { ERROR_CODES } from './errors';
 import type { TLimitsResponseSchema } from './schema';
-import { organisationAllowsNegativeCredits } from '@documenso/lib/server-only/reseller/organisation-allows-negative-credits';
-
-import { ensureOrganisationCredits, getOrganisationCredits } from './user-credits';
+import { getOrganisationCredits } from './user-credits';
 
 export type GetServerLimitsOptions = {
   userId: number;
@@ -28,58 +25,13 @@ export const getServerLimits = async ({
   userId,
   teamId,
 }: GetServerLimitsOptions): Promise<TLimitsResponseSchema> => {
-  // console.log('userId', userId);
-  // console.log('teamId', teamId);
-  // console.log('prisma type:', typeof prisma);
-  // console.log('prisma value:', prisma);
-  // console.log('prisma.team type:', typeof prisma?.team);
-
-  // if (!prisma) {
-  //   console.error('Prisma client is undefined. Check if @documenso/prisma is properly imported.');
-  //   throw new Error('Database connection failed');
-  // }
-
-  // if (!prisma.team) {
-  //   console.error('Prisma team model is undefined. Prisma object:', Object.keys(prisma || {}));
-  //   throw new Error('Database connection failed - team model not available');
-  // }
-
-  // Debug: Check if team exists and what organisation it belongs to
-  const team = await prisma.team.findUnique({
-    where: { id: teamId },
-    select: { id: true, organisationId: true, name: true },
-  });
-
-  if (!team) {
-    console.error('Team not found:', teamId);
-    throw new Error(ERROR_CODES.USER_FETCH_FAILED);
-  }
-
-  console.log('Team found:', team);
-
-  // Debug: Check if user is a member of any organisation
-  const userOrganisationMembers = await prisma.organisationMember.findMany({
-    where: { userId },
-    select: { organisationId: true, organisation: { select: { id: true, name: true } } },
-  });
-
-  console.log('User organisation members:', userOrganisationMembers);
-
-  // Check if the team's organisation matches any of the user's organisations
-  const userOrganisationIds = userOrganisationMembers.map((m) => m.organisationId);
-  if (!userOrganisationIds.includes(team.organisationId)) {
-    console.error(
-      'User is not a member of the team\'s organisation. Team organisationId:',
-      team.organisationId,
-      'User organisationIds:',
-      userOrganisationIds,
-    );
-    throw new Error(ERROR_CODES.USER_FETCH_FAILED);
-  }
-
   const organisation = await prisma.organisation.findFirst({
     where: {
-      id: team.organisationId,
+      teams: {
+        some: {
+          id: teamId,
+        },
+      },
       members: {
         some: {
           userId,
@@ -92,12 +44,10 @@ export const getServerLimits = async ({
   });
 
   if (!organisation) {
-    console.error('No organisation found for userId:', userId, 'teamId:', teamId, 'organisationId:', team.organisationId);
     throw new Error(ERROR_CODES.USER_FETCH_FAILED);
   }
 
   if (!organisation.organisationClaim) {
-    console.error('Organisation found but missing organisationClaim. Organisation ID:', organisation.id);
     throw new Error(ERROR_CODES.USER_FETCH_FAILED);
   }
 
@@ -106,46 +56,43 @@ export const getServerLimits = async ({
   const subscription = await getCurrentSubscriptionByOrganisationId({
     organisationId: organisation.id,
   });
-  
-  // Query organisation credits from UserCredits table (credits column)
-  // Each organisation has its own credits pool
+
+  // Query organisation credits from UserCredits table (credits column).
+  // Each organisation has its own credits pool.
   let userCredits: number;
   try {
     userCredits = await getOrganisationCredits(organisation.id);
   } catch (err) {
     console.error('Error fetching organisation credits:', err);
-    // Log the actual error for debugging
     if (err instanceof Error) {
-      console.error('Error details:', err.message, err.stack);
-      // If it's a Prisma error about table not existing, provide helpful message
       if (err.message.includes('does not exist') || err.message.includes('Unknown model')) {
-        throw new Error('UserCredits table does not exist. Please run migrations: npm run prisma:migrate-dev');
+        throw new Error(
+          'UserCredits table does not exist. Please run migrations: npm run prisma:migrate-dev',
+        );
       }
     }
     throw new Error(ERROR_CODES.USER_FETCH_FAILED);
   }
-  
-  // Get maximumEnvelopeItemCount from organisationClaim
+
   const maximumEnvelopeItemCount = organisation.organisationClaim.envelopeItemCount;
-  
-  // Validate that envelopeItemCount was successfully queried from database
-  // Allow 0 as a valid value
-  if (typeof maximumEnvelopeItemCount !== 'number' || isNaN(maximumEnvelopeItemCount) || maximumEnvelopeItemCount < 0) {
-    console.error('Invalid envelopeItemCount value:', maximumEnvelopeItemCount);
+
+  if (
+    typeof maximumEnvelopeItemCount !== 'number' ||
+    isNaN(maximumEnvelopeItemCount) ||
+    maximumEnvelopeItemCount < 0
+  ) {
     throw new Error(ERROR_CODES.USER_FETCH_FAILED);
   }
 
   const allowNegativeCredits = await organisationAllowsNegativeCredits(organisation.id);
   const remainingDocuments = allowNegativeCredits ? userCredits : Math.max(userCredits, 0);
 
-  // Set quota and remaining from user credits
-  // Always use user credits for documents quota and remaining
   const quota = {
-    documents: userCredits, // Initial credits from UserCredits table (10)
+    documents: userCredits,
     recipients: FREE_PLAN_LIMITS.recipients,
     directTemplates: FREE_PLAN_LIMITS.directTemplates,
   };
-  
+
   const remaining = {
     documents: remainingDocuments,
     recipients: FREE_PLAN_LIMITS.recipients,
@@ -205,6 +152,16 @@ export const getServerLimits = async ({
     };
   }
 
+  // Early return for organisations created ahead of a paid checkout that are still awaiting payment.
+  if (isOrganisationPendingPayment(organisation)) {
+    return {
+      quota: INACTIVE_PLAN_LIMITS,
+      remaining: INACTIVE_PLAN_LIMITS,
+      maximumEnvelopeItemCount,
+      allowNegativeCredits,
+    };
+  }
+
   // Allow unlimited documents for users with an unlimited documents claim.
   // This also allows "free" claim users without subscriptions if they have this flag.
   if (claimFlags.unlimitedDocuments) {
@@ -239,7 +196,6 @@ export const getServerLimits = async ({
 
   remaining.directTemplates = Math.max(remaining.directTemplates - directTemplates, 0);
 
-  // Ensure quota and remaining documents are always set from user credits
   quota.documents = userCredits;
   remaining.documents = remainingDocuments;
 

@@ -13,8 +13,15 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import handle from 'hono-react-router-adapter/node';
 
+import { getLoadContext } from './hono/server/load-context.js';
 import server from './hono/server/router.js';
 import * as build from './index.js';
+
+// Sub-path the app is served under (e.g. "/ESign"). Empty = root.
+// Must match the basePath used by the Hono router and the Vite `base`/RR
+// `basename` so that hashed asset URLs like `/ESign/assets/app-xxx.css`
+// resolve to files on disk at `build/client/assets/app-xxx.css`.
+const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/$/, '');
 
 // Missing hashed assets must not fall through to the HTML app. Cloudflare was
 // caching those HTML 404s for Browser Cache TTL (often 4h), so clients kept
@@ -35,6 +42,13 @@ server.use('/assets/*', async (c, next) => {
 server.use(
   serveStatic({
     root: 'build/client',
+    rewriteRequestPath: (path) => {
+      if (basePath && (path === basePath || path.startsWith(`${basePath}/`))) {
+        const stripped = path.slice(basePath.length);
+        return stripped === '' ? '/' : stripped;
+      }
+      return path;
+    },
     onFound: (path, c) => {
       if (path.startsWith('build/client/assets')) {
         // Hard cache assets with hashed file names.
@@ -47,7 +61,7 @@ server.use(
   }),
 );
 
-const handler = handle(build, server);
+const handler = handle(build, server, { getLoadContext });
 
 const port = parseInt(process.env.PORT || '3000', 10);
 

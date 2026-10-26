@@ -20,9 +20,12 @@ import { AppNavMobile } from './app-nav-mobile';
 import { MenuSwitcher } from './menu-switcher';
 import { OrgMenuSwitcher } from './org-menu-switcher';
 
-export type HeaderProps = HTMLAttributes<HTMLDivElement>;
+export type HeaderProps = HTMLAttributes<HTMLDivElement> & {
+  /** Span the full viewport width instead of the centered max-w-screen-xl container. */
+  fullWidth?: boolean;
+};
 
-export const Header = ({ className, ...props }: HeaderProps) => {
+export const Header = ({ className, fullWidth = false, ...props }: HeaderProps) => {
   const params = useParams();
 
   const { organisations } = useSession();
@@ -36,7 +39,7 @@ export const Header = ({ className, ...props }: HeaderProps) => {
       readStatus: ReadStatus.NOT_OPENED,
     },
     {
-      // refetchInterval: 30000, // Refetch every 30 seconds
+      // refetchInterval: 30000
     },
   );
 
@@ -64,13 +67,19 @@ export const Header = ({ className, ...props }: HeaderProps) => {
   return (
     <header
       className={cn(
-        'supports-backdrop-blur:bg-background/60 sticky top-0 z-[60] flex h-16 w-full items-center border-b border-b-transparent bg-background/95 backdrop-blur duration-200',
-        scrollY > 5 && 'border-b-border',
+        'sticky top-0 z-[60] flex h-16 w-full items-center border-b border-b-transparent bg-background/95 backdrop-blur duration-200 supports-backdrop-blur:bg-background/60',
+        (scrollY > 5 || fullWidth) && 'border-b-border',
         className,
       )}
       {...props}
     >
-      <div className="mx-auto flex w-full max-w-screen-xl items-center justify-between gap-x-4 px-4 md:justify-normal md:px-8">
+      <div
+        className={cn(
+          'mx-auto flex w-full items-center justify-between gap-x-4 px-4 md:justify-normal',
+          fullWidth ? 'md:px-6' : 'max-w-screen-xl md:px-8',
+        )}
+        data-testid="app-header-container"
+      >
         <Link
           to={getRootHref(params)}
           className="hidden rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:inline"

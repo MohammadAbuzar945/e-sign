@@ -1,24 +1,31 @@
+import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
+import { LicenseClient } from '@documenso/lib/server-only/license/license-client';
+import { isAdmin } from '@documenso/lib/utils/is-admin';
+import { msg } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { Outlet, redirect } from 'react-router';
 
-import { getSession } from '@documenso/auth/server/lib/utils/get-session';
-import { LicenseClient } from '@documenso/lib/server-only/license/license-client';
-import { isAdmin } from '@documenso/lib/utils/is-admin';
-
 import { AdminLicenseStatusBanner } from '~/components/general/admin-license-status-banner';
 import { AdminNavLinks } from '~/components/general/admin-nav-links';
+import { adminMiddleware } from '~/middleware/admin';
+import { appMetaTags } from '~/utils/meta';
 
 import type { Route } from './+types/_layout';
 
+export function meta() {
+  return appMetaTags(msg`Admin`);
+}
+
+export const middleware = [adminMiddleware];
+
 export async function loader({ request }: Route.LoaderArgs) {
-  const { user } = await getSession(request);
+  const { user } = await getOptionalSession(request);
+
+  const license = await LicenseClient.getInstance()?.getCachedLicense();
 
   if (!user || !isAdmin(user)) {
     throw redirect('/');
   }
-
-  const licenseClient = LicenseClient.getInstance();
-  const license = licenseClient ? await licenseClient.getCachedLicense() : null;
 
   return {
     license: license || null,
@@ -32,7 +39,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
     <div className="mx-auto w-full min-w-0 max-w-screen-xl px-4 md:px-8">
       <AdminLicenseStatusBanner license={license} />
 
-      <h1 className="text-2xl font-semibold md:text-4xl">
+      <h1 className="font-semibold text-2xl md:text-4xl">
         <Trans>Admin Panel</Trans>
       </h1>
 

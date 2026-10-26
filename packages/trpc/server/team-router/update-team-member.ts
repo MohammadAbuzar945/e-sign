@@ -1,5 +1,3 @@
-import { match } from 'ts-pattern';
-
 import { TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
@@ -8,14 +6,12 @@ import { generateDatabaseId } from '@documenso/lib/universal/id';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
 import { OrganisationGroupType, TeamMemberRole } from '@documenso/prisma/generated/types';
+import { match } from 'ts-pattern';
 
 import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 
 import { authenticatedProcedure } from '../trpc';
-import {
-  ZUpdateTeamMemberRequestSchema,
-  ZUpdateTeamMemberResponseSchema,
-} from './update-team-member.types';
+import { ZUpdateTeamMemberRequestSchema, ZUpdateTeamMemberResponseSchema } from './update-team-member.types';
 
 export const updateTeamMemberRoute = authenticatedProcedure
   //   .meta(updateTeamMemberMeta)
@@ -86,9 +82,7 @@ export const updateTeamMemberRoute = authenticatedProcedure
       (group) =>
         group.organisationGroup.type === OrganisationGroupType.INTERNAL_TEAM &&
         group.teamId === teamId &&
-        group.organisationGroup.organisationGroupMembers.some(
-          (member) => member.organisationMemberId === memberId,
-        ),
+        group.organisationGroup.organisationGroupMembers.some((member) => member.organisationMemberId === memberId),
     );
 
     const teamMemberGroup = team.teamGroups.find(

@@ -1,26 +1,22 @@
-import { EnvelopeType, RecipientRole, SendStatus, SigningStatus } from '@prisma/client';
-
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import type { TRecipientAccessAuthTypes } from '@documenso/lib/types/document-auth';
-import {
-  type TRecipientActionAuthTypes,
-  ZRecipientAuthOptionsSchema,
-} from '@documenso/lib/types/document-auth';
+import { type TRecipientActionAuthTypes, ZRecipientAuthOptionsSchema } from '@documenso/lib/types/document-auth';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
-import {
-  createDocumentAuditLogData,
-  diffRecipientChanges,
-} from '@documenso/lib/utils/document-audit-logs';
+import { createDocumentAuditLogData, diffRecipientChanges } from '@documenso/lib/utils/document-audit-logs';
 import { createRecipientAuthOptions } from '@documenso/lib/utils/document-auth';
 import { parseClaimFlags } from '@documenso/lib/utils/parse-claim-flags';
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType, RecipientRole, SendStatus, SigningStatus } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { extractLegacyIds } from '../../universal/id';
-import { type EnvelopeIdOptions } from '../../utils/envelope';
+import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { mapFieldToLegacyField } from '../../utils/fields';
 import { canRecipientBeModified } from '../../utils/recipients';
+import { assertEnvelopeMutable } from '../envelope/assert-envelope-mutable';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
+import { assertCompatibleRecipientGrouping } from '../signature-level/assert-compatible-recipient-grouping';
+import { assertCompatibleRecipientRole } from '../signature-level/assert-compatible-recipient-role';
 
 export interface UpdateEnvelopeRecipientsOptions {
   userId: number;
@@ -75,6 +71,8 @@ export const updateEnvelopeRecipients = async ({
     });
   }
 
+  assertEnvelopeMutable(envelope);
+
   if (envelope.completedAt) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'Envelope already complete',
@@ -95,10 +93,37 @@ export const updateEnvelopeRecipients = async ({
     });
   }
 
+  for (const recipient of recipients) {
+    if (recipient.role === undefined) {
+      continue;
+    }
+
+    assertCompatibleRecipientRole({
+      signatureLevel: envelope.signatureLevel,
+      role: recipient.role,
+    });
+  }
+
+  const orderUpdates = recipients.flatMap((update) => {
+    const existingRecipient = envelope.recipients.find((recipient) => recipient.id === update.id);
+
+    if (!existingRecipient || update.signingOrder === undefined) {
+      return [];
+    }
+
+    return [{ ...existingRecipient, ...update }];
+  });
+
+  const orderUpdateIds = new Set(orderUpdates.map((recipient) => recipient.id));
+
+  assertCompatibleRecipientGrouping({
+    signatureLevel: envelope.signatureLevel,
+    recipients: orderUpdates,
+    existingRecipients: envelope.recipients.filter((recipient) => !orderUpdateIds.has(recipient.id)),
+  });
+
   const recipientsToUpdate = recipients.map((recipient) => {
-    const originalRecipient = envelope.recipients.find(
-      (existingRecipient) => existingRecipient.id === recipient.id,
-    );
+    const originalRecipient = envelope.recipients.find((existingRecipient) => existingRecipient.id === recipient.id);
 
     if (!originalRecipient) {
       throw new AppError(AppErrorCode.NOT_FOUND, {
@@ -119,6 +144,8 @@ export const updateEnvelopeRecipients = async ({
   });
 
   const updatedRecipients = await prisma.$transaction(async (tx) => {
+    await assertEnvelopeMutable(envelope, tx);
+
     return await Promise.all(
       recipientsToUpdate.map(async ({ originalRecipient, updateData }) => {
         let authOptions = ZRecipientAuthOptionsSchema.parse(originalRecipient.authOptions);
@@ -146,12 +173,8 @@ export const updateEnvelopeRecipients = async ({
             role: mergedRecipient.role,
             signingOrder: mergedRecipient.signingOrder,
             envelopeId: envelope.id,
-            sendStatus:
-              mergedRecipient.role === RecipientRole.CC ? SendStatus.SENT : SendStatus.NOT_SENT,
-            signingStatus:
-              mergedRecipient.role === RecipientRole.CC
-                ? SigningStatus.SIGNED
-                : SigningStatus.NOT_SIGNED,
+            sendStatus: mergedRecipient.role === RecipientRole.CC ? SendStatus.SENT : SendStatus.NOT_SENT,
+            signingStatus: mergedRecipient.role === RecipientRole.CC ? SigningStatus.SIGNED : SigningStatus.NOT_SIGNED,
             authOptions,
           },
           include: {
@@ -162,8 +185,7 @@ export const updateEnvelopeRecipients = async ({
         // Clear all fields if the recipient role is changed to a type that cannot have fields.
         if (
           originalRecipient.role !== updatedRecipient.role &&
-          (updatedRecipient.role === RecipientRole.CC ||
-            updatedRecipient.role === RecipientRole.VIEWER)
+          (updatedRecipient.role === RecipientRole.CC || updatedRecipient.role === RecipientRole.VIEWER)
         ) {
           await tx.field.deleteMany({
             where: {

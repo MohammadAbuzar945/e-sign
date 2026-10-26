@@ -1,9 +1,8 @@
-import { syncMemberCountWithStripeSeatPlan } from '@documenso/ee/server-only/stripe/update-subscription-item-quantity';
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
-import { validateIfSubscriptionIsRequired } from '@documenso/lib/utils/billing';
-import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
+import { jobs } from '@documenso/lib/jobs/client';
+import { getMemberOrganisationRole } from '@documenso/lib/server-only/team/get-member-roles';
+import { buildOrganisationWhereQuery, isOrganisationRoleWithinUserHierarchy } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
 
 import { authenticatedProcedure } from '../trpc';
@@ -33,43 +32,43 @@ export const deleteOrganisationMemberInvitesRoute = authenticatedProcedure
         userId,
         roles: ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_ORGANISATION'],
       }),
-      include: {
-        organisationClaim: true,
-        members: {
-          select: {
-            id: true,
-          },
-        },
-        invites: {
-          select: {
-            id: true,
-          },
-        },
-      },
     });
 
     if (!organisation) {
       throw new AppError(AppErrorCode.NOT_FOUND);
     }
 
-    const { organisationClaim } = organisation;
-
-    const currentSubscription = await getCurrentSubscriptionByOrganisationId({
+    // Role hierarchy check: prevent deleting invitations for roles higher than the current user's.
+    const currentOrganisationMemberRole = await getMemberOrganisationRole({
       organisationId: organisation.id,
+      reference: {
+        type: 'User',
+        id: userId,
+      },
     });
 
-    const subscription = validateIfSubscriptionIsRequired(currentSubscription);
+    const invitesToDelete = await prisma.organisationMemberInvite.findMany({
+      where: {
+        id: {
+          in: invitationIds,
+        },
+        organisationId: organisation.id,
+      },
+      select: {
+        id: true,
+        organisationRole: true,
+      },
+    });
 
-    const numberOfCurrentMembers = organisation.members.length;
-    const numberOfCurrentInvites = organisation.invites.length;
-    const totalMemberCountWithInvites = numberOfCurrentMembers + numberOfCurrentInvites - 1;
+    const hasUnauthorizedRoleAccess = invitesToDelete.some(
+      (invite) =>
+        !isOrganisationRoleWithinUserHierarchy(currentOrganisationMemberRole, invite.organisationRole),
+    );
 
-    if (subscription) {
-      await syncMemberCountWithStripeSeatPlan(
-        subscription,
-        organisationClaim,
-        totalMemberCountWithInvites,
-      );
+    if (hasUnauthorizedRoleAccess) {
+      throw new AppError(AppErrorCode.UNAUTHORIZED, {
+        message: 'User does not have permission to delete invitations for higher roles',
+      });
     }
 
     await prisma.organisationMemberInvite.deleteMany({
@@ -79,5 +78,11 @@ export const deleteOrganisationMemberInvitesRoute = authenticatedProcedure
         },
         organisationId,
       },
+    });
+
+    // Invites count toward seats — sync Stripe quantity down after removal.
+    await jobs.triggerJob({
+      name: 'internal.sync-organisation-seats',
+      payload: { organisationId },
     });
   });

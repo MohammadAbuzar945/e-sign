@@ -1,7 +1,3 @@
-import type { DocumentMeta } from '@prisma/client';
-import { type Field, FieldType } from '@prisma/client';
-import { match } from 'ts-pattern';
-
 import { DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
 import { PDF_VIEWER_PAGE_SELECTOR } from '@documenso/lib/constants/pdf-viewer';
 import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones';
@@ -18,6 +14,9 @@ import type {
   TSignFieldWithTokenMutationSchema,
 } from '@documenso/trpc/server/field-router/schema';
 import { ElementVisible } from '@documenso/ui/primitives/element-visible';
+import type { DocumentMeta } from '@prisma/client';
+import { type Field, FieldType } from '@prisma/client';
+import { match } from 'ts-pattern';
 
 import { DocumentSigningCheckboxField } from '~/components/general/document-signing/document-signing-checkbox-field';
 import { DocumentSigningDateField } from '~/components/general/document-signing/document-signing-date-field';
@@ -34,14 +33,11 @@ export type EmbedDocumentFieldsProps = {
   fields: Field[];
   metadata?: Pick<
     DocumentMeta,
-    | 'timezone'
-    | 'dateFormat'
-    | 'typedSignatureEnabled'
-    | 'uploadSignatureEnabled'
-    | 'drawSignatureEnabled'
+    'timezone' | 'dateFormat' | 'typedSignatureEnabled' | 'uploadSignatureEnabled' | 'drawSignatureEnabled'
   > | null;
   onSignField?: (value: TSignFieldWithTokenMutationSchema) => Promise<void> | void;
   onUnsignField?: (value: TRemovedSignedFieldWithTokenMutationSchema) => Promise<void> | void;
+  onSignatureChanged?: (signature: string | null) => void;
 };
 
 export const EmbedDocumentFields = ({
@@ -49,11 +45,10 @@ export const EmbedDocumentFields = ({
   metadata,
   onSignField,
   onUnsignField,
+  onSignatureChanged,
 }: EmbedDocumentFieldsProps) => {
-  const highestPageNumber = Math.max(...fields.map((field) => field.page));
-
   return (
-    <ElementVisible target={`${PDF_VIEWER_PAGE_SELECTOR}[data-page-number="${highestPageNumber}"]`}>
+    <ElementVisible target={PDF_VIEWER_PAGE_SELECTOR}>
       {fields.map((field) =>
         match(field.type)
           .with(FieldType.SIGNATURE, () => (
@@ -62,6 +57,7 @@ export const EmbedDocumentFields = ({
               field={field}
               onSignField={onSignField}
               onUnsignField={onUnsignField}
+              onSignatureChanged={onSignatureChanged}
               typedSignatureEnabled={metadata?.typedSignatureEnabled}
               uploadSignatureEnabled={metadata?.uploadSignatureEnabled}
               drawSignatureEnabled={metadata?.drawSignatureEnabled}

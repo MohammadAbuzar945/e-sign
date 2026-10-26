@@ -31,24 +31,21 @@ export const UserProfileTimur = ({ className, rows = 2 }: UserProfileTimurProps)
       </div>
 
       <div className="mt-8 w-full">
-        <div className="dark:divide-foreground/30 dark:border-foreground/30 divide-y-2 divide-neutral-200 overflow-hidden rounded-lg border-2 border-neutral-200">
-          <div className="text-muted-foreground dark:bg-foreground/20 bg-neutral-50 p-4 font-medium">
+        <div className="divide-y-2 divide-neutral-200 overflow-hidden rounded-lg border-2 border-neutral-200 dark:divide-foreground/30 dark:border-foreground/30">
+          <div className="bg-neutral-50 p-4 font-medium text-muted-foreground dark:bg-foreground/20">
             <Trans>Documents</Trans>
           </div>
 
           {Array(rows)
             .fill(0)
             .map((_, index) => (
-              <div
-                key={index}
-                className="bg-background flex items-center justify-between gap-x-6 p-4"
-              >
+              <div key={index} className="flex items-center justify-between gap-x-6 bg-background p-4">
                 <div className="flex items-center gap-x-2">
-                  <File className="text-muted-foreground/80 h-8 w-8" strokeWidth={1.5} />
+                  <File className="h-8 w-8 text-muted-foreground/80" strokeWidth={1.5} />
 
                   <div className="space-y-2">
-                    <div className="dark:bg-foreground/30 h-1.5 w-24 rounded-full bg-neutral-300 md:w-36" />
-                    <div className="dark:bg-foreground/20 h-1.5 w-16 rounded-full bg-neutral-200 md:w-24" />
+                    <div className="h-1.5 w-24 rounded-full bg-neutral-300 md:w-36 dark:bg-foreground/30" />
+                    <div className="h-1.5 w-16 rounded-full bg-neutral-200 md:w-24 dark:bg-foreground/20" />
                   </div>
                 </div>
 

@@ -1,11 +1,3 @@
-import { useMemo } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { DateTime } from 'luxon';
-import { useSearchParams } from 'react-router';
-import { UAParser } from 'ua-parser-js';
-
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
@@ -17,10 +9,23 @@ import { DataTable } from '@documenso/ui/primitives/data-table';
 import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import type { DateTimeFormatOptions } from 'luxon';
+import { DateTime } from 'luxon';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router';
+import { UAParser } from 'ua-parser-js';
 
 export type DocumentLogsTableProps = {
   documentId: number;
   userId?: number;
+};
+
+const dateFormat: DateTimeFormatOptions = {
+  ...DateTime.DATETIME_SHORT,
+  hourCycle: 'h12',
 };
 
 export const DocumentLogsTable = ({ documentId, userId }: DocumentLogsTableProps) => {
@@ -63,8 +68,7 @@ export const DocumentLogsTable = ({ documentId, userId }: DocumentLogsTableProps
       {
         header: _(msg`Time`),
         accessorKey: 'createdAt',
-        cell: ({ row }) =>
-          DateTime.fromJSDate(row.original.createdAt).toFormat('yyyy-MM-dd hh:mm:ss a'),
+        cell: ({ row }) => i18n.date(row.original.createdAt, dateFormat),
       },
       {
         header: _(msg`User`),
@@ -85,7 +89,9 @@ export const DocumentLogsTable = ({ documentId, userId }: DocumentLogsTableProps
               )}
             </div>
           ) : (
-            <p>N/A</p>
+            <p>
+              <Trans>N/A</Trans>
+            </p>
           ),
       },
       {
@@ -94,8 +100,7 @@ export const DocumentLogsTable = ({ documentId, userId }: DocumentLogsTableProps
         cell: ({ row }) => (
           <span
             className={cn({
-              'font-medium text-destructive':
-                row.original.type === DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
+              'font-medium text-destructive': row.original.type === DOCUMENT_AUDIT_LOG_TYPE.EMAIL_FAILED,
             })}
           >
             {formatDocumentAuditLogAction(i18n, row.original, userId).description}

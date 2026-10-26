@@ -27,7 +27,7 @@ import {
 } from '@documenso/lib/types/document-auth';
 import {
   type TDocumentMetaDateFormat,
-  ZDocumentMetaTimezoneSchema,
+  ZDocumentMetaDateFormatSchema,
 } from '@documenso/lib/types/document-meta';
 import { normalizeStoredKbaSettings } from '@documenso/lib/utils/kba-settings';
 import { isPersonalLayout } from '@documenso/lib/utils/organisations';
@@ -37,7 +37,6 @@ import { DocumentSignatureSettingsTooltip } from '@documenso/ui/components/docum
 import { RecipientRoleSelect } from '@documenso/ui/components/recipient/recipient-role-select';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
-import { Button } from '@documenso/ui/primitives/button';
 import { Switch } from '@documenso/ui/primitives/switch';
 import { Combobox } from '@documenso/ui/primitives/combobox';
 import {
@@ -62,6 +61,8 @@ import { Input } from '@documenso/ui/primitives/input';
 import { useOptionalCurrentTeam } from '~/providers/team';
 
 import { DefaultRecipientsMultiSelectCombobox } from '../general/default-recipients-multiselect-combobox';
+
+import { FormStickySaveBar } from './form-sticky-save-bar';
 
 /**
  * Can't infer this from the schema since we need to keep the schema inside the component to allow
@@ -140,7 +141,7 @@ export const DocumentPreferencesForm = ({
     documentVisibility: z.nativeEnum(DocumentVisibility).nullable(),
     documentLanguage: z.enum(SUPPORTED_LANGUAGE_CODES).nullable(),
     documentTimezone: z.string().nullable(),
-    documentDateFormat: ZDocumentMetaTimezoneSchema.nullable(),
+    documentDateFormat: ZDocumentMetaDateFormatSchema.nullable(),
     includeSenderDetails: z.boolean().nullable(),
     includeSigningCertificate: z.boolean().nullable(),
     includeQrCodeInCertificate: z.boolean().nullable(),
@@ -171,8 +172,10 @@ export const DocumentPreferencesForm = ({
         ? settings.documentLanguage
         : null,
       documentTimezone: settings.documentTimezone,
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      documentDateFormat: settings.documentDateFormat as TDocumentMetaDateFormat | null,
+      documentDateFormat: (() => {
+        const parsed = ZDocumentMetaDateFormatSchema.safeParse(settings.documentDateFormat);
+        return parsed.success ? parsed.data : null;
+      })(),
       includeSenderDetails: settings.includeSenderDetails,
       includeSigningCertificate: settings.includeSigningCertificate,
       includeQrCodeInCertificate: settings.includeQrCodeInCertificate,
@@ -1060,11 +1063,11 @@ export const DocumentPreferencesForm = ({
             )}
           </div>
 
-          <div className="flex flex-row justify-end space-x-4">
-            <Button type="submit" loading={form.formState.isSubmitting}>
-              <Trans>Update</Trans>
-            </Button>
-          </div>
+          <FormStickySaveBar
+            isDirty={form.formState.isDirty}
+            isSubmitting={form.formState.isSubmitting}
+            onReset={() => form.reset()}
+          />
         </fieldset>
       </form>
     </Form>

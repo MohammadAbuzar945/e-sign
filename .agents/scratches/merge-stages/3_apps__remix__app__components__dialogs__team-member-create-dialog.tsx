@@ -1,0 +1,427 @@
+import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { TEAM_MEMBER_ROLE_HIERARCHY } from '@documenso/lib/constants/teams';
+import { TEAM_MEMBER_ROLE_MAP } from '@documenso/lib/constants/teams-translations';
+import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
+import { trpc } from '@documenso/trpc/react';
+import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
+import { Button } from '@documenso/ui/primitives/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@documenso/ui/primitives/dialog';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
+import { Input } from '@documenso/ui/primitives/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
+import { useToast } from '@documenso/ui/primitives/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { TeamMemberRole } from '@prisma/client';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { InfoIcon, UserPlusIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Link } from 'react-router';
+import { match } from 'ts-pattern';
+import { z } from 'zod';
+
+import { OrganisationMemberInviteDialog } from '~/components/dialogs/organisation-member-invite-dialog';
+import {
+  type OrganisationMemberOption,
+  OrganisationMembersMultiSelectCombobox,
+} from '~/components/general/organisation-members-multiselect-combobox';
+import { useCurrentTeam } from '~/providers/team';
+
+export type TeamMemberCreateDialogProps = {
+  trigger?: React.ReactNode;
+} & Omit<DialogPrimitive.DialogProps, 'children'>;
+
+const ZAddTeamMembersFormSchema = z.object({
+  members: z.array(
+    z.object({
+      organisationMemberId: z.string(),
+      teamRole: z.nativeEnum(TeamMemberRole),
+    }),
+  ),
+});
+
+type TAddTeamMembersFormSchema = z.infer<typeof ZAddTeamMembersFormSchema>;
+
+export const TeamMemberCreateDialog = ({ trigger, ...props }: TeamMemberCreateDialogProps) => {
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<'SELECT' | 'MEMBERS'>('SELECT');
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<OrganisationMemberOption[]>([]);
+  const prevInviteDialogOpenRef = useRef(false);
+
+  const { t } = useLingui();
+  const { toast } = useToast();
+
+  const team = useCurrentTeam();
+  const organisation = useCurrentOrganisation();
+  const utils = trpc.useUtils();
+
+  const canInviteOrganisationMembers = canExecuteOrganisationAction(
+    'MANAGE_ORGANISATION',
+    organisation.currentOrganisationRole,
+  );
+
+  const form = useForm<TAddTeamMembersFormSchema>({
+    resolver: zodResolver(ZAddTeamMembersFormSchema),
+    defaultValues: {
+      members: [],
+    },
+  });
+
+  const { mutateAsync: createTeamMembers } = trpc.team.member.createMany.useMutation();
+
+  // Lightweight count-only query for org members not already on this team.
+  // Powers the "no available members" empty state.
+  const availableMemberCountQuery = trpc.organisation.member.find.useQuery({
+    organisationId: team.organisationId,
+    perPage: 1,
+    excludeTeamId: team.id,
+  });
+
+  const hasNoAvailableMembers =
+    !availableMemberCountQuery.isLoading && (availableMemberCountQuery.data?.count ?? 0) === 0;
+
+  const onFormSubmit = async ({ members }: TAddTeamMembersFormSchema) => {
+    if (members.length === 0) {
+      if (hasNoAvailableMembers && canInviteOrganisationMembers) {
+        setInviteDialogOpen(true);
+        return;
+      }
+
+      // Don't show error if on SELECT step - the disabled Next button already communicates this
+      if (step === 'SELECT') {
+        return;
+      }
+
+      toast({
+        title: t`No members selected`,
+        description: t`Please select at least one member to add to the team.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await createTeamMembers({
+        teamId: team.id,
+        organisationMembers: members,
+      });
+
+      toast({
+        title: t`Success`,
+        description: t`Team members have been added.`,
+        duration: 5000,
+      });
+
+      setOpen(false);
+    } catch {
+      toast({
+        title: t`An unknown error occurred`,
+        description: t`We encountered an unknown error while attempting to add team members. Please try again later.`,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!open) {
+      form.reset();
+      setStep('SELECT');
+      setInviteDialogOpen(false);
+      setSelectedMembers([]);
+    }
+  }, [open, form]);
+
+  // Invalidate queries when invite dialog closes (transitions from true to false) to refresh available members
+  useEffect(() => {
+    if (prevInviteDialogOpenRef.current && !inviteDialogOpen) {
+      void utils.organisation.member.find.invalidate({
+        organisationId: team.organisationId,
+      });
+    }
+    prevInviteDialogOpenRef.current = inviteDialogOpen;
+  }, [inviteDialogOpen, utils, team.organisationId]);
+
+  return (
+    <Dialog
+      {...props}
+      open={open}
+      // Disable automatic onOpenChange events to prevent dialog from closing if auser 'accidentally' clicks the overlay.
+      // Since it would be annoying to redo the whole process.
+    >
+      <DialogTrigger onClick={(e) => e.stopPropagation()} asChild>
+        {trigger ?? (
+          <Button variant="secondary" onClick={() => setOpen(true)}>
+            <Trans>Add members</Trans>
+          </Button>
+        )}
+      </DialogTrigger>
+
+      <DialogContent hideClose={true} position="center">
+        {match(step)
+          .with('SELECT', () => (
+            <DialogHeader>
+              <DialogTitle className="flex flex-row items-center">
+                <Trans>Add members</Trans>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <InfoIcon className="mx-2 h-4 w-4" />
+                  </TooltipTrigger>
+                  <TooltipContent className="z-[99999] max-w-xs text-muted-foreground">
+                    <Trans>
+                      To be able to add members to a team, you must first add them to the organisation. For more
+                      information, please see the{' '}
+                      <Link
+                        to="https://docs.documenso.com/users/organisations/members"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-documenso-700 hover:text-documenso-600 hover:underline"
+                      >
+                        documentation
+                      </Link>
+                      .
+                    </Trans>
+                  </TooltipContent>
+                </Tooltip>
+              </DialogTitle>
+
+              <DialogDescription>
+                <Trans>Select members or groups of members to add to the team.</Trans>
+              </DialogDescription>
+            </DialogHeader>
+          ))
+          .with('MEMBERS', () => (
+            <DialogHeader>
+              <DialogTitle>
+                <Trans>Add members roles</Trans>
+              </DialogTitle>
+
+              <DialogDescription>
+                <Trans>Configure the team roles for each member</Trans>
+              </DialogDescription>
+            </DialogHeader>
+          ))
+          .exhaustive()}
+
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onFormSubmit)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && form.getValues('members').length === 0) {
+                e.preventDefault();
+                if (hasNoAvailableMembers && canInviteOrganisationMembers) {
+                  setInviteDialogOpen(true);
+                }
+                // Don't show toast - the disabled Next button already communicates this
+              }
+            }}
+          >
+            <fieldset disabled={form.formState.isSubmitting}>
+              {step === 'SELECT' && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="members"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>
+                          <Trans>Members</Trans>
+                        </FormLabel>
+
+                        <FormControl>
+                          {hasNoAvailableMembers ? (
+                            <div className="flex flex-col items-center justify-center rounded-lg border border-muted-foreground/25 border-dashed bg-muted/30 px-6 py-12 text-center">
+                              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                                <UserPlusIcon className="h-6 w-6 text-muted-foreground" />
+                              </div>
+                              <h3 className="mb-2 font-semibold text-sm">
+                                <Trans>No organisation members available</Trans>
+                              </h3>
+                              <p className="mb-6 max-w-sm text-muted-foreground text-sm">
+                                {canInviteOrganisationMembers ? (
+                                  <Trans>
+                                    To add members to this team, you must first add them to the organisation.
+                                  </Trans>
+                                ) : (
+                                  <Trans>
+                                    To add members to this team, they must first be invited to the organisation. Only
+                                    organisation admins and managers can invite new members — please contact one of them
+                                    to invite members on your behalf.
+                                  </Trans>
+                                )}
+                              </p>
+                              {canInviteOrganisationMembers && (
+                                <OrganisationMemberInviteDialog
+                                  open={inviteDialogOpen}
+                                  onOpenChange={setInviteDialogOpen}
+                                  trigger={
+                                    <Button type="button" variant="default">
+                                      <UserPlusIcon className="mr-2 h-4 w-4" />
+                                      <Trans>Invite organisation members</Trans>
+                                    </Button>
+                                  }
+                                />
+                              )}
+                            </div>
+                          ) : (
+                            <OrganisationMembersMultiSelectCombobox
+                              organisationId={team.organisationId}
+                              selectedMembers={selectedMembers}
+                              excludeTeamId={team.id}
+                              onChange={(members) => {
+                                setSelectedMembers(members);
+                                field.onChange(
+                                  members.map((member) => ({
+                                    organisationMemberId: member.id,
+                                    teamRole:
+                                      field.value.find((entry) => entry.organisationMemberId === member.id)?.teamRole ||
+                                      TeamMemberRole.MEMBER,
+                                  })),
+                                );
+                              }}
+                              className="w-full bg-background"
+                              dataTestId="team-members-picker"
+                            />
+                          )}
+                        </FormControl>
+
+                        {!hasNoAvailableMembers && (
+                          <>
+                            <FormDescription>
+                              <Trans>Select members to add to this team</Trans>
+                            </FormDescription>
+
+                            {canInviteOrganisationMembers && (
+                              <Alert variant="neutral" className="mt-2 flex items-center gap-2 space-y-0">
+                                <div>
+                                  <UserPlusIcon className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <AlertDescription className="mt-0 flex-1">
+                                  <Trans>Can't find someone?</Trans>{' '}
+                                  <OrganisationMemberInviteDialog
+                                    open={inviteDialogOpen}
+                                    onOpenChange={setInviteDialogOpen}
+                                    trigger={
+                                      <Button
+                                        type="button"
+                                        variant="link"
+                                        className="h-auto p-0 font-medium text-documenso-700 text-sm hover:text-documenso-600"
+                                      >
+                                        <Trans>Invite them to the organisation first</Trans>
+                                      </Button>
+                                    }
+                                  />
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                          </>
+                        )}
+                      </FormItem>
+                    )}
+                  />
+
+                  <DialogFooter className="mt-4">
+                    <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+                      <Trans>Cancel</Trans>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      disabled={form.getValues('members').length === 0}
+                      onClick={() => {
+                        setStep('MEMBERS');
+                      }}
+                    >
+                      <Trans>Next</Trans>
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+
+              {step === 'MEMBERS' && (
+                <>
+                  <div className="custom-scrollbar -m-1 max-h-[60vh] space-y-4 overflow-y-auto p-1">
+                    {form.getValues('members').map((member, index) => (
+                      <div className="flex w-full flex-row space-x-4" key={index}>
+                        <div className="w-full space-y-2">
+                          {index === 0 && (
+                            <FormLabel>
+                              <Trans>Member</Trans>
+                            </FormLabel>
+                          )}
+                          <Input
+                            readOnly
+                            className="bg-background"
+                            value={selectedMembers.find(({ id }) => id === member.organisationMemberId)?.name || ''}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name={`members.${index}.teamRole`}
+                          render={({ field }) => (
+                            <FormItem className="w-full">
+                              {index === 0 && (
+                                <FormLabel required>
+                                  <Trans>Team Role</Trans>
+                                </FormLabel>
+                              )}
+                              <FormControl>
+                                <Select {...field} onValueChange={field.onChange}>
+                                  <SelectTrigger className="text-muted-foreground">
+                                    <SelectValue />
+                                  </SelectTrigger>
+
+                                  <SelectContent position="popper">
+                                    {TEAM_MEMBER_ROLE_HIERARCHY[team.currentTeamRole].map((role) => (
+                                      <SelectItem key={role} value={role}>
+                                        {t(TEAM_MEMBER_ROLE_MAP[role]) ?? role}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <DialogFooter className="mt-4">
+                    <Button type="button" variant="secondary" onClick={() => setStep('SELECT')}>
+                      <Trans>Back</Trans>
+                    </Button>
+
+                    <Button type="submit" loading={form.formState.isSubmitting}>
+                      <Trans>Add Members</Trans>
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </fieldset>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};

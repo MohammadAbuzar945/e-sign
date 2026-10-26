@@ -1,6 +1,7 @@
 import { Trans } from '@lingui/react/macro';
 
 import { Column, Img, Section, Text } from '../components';
+import { getEmailAssetUrl } from '../utils/asset-url';
 import { TemplateDocumentImage } from './template-document-image';
 
 export interface TemplateDocumentPendingProps {
@@ -8,14 +9,7 @@ export interface TemplateDocumentPendingProps {
   assetBaseUrl: string;
 }
 
-export const TemplateDocumentPending = ({
-  documentName,
-  assetBaseUrl,
-}: TemplateDocumentPendingProps) => {
-  const getAssetUrl = (path: string) => {
-    return new URL(path, assetBaseUrl).toString();
-  };
-
+export const TemplateDocumentPending = ({ documentName, assetBaseUrl }: TemplateDocumentPendingProps) => {
   return (
     <>
       <TemplateDocumentImage className="mt-6" assetBaseUrl={assetBaseUrl} />
@@ -23,21 +17,22 @@ export const TemplateDocumentPending = ({
       <Section>
         <Section className="mb-4">
           <Column align="center">
-            <Text className="text-base font-semibold text-blue-500">
+            <Text className="font-semibold text-base text-foreground">
               <Img
-                src={getAssetUrl('/static/clock.png')}
+                src={getEmailAssetUrl(assetBaseUrl, 'static/clock.png')}
                 className="-mt-0.5 mr-2 inline h-7 w-7 align-middle"
+                alt=""
               />
               <Trans>Waiting for others</Trans>
             </Text>
           </Column>
         </Section>
 
-        <Text className="text-primary mb-0 text-center text-lg font-semibold">
+        <Text className="mb-0 text-center font-semibold text-foreground text-lg">
           <Trans>“{documentName}” has been signed</Trans>
         </Text>
 
-        <Text className="mx-auto mb-6 mt-1 max-w-[80%] text-center text-base text-slate-400">
+        <Text className="mx-auto mt-1 mb-6 max-w-[80%] text-center text-base text-muted-foreground">
           <Trans>
             We're still waiting for other signers to sign this document.
             <br />

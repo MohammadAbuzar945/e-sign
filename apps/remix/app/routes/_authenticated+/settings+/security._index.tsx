@@ -1,57 +1,36 @@
+import { getSession } from '@documenso/auth/server/lib/utils/get-session';
+import { useSession } from '@documenso/lib/client-only/providers/session';
+import { isSigninEnabledForProvider } from '@documenso/lib/constants/auth';
+import { getUserAuthMethods } from '@documenso/lib/server-only/user/get-user-auth-methods';
+import { UserAuthMethod } from '@documenso/lib/types/user-auth-method';
+import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
+import { Button } from '@documenso/ui/primitives/button';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { Link } from 'react-router';
 
-import { getSession } from '@documenso/auth/server/lib/utils/get-session';
-import { useSession } from '@documenso/lib/client-only/providers/session';
-import { prisma } from '@documenso/prisma';
-import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
-import { Button } from '@documenso/ui/primitives/button';
-
 import { DisableAuthenticatorAppDialog } from '~/components/forms/2fa/disable-authenticator-app-dialog';
 import { EnableAuthenticatorAppDialog } from '~/components/forms/2fa/enable-authenticator-app-dialog';
 import { ViewRecoveryCodesDialog } from '~/components/forms/2fa/view-recovery-codes-dialog';
 import { PasswordForm } from '~/components/forms/password';
+import { PasswordSetupRequestButton } from '~/components/forms/password-setup-request-button';
 import { SettingsHeader } from '~/components/general/settings-header';
 import { appMetaTags } from '~/utils/meta';
 
 import type { Route } from './+types/security._index';
 
 export function meta() {
-  return appMetaTags('Security');
+  return appMetaTags(msg`Security`);
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
   const { user } = await getSession(request);
 
-  // Todo: Use providers instead after RR7 migration.
-  // const accounts = await prisma.account.findMany({
-  //   where: {
-  //     userId: user.id,
-  //   },
-  //   select: {
-  //     provider: true,
-  //   },
-  // });
-
-  // const providers = accounts.map((account) => account.provider);
-  // let hasEmailPasswordAccount = providers.includes('DOCUMENSO');
-
-  const hasEmailPasswordAccount: boolean = await prisma.user
-    .count({
-      where: {
-        id: user.id,
-        password: {
-          not: null,
-        },
-      },
-    })
-    .then((value) => value > 0);
+  const authMethods = await getUserAuthMethods({ userId: user.id });
 
   return {
-    // providers,
-    hasEmailPasswordAccount,
+    hasEmailPasswordAccount: authMethods.includes(UserAuthMethod.PASSWORD),
   };
 }
 
@@ -61,24 +40,37 @@ export default function SettingsSecurity({ loaderData }: Route.ComponentProps) {
   const { _ } = useLingui();
   const { user } = useSession();
 
+  const isEmailPasswordSigninEnabled = isSigninEnabledForProvider('email');
+
   return (
     <div>
       <SettingsHeader
         title={_(msg`Security`)}
         subtitle={_(msg`Here you can manage your password and security settings.`)}
       />
-      {hasEmailPasswordAccount && (
-        <>
-          <PasswordForm user={user} />
 
-          <hr className="border-border/50 mt-6" />
-        </>
+      {hasEmailPasswordAccount && <PasswordForm user={user} />}
+
+      {!hasEmailPasswordAccount && isEmailPasswordSigninEnabled && (
+        <Alert className="flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
+          <div className="mb-4 sm:mb-0">
+            <AlertTitle>
+              <Trans>Set a password</Trans>
+            </AlertTitle>
+
+            <AlertDescription className="mr-4">
+              <Trans>
+                Your account has no password. Add one to sign in with your email and to sign documents that require it.
+                We'll email you a link.
+              </Trans>
+            </AlertDescription>
+          </div>
+
+          <PasswordSetupRequestButton />
+        </Alert>
       )}
 
-      <Alert
-        className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
-        variant="neutral"
-      >
+      <Alert className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
         <div className="mb-4 sm:mb-0">
           <AlertTitle>
             <Trans>Two factor authentication</Trans>
@@ -87,30 +79,20 @@ export default function SettingsSecurity({ loaderData }: Route.ComponentProps) {
           <AlertDescription className="mr-4">
             {hasEmailPasswordAccount ? (
               <Trans>
-                Add an authenticator to serve as a secondary authentication method when signing in,
-                or when signing documents.
-              </Trans>
-            ) : (
-              <Trans>
-                Add an authenticator to serve as a secondary authentication method for signing
+                Add an authenticator to serve as a secondary authentication method when signing in, or when signing
                 documents.
               </Trans>
+            ) : (
+              <Trans>Add an authenticator to serve as a secondary authentication method for signing documents.</Trans>
             )}
           </AlertDescription>
         </div>
 
-        {user.twoFactorEnabled ? (
-          <DisableAuthenticatorAppDialog />
-        ) : (
-          <EnableAuthenticatorAppDialog />
-        )}
+        {user.twoFactorEnabled ? <DisableAuthenticatorAppDialog /> : <EnableAuthenticatorAppDialog />}
       </Alert>
 
       {user.twoFactorEnabled && (
-        <Alert
-          className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
-          variant="neutral"
-        >
+        <Alert className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
           <div className="mb-4 sm:mb-0">
             <AlertTitle>
               <Trans>Recovery codes</Trans>
@@ -118,8 +100,8 @@ export default function SettingsSecurity({ loaderData }: Route.ComponentProps) {
 
             <AlertDescription className="mr-4">
               <Trans>
-                Two factor authentication recovery codes are used to access your account in the
-                event that you lose access to your authenticator app.
+                Two factor authentication recovery codes are used to access your account in the event that you lose
+                access to your authenticator app.
               </Trans>
             </AlertDescription>
           </div>
@@ -138,9 +120,7 @@ export default function SettingsSecurity({ loaderData }: Route.ComponentProps) {
           </AlertTitle>
 
           <AlertDescription className="mr-4">
-            <Trans>
-              Allows authenticating using biometrics, password managers, hardware keys, etc.
-            </Trans>
+            <Trans>Allows authenticating using biometrics, password managers, hardware keys, etc.</Trans>
           </AlertDescription>
         </div>
 
@@ -151,11 +131,8 @@ export default function SettingsSecurity({ loaderData }: Route.ComponentProps) {
         </Button>
       </Alert> */}
 
-      <Alert
-        className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
-        variant="neutral"
-      >
-        <div className="mb-4 mr-4 sm:mb-0">
+      <Alert className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
+        <div className="mr-4 mb-4 sm:mb-0">
           <AlertTitle>
             <Trans>Recent activity</Trans>
           </AlertTitle>
@@ -172,11 +149,8 @@ export default function SettingsSecurity({ loaderData }: Route.ComponentProps) {
         </Button>
       </Alert>
 
-      <Alert
-        className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
-        variant="neutral"
-      >
-        <div className="mb-4 mr-4 sm:mb-0">
+      <Alert className="mt-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
+        <div className="mr-4 mb-4 sm:mb-0">
           <AlertTitle>
             <Trans>Active sessions</Trans>
           </AlertTitle>

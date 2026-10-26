@@ -1,3 +1,5 @@
+import { SUPPORT_EMAIL } from '@documenso/lib/constants/app';
+import { Button } from '@documenso/ui/primitives/button';
 import { Trans } from '@lingui/react/macro';
 import { Link } from 'react-router';
 
@@ -40,10 +42,9 @@ export default function SignatureDisclosure() {
         </h2>
         <p>
           <Trans>
-            An electronic signature provided by you on our platform, achieved through clicking
-            through to a document and entering your name, or any other electronic signing method we
-            provide, is legally binding. It carries the same weight and enforceability as a manual
-            signature written with ink on paper.
+            An electronic signature provided by you on our platform, achieved through clicking through to a document and
+            entering your name, or any other electronic signing method we provide, is legally binding. It carries the
+            same weight and enforceability as a manual signature written with ink on paper.
           </Trans>
         </p>
 
@@ -73,9 +74,9 @@ export default function SignatureDisclosure() {
         </h2>
         <p>
           <Trans>
-            All documents related to the electronic signing process will be provided to you
-            electronically through our platform or via email. It is your responsibility to ensure
-            that your email address is current and that you can receive and open our emails.
+            All documents related to the electronic signing process will be provided to you electronically through our
+            platform or via email. It is your responsibility to ensure that your email address is current and that you
+            can receive and open our emails.
           </Trans>
         </p>
 
@@ -84,10 +85,9 @@ export default function SignatureDisclosure() {
         </h2>
         <p>
           <Trans>
-            By using the electronic signature feature, you are consenting to conduct transactions
-            and receive disclosures electronically. You acknowledge that your electronic signature
-            on documents is binding and that you accept the terms outlined in the documents you are
-            signing.
+            By using the electronic signature feature, you are consenting to conduct transactions and receive
+            disclosures electronically. You acknowledge that your electronic signature on documents is binding and that
+            you accept the terms outlined in the documents you are signing.
           </Trans>
         </p>
 
@@ -110,9 +110,8 @@ export default function SignatureDisclosure() {
         </h2>
         <p>
           <Trans>
-            It is crucial to keep your contact information, especially your email address, up to
-            date with us. Please notify us immediately of any changes to ensure that you continue to
-            receive all necessary communications.
+            It is crucial to keep your contact information, especially your email address, up to date with us. Please
+            notify us immediately of any changes to ensure that you continue to receive all necessary communications.
           </Trans>
         </p>
 
@@ -121,11 +120,10 @@ export default function SignatureDisclosure() {
         </h2>
         <p>
           <Trans>
-            After signing a document electronically, you will be provided the opportunity to view,
-            download, and print the document for your records. It is highly recommended that you
-            retain a copy of all electronically signed documents for your personal records. We will
-            also retain a copy of the signed document for our records however we may not be able to
-            provide you with a copy of the signed document after a certain period of time.
+            After signing a document electronically, you will be provided the opportunity to view, download, and print
+            the document for your records. It is highly recommended that you retain a copy of all electronically signed
+            documents for your personal records. We will also retain a copy of the signed document for our records
+            however we may not be able to provide you with a copy of the signed document after a certain period of time.
           </Trans>
         </p>
 

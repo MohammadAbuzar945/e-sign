@@ -1,12 +1,11 @@
+import { prisma } from '@documenso/prisma';
 import type { TemplateType } from '@prisma/client';
 import { EnvelopeType, type Prisma } from '@prisma/client';
 
-import { prisma } from '@documenso/prisma';
-
 import { TEAM_DOCUMENT_VISIBILITY_MAP } from '../../constants/teams';
-import { type FindResultResponse } from '../../types/search-params';
+import type { FindResultResponse } from '../../types/search-params';
 import { getMemberRoles } from '../team/get-member-roles';
-import { getTeamById } from '../team/get-team';
+import { buildTemplateSearchFilter } from './build-template-search-filter';
 
 export type FindTemplatesOptions = {
   userId: number;
@@ -15,6 +14,8 @@ export type FindTemplatesOptions = {
   page?: number;
   perPage?: number;
   folderId?: string;
+  query?: string;
+  ownerIds?: number[];
 };
 
 export const findTemplates = async ({
@@ -24,25 +25,9 @@ export const findTemplates = async ({
   page = 1,
   perPage = 10,
   folderId,
+  query,
+  ownerIds,
 }: FindTemplatesOptions) => {
-  const whereFilter: Prisma.EnvelopeWhereInput[] = [];
-
-  const team = await getTeamById({ userId, teamId });
-
-  const isOrganisationOwner = team.organisation.ownerUserId === userId;
-  const isTeamMember = team.teamGroups.length > 0;
-
-  // Organisation owners who are not members of the team should not see team templates.
-  if (isOrganisationOwner && !isTeamMember) {
-    return {
-      data: [],
-      count: 0,
-      currentPage: Math.max(page, 1),
-      perPage,
-      totalPages: 0,
-    } satisfies FindResultResponse<unknown[]>;
-  }
-
   const { teamRole } = await getMemberRoles({
     teamId,
     reference: {
@@ -51,7 +36,7 @@ export const findTemplates = async ({
     },
   });
 
-  whereFilter.push(
+  const filters: Prisma.EnvelopeWhereInput[] = [
     { teamId },
     {
       OR: [
@@ -63,51 +48,55 @@ export const findTemplates = async ({
         { userId, teamId },
       ],
     },
-  );
+    folderId ? { folderId } : { folderId: null },
+  ];
 
-  if (folderId) {
-    whereFilter.push({ folderId });
-  } else {
-    whereFilter.push({ folderId: null });
+  if (ownerIds && ownerIds.length > 0) {
+    filters.push({ userId: { in: ownerIds } });
   }
+
+  const searchFilter = buildTemplateSearchFilter(query);
+
+  if (searchFilter) {
+    filters.push(searchFilter);
+  }
+
+  const where: Prisma.EnvelopeWhereInput = {
+    type: EnvelopeType.TEMPLATE,
+    templateType: type,
+    AND: filters,
+  };
+
+  const templateInclude = {
+    team: {
+      select: {
+        id: true,
+        url: true,
+        name: true,
+      },
+    },
+    fields: true,
+    recipients: true,
+    documentMeta: true,
+    directLink: {
+      select: {
+        token: true,
+        enabled: true,
+      },
+    },
+  } as const;
 
   const [data, count] = await Promise.all([
     prisma.envelope.findMany({
-      where: {
-        type: EnvelopeType.TEMPLATE,
-        templateType: type,
-        AND: whereFilter,
-      },
-      include: {
-        team: {
-          select: {
-            id: true,
-            url: true,
-          },
-        },
-        fields: true,
-        recipients: true,
-        documentMeta: true,
-        directLink: {
-          select: {
-            token: true,
-            enabled: true,
-          },
-        },
-      },
+      where,
+      include: templateInclude,
       skip: Math.max(page - 1, 0) * perPage,
       take: perPage,
       orderBy: {
         createdAt: 'desc',
       },
     }),
-    prisma.envelope.count({
-      where: {
-        type: EnvelopeType.TEMPLATE,
-        templateType: type,
-        AND: whereFilter,
-      },
-    }),
+    prisma.envelope.count({ where }),
   ]);
 
   return {

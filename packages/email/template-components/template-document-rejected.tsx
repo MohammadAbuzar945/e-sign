@@ -1,6 +1,6 @@
 import { Trans } from '@lingui/react/macro';
 
-import { Button, Heading, Section, Text } from '../components';
+import { Button, Heading, Text } from '../components';
 
 export interface TemplateDocumentRejectedProps {
   documentName: string;
@@ -17,34 +17,32 @@ export function TemplateDocumentRejected({
 }: TemplateDocumentRejectedProps) {
   return (
     <div className="mt-4">
-      <Heading className="mb-4 text-center text-2xl font-semibold text-slate-800">
+      <Heading className="mb-4 text-center font-semibold text-2xl text-foreground">
         <Trans>Document Rejected</Trans>
       </Heading>
 
-      <Text className="mb-4 text-center text-base">
+      <Text className="mb-4 text-base">
         <Trans>
           {signerName} has rejected the document "{documentName}".
         </Trans>
       </Text>
 
       {rejectionReason && (
-        <Text className="mb-4 text-center text-base text-slate-400">
+        <Text className="mb-4 text-base text-muted-foreground">
           <Trans>Reason for rejection: {rejectionReason}</Trans>
         </Text>
       )}
 
-      <Text className="mb-6 text-center text-base">
+      <Text className="mb-6 text-base">
         <Trans>You can view the document and its status by clicking the button below.</Trans>
       </Text>
 
-      <Section className="mb-6 mt-8 text-center">
-        <Button
-          href={documentUrl}
-          className="bg-documenso-500 inline-flex items-center justify-center rounded-lg px-6 py-3 text-center text-sm font-medium text-black no-underline"
-        >
-          <Trans>View Document</Trans>
-        </Button>
-      </Section>
+      <Button
+        href={documentUrl}
+        className="inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-center font-medium text-primary-foreground text-sm no-underline"
+      >
+        <Trans>View Document</Trans>
+      </Button>
     </div>
   );
 }

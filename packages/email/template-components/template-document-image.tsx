@@ -1,22 +1,23 @@
 import { Column, Img, Row, Section } from '../components';
+import { getEmailAssetUrl } from '../utils/asset-url';
 
-export interface TemplateDocumentImageProps {
+export type TemplateDocumentImageProps = {
   assetBaseUrl: string;
   className?: string;
-}
+};
 
 export const TemplateDocumentImage = ({ assetBaseUrl, className }: TemplateDocumentImageProps) => {
-  const getAssetUrl = (path: string) => {
-    return new URL(path, assetBaseUrl).toString();
-  };
-
   return (
     <Section className={className}>
       <Row className="table-fixed">
         <Column />
 
         <Column>
-          <Img className="h-42 mx-auto" src={getAssetUrl('/static/document.png')} alt="Nomia" />
+          <Img
+            className="mx-auto h-42"
+            src={getEmailAssetUrl(assetBaseUrl, 'static/document.png')}
+            alt="Nomia"
+          />
         </Column>
 
         <Column />

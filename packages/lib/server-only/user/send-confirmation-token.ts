@@ -1,24 +1,15 @@
+import { prisma } from '@documenso/prisma';
 import crypto from 'crypto';
 import { DateTime } from 'luxon';
-
-import { prisma } from '@documenso/prisma';
 
 import { USER_SIGNUP_VERIFICATION_TOKEN_IDENTIFIER } from '../../constants/email';
 import { ONE_HOUR } from '../../constants/time';
 import { sendConfirmationEmail } from '../auth/send-confirmation-email';
 import { getMostRecentEmailVerificationToken } from './get-most-recent-email-verification-token';
 
-type SendConfirmationTokenOptions = {
-  email: string;
-  force?: boolean;
-  affiliateSlug?: string;
-};
+type SendConfirmationTokenOptions = { email: string; force?: boolean };
 
-export const sendConfirmationToken = async ({
-  email,
-  force = false,
-  affiliateSlug,
-}: SendConfirmationTokenOptions) => {
+export const sendConfirmationToken = async ({ email, force = false }: SendConfirmationTokenOptions) => {
   const token = crypto.randomBytes(20).toString('hex');
 
   const user = await prisma.user.findFirst({
@@ -36,14 +27,6 @@ export const sendConfirmationToken = async ({
   }
 
   const mostRecentToken = await getMostRecentEmailVerificationToken({ userId: user.id });
-  const metadataAffiliateSlug =
-    affiliateSlug?.trim() ||
-    (mostRecentToken?.metadata &&
-    typeof mostRecentToken.metadata === 'object' &&
-    'affiliateSlug' in mostRecentToken.metadata &&
-    typeof mostRecentToken.metadata.affiliateSlug === 'string'
-      ? mostRecentToken.metadata.affiliateSlug
-      : undefined);
 
   // If we've sent a token in the last 5 minutes, don't send another one
   if (
@@ -51,7 +34,7 @@ export const sendConfirmationToken = async ({
     mostRecentToken?.createdAt &&
     DateTime.fromJSDate(mostRecentToken.createdAt).diffNow('minutes').minutes > -5
   ) {
-    return { success: true };
+    // return;
   }
 
   const createdToken = await prisma.verificationToken.create({
@@ -59,9 +42,6 @@ export const sendConfirmationToken = async ({
       identifier: USER_SIGNUP_VERIFICATION_TOKEN_IDENTIFIER,
       token: token,
       expires: new Date(Date.now() + ONE_HOUR),
-      ...(metadataAffiliateSlug
-        ? { metadata: { affiliateSlug: metadataAffiliateSlug } }
-        : {}),
       user: {
         connect: {
           id: user.id,

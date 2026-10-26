@@ -53,6 +53,7 @@ export const getOrganisationAuthenticationPortal = async ({
           wellKnownUrl: true,
           autoProvisionUsers: true,
           allowedDomains: true,
+          allowPersonalOrganisations: true,
           clientSecret: true,
         },
       },
@@ -80,6 +81,7 @@ export const getOrganisationAuthenticationPortal = async ({
     wellKnownUrl: portal.wellKnownUrl,
     autoProvisionUsers: portal.autoProvisionUsers,
     allowedDomains: portal.allowedDomains,
+    allowPersonalOrganisations: portal.allowPersonalOrganisations,
     clientSecretProvided: Boolean(portal.clientSecret),
   };
 };

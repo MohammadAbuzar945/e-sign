@@ -15,9 +15,15 @@ import { findOrganisationGroupsRoute } from './find-organisation-groups';
 import { findOrganisationMemberInvitesRoute } from './find-organisation-member-invites';
 import { findOrganisationMembersRoute } from './find-organisation-members';
 import { getOrganisationRoute } from './get-organisation';
+import { getOrganisationAnalyticsDocumentsOverTimeRoute } from './get-organisation-analytics-documents-over-time';
+import { getOrganisationAnalyticsOverviewRoute } from './get-organisation-analytics-overview';
+import { getOrganisationAnalyticsStatusBreakdownRoute } from './get-organisation-analytics-status-breakdown';
+import { getOrganisationAnalyticsTeamActivityRoute } from './get-organisation-analytics-team-activity';
+import { getOrganisationAnalyticsTemplateUsageRoute } from './get-organisation-analytics-template-usage';
 import { getOrganisationMemberInvitesRoute } from './get-organisation-member-invites';
 import { exportOrganisationCreditUsageRoute } from './export-organisation-credit-usage';
 import { getOrganisationPurchaseHistoryRoute } from './get-organisation-purchase-history';
+import { getOrganisationQuotaFlagsRoute } from './get-organisation-quota-flags';
 import { getOrganisationSessionRoute } from './get-organisation-session';
 import { getOrganisationsRoute } from './get-organisations';
 import { getResellerEligibilityRoute } from './get-reseller-eligibility';
@@ -59,6 +65,7 @@ import {
   updateResellerPayoutModeRoute,
 } from './reseller-payout';
 import { updateOrganisationRoute } from './update-organisation';
+import { updateOrganisationBrandingLogoRoute } from './update-organisation-branding-logo';
 import { updateOrganisationGroupRoute } from './update-organisation-group';
 import { updateOrganisationMemberRoute } from './update-organisation-members';
 import { updateOrganisationSettingsRoute } from './update-organisation-settings';
@@ -68,10 +75,18 @@ export const organisationRouter = router({
   getMany: getOrganisationsRoute,
   getPurchaseHistory: getOrganisationPurchaseHistoryRoute,
   exportCreditUsage: exportOrganisationCreditUsageRoute,
+  getQuotaFlags: getOrganisationQuotaFlagsRoute,
   create: createOrganisationRoute,
   update: updateOrganisationRoute,
   delete: deleteOrganisationRoute,
   leave: leaveOrganisationRoute,
+  analytics: {
+    getOverview: getOrganisationAnalyticsOverviewRoute,
+    getDocumentsOverTime: getOrganisationAnalyticsDocumentsOverTimeRoute,
+    getStatusBreakdown: getOrganisationAnalyticsStatusBreakdownRoute,
+    getTemplateUsage: getOrganisationAnalyticsTemplateUsageRoute,
+    getTeamActivity: getOrganisationAnalyticsTeamActivityRoute,
+  },
   member: {
     find: findOrganisationMembersRoute,
     update: updateOrganisationMemberRoute,
@@ -95,6 +110,7 @@ export const organisationRouter = router({
   },
   settings: {
     update: updateOrganisationSettingsRoute,
+    updateBrandingLogo: updateOrganisationBrandingLogoRoute,
   },
   reseller: {
     getEligibility: getResellerEligibilityRoute,

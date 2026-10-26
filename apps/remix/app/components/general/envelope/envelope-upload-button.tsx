@@ -1,33 +1,26 @@
-import { useMemo, useState } from 'react';
-
-import { msg, plural } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { EnvelopeType } from '@prisma/client';
-import { ErrorCode as DropzoneErrorCode, type FileRejection } from 'react-dropzone';
-import { useNavigate } from 'react-router';
-import { match } from 'ts-pattern';
-
 import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
-import { APP_DOCUMENT_UPLOAD_SIZE_LIMIT } from '@documenso/lib/constants/app';
 import { TIME_ZONES } from '@documenso/lib/constants/time-zones';
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { AppError } from '@documenso/lib/errors/app-error';
 import { formatDocumentsPath, formatTemplatesPath } from '@documenso/lib/utils/teams';
 import { trpc } from '@documenso/trpc/react';
 import type { TCreateEnvelopePayload } from '@documenso/trpc/server/envelope-router/create-envelope.types';
+import { buildDropzoneRejectionDescription } from '@documenso/ui/lib/handle-dropzone-rejection';
 import { cn } from '@documenso/ui/lib/utils';
 import { DocumentUploadButton } from '@documenso/ui/primitives/document-upload-button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@documenso/ui/primitives/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg, plural } from '@lingui/core/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { EnvelopeType } from '@prisma/client';
+import { useMemo, useState } from 'react';
+import { ErrorCode as DropzoneErrorCode, type FileRejection } from 'react-dropzone';
+import { useNavigate } from 'react-router';
 
 import { useCurrentTeam } from '~/providers/team';
+import { getUploadErrorMessage } from '~/utils/toast-error-messages';
 
 export type EnvelopeUploadButtonProps = {
   className?: string;
@@ -39,35 +32,31 @@ export type EnvelopeUploadButtonProps = {
  * Upload an envelope
  */
 export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUploadButtonProps) => {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const { toast } = useToast();
   const { user } = useSession();
+  const analytics = useAnalytics();
 
   const team = useCurrentTeam();
 
   const navigate = useNavigate();
   const organisation = useCurrentOrganisation();
 
-  const userTimezone = TIME_ZONES.find(
-    (timezone) => timezone === Intl.DateTimeFormat().resolvedOptions().timeZone,
-  );
+  const userTimezone = TIME_ZONES.find((timezone) => timezone === Intl.DateTimeFormat().resolvedOptions().timeZone);
 
-  const { remaining, refreshLimits, maximumEnvelopeItemCount, allowNegativeCredits } = useLimits();
+  const { quota, remaining, refreshLimits, maximumEnvelopeItemCount } = useLimits();
 
   const [isLoading, setIsLoading] = useState(false);
 
   const { mutateAsync: createEnvelope } = trpc.envelope.create.useMutation();
 
   const disabledMessage = useMemo(() => {
-    const isOrganisationOwner = organisation.ownerUserId === user.id;
-    const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
-
-    if (isOwnerNonMember) {
-      return msg`You must be a member of this team to upload documents.`;
+    if (organisation.subscription && remaining.documents === 0) {
+      return msg`Document upload disabled due to unpaid invoices`;
     }
 
-    if (organisation.subscription && !allowNegativeCredits && remaining.documents === 0) {
-      return msg`Document upload disabled due to unpaid invoices`;
+    if (remaining.documents === 0) {
+      return msg`You have reached your document limit.`;
     }
 
     if (!user.emailVerified) {
@@ -75,24 +64,9 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organisation.subscription, remaining.documents, allowNegativeCredits, user.emailVerified, team]);
+  }, [remaining.documents, user.emailVerified, team]);
 
   const onFileDrop = async (files: File[]) => {
-    // Check if user has no credits remaining
-    if (
-      type === EnvelopeType.DOCUMENT &&
-      !allowNegativeCredits &&
-      (remaining.documents === 0 || remaining.documents === null)
-    ) {
-      toast({
-        title: t`Upload failed`,
-        description: t`You have reached your document limit. Please upgrade your plan to upload more documents.`,
-        variant: 'destructive',
-        duration: 7500,
-      });
-      return;
-    }
-
     try {
       setIsLoading(true);
 
@@ -121,12 +95,9 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
 
       void refreshLimits();
 
-      const pathPrefix =
-        type === EnvelopeType.DOCUMENT
-          ? formatDocumentsPath(team.url)
-          : formatTemplatesPath(team.url);
+      const pathPrefix = type === EnvelopeType.DOCUMENT ? formatDocumentsPath(team.url) : formatTemplatesPath(team.url);
 
-      const aiQueryParam = team.preferences.aiFeaturesEnabled ? '?ai=false' : '';
+      const aiQueryParam = team.preferences.aiFeaturesEnabled ? '?ai=true' : '';
 
       await navigate(`${pathPrefix}/${id}/edit${aiQueryParam}`);
 
@@ -143,21 +114,16 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
 
       console.error(err);
 
-      const errorMessage = match(error.code)
-        .with('INVALID_DOCUMENT_FILE', () => t`You cannot upload encrypted PDFs.`)
-        .with(
-          AppErrorCode.LIMIT_EXCEEDED,
-          () => t`You have reached your document limit. Please upgrade your plan.`,
-        )
-        .with(
-          'ENVELOPE_ITEM_LIMIT_EXCEEDED',
-          () => t`You have reached the limit of the number of files per envelope.`,
-        )
-        .otherwise(() => t`An error occurred while uploading your document.`);
+      analytics.captureException(err, {
+        source: 'editor',
+        location: 'upload_document',
+      });
+
+      const errorMessage = getUploadErrorMessage(error.code);
 
       toast({
-        title: t`Error`,
-        description: errorMessage,
+        title: i18n._(errorMessage.title),
+        description: i18n._(errorMessage.description),
         variant: 'destructive',
         duration: 7500,
       });
@@ -186,37 +152,22 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
 
     toast({
       title: t`Upload failed`,
-      description: t`File cannot be larger than ${APP_DOCUMENT_UPLOAD_SIZE_LIMIT}MB`,
+      description: i18n._(buildDropzoneRejectionDescription(fileRejections)),
       duration: 5000,
       variant: 'destructive',
     });
   };
 
-  const isOrganisationOwner = organisation.ownerUserId === user.id;
-  const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
-
-  const isDisabled = !user.emailVerified || isOwnerNonMember;
-  const hasNoCredits =
-    type === EnvelopeType.DOCUMENT &&
-    !allowNegativeCredits &&
-    (remaining.documents === 0 || remaining.documents === null);
-  const hasNegativeCredits =
-    type === EnvelopeType.DOCUMENT &&
-    typeof remaining.documents === 'number' &&
-    remaining.documents < 0;
-  const showCreditsInfo = type === EnvelopeType.DOCUMENT && typeof remaining.documents === 'number';
-
   return (
-    <div className={cn('relative flex flex-col gap-2', className)}>
+    <div className={cn('relative', className)}>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <div>
               <DocumentUploadButton
                 loading={isLoading}
-                disabled={isDisabled}
+                disabled={remaining.documents === 0 || !user.emailVerified}
                 disabledMessage={disabledMessage}
-                variant={hasNoCredits ? 'default' : 'default'}
                 onDrop={onFileDrop}
                 onDropRejected={onFileDropRejected}
                 type={type}
@@ -226,31 +177,17 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
             </div>
           </TooltipTrigger>
 
-          {showCreditsInfo && remaining.documents !== 0 && (
+          {type === EnvelopeType.DOCUMENT && remaining.documents > 0 && Number.isFinite(remaining.documents) && (
             <TooltipContent>
               <p className="text-sm">
                 <Trans>
-                  {remaining.documents} envelopes remaining
+                  {remaining.documents} of {quota.documents} documents remaining this month.
                 </Trans>
               </p>
             </TooltipContent>
           )}
         </Tooltip>
       </TooltipProvider>
-
-      {/* Always show remaining credits under the button */}
-      {showCreditsInfo && (
-        <p
-          className={cn(
-            'text-center text-xs',
-            hasNegativeCredits ? 'font-medium text-amber-700' : 'text-muted-foreground',
-          )}
-        >
-          <Trans>
-            {remaining.documents} envelopes remaining
-          </Trans>
-        </p>
-      )}
     </div>
   );
 };

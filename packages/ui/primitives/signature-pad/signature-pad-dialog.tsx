@@ -1,12 +1,11 @@
-import type { HTMLAttributes } from 'react';
-import { useState } from 'react';
+import { parseMessageDescriptor } from '@documenso/lib/utils/i18n';
+import { Dialog, DialogClose, DialogContent, DialogFooter } from '@documenso/ui/primitives/dialog';
 
 import type { MessageDescriptor } from '@lingui/core';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { motion } from 'framer-motion';
-
-import { parseMessageDescriptor } from '@documenso/lib/utils/i18n';
-import { Dialog, DialogClose, DialogContent, DialogFooter } from '@documenso/ui/primitives/dialog';
+import type { HTMLAttributes } from 'react';
+import { useState } from 'react';
 
 import { cn } from '../../lib/utils';
 import { Button } from '../button';
@@ -42,6 +41,15 @@ export const SignaturePadDialog = ({
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [signature, setSignature] = useState<string>(value ?? '');
 
+  const onOpenChange = (open: boolean) => {
+    if (disabled) {
+      return;
+    }
+
+    setSignature(value ?? '');
+    setShowSignatureModal(open);
+  };
+
   return (
     <div
       className={cn(
@@ -63,7 +71,7 @@ export const SignaturePadDialog = ({
         type="button"
         disabled={disabled}
         className="absolute inset-0 flex items-center justify-center bg-transparent"
-        onClick={() => setShowSignatureModal(true)}
+        onClick={() => onOpenChange(true)}
         whileHover="onHover"
       >
         {!value && !disableAnimation && (
@@ -110,7 +118,7 @@ export const SignaturePadDialog = ({
         )}
       </motion.button>
 
-      <Dialog open={showSignatureModal} onOpenChange={disabled ? undefined : setShowSignatureModal}>
+      <Dialog open={showSignatureModal} onOpenChange={onOpenChange}>
         <DialogContent hideClose={true} className="p-6 pt-4">
           <SignaturePad
             id="signature"
@@ -136,14 +144,10 @@ export const SignaturePadDialog = ({
               disabled={!signature}
               onClick={() => {
                 onChange(signature);
-                setShowSignatureModal(false);
+                onOpenChange(false);
               }}
             >
-              {dialogConfirmText ? (
-                parseMessageDescriptor(i18n._, dialogConfirmText)
-              ) : (
-                <Trans>Next</Trans>
-              )}
+              {dialogConfirmText ? parseMessageDescriptor(i18n._, dialogConfirmText) : <Trans>Next</Trans>}
             </Button>
           </DialogFooter>
         </DialogContent>

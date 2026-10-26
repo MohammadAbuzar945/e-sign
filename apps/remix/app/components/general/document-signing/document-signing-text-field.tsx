@@ -1,11 +1,5 @@
-import { useEffect, useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Plural, Trans } from '@lingui/react/macro';
-import { useRevalidator } from 'react-router';
-
 import { validateTextField } from '@documenso/lib/advanced-fields-validation/validate-text';
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
@@ -21,6 +15,11 @@ import { Button } from '@documenso/ui/primitives/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@documenso/ui/primitives/dialog';
 import { Textarea } from '@documenso/ui/primitives/textarea';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Plural, Trans } from '@lingui/react/macro';
+import { useEffect, useState } from 'react';
+import { useRevalidator } from 'react-router';
 
 import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 import { DocumentSigningFieldContainer } from './document-signing-field-container';
@@ -48,14 +47,11 @@ export type TextFieldProps = {
   onUnsignField?: (value: TRemovedSignedFieldWithTokenMutationSchema) => Promise<void> | void;
 };
 
-export const DocumentSigningTextField = ({
-  field,
-  onSignField,
-  onUnsignField,
-}: DocumentSigningTextFieldProps) => {
+export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: DocumentSigningTextFieldProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
+  const analytics = useAnalytics();
 
   const { recipient, isAssistantMode } = useDocumentSigningRecipientContext();
 
@@ -71,10 +67,8 @@ export const DocumentSigningTextField = ({
   const { mutateAsync: signFieldWithToken, isPending: isSignFieldWithTokenLoading } =
     trpc.field.signFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
-  const {
-    mutateAsync: removeSignedFieldWithToken,
-    isPending: isRemoveSignedFieldWithTokenLoading,
-  } = trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
+  const { mutateAsync: removeSignedFieldWithToken, isPending: isRemoveSignedFieldWithTokenLoading } =
+    trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
   const safeFieldMeta = ZTextFieldMeta.safeParse(field.fieldMeta);
   const parsedFieldMeta = safeFieldMeta.success ? safeFieldMeta.data : null;
@@ -178,6 +172,13 @@ export const DocumentSigningTextField = ({
 
       console.error(err);
 
+      analytics.captureException(err, {
+        source: 'signing',
+        location: 'sign_field',
+        fieldType: field.type,
+        recipientId: field.recipientId,
+      });
+
       toast({
         title: _(msg`Error`),
         description: isAssistantMode
@@ -208,6 +209,13 @@ export const DocumentSigningTextField = ({
     } catch (err) {
       console.error(err);
 
+      analytics.captureException(err, {
+        source: 'signing',
+        location: 'remove_field',
+        fieldType: field.type,
+        recipientId: field.recipientId,
+      });
+
       toast({
         title: _(msg`Error`),
         description: _(msg`An error occurred while removing the field.`),
@@ -234,19 +242,11 @@ export const DocumentSigningTextField = ({
   const charactersRemaining = (parsedFieldMeta?.characterLimit ?? 0) - (localText.length ?? 0);
 
   return (
-    <DocumentSigningFieldContainer
-      field={field}
-      onPreSign={onPreSign}
-      onSign={onSign}
-      onRemove={onRemove}
-      type="Text"
-    >
+    <DocumentSigningFieldContainer field={field} onPreSign={onPreSign} onSign={onSign} onRemove={onRemove} type="Text">
       {isLoading && <DocumentSigningFieldsLoader />}
 
       {!field.inserted && (
-        <DocumentSigningFieldsUninserted>
-          {fieldDisplayName || <Trans>Text</Trans>}
-        </DocumentSigningFieldsUninserted>
+        <DocumentSigningFieldsUninserted>{fieldDisplayName || <Trans>Text</Trans>}</DocumentSigningFieldsUninserted>
       )}
 
       {field.inserted && (
@@ -257,9 +257,7 @@ export const DocumentSigningTextField = ({
 
       <Dialog open={showCustomTextModal} onOpenChange={setShowCustomTextModal}>
         <DialogContent>
-          <DialogTitle>
-            {parsedFieldMeta?.label ? parsedFieldMeta?.label : <Trans>Text</Trans>}
-          </DialogTitle>
+          <DialogTitle>{parsedFieldMeta?.label ? parsedFieldMeta?.label : <Trans>Text</Trans>}</DialogTitle>
 
           <div>
             <Textarea

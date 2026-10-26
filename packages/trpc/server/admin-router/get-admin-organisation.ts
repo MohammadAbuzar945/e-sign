@@ -1,5 +1,4 @@
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { getCurrentSubscriptionByOrganisationId } from '@documenso/lib/server-only/subscription/get-current-subscription-by-organisation-id';
 import { prisma } from '@documenso/prisma';
 
 import { getOrganisationCredits } from '@documenso/ee/server-only/limits/user-credits';
@@ -40,6 +39,11 @@ export const getAdminOrganisation = async ({ organisationId }: GetOrganisationOp
       organisationClaim: true,
       organisationGlobalSettings: true,
       teams: true,
+      monthlyStats: {
+        orderBy: {
+          period: 'desc',
+        },
+      },
       members: {
         include: {
           organisationGroupMembers: {
@@ -56,6 +60,7 @@ export const getAdminOrganisation = async ({ organisationId }: GetOrganisationOp
           },
         },
       },
+      subscription: true,
     },
   });
 
@@ -65,11 +70,8 @@ export const getAdminOrganisation = async ({ organisationId }: GetOrganisationOp
     });
   }
 
-  const subscription = await getCurrentSubscriptionByOrganisationId({
-    organisationId: organisation.id,
-  });
-
   let credits = 0;
+
   try {
     credits = await getOrganisationCredits(organisation.id);
   } catch {
@@ -78,7 +80,6 @@ export const getAdminOrganisation = async ({ organisationId }: GetOrganisationOp
 
   return {
     ...organisation,
-    subscription,
     credits,
   };
 };

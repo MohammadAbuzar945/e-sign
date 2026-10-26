@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import { Img } from '../components';
+import { getEmailAssetUrl } from '../utils/asset-url';
 
 export type TemplateImageProps = {
   assetBaseUrl: string;
@@ -22,14 +23,10 @@ export const TemplateImage = ({
   style,
   alt = '',
 }: TemplateImageProps) => {
-  const getAssetUrl = (path: string) => {
-    return new URL(path, assetBaseUrl).toString();
-  };
-
   return (
     <Img
       className={className}
-      src={getAssetUrl(`/static/${staticAsset}`)}
+      src={getEmailAssetUrl(assetBaseUrl, `static/${staticAsset}`)}
       alt={alt}
       width={width}
       height={height}

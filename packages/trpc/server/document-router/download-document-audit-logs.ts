@@ -17,18 +17,18 @@ export const downloadDocumentAuditLogsRoute = authenticatedProcedure
   .output(ZDownloadDocumentAuditLogsResponseSchema)
   .mutation(async ({ input, ctx }) => {
     const { teamId } = ctx;
-    const { documentId } = input;
+    const { envelopeId } = input;
 
     ctx.logger.info({
       input: {
-        documentId,
+        envelopeId,
       },
     });
 
     const envelope = await getEnvelopeById({
       id: {
-        type: 'documentId',
-        id: documentId,
+        type: 'envelopeId',
+        id: envelopeId,
       },
       type: EnvelopeType.DOCUMENT,
       userId: ctx.user.id,

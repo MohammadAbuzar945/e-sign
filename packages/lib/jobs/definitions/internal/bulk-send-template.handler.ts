@@ -1,15 +1,11 @@
-import { createElement } from 'react';
-
-import { msg } from '@lingui/macro';
-import { parse } from 'csv-parse/sync';
-import { z } from 'zod';
-
-import { mailer } from '@documenso/email/mailer';
 import { BulkSendCompleteEmail } from '@documenso/email/templates/bulk-send-complete';
 import { sendDocument } from '@documenso/lib/server-only/document/send-document';
 import { createDocumentFromTemplate } from '@documenso/lib/server-only/template/create-document-from-template';
 import { getTemplateById } from '@documenso/lib/server-only/template/get-template-by-id';
+import { validateBulkSendCsv } from '@documenso/lib/server-only/template/validate-bulk-send-csv';
 import { prisma } from '@documenso/prisma';
+import { msg } from '@lingui/macro';
+import { createElement } from 'react';
 
 import { getI18nInstance } from '../../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../../constants/app';
@@ -19,21 +15,7 @@ import { renderEmailWithI18N } from '../../../utils/render-email-with-i18n';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TBulkSendTemplateJobDefinition } from './bulk-send-template';
 
-const ZRecipientRowSchema = z.object({
-  name: z.string().optional(),
-  email: z.union([
-    z.string().email({ message: 'Value must be a valid email or empty string' }),
-    z.string().max(0, { message: 'Value must be a valid email or empty string' }),
-  ]),
-});
-
-export const run = async ({
-  payload,
-  io,
-}: {
-  payload: TBulkSendTemplateJobDefinition;
-  io: JobRunIO;
-}) => {
+export const run = async ({ payload, io }: { payload: TBulkSendTemplateJobDefinition; io: JobRunIO }) => {
   const { userId, teamId, templateId, csvContent, sendImmediately, requestMetadata } = payload;
 
   const template = await getTemplateById({
@@ -49,24 +31,20 @@ export const run = async ({
     throw new Error('Template not found');
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rows = parse<any>(csvContent, { columns: true, skip_empty_lines: true });
-
-  if (rows.length > 100) {
-    throw new Error('Maximum 100 rows allowed per upload');
-  }
-
   const { recipients } = template;
 
-  // Validate CSV structure
-  const csvHeaders = Object.keys(rows[0]);
-  const requiredHeaders = recipients.map((_, index) => `recipient_${index + 1}_email`);
+  // The CSV is validated upfront when the bulk send is uploaded, this acts as
+  // a final safeguard prior to processing.
+  const csvValidationResult = validateBulkSendCsv({
+    csvContent,
+    recipientCount: recipients.length,
+  });
 
-  for (const header of requiredHeaders) {
-    if (!csvHeaders.includes(header)) {
-      throw new Error(`Missing required column: ${header}`);
-    }
+  if (!csvValidationResult.success) {
+    throw new Error(`Bulk send CSV failed validation: ${JSON.stringify(csvValidationResult.error)}`);
   }
+
+  const rows = csvValidationResult.data;
 
   const user = await prisma.user.findFirstOrThrow({
     where: {
@@ -81,28 +59,12 @@ export const run = async ({
   const results = {
     success: 0,
     failed: 0,
-    errors: Array<string>(),
+    errors: [] as string[],
   };
 
   // Process each row
   for (const [rowIndex, row] of rows.entries()) {
     try {
-      for (const [recipientIndex] of recipients.entries()) {
-        const nameKey = `recipient_${recipientIndex + 1}_name`;
-        const emailKey = `recipient_${recipientIndex + 1}_email`;
-
-        const parsed = ZRecipientRowSchema.safeParse({
-          name: row[nameKey],
-          email: row[emailKey],
-        });
-
-        if (!parsed.success) {
-          throw new Error(
-            `Invalid recipient data provided for ${emailKey}, ${nameKey}: ${parsed.error.issues?.[0]?.message}`,
-          );
-        }
-      }
-
       const envelope = await io.runTask(`create-document-${rowIndex}`, async () => {
         return await createDocumentFromTemplate({
           id: {
@@ -171,7 +133,7 @@ export const run = async ({
       assetBaseUrl: NEXT_PUBLIC_WEBAPP_URL(),
     });
 
-    const { branding, emailLanguage, senderEmail } = await getEmailContext({
+    const { branding, emailLanguage, senderEmail, emailTransport } = await getEmailContext({
       emailType: 'INTERNAL',
       source: {
         type: 'team',
@@ -193,7 +155,7 @@ export const run = async ({
       }),
     ]);
 
-    await mailer.sendMail({
+    await emailTransport.sendMail({
       to: {
         name: user.name || '',
         address: user.email,

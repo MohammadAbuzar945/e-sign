@@ -1,10 +1,10 @@
-import { z } from 'zod';
-
 import { ZDocumentAuditLogSchema } from '@documenso/lib/types/document-audit-logs';
 import { ZFindResultResponse, ZFindSearchParamsSchema } from '@documenso/lib/types/search-params';
+import { z } from 'zod';
 
 export const ZFindDocumentAuditLogsRequestSchema = ZFindSearchParamsSchema.extend({
   envelopeId: z.string(),
+  recipientId: z.number().optional(),
   orderByColumn: z.enum(['createdAt']).optional(),
   orderByDirection: z.enum(['asc', 'desc']).optional(),
 });

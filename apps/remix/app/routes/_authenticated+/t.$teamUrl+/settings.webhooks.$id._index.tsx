@@ -1,23 +1,3 @@
-import { useMemo, useState } from 'react';
-import { useEffect } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { WebhookCallStatus, WebhookTriggerEvents } from '@prisma/client';
-import {
-  CheckCircle2Icon,
-  ChevronRightIcon,
-  PencilIcon,
-  TerminalIcon,
-  XCircleIcon,
-} from 'lucide-react';
-import { useNavigate } from 'react-router';
-import { useLocation, useSearchParams } from 'react-router';
-import { Link } from 'react-router';
-import { z } from 'zod';
-
-import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { useIsMounted } from '@documenso/lib/client-only/hooks/use-is-mounted';
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
@@ -35,6 +15,14 @@ import { SpinnerBox } from '@documenso/ui/primitives/spinner';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg } from '@lingui/core/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { WebhookCallStatus, WebhookTriggerEvents } from '@prisma/client';
+import { CheckCircle2Icon, ChevronRightIcon, PencilIcon, TerminalIcon, XCircleIcon } from 'lucide-react';
+import { debounce, parseAsString, useQueryState } from 'nuqs';
+import { useMemo } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { z } from 'zod';
 
 import { WebhookEditDialog } from '~/components/dialogs/webhook-edit-dialog';
 import { WebhookTestDialog } from '~/components/dialogs/webhook-test-dialog';
@@ -55,7 +43,7 @@ const WebhookSearchParamsSchema = ZUrlSearchParamsSchema.extend({
 });
 
 export function meta() {
-  return appMetaTags('Webhooks');
+  return appMetaTags(msg`Webhooks`);
 }
 
 export default function WebhookPage({ params }: Route.ComponentProps) {
@@ -63,17 +51,16 @@ export default function WebhookPage({ params }: Route.ComponentProps) {
   const { toast } = useToast();
 
   const { pathname } = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const updateSearchParams = useUpdateSearchParams();
   const team = useCurrentTeam();
 
-  const [searchQuery, setSearchQuery] = useState(() => searchParams?.get('query') ?? '');
-
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, 500);
-
-  const parsedSearchParams = WebhookSearchParamsSchema.parse(
-    Object.fromEntries(searchParams ?? []),
+  const [searchQuery, setSearchQuery] = useQueryState(
+    'query',
+    parseAsString.withDefault('').withOptions({ shallow: false, limitUrlUpdates: debounce(500) }),
   );
+
+  const parsedSearchParams = WebhookSearchParamsSchema.parse(Object.fromEntries(searchParams ?? []));
 
   const { data: webhook, isLoading } = trpc.webhook.getWebhookById.useQuery(
     {
@@ -86,34 +73,19 @@ export default function WebhookPage({ params }: Route.ComponentProps) {
     data,
     isLoading: isLogsLoading,
     isLoadingError: isLogsLoadingError,
-  } = trpc.webhook.calls.find.useQuery({
-    webhookId: params.id,
-    page: parsedSearchParams.page,
-    perPage: parsedSearchParams.perPage,
-    status: parsedSearchParams.status,
-    events: parsedSearchParams.events,
-    query: parsedSearchParams.query,
-  });
-
-  /**
-   * Handle debouncing the search query.
-   */
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams?.toString());
-
-    params.set('query', debouncedSearchQuery);
-
-    if (debouncedSearchQuery === '') {
-      params.delete('query');
-    }
-
-    // If nothing  to change then do nothing.
-    if (params.toString() === searchParams?.toString()) {
-      return;
-    }
-
-    setSearchParams(params);
-  }, [debouncedSearchQuery, pathname, searchParams]);
+  } = trpc.webhook.calls.find.useQuery(
+    {
+      webhookId: params.id,
+      page: parsedSearchParams.page,
+      perPage: parsedSearchParams.perPage,
+      status: parsedSearchParams.status,
+      events: parsedSearchParams.events,
+      query: parsedSearchParams.query,
+    },
+    {
+      placeholderData: (previousData) => previousData,
+    },
+  );
 
   const onPaginationChange = (page: number, perPage: number) => {
     updateSearchParams({
@@ -151,9 +123,7 @@ export default function WebhookPage({ params }: Route.ComponentProps) {
         accessorKey: 'event',
         cell: ({ row }) => (
           <div>
-            <p className="text-foreground text-sm font-semibold">
-              {toFriendlyWebhookEventName(row.original.event)}
-            </p>
+            <p className="font-semibold text-foreground text-sm">{toFriendlyWebhookEventName(row.original.event)}</p>
             <p className="text-muted-foreground text-xs">{row.original.id}</p>
           </div>
         ),
@@ -170,7 +140,7 @@ export default function WebhookPage({ params }: Route.ComponentProps) {
               })}
             </p>
 
-            <div className="data-state-selected:block opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="opacity-0 transition-opacity group-hover:opacity-100 data-state-selected:block">
               <ChevronRightIcon className="h-4 w-4" />
             </div>
           </div>
@@ -232,6 +202,7 @@ export default function WebhookPage({ params }: Route.ComponentProps) {
   return (
     <div>
       <SettingsHeader
+        hideDivider
         title={
           <div className="flex items-center gap-2">
             <p>
@@ -267,8 +238,8 @@ export default function WebhookPage({ params }: Route.ComponentProps) {
       <div className="mt-4">
         <div className="mb-4 flex flex-row items-center justify-between gap-x-4">
           <Input
-            defaultValue={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => void setSearchQuery(e.target.value || null)}
             placeholder={t`Search by ID`}
           />
 
@@ -276,17 +247,17 @@ export default function WebhookPage({ params }: Route.ComponentProps) {
 
           <Tabs value={parsedSearchParams.status || ''} className="flex-shrink-0">
             <TabsList>
-              <TabsTrigger className="hover:text-foreground min-w-[60px]" value="" asChild>
+              <TabsTrigger className="min-w-[60px] hover:text-foreground" value="" asChild>
                 <Link to={getTabHref('')}>
                   <Trans>All</Trans>
                 </Link>
               </TabsTrigger>
-              <TabsTrigger className="hover:text-foreground min-w-[60px]" value="SUCCESS" asChild>
+              <TabsTrigger className="min-w-[60px] hover:text-foreground" value="SUCCESS" asChild>
                 <Link to={getTabHref(WebhookCallStatus.SUCCESS)}>
                   <Trans>Success</Trans>
                 </Link>
               </TabsTrigger>
-              <TabsTrigger className="hover:text-foreground min-w-[60px]" value="FAILED" asChild>
+              <TabsTrigger className="min-w-[60px] hover:text-foreground" value="FAILED" asChild>
                 <Link to={getTabHref(WebhookCallStatus.FAILED)}>
                   <Trans>Failed</Trans>
                 </Link>
@@ -330,9 +301,7 @@ export default function WebhookPage({ params }: Route.ComponentProps) {
           }}
         >
           {(table) =>
-            results.totalPages > 1 && (
-              <DataTablePagination additionalInformation="VisibleCount" table={table} />
-            )
+            results.totalPages > 1 && <DataTablePagination additionalInformation="VisibleCount" table={table} />
           }
         </DataTable>
       </div>
@@ -375,7 +344,7 @@ const WebhookEventCombobox = () => {
   return (
     <MultiSelectCombobox
       emptySelectionPlaceholder={
-        <p className="text-muted-foreground font-normal">
+        <p className="font-normal text-muted-foreground">
           <Trans>
             <span className="text-muted-foreground/70">Events:</span> All
           </Trans>

@@ -8,10 +8,7 @@ import { OrganisationGroupType } from '@documenso/prisma/generated/types';
 
 import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 import { authenticatedProcedure } from '../trpc';
-import {
-  ZUpdateTeamGroupRequestSchema,
-  ZUpdateTeamGroupResponseSchema,
-} from './update-team-group.types';
+import { ZUpdateTeamGroupRequestSchema, ZUpdateTeamGroupResponseSchema } from './update-team-group.types';
 
 export const updateTeamGroupRoute = authenticatedProcedure
   // .meta(updateTeamGroupMeta)
@@ -50,9 +47,12 @@ export const updateTeamGroupRoute = authenticatedProcedure
       });
     }
 
-    if (teamGroup.organisationGroup.type === OrganisationGroupType.INTERNAL_ORGANISATION) {
+    if (
+      teamGroup.organisationGroup.type === OrganisationGroupType.INTERNAL_ORGANISATION ||
+      teamGroup.organisationGroup.type === OrganisationGroupType.INTERNAL_TEAM
+    ) {
       throw new AppError(AppErrorCode.UNAUTHORIZED, {
-        message: 'You are not allowed to update internal organisation groups',
+        message: 'You are not allowed to update internal groups',
       });
     }
 

@@ -1,14 +1,11 @@
-import React from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { InfoIcon } from 'lucide-react';
-
 import { DOCUMENT_AUTH_TYPES } from '@documenso/lib/constants/document-auth';
 import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
 import { MultiSelect, type Option } from '@documenso/ui/primitives/multiselect';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { InfoIcon } from 'lucide-react';
 
 export interface DocumentGlobalAuthAccessSelectProps {
   value?: string[];
@@ -44,16 +41,12 @@ export const DocumentGlobalAuthAccessSelect = ({
 
   // Convert string array to Option array for MultiSelect
   const selectedOptions = (
-    displayValue
-      .map((val) => authOptions.find((option) => option.value === val))
-      .filter(Boolean) as Option[]
+    displayValue.map((val) => authOptions.find((option) => option.value === val)).filter(Boolean) as Option[]
   );
 
   // Convert default value to Option array (empty = No restrictions)
   const defaultOptions = (
-    (defaultValue?.length ? defaultValue : ['-1'])
-      .map((val) => authOptions.find((option) => option.value === val))
-      .filter(Boolean) as Option[]
+    (defaultValue?.length ? defaultValue : ['-1']).map((val) => authOptions.find((option) => option.value === val)).filter(Boolean) as Option[]
   );
 
   const handleChange = (options: Option[]) => {
@@ -89,7 +82,7 @@ export const DocumentGlobalAuthAccessTooltip = () => (
       <InfoIcon className="mx-2 h-4 w-4" />
     </TooltipTrigger>
 
-    <TooltipContent className="text-foreground max-w-md space-y-2 p-4">
+    <TooltipContent className="max-w-md space-y-2 p-4 text-foreground">
       <h2>
         <strong>
           <Trans>Document access</Trans>

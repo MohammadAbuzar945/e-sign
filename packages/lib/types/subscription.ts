@@ -4,6 +4,47 @@ import { z } from 'zod';
 import { ZOrganisationNameSchema } from '@documenso/trpc/server/organisation-router/create-organisation.types';
 
 /**
+ * Rate limit window schema.
+ *
+ * Example: "5m", "1h", "1d"
+ */
+export const RATE_LIMIT_WINDOW_REGEX = /^\d+[smhd]$/;
+
+const RATE_LIMIT_WINDOW_ERROR_MESSAGE = 'Use a duration with a unit, e.g. 5m, 1h, or 24h';
+const RATE_LIMIT_DUPLICATE_WINDOW_ERROR_MESSAGE = 'Use a unique window for each rate limit';
+
+export const ZRateLimitWindowSchema = z.string().trim().regex(RATE_LIMIT_WINDOW_REGEX, {
+  message: RATE_LIMIT_WINDOW_ERROR_MESSAGE,
+});
+
+export const ZRateLimitArraySchema = z
+  .array(
+    z.object({
+      window: ZRateLimitWindowSchema,
+      max: z.number().int().positive(),
+    }),
+  )
+  .superRefine((entries, ctx) => {
+    const windows = new Set<string>();
+
+    entries.forEach((entry, index) => {
+      const window = entry.window.trim();
+
+      if (windows.has(window)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: RATE_LIMIT_DUPLICATE_WINDOW_ERROR_MESSAGE,
+          path: [index, 'window'],
+        });
+      }
+
+      windows.add(window);
+    });
+  });
+
+export type TRateLimitArray = z.infer<typeof ZRateLimitArraySchema>;
+
+/**
  * README:
  * - If you update this you MUST update the `backport-subscription-claims` schema as well.
  */
@@ -29,9 +70,22 @@ export const ZClaimFlagsSchema = z.object({
 
   cfr21: z.boolean().optional(),
 
+  hipaa: z.boolean().optional(),
+
   authenticationPortal: z.boolean().optional(),
 
   allowLegacyEnvelopes: z.boolean().optional(),
+
+  signingReminders: z.boolean().optional(),
+
+  cscQesSigning: z.boolean().optional(),
+
+  /**
+   * Controls whether an organisation is prevented from sending emails.
+   *
+   * When this is enabled, ALL emails for the organisation are blocked.
+   */
+  disableEmails: z.boolean().optional(),
 });
 
 export type TClaimFlags = z.infer<typeof ZClaimFlagsSchema>;
@@ -85,6 +139,11 @@ export const SUBSCRIPTION_CLAIM_FEATURE_FLAGS: Record<
     label: '21 CFR',
     isEnterprise: true,
   },
+  hipaa: {
+    key: 'hipaa',
+    label: 'HIPAA',
+    isEnterprise: true,
+  },
   authenticationPortal: {
     key: 'authenticationPortal',
     label: 'Authentication portal',
@@ -93,6 +152,19 @@ export const SUBSCRIPTION_CLAIM_FEATURE_FLAGS: Record<
   allowLegacyEnvelopes: {
     key: 'allowLegacyEnvelopes',
     label: 'Allow Legacy Envelopes',
+  },
+  signingReminders: {
+    key: 'signingReminders',
+    label: 'Signing reminders',
+  },
+  cscQesSigning: {
+    key: 'cscQesSigning',
+    label: 'QES signing',
+    isEnterprise: true,
+  },
+  disableEmails: {
+    key: 'disableEmails',
+    label: 'Disable emails',
   },
 };
 
@@ -105,100 +177,39 @@ export enum INTERNAL_CLAIM_ID {
   ENTERPRISE = 'enterprise',
 }
 
-export type InternalClaim = Omit<SubscriptionClaim, 'createdAt' | 'updatedAt'>;
+export type InternalClaim = Pick<SubscriptionClaim, 'id' | 'name'>;
 
 export type InternalClaims = {
   [key in INTERNAL_CLAIM_ID]: InternalClaim;
 };
 
 export const internalClaims: InternalClaims = {
+  /**
+   * Free plan has no rates and quotas since this may break self-hosters.
+   */
   [INTERNAL_CLAIM_ID.FREE]: {
     id: INTERNAL_CLAIM_ID.FREE,
     name: 'Free',
-    teamCount: 0,
-    memberCount: 0,
-    envelopeItemCount: 5,
-    locked: true,
-    flags: {
-      allowCustomBranding: false,
-    },
   },
   [INTERNAL_CLAIM_ID.INDIVIDUAL]: {
     id: INTERNAL_CLAIM_ID.INDIVIDUAL,
     name: 'Individual',
-    teamCount: 1,
-    memberCount: 1,
-    envelopeItemCount: 5,
-    locked: true,
-    flags: {
-      unlimitedDocuments: true,
-    },
   },
   [INTERNAL_CLAIM_ID.TEAM]: {
     id: INTERNAL_CLAIM_ID.TEAM,
     name: 'Teams',
-    teamCount: 1,
-    memberCount: 5,
-    envelopeItemCount: 5,
-    locked: true,
-    flags: {
-      unlimitedDocuments: true,
-      allowCustomBranding: true,
-      embedSigning: true,
-    },
   },
   [INTERNAL_CLAIM_ID.PLATFORM]: {
     id: INTERNAL_CLAIM_ID.PLATFORM,
     name: 'Platform',
-    teamCount: 1,
-    memberCount: 0,
-    envelopeItemCount: 10,
-    locked: true,
-    flags: {
-      unlimitedDocuments: true,
-      allowCustomBranding: true,
-      hidePoweredBy: true,
-      emailDomains: false,
-      embedAuthoring: false,
-      embedAuthoringWhiteLabel: true,
-      embedSigning: false,
-      embedSigningWhiteLabel: true,
-    },
   },
   [INTERNAL_CLAIM_ID.ENTERPRISE]: {
     id: INTERNAL_CLAIM_ID.ENTERPRISE,
     name: 'Enterprise',
-    teamCount: 0,
-    memberCount: 0,
-    envelopeItemCount: 10,
-    locked: true,
-    flags: {
-      unlimitedDocuments: true,
-      allowCustomBranding: true,
-      hidePoweredBy: true,
-      emailDomains: true,
-      embedAuthoring: true,
-      embedAuthoringWhiteLabel: true,
-      embedSigning: true,
-      embedSigningWhiteLabel: true,
-      cfr21: true,
-      authenticationPortal: true,
-    },
   },
   [INTERNAL_CLAIM_ID.EARLY_ADOPTER]: {
     id: INTERNAL_CLAIM_ID.EARLY_ADOPTER,
     name: 'Early Adopter',
-    teamCount: 0,
-    memberCount: 0,
-    envelopeItemCount: 5,
-    locked: true,
-    flags: {
-      unlimitedDocuments: true,
-      allowCustomBranding: true,
-      hidePoweredBy: true,
-      embedSigning: true,
-      embedSigningWhiteLabel: true,
-    },
   },
 } as const;
 

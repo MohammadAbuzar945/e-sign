@@ -6,6 +6,7 @@ import {
 } from '@documenso/lib/types/document-auth';
 import { ZDocumentMetaUpdateSchema } from '@documenso/lib/types/document-meta';
 import { ZEnvelopeLiteSchema } from '@documenso/lib/types/envelope';
+import { TemplateType } from '@prisma/client';
 
 import {
   ZDocumentExternalIdSchema,
@@ -19,25 +20,34 @@ export const updateEnvelopeMeta: TrpcRouteMeta = {
     method: 'POST',
     path: '/envelope/update',
     summary: 'Update envelope',
+    description: 'Update envelope properties and settings',
     tags: ['Envelope'],
   },
 };
 
 export const ZUpdateEnvelopeRequestSchema = z.object({
-  envelopeId: z.string(),
+  envelopeId: z.string().describe('The ID of the envelope to update.'),
   data: z
     .object({
       title: ZDocumentTitleSchema.optional(),
       externalId: ZDocumentExternalIdSchema.nullish(),
       visibility: ZDocumentVisibilitySchema.optional(),
       includeQrCodeInCertificate: z.boolean().nullish(),
-      globalAccessAuth: z.array(ZDocumentAccessAuthTypesSchema).optional(),
-      globalActionAuth: z.array(ZDocumentActionAuthTypesSchema).optional(),
+      globalAccessAuth: z
+        .array(ZDocumentAccessAuthTypesSchema)
+        .describe('The authentication methods required to access the envelope.')
+        .optional(),
+      globalActionAuth: z
+        .array(ZDocumentActionAuthTypesSchema)
+        .describe('The authentication methods required to sign the envelope.')
+        .optional(),
       kbaAccessExplicitlyDisabled: z.boolean().optional(),
-      folderId: z.string().nullish(),
+      folderId: z.string().describe('The ID of the folder containing the envelope.').nullish(),
+      templateType: z.nativeEnum(TemplateType).describe('The template type.').optional(),
     })
+    .describe('The envelope properties to update.')
     .optional(),
-  meta: ZDocumentMetaUpdateSchema.optional(),
+  meta: ZDocumentMetaUpdateSchema.describe('The email and signing settings to update.').optional(),
 });
 
 export const ZUpdateEnvelopeResponseSchema = ZEnvelopeLiteSchema;

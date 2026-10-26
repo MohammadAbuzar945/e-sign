@@ -1,8 +1,6 @@
-import { DocumentStatus, EnvelopeType } from '@prisma/client';
-
 import type { DateRange } from '@documenso/lib/types/search-params';
-import { ADMIN_HIDDEN_USER_EMAILS } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
 import { kyselyPrisma, sql } from '@documenso/prisma';
+import { DocumentStatus, EnvelopeType } from '@prisma/client';
 
 export type OrganisationInsights = {
   id: number;
@@ -32,22 +30,14 @@ export async function getSigningVolume({
 }: GetSigningVolumeOptions) {
   const offset = Math.max(page - 1, 0) * perPage;
 
-  const hiddenEmails = [...ADMIN_HIDDEN_USER_EMAILS];
   let findQuery = kyselyPrisma.$kysely
     .selectFrom('Organisation as o')
-    .innerJoin('User as owner', 'owner.id', 'o.ownerUserId')
     .where((eb) =>
-      eb.and([
-        eb.not(eb('owner.email', 'in', hiddenEmails)),
-        eb.or([
-          eb('o.name', 'ilike', `%${search}%`),
-          eb.exists(
-            eb
-              .selectFrom('Team as t')
-              .whereRef('t.organisationId', '=', 'o.id')
-              .where('t.name', 'ilike', `%${search}%`),
-          ),
-        ]),
+      eb.or([
+        eb('o.name', 'ilike', `%${search}%`),
+        eb.exists(
+          eb.selectFrom('Team as t').whereRef('t.organisationId', '=', 'o.id').where('t.name', 'ilike', `%${search}%`),
+        ),
       ]),
     )
     .select((eb) => [
@@ -84,19 +74,12 @@ export async function getSigningVolume({
 
   const countQuery = kyselyPrisma.$kysely
     .selectFrom('Organisation as o')
-    .innerJoin('User as owner', 'owner.id', 'o.ownerUserId')
     .where((eb) =>
-      eb.and([
-        eb.not(eb('owner.email', 'in', hiddenEmails)),
-        eb.or([
-          eb('o.name', 'ilike', `%${search}%`),
-          eb.exists(
-            eb
-              .selectFrom('Team as t')
-              .whereRef('t.organisationId', '=', 'o.id')
-              .where('t.name', 'ilike', `%${search}%`),
-          ),
-        ]),
+      eb.or([
+        eb('o.name', 'ilike', `%${search}%`),
+        eb.exists(
+          eb.selectFrom('Team as t').whereRef('t.organisationId', '=', 'o.id').where('t.name', 'ilike', `%${search}%`),
+        ),
       ]),
     )
     .select(({ fn }) => [fn.countAll().as('count')]);
@@ -156,22 +139,15 @@ export async function getOrganisationInsights({
     }
   }
 
-  const hiddenEmailsInsights = [...ADMIN_HIDDEN_USER_EMAILS];
   let findQuery = kyselyPrisma.$kysely
     .selectFrom('Organisation as o')
-    .innerJoin('User as owner', 'owner.id', 'o.ownerUserId')
+    .leftJoin('Subscription as s', 'o.id', 's.organisationId')
     .where((eb) =>
-      eb.and([
-        eb.not(eb('owner.email', 'in', hiddenEmailsInsights)),
-        eb.or([
-          eb('o.name', 'ilike', `%${search}%`),
-          eb.exists(
-            eb
-              .selectFrom('Team as t')
-              .whereRef('t.organisationId', '=', 'o.id')
-              .where('t.name', 'ilike', `%${search}%`),
-          ),
-        ]),
+      eb.or([
+        eb('o.name', 'ilike', `%${search}%`),
+        eb.exists(
+          eb.selectFrom('Team as t').whereRef('t.organisationId', '=', 'o.id').where('t.name', 'ilike', `%${search}%`),
+        ),
       ]),
     )
     .select((eb) => [
@@ -179,14 +155,7 @@ export async function getOrganisationInsights({
       'o.createdAt as createdAt',
       'o.customerId as customerId',
       sql<string>`COALESCE(o.name, 'Unknown')`.as('name'),
-      // Subquery (not a join) so orgs with multiple subscriptions are not duplicated.
-      eb
-        .selectFrom('Subscription as s')
-        .whereRef('s.organisationId', '=', 'o.id')
-        .orderBy('s.createdAt', 'desc')
-        .select('s.status')
-        .limit(1)
-        .as('subscriptionStatus'),
+      sql<string>`CASE WHEN s.status IS NOT NULL THEN s.status ELSE NULL END`.as('subscriptionStatus'),
       eb
         .selectFrom('Team as t')
         .whereRef('t.organisationId', '=', 'o.id')
@@ -227,19 +196,12 @@ export async function getOrganisationInsights({
 
   const countQuery = kyselyPrisma.$kysely
     .selectFrom('Organisation as o')
-    .innerJoin('User as owner', 'owner.id', 'o.ownerUserId')
     .where((eb) =>
-      eb.and([
-        eb.not(eb('owner.email', 'in', hiddenEmailsInsights)),
-        eb.or([
-          eb('o.name', 'ilike', `%${search}%`),
-          eb.exists(
-            eb
-              .selectFrom('Team as t')
-              .whereRef('t.organisationId', '=', 'o.id')
-              .where('t.name', 'ilike', `%${search}%`),
-          ),
-        ]),
+      eb.or([
+        eb('o.name', 'ilike', `%${search}%`),
+        eb.exists(
+          eb.selectFrom('Team as t').whereRef('t.organisationId', '=', 'o.id').where('t.name', 'ilike', `%${search}%`),
+        ),
       ]),
     )
     .select(({ fn }) => [fn.countAll().as('count')]);

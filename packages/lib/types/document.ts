@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import { DocumentDataSchema } from '@documenso/prisma/generated/zod/modelSchema/DocumentDataSchema';
 import { DocumentMetaSchema } from '@documenso/prisma/generated/zod/modelSchema/DocumentMetaSchema';
 import { EnvelopeItemSchema } from '@documenso/prisma/generated/zod/modelSchema/EnvelopeItemSchema';
@@ -7,6 +5,7 @@ import { FolderSchema } from '@documenso/prisma/generated/zod/modelSchema/Folder
 import { TeamSchema } from '@documenso/prisma/generated/zod/modelSchema/TeamSchema';
 import { UserSchema } from '@documenso/prisma/generated/zod/modelSchema/UserSchema';
 import { LegacyDocumentSchema } from '@documenso/prisma/types/document-legacy-schema';
+import { z } from 'zod';
 
 import { ZFieldSchema } from './field';
 import { ZRecipientLiteSchema } from './recipient';
@@ -38,10 +37,7 @@ export const ZDocumentSchema = LegacyDocumentSchema.pick({
   internalVersion: z.number(),
 
   // Which "Template" the document was created from.
-  templateId: z
-    .number()
-    .nullish()
-    .describe('The ID of the template that the document was created from, if any.'),
+  templateId: z.number().nullish().describe('The ID of the template that the document was created from, if any.'),
 
   // Backwards compatibility.
   documentDataId: z.string().default(''),
@@ -72,6 +68,8 @@ export const ZDocumentSchema = LegacyDocumentSchema.pick({
     emailSettings: true,
     emailId: true,
     emailReplyTo: true,
+    envelopeExpirationPeriod: true,
+    reminderSettings: true,
   }).extend({
     password: z.string().nullable().default(null),
     documentId: z.number().default(-1).optional(),
@@ -128,10 +126,7 @@ export const ZDocumentLiteSchema = LegacyDocumentSchema.pick({
   documentDataId: z.string().default(''),
 
   // Which "Template" the document was created from.
-  templateId: z
-    .number()
-    .nullish()
-    .describe('The ID of the template that the document was created from, if any.'),
+  templateId: z.number().nullish().describe('The ID of the template that the document was created from, if any.'),
 });
 
 export type TDocumentLite = z.infer<typeof ZDocumentLiteSchema>;
@@ -165,10 +160,7 @@ export const ZDocumentManySchema = LegacyDocumentSchema.pick({
   documentDataId: z.string().default(''),
 
   // Which "Template" the document was created from.
-  templateId: z
-    .number()
-    .nullish()
-    .describe('The ID of the template that the document was created from, if any.'),
+  templateId: z.number().nullish().describe('The ID of the template that the document was created from, if any.'),
 
   user: UserSchema.pick({
     id: true,
@@ -183,3 +175,5 @@ export const ZDocumentManySchema = LegacyDocumentSchema.pick({
 });
 
 export type TDocumentMany = z.infer<typeof ZDocumentManySchema>;
+
+export type DocumentDataVersion = 'initial' | 'current';

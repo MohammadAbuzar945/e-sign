@@ -1,13 +1,14 @@
+import { prisma } from '@documenso/prisma';
 import { DocumentStatus, EnvelopeType } from '@prisma/client';
 import { match } from 'ts-pattern';
-
-import { prisma } from '@documenso/prisma';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { DocumentAccessAuth, type TDocumentAuthMethods } from '../../types/document-auth';
 import { extractDocumentAuthMethods } from '../../utils/document-auth';
+import { getRecipientsWithMissingFields } from '../../utils/recipients';
 import { extractFieldAutoInsertValues } from '../document/send-document';
 import { getTeamSettings } from '../team/get-team-settings';
+import { assertSenderNotDisabled } from '../user/assert-user-not-disabled';
 import type { EnvelopeForSigningResponse } from './get-envelope-for-recipient-signing';
 import { ZEnvelopeForSigningResponse } from './get-envelope-for-recipient-signing';
 
@@ -84,9 +85,7 @@ export const getEnvelopeForDirectTemplateSigning = async ({
     },
   });
 
-  const recipient = (envelope?.recipients || []).find(
-    (r) => r.id === envelope?.directLink?.directTemplateRecipientId,
-  );
+  const recipient = (envelope?.recipients || []).find((r) => r.id === envelope?.directLink?.directTemplateRecipientId);
 
   if (!envelope || !recipient) {
     throw new AppError(AppErrorCode.NOT_FOUND, {
@@ -99,6 +98,8 @@ export const getEnvelopeForDirectTemplateSigning = async ({
       message: 'Envelope has no items',
     });
   }
+
+  await assertSenderNotDisabled({ userId: envelope.userId });
 
   // Currently not using this since for direct templates "User" access means they just need to be
   // logged in.
@@ -129,6 +130,17 @@ export const getEnvelopeForDirectTemplateSigning = async ({
     });
   }
 
+  const recipientsWithMissingFields = getRecipientsWithMissingFields(
+    envelope.recipients,
+    envelope.recipients.flatMap((envelopeRecipient) => envelopeRecipient.fields),
+  );
+
+  if (recipientsWithMissingFields.length > 0) {
+    throw new AppError(AppErrorCode.MISSING_SIGNATURE_FIELD, {
+      message: 'One or more signers on this direct template are missing a signature field',
+    });
+  }
+
   const settings = await getTeamSettings({ teamId: envelope.teamId });
 
   const sender = settings.includeSenderDetails
@@ -147,7 +159,7 @@ export const getEnvelopeForDirectTemplateSigning = async ({
       ...recipient,
       directToken: envelope.directLink?.token || '',
       fields: recipient.fields.map((field) => {
-        const autoInsertValue = extractFieldAutoInsertValues(field);
+        const autoInsertValue = extractFieldAutoInsertValues(field, recipient);
 
         if (!autoInsertValue) {
           return field;
@@ -164,6 +176,7 @@ export const getEnvelopeForDirectTemplateSigning = async ({
     isRecipientsTurn: true,
     isCompleted: false,
     isRejected: false,
+    isExpired: false,
     sender,
     settings: {
       includeSenderDetails: settings.includeSenderDetails,

@@ -1,15 +1,26 @@
+import { formatPath, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import {
+  isDisposableEmail,
+  isEmailDomainAllowedForSignup,
+  isSignupEnabledForProvider,
+} from '@documenso/lib/constants/auth';
+import { formatEmbedAuthCompletePageUrl } from '@documenso/lib/constants/embed-auth';
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { getEmailBlocklistDomains } from '@documenso/lib/server-only/site-settings/get-email-blocklist-domains';
+import { onCreateUserHook } from '@documenso/lib/server-only/user/create-user';
+import { deletedServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
+import { legacyServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/legacy-service-account';
+import { isValidReturnTo, normalizeReturnTo } from '@documenso/lib/utils/is-valid-return-to';
+import { logger } from '@documenso/lib/utils/logger';
+import { prisma } from '@documenso/prisma';
 import { UserSecurityAuditLogType } from '@prisma/client';
-import { OAuth2Client, decodeIdToken } from 'arctic';
+import { decodeIdToken, OAuth2Client } from 'arctic';
 import type { Context } from 'hono';
 import { deleteCookie } from 'hono/cookie';
 
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { onCreateUserHook } from '@documenso/lib/server-only/user/create-user';
-import { isValidReturnTo, normalizeReturnTo } from '@documenso/lib/utils/is-valid-return-to';
-import { prisma } from '@documenso/prisma';
-
 import type { OAuthClientOptions } from '../../config';
 import { AuthenticationErrorCode } from '../errors/error-codes';
+import { failEmbedAuthFlow } from '../handoff/record-embed-auth-failure';
 import { onAuthorize } from './authorizer';
 import { getOpenIdConfiguration } from './open-id';
 
@@ -20,13 +31,62 @@ type HandleOAuthCallbackUrlOptions = {
   clientOptions: OAuthClientOptions;
 };
 
+const redirectToSignInError = async (c: Context, errorCode: string) => {
+  const isEmbedFlow = await failEmbedAuthFlow(c, c.req.query('state'), errorCode);
+
+  if (isEmbedFlow) {
+    return c.redirect(formatEmbedAuthCompletePageUrl('error'), 302);
+  }
+
+  const errorUrl = new URL(formatPath('/signin'), NEXT_PUBLIC_WEBAPP_URL());
+
+  errorUrl.searchParams.set('error', errorCode);
+
+  return c.redirect(errorUrl.toString(), 302);
+};
+
 export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOptions) => {
+  const { c } = options;
+
+  try {
+    return await handleOAuthCallback(options);
+  } catch (err) {
+    const reason = err instanceof AppError ? err.code : AppErrorCode.UNKNOWN_ERROR;
+
+    const isEmbedFlow = await failEmbedAuthFlow(c, c.req.query('state'), reason);
+
+    if (!isEmbedFlow) {
+      throw err;
+    }
+
+    logger.error({
+      event: 'auth.embed.oauth_callback_failed',
+      error: err,
+    });
+
+    return c.redirect(formatEmbedAuthCompletePageUrl('error'), 302);
+  }
+};
+
+const handleOAuthCallback = async (options: HandleOAuthCallbackUrlOptions) => {
   const { c, clientOptions } = options;
 
   const requestMeta = c.get('requestMetadata');
 
-  const { email, name, sub, accessToken, accessTokenExpiresAt, idToken, redirectPath } =
-    await validateOauth({ c, clientOptions });
+  const { email, name, sub, accessToken, accessTokenExpiresAt, idToken, redirectPath } = await validateOauth({
+    c,
+    clientOptions,
+  });
+
+  if (email.toLowerCase() === legacyServiceAccountEmail() || email.toLowerCase() === deletedServiceAccountEmail()) {
+    const isEmbedFlow = await failEmbedAuthFlow(c, c.req.query('state'), 'service_account');
+
+    if (isEmbedFlow) {
+      return c.redirect(formatEmbedAuthCompletePageUrl('error'), 302);
+    }
+
+    return c.text('FORBIDDEN', 403);
+  }
 
   // if (email.toLowerCase() !== ALLOWED_LOGIN_EMAIL) {
   //   throw new AppError(AuthenticationErrorCode.InvalidRequest, {
@@ -113,6 +173,23 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
     return c.redirect(redirectPath, 302);
   }
 
+  // Check if signups are disabled for this provider.
+  if (!isSignupEnabledForProvider(clientOptions.id as 'google' | 'microsoft' | 'oidc')) {
+    return redirectToSignInError(c, AuthenticationErrorCode.SignupDisabled);
+  }
+
+  // Check domain restriction for new SSO users.
+  if (!isEmailDomainAllowedForSignup(email)) {
+    return redirectToSignInError(c, AuthenticationErrorCode.SignupDisabled);
+  }
+
+  // Reject disposable / throwaway email providers for new SSO users.
+  const additionalBlockedDomains = await getEmailBlocklistDomains();
+
+  if (isDisposableEmail(email, additionalBlockedDomains)) {
+    return redirectToSignInError(c, AuthenticationErrorCode.SignupDisposableEmail);
+  }
+
   // Handle new user.
   const createdUser = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
@@ -160,11 +237,7 @@ export const validateOauth = async (options: HandleOAuthCallbackUrlOptions) => {
     requiredScopes: clientOptions.scope,
   });
 
-  const oAuthClient = new OAuth2Client(
-    clientOptions.clientId,
-    clientOptions.clientSecret,
-    clientOptions.redirectUrl,
-  );
+  const oAuthClient = new OAuth2Client(clientOptions.clientId, clientOptions.clientSecret, clientOptions.redirectUrl);
 
   const code = c.req.query('code');
   const state = c.req.query('state');
@@ -182,21 +255,20 @@ export const validateOauth = async (options: HandleOAuthCallbackUrlOptions) => {
   // eslint-disable-next-line prefer-const
   let [redirectState, redirectPath] = storedRedirectPath.split(' ');
 
+  // The sub-path aware root, e.g. "/" or "/ESign/".
+  const defaultRedirectPath = formatPath('/');
+
   if (redirectState !== storedState || !redirectPath) {
-    redirectPath = '/';
+    redirectPath = defaultRedirectPath;
   }
 
   if (!isValidReturnTo(redirectPath)) {
-    redirectPath = '/';
+    redirectPath = defaultRedirectPath;
   }
 
-  redirectPath = normalizeReturnTo(redirectPath) || '/';
+  redirectPath = normalizeReturnTo(redirectPath) || defaultRedirectPath;
 
-  const tokens = await oAuthClient.validateAuthorizationCode(
-    token_endpoint,
-    code,
-    storedCodeVerifier,
-  );
+  const tokens = await oAuthClient.validateAuthorizationCode(token_endpoint, code, storedCodeVerifier);
 
   const accessToken = tokens.accessToken();
   const accessTokenExpiresAt = tokens.accessTokenExpiresAt();

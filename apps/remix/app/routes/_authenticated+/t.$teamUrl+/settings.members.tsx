@@ -1,10 +1,6 @@
-import { useEffect, useState } from 'react';
-
-import { useLingui } from '@lingui/react/macro';
-import { useLocation, useSearchParams } from 'react-router';
-
-import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { Input } from '@documenso/ui/primitives/input';
+import { useLingui } from '@lingui/react/macro';
+import { debounce, parseAsString, useQueryState } from 'nuqs';
 
 import { useSession } from '@documenso/lib/client-only/providers/session';
 
@@ -20,42 +16,20 @@ export default function TeamsSettingsMembersPage() {
   const team = useOptionalCurrentTeam();
   const { user } = useSession();
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { pathname } = useLocation();
-
-  const [searchQuery, setSearchQuery] = useState(() => searchParams?.get('query') ?? '');
-
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, 500);
-
-  /**
-   * Handle debouncing the search query.
-   */
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams?.toString());
-
-    params.set('query', debouncedSearchQuery);
-
-    if (debouncedSearchQuery === '') {
-      params.delete('query');
-    }
-
-    // If nothing  to change then do nothing.
-    if (params.toString() === searchParams?.toString()) {
-      return;
-    }
-
-    setSearchParams(params);
-  }, [debouncedSearchQuery, pathname, searchParams]);
+  const [searchQuery, setSearchQuery] = useQueryState(
+    'query',
+    parseAsString.withDefault('').withOptions({ shallow: false, limitUrlUpdates: debounce(500) }),
+  );
 
   return (
     <div>
-      <SettingsHeader title={t`Team Members`} subtitle={t`Manage the members of your team.`}>
+      <SettingsHeader hideDivider title={t`Team Members`} subtitle={t`Manage the members of your team.`}>
         <TeamMemberCreateDialog />
       </SettingsHeader>
 
       <Input
-        defaultValue={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
+        value={searchQuery}
+        onChange={(e) => void setSearchQuery(e.target.value || null)}
         placeholder={t`Search`}
         className="mb-4"
       />

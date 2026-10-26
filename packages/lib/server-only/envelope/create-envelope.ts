@@ -1,14 +1,3 @@
-import type { DocumentMeta, DocumentVisibility, TemplateType, Prisma } from '@prisma/client';
-import {
-  DocumentSource,
-  EnvelopeType,
-  FolderType,
-  RecipientRole,
-  SendStatus,
-  SigningStatus,
-  WebhookTriggerEvents,
-} from '@prisma/client';
-
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { PlaceholderInfo } from '@documenso/lib/server-only/pdf/auto-place-fields';
 import { convertPlaceholdersToFieldInputs } from '@documenso/lib/server-only/pdf/auto-place-fields';
@@ -20,6 +9,16 @@ import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-reques
 import { nanoid, prefixedId } from '@documenso/lib/universal/id';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
+import type { DocumentMeta, DocumentVisibility, TemplateType } from '@prisma/client';
+import {
+  DocumentSource,
+  EnvelopeType,
+  FolderType,
+  RecipientRole,
+  SendStatus,
+  SigningStatus,
+  WebhookTriggerEvents,
+} from '@prisma/client';
 
 import type {
   TDocumentAccessAuthTypes,
@@ -31,18 +30,22 @@ import { DocumentAccessAuth } from '../../types/document-auth';
 import type { TDocumentFormValues } from '../../types/document-form-values';
 import type { TEnvelopeAttachmentType } from '../../types/envelope-attachment';
 import type { TFieldAndMeta } from '../../types/field-meta';
-import {
-  ZWebhookDocumentSchema,
-  mapEnvelopeToWebhookDocumentPayload,
-} from '../../types/webhook-payload';
+import type { TSignatureLevel } from '../../types/signature-level';
+import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../types/webhook-payload';
 import { getFileServerSide } from '../../universal/upload/get-file.server';
 import { putPdfFileServerSide } from '../../universal/upload/put-file.server';
 import { extractDerivedDocumentMeta } from '../../utils/document';
 import { createDocumentAuthOptions, createRecipientAuthOptions } from '../../utils/document-auth';
 import { normalizeStoredKbaSettings } from '../../utils/kba-settings';
-import { resolveTeamFolderId } from '../folder/resolve-team-folder-id';
-import { buildTeamWhereQuery, extractDerivedTeamSettings } from '../../utils/teams';
+import { buildTeamWhereQuery } from '../../utils/teams';
 import { incrementDocumentId, incrementTemplateId } from '../envelope/increment-id';
+import { assertOrganisationRatesAndLimits } from '../rate-limit/assert-organisation-rates-and-limits';
+import { assignOmittedRecipientSigningOrders } from '../recipient/assign-omitted-recipient-signing-orders';
+import { assertCompatibleRecipientGrouping } from '../signature-level/assert-compatible-recipient-grouping';
+import { assertCompatibleRecipientRole } from '../signature-level/assert-compatible-recipient-role';
+import { resolveSignatureLevel } from '../signature-level/resolve-signature-level';
+import { getTeamSettings } from '../team/get-team-settings';
+import { assertUserNotDisabledById } from '../user/assert-user-not-disabled';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
 
 const NOMIA_PREFIX = 'NomiaSigns-';
@@ -108,7 +111,6 @@ export type CreateEnvelopeOptions = {
       placeholders?: PlaceholderInfo[];
     }[];
     formValues?: TDocumentFormValues;
-    fromNomia?: boolean;
 
     userTimezone?: string;
 
@@ -123,12 +125,21 @@ export type CreateEnvelopeOptions = {
     recipients?: CreateEnvelopeRecipientOptions[];
     folderId?: string;
     delegatedDocumentOwner?: string;
+    signatureLevel?: TSignatureLevel;
   };
   attachments?: Array<{
     label: string;
     data: string;
     type?: TEnvelopeAttachmentType;
   }>;
+
+  /**
+   * Whether to bypass adding default recipients.
+   *
+   * Defaults to false.
+   */
+  bypassDefaultRecipients?: boolean;
+
   meta?: Partial<Omit<DocumentMeta, 'id'>>;
   requestMetadata: ApiRequestMetadata;
 };
@@ -142,13 +153,18 @@ export const createEnvelope = async ({
   meta,
   requestMetadata,
   internalVersion,
+  bypassDefaultRecipients = false,
 }: CreateEnvelopeOptions) => {
+  // Refuse to create on behalf of a disabled account. Guards every route that
+  // funnels through here (document.create, envelope.use, template create,
+  // embedding template/document create, API v1) and the seed/job paths.
+  await assertUserNotDisabledById({ userId });
+
   const {
     type,
     title,
     externalId,
     formValues,
-    
     userTimezone,
     folderId,
     templateType,
@@ -159,18 +175,22 @@ export const createEnvelope = async ({
     visibility: visibilityOverride,
     includeQrCodeInCertificate,
     delegatedDocumentOwner,
+    signatureLevel: requestedSignatureLevel,
   } = data;
+
+  const signatureLevel = resolveSignatureLevel({
+    requested: requestedSignatureLevel,
+    strict: true,
+  });
 
   const team = await prisma.team.findFirst({
     where: buildTeamWhereQuery({ teamId, userId }),
     include: {
       organisation: {
-        include: {
+        select: {
           organisationClaim: true,
-          organisationGlobalSettings: true,
         },
       },
-      teamGlobalSettings: true,
     },
   });
 
@@ -180,21 +200,53 @@ export const createEnvelope = async ({
     });
   }
 
-  const settings = extractDerivedTeamSettings(
-    team.organisation.organisationGlobalSettings,
-    team.teamGlobalSettings,
-  );
+  // Enforce the organisation document-creation limit before doing any work.
+  // Only documents count towards the limit (templates are exempt).
+  if (type === EnvelopeType.DOCUMENT) {
+    await assertOrganisationRatesAndLimits({
+      organisationId: team.organisationId,
+      organisationClaim: team.organisation.organisationClaim,
+      type: 'document',
+      count: 1,
+    });
+  }
 
-  const resolvedFolderId = await resolveTeamFolderId({
-    folderId,
+  // Verify that the folder exists and is associated with the team.
+  if (folderId) {
+    const folder = await prisma.folder.findUnique({
+      where: {
+        id: folderId,
+        type: data.type === EnvelopeType.TEMPLATE ? FolderType.TEMPLATE : FolderType.DOCUMENT,
+        team: buildTeamWhereQuery({ teamId, userId }),
+      },
+    });
+
+    if (!folder) {
+      throw new AppError(AppErrorCode.NOT_FOUND, {
+        message: 'Folder not found',
+      });
+    }
+  }
+
+  const settings = await getTeamSettings({
     userId,
     teamId,
-    type: data.type === EnvelopeType.TEMPLATE ? FolderType.TEMPLATE : FolderType.DOCUMENT,
   });
 
   if (data.envelopeItems.length !== 1 && internalVersion === 1) {
     throw new AppError(AppErrorCode.INVALID_BODY, {
       message: 'Envelope items must have exactly 1 item for version 1',
+    });
+  }
+
+  // CSC / TSP signing flows assume the V2 envelope shape: per-recipient
+  // anchors, materialised PDF lineage, sequential signing, mutation lock.
+  // The legacy V1 (Document) model can't carry that state, so AES/QES on V1
+  // is structurally unsupported and must fail at create time — not later at
+  // sign or seal time when the cause is harder to attribute.
+  if (signatureLevel !== 'SES' && internalVersion === 1) {
+    throw new AppError(AppErrorCode.INVALID_BODY, {
+      message: `Envelopes signed at '${signatureLevel}' require internalVersion=2; the legacy V1 envelope shape cannot host TSP signing.`,
     });
   }
 
@@ -224,7 +276,7 @@ export const createEnvelope = async ({
 
         const titleToUse = item.title || title;
 
-        const newDocumentData = await putPdfFileServerSide({
+        const { documentData: newDocumentData } = await putPdfFileServerSide({
           name: titleToUse,
           type: 'application/pdf',
           arrayBuffer: async () => Promise.resolve(normalizedPdf),
@@ -239,14 +291,13 @@ export const createEnvelope = async ({
     );
   }
 
+  // Auto-apply KBA to globalAccessAuth when the team/org has KBA enabled.
   const derivedKbaForAccess = normalizeStoredKbaSettings(
     (settings as { kbaSettings?: unknown }).kbaSettings,
   );
   const initialGlobalAccessAuth: TDocumentAccessAuthTypes[] = [...(globalAccessAuth || [])];
-  if (
-    derivedKbaForAccess.isEnabled &&
-    !initialGlobalAccessAuth.includes(DocumentAccessAuth.KBA)
-  ) {
+
+  if (derivedKbaForAccess.isEnabled && !initialGlobalAccessAuth.includes(DocumentAccessAuth.KBA)) {
     initialGlobalAccessAuth.push(DocumentAccessAuth.KBA);
   }
 
@@ -260,15 +311,39 @@ export const createEnvelope = async ({
   );
 
   // Check if user has permission to set the global action auth.
-  const claimFlags = team.organisation?.organisationClaim?.flags as { cfr21?: boolean } | null;
   if (
     (authOptions.globalActionAuth.length > 0 || recipientsHaveActionAuth) &&
-    !claimFlags?.cfr21
+    !team.organisation.organisationClaim.flags.cfr21
   ) {
     throw new AppError(AppErrorCode.UNAUTHORIZED, {
       message: 'You do not have permission to set the action auth',
     });
   }
+
+  for (const recipient of data.recipients ?? []) {
+    assertCompatibleRecipientRole({ signatureLevel, role: recipient.role });
+  }
+
+  const parsedDefaultRecipients =
+    settings.defaultRecipients && !bypassDefaultRecipients
+      ? ZDefaultRecipientsSchema.parse(settings.defaultRecipients)
+      : [];
+
+  const defaultRecipients: CreateEnvelopeRecipientOptions[] = parsedDefaultRecipients.map(
+    (recipient) => ({
+      email: recipient.email,
+      name: recipient.name,
+      role: recipient.role,
+    }),
+  );
+
+  const requestedRecipients = [...(data.recipients ?? []), ...defaultRecipients];
+
+  assertCompatibleRecipientGrouping({ signatureLevel, recipients: requestedRecipients });
+
+  const recipientsToCreate = assignOmittedRecipientSigningOrders({
+    recipients: requestedRecipients,
+  });
 
   const visibility = visibilityOverride || settings.documentVisibility;
 
@@ -293,8 +368,6 @@ export const createEnvelope = async ({
   // userTimezone is last because it's always passed in regardless of the organisation/team settings
   // for uploads from the frontend
   const timezoneToUse = meta?.timezone || settings.documentTimezone || userTimezone;
-
-
 
   const getValidatedDelegatedOwner = async () => {
     if (
@@ -330,14 +403,16 @@ export const createEnvelope = async ({
     return delegatedOwner;
   };
 
-  
-
   const [documentMeta, secondaryId, delegatedOwner] = await Promise.all([
     prisma.documentMeta.create({
-      data: extractDerivedDocumentMeta(settings, {
-        ...meta,
-        timezone: timezoneToUse,
-      }),
+      data: extractDerivedDocumentMeta(
+        settings,
+        {
+          ...meta,
+          timezone: timezoneToUse,
+        },
+        signatureLevel,
+      ),
     }),
     type === EnvelopeType.DOCUMENT
       ? incrementDocumentId().then((v) => v.formattedDocumentId)
@@ -348,7 +423,7 @@ export const createEnvelope = async ({
 
   const { processedExternalId, fromNomia } = processExternalId(externalId);
 
-  const createdEnvelopeId = await prisma.$transaction(async (tx) => {
+  const createdEnvelope = await prisma.$transaction(async (tx) => {
     const envelope = await tx.envelope.create({
       data: {
         id: prefixedId('envelope'),
@@ -356,6 +431,7 @@ export const createEnvelope = async ({
         internalVersion,
         type,
         title,
+        signatureLevel,
         qrToken: prefixedId('qr'),
         externalId: processedExternalId,
         fromNomia,
@@ -383,7 +459,7 @@ export const createEnvelope = async ({
         authOptions,
         includeQrCodeInCertificate: includeQrCodeInCertificate ?? null,
         visibility,
-        folderId: resolvedFolderId,
+        folderId,
         formValues,
         source: type === EnvelopeType.DOCUMENT ? DocumentSource.DOCUMENT : DocumentSource.TEMPLATE,
         documentMetaId: documentMeta.id,
@@ -400,22 +476,8 @@ export const createEnvelope = async ({
 
     const firstEnvelopeItem = envelope.envelopeItems[0];
 
-    const defaultRecipients = settings.defaultRecipients
-      ? ZDefaultRecipientsSchema.parse(settings.defaultRecipients)
-      : [];
-
-    const mappedDefaultRecipients: CreateEnvelopeRecipientOptions[] = defaultRecipients.map(
-      (recipient) => ({
-        email: recipient.email,
-        name: recipient.name,
-        role: recipient.role,
-      }),
-    );
-
-    const allRecipients = [...(data.recipients || []), ...mappedDefaultRecipients];
-
     await Promise.all(
-      allRecipients.map(async (recipient) => {
+      recipientsToCreate.map(async (recipient) => {
         const recipientAuthOptions = createRecipientAuthOptions({
           accessAuth: recipient.accessAuth ?? [],
           actionAuth: recipient.actionAuth ?? [],
@@ -593,7 +655,31 @@ export const createEnvelope = async ({
       }
     }
 
-    // Only create audit logs inside the transaction. Webhook and heavy read run after commit.
+    const createdEnvelope = await tx.envelope.findFirst({
+      where: {
+        id: envelope.id,
+      },
+      include: {
+        documentMeta: true,
+        recipients: true,
+        fields: true,
+        folder: true,
+        envelopeAttachments: true,
+        envelopeItems: {
+          include: {
+            documentData: true,
+          },
+        },
+      },
+    });
+
+    if (!createdEnvelope) {
+      throw new AppError(AppErrorCode.NOT_FOUND, {
+        message: 'Envelope not found',
+      });
+    }
+
+    // Only create audit logs for documents.
     if (type === EnvelopeType.DOCUMENT) {
       await tx.documentAuditLog.create({
         data: createDocumentAuditLogData({
@@ -612,6 +698,7 @@ export const createEnvelope = async ({
         }),
       });
 
+      // Create audit log for delegated owner if validation passed
       if (delegatedOwner) {
         await tx.documentAuditLog.create({
           data: createDocumentAuditLogData({
@@ -631,31 +718,21 @@ export const createEnvelope = async ({
       }
     }
 
-    return envelope.id;
+    return createdEnvelope;
   });
 
-  // Fetch full envelope after transaction (shorter TX, no webhook/read inside).
-  const createdEnvelope = await prisma.envelope.findFirst({
-    where: { id: createdEnvelopeId },
-    include: {
-      documentMeta: true,
-      recipients: true,
-      fields: true,
-      folder: true,
-      envelopeAttachments: true,
-      envelopeItems: true,
-    },
-  });
-
-  if (!createdEnvelope) {
-    throw new AppError(AppErrorCode.NOT_FOUND, {
-      message: 'Envelope not found',
-    });
-  }
-
+  // Trigger webhook outside the transaction to avoid holding the connection
+  // open during network I/O.
   if (type === EnvelopeType.DOCUMENT) {
     await triggerWebhook({
       event: WebhookTriggerEvents.DOCUMENT_CREATED,
+      data: ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(createdEnvelope)),
+      userId,
+      teamId,
+    });
+  } else if (type === EnvelopeType.TEMPLATE) {
+    await triggerWebhook({
+      event: WebhookTriggerEvents.TEMPLATE_CREATED,
       data: ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(createdEnvelope)),
       userId,
       teamId,

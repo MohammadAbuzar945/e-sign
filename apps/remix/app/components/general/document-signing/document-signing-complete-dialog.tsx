@@ -1,19 +1,8 @@
-import { useMemo, useState } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
-import type { Field, Recipient } from '@prisma/client';
-import { RecipientRole } from '@prisma/client';
-import { useForm } from 'react-hook-form';
-import { match } from 'ts-pattern';
-import { z } from 'zod';
-
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import {
-  type TRecipientAccessAuth,
-  ZDocumentAccessAuthSchema,
-} from '@documenso/lib/types/document-auth';
+import { type TRecipientAccessAuth, ZDocumentAccessAuthSchema } from '@documenso/lib/types/document-auth';
 import { fieldsContainUnsignedRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
+import { zEmail } from '@documenso/lib/utils/zod';
 import { Button } from '@documenso/ui/primitives/button';
 import {
   Dialog,
@@ -24,19 +13,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@documenso/ui/primitives/form/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
+import { useToast } from '@documenso/ui/primitives/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans, useLingui } from '@lingui/react/macro';
+import type { Field, Recipient } from '@prisma/client';
+import { RecipientRole } from '@prisma/client';
+import type { ReactNode } from 'react';
+import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { match } from 'ts-pattern';
+import { z } from 'zod';
 
 import { useEmbedSigningContext } from '~/components/embed/embed-signing-context';
 import { AccessAuth2FAForm } from '~/components/general/document-signing/access-auth-2fa-form';
 import { DocumentSigningDisclosure } from '~/components/general/document-signing/document-signing-disclosure';
+
+import { getSigningCompletionErrorMessage } from '~/utils/toast-error-messages';
 
 import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 
@@ -64,11 +58,16 @@ export type DocumentSigningCompleteDialogProps = {
   buttonSize?: 'sm' | 'lg';
   position?: 'start' | 'end' | 'center';
   disableNameInput?: boolean;
+
+  /** When provided, replaces the confirmation form (and 2FA step) as the dialog body. */
+  children?: ReactNode;
+
+  onOpenChange?: (open: boolean) => void;
 };
 
 const ZNextSignerFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email address'),
+  email: zEmail('Invalid email address'),
   accessAuthOptions: ZDocumentAccessAuthSchema.optional(),
 });
 
@@ -76,7 +75,7 @@ type TNextSignerFormSchema = z.infer<typeof ZNextSignerFormSchema>;
 
 const ZDirectRecipientFormSchema = z.object({
   name: z.string(),
-  email: z.string().email('Invalid email address'),
+  email: zEmail('Invalid email address'),
 });
 
 type TDirectRecipientFormSchema = z.infer<typeof ZDirectRecipientFormSchema>;
@@ -95,8 +94,12 @@ export const DocumentSigningCompleteDialog = ({
   buttonSize = 'lg',
   position,
   disableNameInput = false,
+  children,
+  onOpenChange,
 }: DocumentSigningCompleteDialogProps) => {
-  const { t } = useLingui();
+  const analytics = useAnalytics();
+  const { t, i18n } = useLingui();
+  const { toast } = useToast();
 
   const [showDialog, setShowDialog] = useState(false);
 
@@ -107,8 +110,10 @@ export const DocumentSigningCompleteDialog = ({
 
   const { isNameLocked, isEmailLocked } = useEmbedSigningContext() || {};
 
+  const canDictateNextSigner = allowDictateNextSigner && Boolean(defaultNextSigner);
+
   const form = useForm<TNextSignerFormSchema>({
-    resolver: allowDictateNextSigner ? zodResolver(ZNextSignerFormSchema) : undefined,
+    resolver: canDictateNextSigner ? zodResolver(ZNextSignerFormSchema) : undefined,
     defaultValues: {
       name: defaultNextSigner?.name ?? '',
       email: defaultNextSigner?.email ?? '',
@@ -117,7 +122,7 @@ export const DocumentSigningCompleteDialog = ({
 
   const recipientForm = useForm<TDirectRecipientFormSchema>({
     resolver: zodResolver(ZDirectRecipientFormSchema),
-    defaultValues: {
+    values: {
       name: recipientPayload?.name ?? '',
       email: recipientPayload?.email ?? '',
     },
@@ -143,6 +148,7 @@ export const DocumentSigningCompleteDialog = ({
     }
 
     setShowDialog(open);
+    onOpenChange?.(open);
   };
 
   const onFormSubmit = async (data: TNextSignerFormSchema) => {
@@ -157,30 +163,51 @@ export const DocumentSigningCompleteDialog = ({
         }
 
         recipientOverridePayload = recipientForm.getValues();
+      } else if (recipientPayload && recipientPayload.email && !recipient.email) {
+        // Form is hidden because we have an email (e.g. from embed context),
+        // but the DB recipient doesn't have one yet — send the override.
+        recipientOverridePayload = recipientPayload;
       }
 
+      // Check if 2FA is required
       if (completionRequires2FA && !data.accessAuthOptions) {
         setShowTwoFactorForm(true);
         return;
       }
 
       const nextSigner =
-        allowDictateNextSigner && data.name && data.email
-          ? { name: data.name, email: data.email }
-          : undefined;
+        allowDictateNextSigner && data.name && data.email ? { name: data.name, email: data.email } : undefined;
 
       await onSignatureComplete(nextSigner, data.accessAuthOptions, recipientOverridePayload);
     } catch (error) {
       const err = AppError.parseError(error);
 
       if (AppErrorCode.TWO_FACTOR_AUTH_FAILED === err.code) {
-        // This was an access auth validation failure - show the matching auth dialog again with error.
+        // This was a 2FA validation failure - show the 2FA dialog again with error
         form.setValue('accessAuthOptions', undefined);
+
         setTwoFactorValidationError('Invalid verification code. Please try again.');
         setShowTwoFactorForm(true);
 
         return;
       }
+
+      analytics.captureException(error, {
+        source: 'signing',
+        location: 'complete_document',
+      });
+
+      // This dialog owns the completion error toast for every signing surface
+      // so the user gets a specific, actionable message. Callers should run
+      // their own side effects (e.g. embeds posting document-error) and
+      // rethrow rather than toasting themselves.
+      const toastMessage = getSigningCompletionErrorMessage(err.code);
+
+      toast({
+        title: i18n._(toastMessage.title),
+        description: i18n._(toastMessage.description),
+        variant: 'destructive',
+      });
     }
   };
 
@@ -208,9 +235,7 @@ export const DocumentSigningCompleteDialog = ({
           {match({ isComplete, role: recipient.role })
             .with({ isComplete: false }, () => <Trans>Next Field</Trans>)
             .with({ isComplete: true, role: RecipientRole.APPROVER }, () => <Trans>Approve</Trans>)
-            .with({ isComplete: true, role: RecipientRole.VIEWER }, () => (
-              <Trans>Mark as viewed</Trans>
-            ))
+            .with({ isComplete: true, role: RecipientRole.VIEWER }, () => <Trans>Mark as viewed</Trans>)
             .with({ isComplete: true }, () => <Trans>Complete</Trans>)
             .exhaustive()}
         </Button>
@@ -251,11 +276,19 @@ export const DocumentSigningCompleteDialog = ({
         </DialogHeader>
 
         <div className="rounded-lg border border-border bg-muted/50 p-4 text-center">
-          <p className="text-sm font-medium text-muted-foreground">{documentTitle}</p>
+          <p className="font-medium text-muted-foreground text-sm">{documentTitle}</p>
         </div>
 
-        {!showTwoFactorForm && (
-          <>
+        {match({ hasChildren: Boolean(children), showTwoFactorForm })
+          .with({ hasChildren: true }, () => children)
+          .with({ showTwoFactorForm: true }, () => (
+            <AccessAuth2FAForm
+              token={recipient.token}
+              error={twoFactorValidationError}
+              onSubmit={onTwoFactorFormSubmit}
+            />
+          ))
+          .otherwise(() => (
             <fieldset disabled={form.formState.isSubmitting} className="border-none p-0">
               {recipientPayload && !recipientPayload.email && (
                 <Form {...recipientForm}>
@@ -311,7 +344,7 @@ export const DocumentSigningCompleteDialog = ({
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onFormSubmit)}>
-                  {allowDictateNextSigner && defaultNextSigner && (
+                  {canDictateNextSigner && (
                     <div className="mb-4 flex flex-col gap-4">
                       <div className="flex flex-col gap-4 md:flex-row">
                         <FormField
@@ -323,11 +356,7 @@ export const DocumentSigningCompleteDialog = ({
                                 <Trans>Next Recipient Name</Trans>
                               </FormLabel>
                               <FormControl>
-                                <Input
-                                  {...field}
-                                  className="mt-2"
-                                  placeholder={t`Enter the next signer's name`}
-                                />
+                                <Input {...field} className="mt-2" placeholder={t`Enter the next signer's name`} />
                               </FormControl>
 
                               <FormMessage />
@@ -371,11 +400,7 @@ export const DocumentSigningCompleteDialog = ({
                       <Trans>Cancel</Trans>
                     </Button>
 
-                    <Button
-                      type="submit"
-                      disabled={!isComplete}
-                      loading={form.formState.isSubmitting}
-                    >
+                    <Button type="submit" disabled={!isComplete} loading={form.formState.isSubmitting}>
                       {match(recipient.role)
                         .with(RecipientRole.VIEWER, () => <Trans>Mark as Viewed</Trans>)
                         .with(RecipientRole.SIGNER, () => <Trans>Sign</Trans>)
@@ -388,17 +413,7 @@ export const DocumentSigningCompleteDialog = ({
                 </form>
               </Form>
             </fieldset>
-          </>
-        )}
-
-        {showTwoFactorForm && (
-          <AccessAuth2FAForm
-            token={recipient.token}
-            error={twoFactorValidationError}
-            onSubmit={onTwoFactorFormSubmit}
-          />
-        )}
-
+          ))}
       </DialogContent>
     </Dialog>
   );

@@ -1,14 +1,3 @@
-import { useEffect, useMemo, useState } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useForm } from 'react-hook-form';
-import { useSearchParams } from 'react-router';
-import type { z } from 'zod';
-
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
@@ -31,14 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@documenso/ui/primitives/form/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import {
   Select,
@@ -49,6 +31,15 @@ import {
 } from '@documenso/ui/primitives/select';
 import { SpinnerBox } from '@documenso/ui/primitives/spinner';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useSearchParams } from 'react-router';
+import type { z } from 'zod';
 
 export type TeamCreateDialogProps = {
   trigger?: React.ReactNode;
@@ -162,16 +153,18 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
 
       toast({
         title: _(msg`An unknown error occurred`),
-        description: _(
-          msg`We encountered an unknown error while attempting to create a team. Please try again later.`,
-        ),
+        description: _(msg`We encountered an unknown error while attempting to create a team. Please try again later.`),
         variant: 'destructive',
       });
     }
   };
 
   const mapTextToUrl = (text: string) => {
-    return text.toLowerCase().replace(/\s+/g, '-');
+    return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, '-');
   };
 
   const dialogState = useMemo(() => {
@@ -202,11 +195,7 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
   }, [open, form]);
 
   return (
-    <Dialog
-      {...props}
-      open={open}
-      onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}
-    >
+    <Dialog {...props} open={open} onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}>
       <DialogTrigger onClick={(e) => e.stopPropagation()} asChild={true}>
         {trigger ?? (
           <Button className="flex-shrink-0" variant="secondary">
@@ -230,15 +219,11 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
 
         {dialogState === 'alert' && (
           <>
-            <Alert
-              className="flex flex-col justify-between p-6 sm:flex-row sm:items-center"
-              variant="neutral"
-            >
+            <Alert className="flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="neutral">
               <AlertDescription className="mt-0">
                 <Trans>
-                  You have reached the maximum number of teams for your plan. Please contact sales
-                  at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> if you would like to
-                  adjust your plan.
+                  You have reached the maximum number of teams for your plan. Please contact sales at{' '}
+                  <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> if you would like to adjust your plan.
                 </Trans>
               </AlertDescription>
             </Alert>
@@ -254,10 +239,7 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
         {dialogState === 'form' && (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onFormSubmit)}>
-              <fieldset
-                className="flex h-full flex-col space-y-4"
-                disabled={form.formState.isSubmitting}
-              >
+              <fieldset className="flex h-full flex-col space-y-4" disabled={form.formState.isSubmitting}>
                 <FormField
                   control={form.control}
                   name="teamName"
@@ -300,7 +282,7 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
                         <Input className="bg-background" {...field} />
                       </FormControl>
                       {!form.formState.errors.teamUrl && (
-                        <span className="text-foreground/50 text-xs font-normal">
+                        <span className="font-normal text-foreground/50 text-xs">
                           {field.value ? (
                             `${NEXT_PUBLIC_WEBAPP_URL()}/t/${organisation.id.slice(-5)}-${field.value}`
                           ) : (
@@ -423,11 +405,7 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
                     <Trans>Cancel</Trans>
                   </Button>
 
-                  <Button
-                    type="submit"
-                    data-testid="dialog-create-team-button"
-                    loading={form.formState.isSubmitting}
-                  >
+                  <Button type="submit" data-testid="dialog-create-team-button" loading={form.formState.isSubmitting}>
                     <Trans>Create Team</Trans>
                   </Button>
                 </DialogFooter>

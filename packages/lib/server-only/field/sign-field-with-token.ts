@@ -1,8 +1,3 @@
-import { DocumentStatus, FieldType, RecipientRole, SigningStatus } from '@prisma/client';
-import { DateTime } from 'luxon';
-import { isDeepEqual } from 'remeda';
-import { match } from 'ts-pattern';
-
 import { validateCheckboxField } from '@documenso/lib/advanced-fields-validation/validate-checkbox';
 import { validateDropdownField } from '@documenso/lib/advanced-fields-validation/validate-dropdown';
 import { validateNumberField } from '@documenso/lib/advanced-fields-validation/validate-number';
@@ -10,10 +5,15 @@ import { validateRadioField } from '@documenso/lib/advanced-fields-validation/va
 import { validateTextField } from '@documenso/lib/advanced-fields-validation/validate-text';
 import { fromCheckboxValue } from '@documenso/lib/universal/field-checkbox';
 import { prisma } from '@documenso/prisma';
+import { DocumentStatus, FieldType, RecipientRole, SigningStatus } from '@prisma/client';
+import { DateTime } from 'luxon';
+import { isDeepEqual } from 'remeda';
+import { match } from 'ts-pattern';
 
 import { AUTO_SIGNABLE_FIELD_TYPES } from '../../constants/autosign';
 import { DEFAULT_DOCUMENT_DATE_FORMAT } from '../../constants/date-formats';
 import { DEFAULT_DOCUMENT_TIME_ZONE } from '../../constants/time-zones';
+import { AppError, AppErrorCode } from '../../errors/app-error';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '../../types/document-audit-logs';
 import type { TRecipientActionAuth } from '../../types/document-auth';
 import {
@@ -26,7 +26,10 @@ import {
 } from '../../types/field-meta';
 import type { RequestMetadata } from '../../universal/extract-request-metadata';
 import { createDocumentAuditLogData } from '../../utils/document-audit-logs';
+import { getRecipientFieldsWhereInput } from '../../utils/recipient-queries';
+import { assertRecipientNotExpired } from '../../utils/recipients';
 import { validateFieldAuth } from '../document/validate-field-auth';
+import { assertSenderNotDisabled } from '../user/assert-user-not-disabled';
 
 export type SignFieldWithTokenOptions = {
   token: string;
@@ -66,20 +69,10 @@ export const signFieldWithToken = async ({
   const field = await prisma.field.findFirstOrThrow({
     where: {
       id: fieldId,
-      recipient: {
-        ...(recipient.role !== RecipientRole.ASSISTANT
-          ? {
-              id: recipient.id,
-            }
-          : {
-              signingStatus: {
-                not: SigningStatus.SIGNED,
-              },
-              signingOrder: {
-                gte: recipient.signingOrder ?? 0,
-              },
-            }),
-      },
+      recipient: getRecipientFieldsWhereInput({
+        recipient,
+        allowAssistantAccessToOtherRecipients: true,
+      }),
     },
     include: {
       envelope: {
@@ -101,6 +94,8 @@ export const signFieldWithToken = async ({
     throw new Error(`Recipient not found for field ${field.id}`);
   }
 
+  await assertSenderNotDisabled({ userId: envelope.userId });
+
   if (envelope.deletedAt) {
     throw new Error(`Document ${envelope.id} has been deleted`);
   }
@@ -109,10 +104,9 @@ export const signFieldWithToken = async ({
     throw new Error(`Document ${envelope.id} must be pending for signing`);
   }
 
-  if (
-    recipient.signingStatus === SigningStatus.SIGNED ||
-    field.recipient.signingStatus === SigningStatus.SIGNED
-  ) {
+  assertRecipientNotExpired(recipient);
+
+  if (recipient.signingStatus === SigningStatus.SIGNED || field.recipient.signingStatus === SigningStatus.SIGNED) {
     throw new Error(`Recipient ${recipient.id} has already signed`);
   }
 
@@ -123,6 +117,16 @@ export const signFieldWithToken = async ({
   // Unreachable code based on the above query but we need to satisfy TypeScript
   if (field.recipientId === null) {
     throw new Error(`Field ${fieldId} has no recipientId`);
+  }
+
+  if (
+    field.type === FieldType.SIGNATURE &&
+    recipient.role === RecipientRole.ASSISTANT &&
+    field.recipientId !== recipient.id
+  ) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Assistant recipients cannot sign signature fields',
+    });
   }
 
   if (field.type === FieldType.NUMBER && field.fieldMeta) {
@@ -188,8 +192,7 @@ export const signFieldWithToken = async ({
     },
   });
 
-  const isSignatureField =
-    field.type === FieldType.SIGNATURE || field.type === FieldType.FREE_SIGNATURE;
+  const isSignatureField = field.type === FieldType.SIGNATURE || field.type === FieldType.FREE_SIGNATURE;
 
   let customText = !isSignatureField ? value : undefined;
 
@@ -297,27 +300,14 @@ export const signFieldWithToken = async ({
               type,
               data: signatureImageAsBase64 || typedSignature || '',
             }))
-            .with(
-              FieldType.DATE,
-              FieldType.EMAIL,
-              FieldType.NAME,
-              FieldType.TEXT,
-              FieldType.INITIALS,
-              (type) => ({
-                type,
-                data: updatedField.customText,
-              }),
-            )
-            .with(
-              FieldType.NUMBER,
-              FieldType.RADIO,
-              FieldType.CHECKBOX,
-              FieldType.DROPDOWN,
-              (type) => ({
-                type,
-                data: updatedField.customText,
-              }),
-            )
+            .with(FieldType.DATE, FieldType.EMAIL, FieldType.NAME, FieldType.TEXT, FieldType.INITIALS, (type) => ({
+              type,
+              data: updatedField.customText,
+            }))
+            .with(FieldType.NUMBER, FieldType.RADIO, FieldType.CHECKBOX, FieldType.DROPDOWN, (type) => ({
+              type,
+              data: updatedField.customText,
+            }))
             .exhaustive(),
           fieldSecurity: derivedRecipientActionAuth
             ? {

@@ -1,30 +1,22 @@
-import { createElement } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import type { Organisation, Prisma } from '@prisma/client';
-import { OrganisationGroupType, OrganisationMemberInviteStatus } from '@prisma/client';
-import { nanoid } from 'nanoid';
-
-import { syncMemberCountWithStripeSeatPlan } from '@documenso/ee/server-only/stripe/update-subscription-item-quantity';
-import { mailer } from '@documenso/email/mailer';
 import { OrganisationInviteEmailTemplate } from '@documenso/email/templates/organisation-invite';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
-import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
 import { isOrganisationRoleWithinUserHierarchy } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
 import type { TCreateOrganisationMemberInvitesRequestSchema } from '@documenso/trpc/server/organisation-router/create-organisation-member-invites.types';
+import { msg } from '@lingui/core/macro';
+import type { Organisation, Prisma } from '@prisma/client';
+import { OrganisationMemberInviteStatus } from '@prisma/client';
+import { nanoid } from 'nanoid';
+import { createElement } from 'react';
 
 import { getI18nInstance } from '../../client-only/providers/i18n-server';
 import { generateDatabaseId } from '../../universal/id';
-import { validateIfSubscriptionIsRequired } from '../../utils/billing';
 import { buildOrganisationWhereQuery } from '../../utils/organisations';
 import { renderEmailWithI18N } from '../../utils/render-email-with-i18n';
 import { getEmailContext } from '../email/get-email-context';
-import { getCurrentSubscriptionByOrganisationId } from '../subscription/get-current-subscription-by-organisation-id';
 import { getMemberOrganisationRole } from '../team/get-member-roles';
-import { createTeamAuditLogData } from '../../utils/team-audit-logs';
 
 export type CreateOrganisationMemberInvitesOptions = {
   userId: number;
@@ -65,21 +57,12 @@ export const createOrganisationMemberInvites = async ({
         },
       },
       organisationGlobalSettings: true,
-      organisationClaim: true,
     },
   });
 
   if (!organisation) {
     throw new AppError(AppErrorCode.NOT_FOUND);
   }
-
-  const { organisationClaim } = organisation;
-
-  const currentSubscription = await getCurrentSubscriptionByOrganisationId({
-    organisationId: organisation.id,
-  });
-
-  const subscription = validateIfSubscriptionIsRequired(currentSubscription);
 
   const currentOrganisationMemberRole = await getMemberOrganisationRole({
     organisationId: organisation.id,
@@ -107,8 +90,7 @@ export const createOrganisationMemberInvites = async ({
   });
 
   const unauthorizedRoleAccess = usersToInvite.some(
-    ({ organisationRole }) =>
-      !isOrganisationRoleWithinUserHierarchy(currentOrganisationMemberRole, organisationRole),
+    ({ organisationRole }) => !isOrganisationRoleWithinUserHierarchy(currentOrganisationMemberRole, organisationRole),
   );
 
   if (unauthorizedRoleAccess) {
@@ -117,89 +99,19 @@ export const createOrganisationMemberInvites = async ({
     });
   }
 
-  const organisationMemberInvites: Prisma.OrganisationMemberInviteCreateManyInput[] =
-    usersToInvite.map(({ email, organisationRole }) => ({
+  const organisationMemberInvites: Prisma.OrganisationMemberInviteCreateManyInput[] = usersToInvite.map(
+    ({ email, organisationRole }) => ({
       id: generateDatabaseId('member_invite'),
       email,
       organisationId,
       organisationRole,
       token: nanoid(32),
-    }));
-
-  const numberOfCurrentMembers = organisation.members.length;
-  const numberOfCurrentInvites = organisation.invites.length;
-  const numberOfNewInvites = organisationMemberInvites.length;
-
-  const totalMemberCountWithInvites =
-    numberOfCurrentMembers + numberOfCurrentInvites + numberOfNewInvites;
-
-  // Handle billing for seat based plans.
-  if (subscription) {
-    await syncMemberCountWithStripeSeatPlan(
-      subscription,
-      organisationClaim,
-      totalMemberCountWithInvites,
-    );
-  }
+    }),
+  );
 
   await prisma.organisationMemberInvite.createMany({
     data: organisationMemberInvites,
   });
-
-  const teams = await prisma.team.findMany({
-    where: {
-      organisationId: organisation.id,
-      teamGroups: {
-        some: {
-          organisationGroup: {
-            type: OrganisationGroupType.INTERNAL_ORGANISATION,
-            organisationRole: {
-              in: organisationMemberInvites.map((invite) => invite.organisationRole),
-            },
-          },
-        },
-      },
-    },
-    include: {
-      teamGroups: {
-        include: {
-          organisationGroup: true,
-        },
-      },
-    },
-  });
-
-  const auditLogs = organisationMemberInvites.flatMap((invite) => {
-    const teamsForRole = teams.filter((team) =>
-      team.teamGroups.some(
-        (group) =>
-          group.organisationGroup.type === OrganisationGroupType.INTERNAL_ORGANISATION &&
-          group.organisationGroup.organisationRole === invite.organisationRole,
-      ),
-    );
-
-    return teamsForRole.map((team) =>
-      createTeamAuditLogData({
-        teamId: team.id,
-        type: TEAM_AUDIT_LOG_TYPE.ORGANISATION_MEMBER_INVITED,
-        data: {
-          email: invite.email,
-          organisationId: organisation.id,
-          inviterUserId: userId,
-        },
-        user: {
-          id: userId,
-          name: userName,
-        },
-      }),
-    );
-  });
-
-  if (auditLogs.length > 0) {
-    await (prisma as any).teamAuditLog.createMany({
-      data: auditLogs,
-    });
-  }
 
   const sendEmailResult = await Promise.allSettled(
     organisationMemberInvites.map(async ({ email, token }) =>
@@ -250,13 +162,19 @@ export const sendOrganisationMemberInviteEmail = async ({
     organisationName: organisation.name,
   });
 
-  const { branding, emailLanguage, senderEmail } = await getEmailContext({
+  const { branding, emailLanguage, senderEmail, emailsDisabled, emailTransport } = await getEmailContext({
     emailType: 'INTERNAL',
     source: {
       type: 'organisation',
       organisationId: organisation.id,
     },
   });
+
+  // Member invites can be sent to anyone, so block them when the organisation has email
+  // sending disabled.
+  if (emailsDisabled) {
+    return;
+  }
 
   const [html, text] = await Promise.all([
     renderEmailWithI18N(template, {
@@ -272,10 +190,10 @@ export const sendOrganisationMemberInviteEmail = async ({
 
   const i18n = await getI18nInstance(emailLanguage);
 
-  await mailer.sendMail({
+  await emailTransport.sendMail({
     to: email,
     from: senderEmail,
-    subject: i18n._(msg`You have been invited to join ${organisation.name} on Nomia`),
+    subject: i18n._(msg`You have been invited to join ${organisation.name} on Documenso`),
     html,
     text,
   });

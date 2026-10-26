@@ -1,8 +1,4 @@
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { useRevalidator } from 'react-router';
-
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
@@ -14,6 +10,10 @@ import type {
   TSignFieldWithTokenMutationSchema,
 } from '@documenso/trpc/server/field-router/schema';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { useRevalidator } from 'react-router';
 
 import { DocumentSigningFieldContainer } from './document-signing-field-container';
 import {
@@ -30,14 +30,11 @@ export type DocumentSigningEmailFieldProps = {
   onUnsignField?: (value: TRemovedSignedFieldWithTokenMutationSchema) => Promise<void> | void;
 };
 
-export const DocumentSigningEmailField = ({
-  field,
-  onSignField,
-  onUnsignField,
-}: DocumentSigningEmailFieldProps) => {
+export const DocumentSigningEmailField = ({ field, onSignField, onUnsignField }: DocumentSigningEmailFieldProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
+  const analytics = useAnalytics();
 
   const { email: providedEmail } = useRequiredDocumentSigningContext();
 
@@ -46,10 +43,8 @@ export const DocumentSigningEmailField = ({
   const { mutateAsync: signFieldWithToken, isPending: isSignFieldWithTokenLoading } =
     trpc.field.signFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
-  const {
-    mutateAsync: removeSignedFieldWithToken,
-    isPending: isRemoveSignedFieldWithTokenLoading,
-  } = trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
+  const { mutateAsync: removeSignedFieldWithToken, isPending: isRemoveSignedFieldWithTokenLoading } =
+    trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
   const isLoading = isSignFieldWithTokenLoading || isRemoveSignedFieldWithTokenLoading;
 
@@ -85,6 +80,13 @@ export const DocumentSigningEmailField = ({
 
       console.error(err);
 
+      analytics.captureException(err, {
+        source: 'signing',
+        location: 'sign_field',
+        fieldType: field.type,
+        recipientId: field.recipientId,
+      });
+
       toast({
         title: _(msg`Error`),
         description: isAssistantMode
@@ -112,6 +114,13 @@ export const DocumentSigningEmailField = ({
       await revalidate();
     } catch (err) {
       console.error(err);
+
+      analytics.captureException(err, {
+        source: 'signing',
+        location: 'remove_field',
+        fieldType: field.type,
+        recipientId: field.recipientId,
+      });
 
       toast({
         title: _(msg`Error`),

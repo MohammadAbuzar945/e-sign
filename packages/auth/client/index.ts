@@ -1,9 +1,8 @@
+import { formatPath, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { AppError } from '@documenso/lib/errors/app-error';
 import type { ClientResponse, InferRequestType } from 'hono/client';
 import { hc } from 'hono/client';
 import superjson from 'superjson';
-
-import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-import { AppError } from '@documenso/lib/errors/app-error';
 
 import type { AuthAppType } from '../server';
 import type { SessionValidationResult } from '../server/lib/session/session';
@@ -26,18 +25,29 @@ import type {
 
 type AuthClientType = ReturnType<typeof hc<AuthAppType>>;
 
-type TEmailPasswordSignin = InferRequestType<
-  AuthClientType['email-password']['authorize']['$post']
->['json'] & { redirectPath?: string };
+type TEmailPasswordSignin = InferRequestType<AuthClientType['email-password']['authorize']['$post']>['json'] & {
+  redirectPath?: string;
+};
 
 type TPasskeySignin = InferRequestType<AuthClientType['passkey']['authorize']['$post']>['json'] & {
   redirectPath?: string;
 };
 
+type TEmbedAuthStart = InferRequestType<AuthClientType['embed']['start']['$post']>['json'];
+
+type TEmbedAuthRedeem = InferRequestType<AuthClientType['embed']['redeem']['$post']>['json'];
+
+export type TEmbedAuthRedeemResult = 'ok' | 'pending' | 'rate-limited' | 'failed';
+
+// Cross-site iframe requests need `credentials: 'include'` to carry the partitioned cookie.
+const embedRequestOptions = {
+  init: {
+    credentials: 'include',
+  },
+} as const;
+
 export class AuthClient {
   public client: AuthClientType;
-
-  private signOutredirectPath: string = '/signin';
 
   constructor(options: { baseUrl: string }) {
     this.client = hc<AuthAppType>(options.baseUrl);
@@ -46,20 +56,14 @@ export class AuthClient {
   public async signOut({ redirectPath }: { redirectPath?: string } = {}) {
     await this.client.signout.$post();
 
-    window.location.href = redirectPath ?? this.signOutredirectPath;
+    window.location.href = redirectPath ?? formatPath('/signin');
   }
 
   public async signOutAllSessions() {
     await this.client['signout-all'].$post();
   }
 
-  public async signOutSession({
-    sessionId,
-    redirectPath,
-  }: {
-    sessionId: string;
-    redirectPath?: string;
-  }) {
+  public async signOutSession({ sessionId, redirectPath }: { sessionId: string; redirectPath?: string }) {
     await this.client['signout-session'].$post({
       json: { sessionId },
     });
@@ -279,6 +283,64 @@ export class AuthClient {
       }
 
       handleSignInRedirect(data.redirectPath);
+    },
+  };
+
+  public embed = {
+    start: async (data: TEmbedAuthStart): Promise<{ redirectUrl: string | null; returnTo: string | null }> => {
+      const response = await this.client.embed.start.$post({ json: data });
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        throw AppError.parseError(error);
+      }
+
+      const result = await response.json();
+
+      return {
+        redirectUrl: result.redirectUrl,
+        returnTo: 'returnTo' in result ? result.returnTo : null,
+      };
+    },
+
+    redeem: async (data: TEmbedAuthRedeem): Promise<TEmbedAuthRedeemResult> => {
+      const response = await this.client.embed.redeem.$post({ json: data }, embedRequestOptions);
+
+      // The RPC type does not know about the rate limit middleware's 429.
+      const status: number = response.status;
+
+      if (status === 429) {
+        return 'rate-limited';
+      }
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        throw AppError.parseError(error);
+      }
+
+      if (response.status === 202) {
+        return 'pending';
+      }
+
+      const result = await response.json();
+
+      return result.status === 'failed' ? 'failed' : 'ok';
+    },
+
+    getSession: async () => {
+      const response = await this.client['session-json'].$get(undefined, embedRequestOptions);
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        throw AppError.parseError(error);
+      }
+
+      const result = await response.json();
+
+      return superjson.deserialize<SessionValidationResult>(result);
     },
   };
 

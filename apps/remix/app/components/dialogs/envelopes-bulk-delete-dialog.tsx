@@ -1,9 +1,3 @@
-import { Plural, useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { EnvelopeType } from '@prisma/client';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-
-import { AppError } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
@@ -16,12 +10,10 @@ import {
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-
-import {
-  EnvelopesBulkSelectionLimitAlert,
-  isBulkSelectionOverLimit,
-  MAX_ENVELOPE_IDS_PER_REQUEST,
-} from '~/components/dialogs/envelopes-bulk-selection-limit-alert';
+import { plural } from '@lingui/core/macro';
+import { Plural, Trans, useLingui } from '@lingui/react/macro';
+import { EnvelopeType } from '@prisma/client';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
 
 export type EnvelopesBulkDeleteDialogProps = {
   envelopeIds: string[];
@@ -45,31 +37,38 @@ export const EnvelopesBulkDeleteDialog = ({
   const trpcUtils = trpc.useUtils();
 
   const isDocument = envelopeType === EnvelopeType.DOCUMENT;
-  const isOverLimit = isBulkSelectionOverLimit(envelopeIds.length);
 
   const { mutateAsync: bulkDeleteEnvelopes, isPending } = trpc.envelope.bulk.delete.useMutation({
     onSuccess: async (result) => {
       // Invalidate the appropriate query based on envelope type.
       if (isDocument) {
-        await Promise.all([
-          trpcUtils.document.findDocumentsInternal.invalidate(),
-          trpcUtils.document.inbox.getCount.invalidate(),
-          trpcUtils.document.inbox.find.invalidate(),
-        ]);
+        await trpcUtils.document.findDocumentsInternal.invalidate();
       } else {
-        await trpcUtils.template.findTemplates.invalidate();
+        await Promise.all([
+          trpcUtils.template.findTemplates.invalidate(),
+          trpcUtils.template.findTemplatesInternal.invalidate(),
+        ]);
       }
 
       if (result.failedIds.length > 0) {
         toast({
           title: isDocument ? t`Documents partially deleted` : t`Templates partially deleted`,
-          description: t`${result.deletedCount} item(s) deleted. ${result.failedIds.length} item(s) could not be deleted.`,
+          description: t`${plural(result.deletedCount, {
+            one: '# item deleted.',
+            other: '# items deleted.',
+          })} ${plural(result.failedIds.length, {
+            one: '# item could not be deleted.',
+            other: '# items could not be deleted.',
+          })}`,
           variant: 'destructive',
         });
       } else {
         toast({
           title: isDocument ? t`Documents deleted` : t`Templates deleted`,
-          description: t`${result.deletedCount} item(s) have been deleted.`,
+          description: plural(result.deletedCount, {
+            one: '# item has been deleted.',
+            other: '# items have been deleted.',
+          }),
           variant: 'default',
         });
       }
@@ -77,14 +76,10 @@ export const EnvelopesBulkDeleteDialog = ({
       onSuccess?.();
       onOpenChange(false);
     },
-    onError: (err) => {
-      const error = AppError.parseError(err);
-
+    onError: () => {
       toast({
-        title: t`Too many items selected`,
-        description: isBulkSelectionOverLimit(envelopeIds.length)
-          ? t`You can only delete up to ${MAX_ENVELOPE_IDS_PER_REQUEST} items at a time. Please deselect some items and try again.`
-          : error.message || t`An error occurred while deleting the items.`,
+        title: t`Error`,
+        description: t`An error occurred while deleting the items.`,
         variant: 'destructive',
       });
     },
@@ -94,9 +89,7 @@ export const EnvelopesBulkDeleteDialog = ({
     <Dialog {...props} open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {isDocument ? <Trans>Delete Documents</Trans> : <Trans>Delete Templates</Trans>}
-          </DialogTitle>
+          <DialogTitle>{isDocument ? <Trans>Delete Documents</Trans> : <Trans>Delete Templates</Trans>}</DialogTitle>
 
           <DialogDescription>
             {isDocument ? (
@@ -115,9 +108,6 @@ export const EnvelopesBulkDeleteDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <EnvelopesBulkSelectionLimitAlert selectedCount={envelopeIds.length} />
-
-        {!isOverLimit && (
         <Alert variant="warning">
           <AlertDescription>
             <p>
@@ -156,15 +146,9 @@ export const EnvelopesBulkDeleteDialog = ({
             </ul>
           </AlertDescription>
         </Alert>
-        )}
 
         <DialogFooter>
-        <Button
-            type="button"
-            variant="secondary"
-            onClick={() => onOpenChange(false)}
-            disabled={isPending}
-          >
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={isPending}>
             <Trans>Cancel</Trans>
           </Button>
 
@@ -175,7 +159,6 @@ export const EnvelopesBulkDeleteDialog = ({
             }}
             loading={isPending}
             variant="destructive"
-            disabled={isOverLimit}
           >
             <Trans>Delete</Trans>
           </Button>

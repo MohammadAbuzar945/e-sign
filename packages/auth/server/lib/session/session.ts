@@ -1,12 +1,11 @@
-import { sha256 } from '@oslojs/crypto/sha2';
-import { encodeBase32LowerCaseNoPadding, encodeHexLowerCase } from '@oslojs/encoding';
-import { type Session, type User, UserSecurityAuditLogType } from '@prisma/client';
-
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { RequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { prisma } from '@documenso/prisma';
+import { sha256 } from '@oslojs/crypto/sha2';
+import { encodeBase32LowerCaseNoPadding, encodeHexLowerCase } from '@oslojs/encoding';
+import { type Prisma, type Session, type User, UserSecurityAuditLogType } from '@prisma/client';
 
-import { AUTH_SESSION_LIFETIME } from '../../config';
+import { AUTH_EMBED_SESSION_LIFETIME, AUTH_SESSION_LIFETIME } from '../../config';
 
 /**
  * The user object to pass around the app.
@@ -15,14 +14,7 @@ import { AUTH_SESSION_LIFETIME } from '../../config';
  */
 export type SessionUser = Pick<
   User,
-  | 'id'
-  | 'name'
-  | 'email'
-  | 'emailVerified'
-  | 'avatarImageId'
-  | 'twoFactorEnabled'
-  | 'roles'
-  | 'signature'
+  'id' | 'name' | 'email' | 'emailVerified' | 'avatarImageId' | 'twoFactorEnabled' | 'roles' | 'signature' | 'disabled'
   | 'maxOrganisationCount'
 >;
 
@@ -44,10 +36,16 @@ export const generateSessionToken = (): string => {
   return token;
 };
 
+export type CreateSessionOptions = {
+  isEmbed?: boolean;
+  tx?: Prisma.TransactionClient;
+};
+
 export const createSession = async (
   token: string,
   userId: number,
   metadata: RequestMetadata,
+  { isEmbed = false, tx = prisma }: CreateSessionOptions = {},
 ): Promise<Session> => {
   const hashedSessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
 
@@ -57,16 +55,17 @@ export const createSession = async (
     userId,
     updatedAt: new Date(),
     createdAt: new Date(),
-    expiresAt: new Date(Date.now() + AUTH_SESSION_LIFETIME),
+    expiresAt: new Date(Date.now() + (isEmbed ? AUTH_EMBED_SESSION_LIFETIME : AUTH_SESSION_LIFETIME)),
     ipAddress: metadata.ipAddress ?? null,
     userAgent: metadata.userAgent ?? null,
+    isEmbed,
   };
 
-  await prisma.session.create({
+  await tx.session.create({
     data: session,
   });
 
-  await prisma.userSecurityAuditLog.create({
+  await tx.userSecurityAuditLog.create({
     data: {
       userId,
       ipAddress: metadata.ipAddress,
@@ -100,6 +99,7 @@ export const validateSessionToken = async (token: string): Promise<SessionValida
           roles: true,
           signature: true,
           maxOrganisationCount: true,
+          disabled: true,
         },
       },
     },
@@ -116,8 +116,9 @@ export const validateSessionToken = async (token: string): Promise<SessionValida
     return { session: null, user: null, isAuthenticated: false };
   }
 
-  if (Date.now() >= session.expiresAt.getTime() - 1000 * 60 * 60 * 24 * 15) {
-    session.expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+  // Embed sessions are never extended; the user starts a new popup flow instead.
+  if (!session.isEmbed && Date.now() >= session.expiresAt.getTime() - 1000 * 60 * 60 * 24 * 15) {
+    session.expiresAt = new Date(Date.now() + AUTH_SESSION_LIFETIME);
 
     await prisma.session.update({
       where: {
@@ -168,9 +169,7 @@ export const invalidateSessions = async ({
         userId,
         ipAddress: metadata.ipAddress,
         userAgent: metadata.userAgent,
-        type: isRevoke
-          ? UserSecurityAuditLogType.SESSION_REVOKED
-          : UserSecurityAuditLogType.SIGN_OUT,
+        type: isRevoke ? UserSecurityAuditLogType.SESSION_REVOKED : UserSecurityAuditLogType.SIGN_OUT,
       })),
     });
   });

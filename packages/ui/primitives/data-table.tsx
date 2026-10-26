@@ -1,5 +1,3 @@
-import React, { useMemo } from 'react';
-
 import { Trans } from '@lingui/react/macro';
 import type {
   ColumnDef,
@@ -10,6 +8,9 @@ import type {
   VisibilityState,
 } from '@tanstack/react-table';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import type React from 'react';
+import { useMemo } from 'react';
+import { cn } from '../lib/utils';
 
 import { Skeleton } from './skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
@@ -19,6 +20,7 @@ export type DataTableChildren<TData> = (_table: TTable<TData>) => React.ReactNod
 export type { ColumnDef as DataTableColumnDef, RowSelectionState } from '@tanstack/react-table';
 
 export interface DataTableProps<TData, TValue> {
+  className?: string;
   columns: ColumnDef<TData, TValue>[];
   columnVisibility?: VisibilityState;
   data: TData[];
@@ -48,6 +50,7 @@ export interface DataTableProps<TData, TValue> {
 }
 
 export function DataTable<TData, TValue>({
+  className,
   columns,
   columnVisibility,
   data,
@@ -120,7 +123,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <>
-      <div className="rounded-md border">
+      <div className={cn('rounded-md border', className)}>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -128,9 +131,7 @@ export function DataTable<TData, TValue>({
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   );
                 })}
@@ -180,10 +181,7 @@ export function DataTable<TData, TValue>({
                       </p>
 
                       {hasFilters && onClearFilters !== undefined && (
-                        <button
-                          onClick={() => onClearFilters()}
-                          className="mt-1 text-sm text-foreground"
-                        >
+                        <button onClick={() => onClearFilters()} className="mt-1 text-foreground text-sm">
                           <Trans>Clear filters</Trans>
                         </button>
                       )}

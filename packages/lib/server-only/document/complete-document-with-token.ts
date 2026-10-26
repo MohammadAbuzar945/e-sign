@@ -1,3 +1,10 @@
+import { DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
+import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones';
+import { DOCUMENT_AUDIT_LOG_TYPE, RECIPIENT_DIFF_TYPE } from '@documenso/lib/types/document-audit-logs';
+import type { RequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
+import { fieldsContainUnsignedRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
+import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
+import { prisma } from '@documenso/prisma';
 import {
   DocumentSigningOrder,
   DocumentStatus,
@@ -8,31 +15,23 @@ import {
   SigningStatus,
   WebhookTriggerEvents,
 } from '@prisma/client';
-
-import {
-  DOCUMENT_AUDIT_LOG_TYPE,
-  RECIPIENT_DIFF_TYPE,
-} from '@documenso/lib/types/document-audit-logs';
-import type { RequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
-import { fieldsContainUnsignedRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
-import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
-import { prisma } from '@documenso/prisma';
+import { DateTime } from 'luxon';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { jobs } from '../../jobs/client';
 import type { TRecipientAccessAuth } from '../../types/document-auth';
 import { DocumentAuth } from '../../types/document-auth';
-import {
-  ZWebhookDocumentSchema,
-  mapEnvelopeToWebhookDocumentPayload,
-} from '../../types/webhook-payload';
+import { isTspEnvelope } from '../../types/signature-level';
+import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../types/webhook-payload';
 import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { mapSecondaryIdToDocumentId, unsafeBuildEnvelopeIdQuery } from '../../utils/envelope';
+import { getRecipientsInActiveSigningStep, isRecipientTurnBySigningOrder } from '../../utils/recipient-groups';
+import { assertRecipientNotExpired, isRecipientBefore } from '../../utils/recipients';
 import { getIsRecipientsTurnToSign } from '../recipient/get-is-recipient-turn';
+import { assertSenderNotDisabled } from '../user/assert-user-not-disabled';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
 import { isRecipientAuthorized } from './is-recipient-authorized';
-import { sendPendingEmail } from './send-pending-email';
 
 export type CompleteDocumentWithTokenOptions = {
   token: string;
@@ -60,10 +59,10 @@ export const completeDocumentWithToken = async ({
   userId,
   accessAuthOptions,
   requestMetadata,
-  nextSigner,
+  nextSigner: dictatedNextSigner,
   recipientOverride,
 }: CompleteDocumentWithTokenOptions) => {
-  const envelope = await prisma.envelope.findFirstOrThrow({
+  const envelope = await prisma.envelope.findFirst({
     where: {
       ...unsafeBuildEnvelopeIdQuery(id, EnvelopeType.DOCUMENT),
       recipients: {
@@ -82,21 +81,57 @@ export const completeDocumentWithToken = async ({
     },
   });
 
-  const legacyDocumentId = mapSecondaryIdToDocumentId(envelope.secondaryId);
-
-  if (envelope.status !== DocumentStatus.PENDING) {
-    throw new Error(`Document ${envelope.id} must be pending`);
+  // The most common cause is a stale signing page: the document was deleted,
+  // or the recipient was removed, after the link was opened. Surface a
+  // NOT_FOUND instead of leaking a Prisma P2025 as a 500.
+  if (!envelope) {
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: 'Document not found for the provided signing token',
+      statusCode: 404,
+    });
   }
 
+  await assertSenderNotDisabled({ userId: envelope.userId });
+
+  const legacyDocumentId = mapSecondaryIdToDocumentId(envelope.secondaryId);
+
   if (envelope.recipients.length === 0) {
-    throw new Error(`Document ${envelope.id} has no recipient with token ${token}`);
+    throw new AppError(AppErrorCode.NOT_FOUND, {
+      message: `Document ${envelope.id} has no recipient with the provided token`,
+      statusCode: 404,
+    });
   }
 
   const [recipient] = envelope.recipients;
 
+  // A retried or duplicate completion request for an already signed
+  // recipient throws a code the router resolves idempotently. This must be
+  // checked before the envelope status guard since the envelope may have
+  // been completed and sealed by the recipient's original request.
   if (recipient.signingStatus === SigningStatus.SIGNED) {
-    throw new Error(`Recipient ${recipient.id} has already signed`);
+    throw new AppError(AppErrorCode.RECIPIENT_ALREADY_SIGNED, {
+      message: `Recipient ${recipient.id} has already signed`,
+      statusCode: 400,
+    });
   }
+
+  if (envelope.status !== DocumentStatus.PENDING) {
+    const envelopeStatusErrorCode: Record<DocumentStatus, AppErrorCode> = {
+      [DocumentStatus.DRAFT]: AppErrorCode.ENVELOPE_DRAFT,
+      [DocumentStatus.COMPLETED]: AppErrorCode.ENVELOPE_COMPLETED,
+      [DocumentStatus.REJECTED]: AppErrorCode.ENVELOPE_REJECTED,
+      [DocumentStatus.CANCELLED]: AppErrorCode.ENVELOPE_CANCELLED,
+      // Unreachable: guarded by the status check above.
+      [DocumentStatus.PENDING]: AppErrorCode.INVALID_REQUEST,
+    };
+
+    throw new AppError(envelopeStatusErrorCode[envelope.status], {
+      message: `Document ${envelope.id} must be pending to be completed, found ${envelope.status}`,
+      statusCode: 400,
+    });
+  }
+
+  assertRecipientNotExpired(recipient);
 
   if (recipient.signingStatus === SigningStatus.REJECTED) {
     throw new AppError(AppErrorCode.UNKNOWN_ERROR, {
@@ -106,57 +141,19 @@ export const completeDocumentWithToken = async ({
   }
 
   if (envelope.documentMeta?.signingOrder === DocumentSigningOrder.SEQUENTIAL) {
-    const isRecipientsTurn = await getIsRecipientsTurnToSign({ token: recipient.token });
+    const isRecipientsTurn = await getIsRecipientsTurnToSign({
+      token: recipient.token,
+    });
 
     if (!isRecipientsTurn) {
-      throw new Error(
-        `Recipient ${recipient.id} attempted to complete the document before it was their turn`,
-      );
+      throw new AppError(AppErrorCode.RECIPIENT_OUT_OF_TURN, {
+        message: `Recipient ${recipient.id} attempted to complete the document before it was their turn`,
+        statusCode: 400,
+      });
     }
   }
 
-  const fields = await prisma.field.findMany({
-    where: {
-      envelopeId: envelope.id,
-      recipientId: recipient.id,
-    },
-  });
-
-  if (fieldsContainUnsignedRequiredField(fields)) {
-    throw new Error(`Recipient ${recipient.id} has unsigned fields`);
-  }
-
-  let recipientName = recipient.name;
-  let recipientEmail = recipient.email;
-
-  // Only trim the name if it's been derived.
-  if (!recipientName) {
-    recipientName = (
-      recipientOverride?.name ||
-      fields.find((field) => field.type === FieldType.NAME)?.customText ||
-      ''
-    ).trim();
-  }
-
-  // Only trim the email if it's been derived.
-  if (!recipient.email) {
-    recipientEmail = (
-      recipientOverride?.email ||
-      fields.find((field) => field.type === FieldType.EMAIL)?.customText ||
-      ''
-    )
-      .trim()
-      .toLowerCase();
-  }
-
-  if (!recipientEmail) {
-    throw new AppError(AppErrorCode.INVALID_BODY, {
-      message: 'Recipient email is required',
-    });
-  }
-
-  // Check ACCESS AUTH 2FA validation during document completion.
-  // KBA is validated at document link access time.
+  // Check ACCESS AUTH 2FA validation during document completion
   const { derivedRecipientAccessAuth } = extractDocumentAuthMethods({
     documentAuth: envelope.authOptions,
     recipientAuth: recipient.authOptions,
@@ -214,10 +211,123 @@ export const completeDocumentWithToken = async ({
     });
   }
 
+  let fields = await prisma.field.findMany({
+    where: {
+      envelopeId: envelope.id,
+      recipientId: recipient.id,
+    },
+  });
+
+  // This should be scoped to the current recipient.
+  const uninsertedDateFields = fields.filter((field) => field.type === FieldType.DATE && !field.inserted);
+
+  let recipientName = recipient.name;
+  let recipientEmail = recipient.email;
+
+  // Only trim the name if it's been derived.
+  if (!recipientName) {
+    recipientName = (
+      recipientOverride?.name ||
+      fields.find((field) => field.type === FieldType.NAME)?.customText ||
+      ''
+    ).trim();
+  }
+
+  // Only trim the email if it's been derived.
+  if (!recipient.email) {
+    recipientEmail = (
+      recipientOverride?.email ||
+      fields.find((field) => field.type === FieldType.EMAIL)?.customText ||
+      ''
+    )
+      .trim()
+      .toLowerCase();
+  }
+
+  if (!recipientEmail) {
+    throw new AppError(AppErrorCode.INVALID_BODY, {
+      message: 'Recipient email is required',
+    });
+  }
+
+  // Auto-insert all un-inserted date fields for V2 envelopes at completion time.
+  if (envelope.internalVersion === 2 && uninsertedDateFields.length > 0) {
+    const formattedDate = DateTime.now()
+      .setZone(envelope.documentMeta?.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE)
+      .toFormat(envelope.documentMeta?.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT);
+
+    const newDateFieldValues = {
+      customText: formattedDate,
+      inserted: true,
+    };
+
+    await prisma.field.updateMany({
+      where: {
+        id: {
+          in: uninsertedDateFields.map((field) => field.id),
+        },
+      },
+      data: {
+        ...newDateFieldValues,
+      },
+    });
+
+    // Create audit log entries for each auto-inserted date field.
+    await prisma.documentAuditLog.createMany({
+      data: uninsertedDateFields.map((field) =>
+        createDocumentAuditLogData({
+          type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_FIELD_INSERTED,
+          envelopeId: envelope.id,
+          user: {
+            email: recipientEmail,
+            name: recipientName,
+          },
+          requestMetadata,
+          data: {
+            recipientEmail: recipientEmail,
+            recipientId: recipient.id,
+            recipientName: recipientName,
+            recipientRole: recipient.role,
+            fieldId: field.secondaryId,
+            field: {
+              type: FieldType.DATE,
+              data: formattedDate,
+            },
+          },
+        }),
+      ),
+    });
+
+    // Update the local fields array so the subsequent validation check passes.
+    fields = fields.map((field) => {
+      if (field.type === FieldType.DATE && !field.inserted) {
+        return {
+          ...field,
+          ...newDateFieldValues,
+        };
+      }
+
+      return field;
+    });
+  }
+
+  if (fieldsContainUnsignedRequiredField(fields)) {
+    throw new AppError(AppErrorCode.RECIPIENT_HAS_UNSIGNED_FIELDS, {
+      message: `Recipient ${recipient.id} has unsigned fields`,
+      statusCode: 400,
+    });
+  }
+
   await prisma.$transaction(async (tx) => {
-    await tx.recipient.update({
+    // Conditional update so two concurrent completion requests can't both
+    // proceed: only the request that transitions the recipient to SIGNED
+    // continues, the loser sees a count of 0 and aborts.
+    const { count: updatedRecipientCount } = await tx.recipient.updateMany({
       where: {
         id: recipient.id,
+        signingStatus: {
+          not: SigningStatus.SIGNED,
+        },
       },
       data: {
         signingStatus: SigningStatus.SIGNED,
@@ -226,6 +336,16 @@ export const completeDocumentWithToken = async ({
         email: recipientEmail,
       },
     });
+
+    // A concurrent request completed the recipient between our initial read
+    // and this transaction. Abort so the winning request handles all side
+    // effects, the router resolves this code idempotently.
+    if (updatedRecipientCount === 0) {
+      throw new AppError(AppErrorCode.RECIPIENT_ALREADY_SIGNED, {
+        message: `Recipient ${recipient.id} has already signed`,
+        statusCode: 400,
+      });
+    }
 
     if (recipientEmail !== recipient.email || recipientName !== recipient.name) {
       await tx.documentAuditLog.create({
@@ -284,6 +404,18 @@ export const completeDocumentWithToken = async ({
     });
   });
 
+  const envelopeWithRelations = await prisma.envelope.findUniqueOrThrow({
+    where: { id: envelope.id },
+    include: { documentMeta: true, recipients: true },
+  });
+
+  await triggerWebhook({
+    event: WebhookTriggerEvents.DOCUMENT_RECIPIENT_COMPLETED,
+    data: ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(envelopeWithRelations)),
+    userId: envelope.userId,
+    teamId: envelope.teamId,
+  });
+
   await jobs.triggerJob({
     name: 'send.recipient.signed.email',
     payload: {
@@ -296,6 +428,7 @@ export const completeDocumentWithToken = async ({
     select: {
       id: true,
       signingOrder: true,
+      signingStatus: true,
       name: true,
       email: true,
       role: true,
@@ -315,67 +448,109 @@ export const completeDocumentWithToken = async ({
   });
 
   if (pendingRecipients.length > 0) {
-    await sendPendingEmail({ id, recipientId: recipient.id });
+    await jobs.triggerJob({
+      name: 'send.document.pending.email',
+      payload: {
+        envelopeId: envelope.id,
+        recipientId: recipient.id,
+      },
+    });
 
     if (envelope.documentMeta?.signingOrder === DocumentSigningOrder.SEQUENTIAL) {
-      const [nextRecipient] = pendingRecipients;
+      const sequencing = { strictlySequential: isTspEnvelope(envelope) };
 
-      await prisma.$transaction(async (tx) => {
-        if (nextSigner && envelope.documentMeta?.allowDictateNextSigner) {
-          await tx.documentAuditLog.create({
-            data: createDocumentAuditLogData({
-              type: DOCUMENT_AUDIT_LOG_TYPE.RECIPIENT_UPDATED,
-              envelopeId: envelope.id,
-              user: {
-                name: recipientName,
-                email: recipientEmail,
-              },
-              requestMetadata,
+      const nextRecipients = getRecipientsInActiveSigningStep(pendingRecipients, sequencing);
+
+      // Peers still pending in the current step are not the "next" step:
+      // nobody advances until the whole group has completed.
+      const hasCompletedCurrentStep = nextRecipients.every((pendingRecipient) =>
+        isRecipientBefore(recipient, pendingRecipient, sequencing),
+      );
+
+      if (
+        nextRecipients.length > 0 &&
+        hasCompletedCurrentStep &&
+        // Ensure that the next recipient can actually act on the document.
+        isRecipientTurnBySigningOrder(pendingRecipients, nextRecipients[0], sequencing)
+      ) {
+        // Dictation is only allowed when advancing to a single-recipient step.
+        const canDictateNextSigner =
+          Boolean(dictatedNextSigner) &&
+          Boolean(envelope.documentMeta?.allowDictateNextSigner) &&
+          nextRecipients.length === 1;
+
+        if (canDictateNextSigner && dictatedNextSigner) {
+          await prisma.$transaction(async (tx) => {
+            const [nextRecipient] = nextRecipients;
+
+            await tx.recipient.update({
+              where: { id: nextRecipient.id },
               data: {
-                recipientEmail: nextRecipient.email,
-                recipientName: nextRecipient.name,
-                recipientId: nextRecipient.id,
-                recipientRole: nextRecipient.role,
-                changes: [
-                  {
-                    type: RECIPIENT_DIFF_TYPE.NAME,
-                    from: nextRecipient.name,
-                    to: nextSigner.name,
-                  },
-                  {
-                    type: RECIPIENT_DIFF_TYPE.EMAIL,
-                    from: nextRecipient.email,
-                    to: nextSigner.email,
-                  },
-                ],
+                sendStatus: SendStatus.SENT,
+                sentAt: new Date(),
+                name: dictatedNextSigner.name,
+                email: dictatedNextSigner.email,
               },
-            }),
+            });
+
+            await tx.documentAuditLog.create({
+              data: createDocumentAuditLogData({
+                type: DOCUMENT_AUDIT_LOG_TYPE.RECIPIENT_UPDATED,
+                envelopeId: envelope.id,
+                user: {
+                  name: recipientName,
+                  email: recipientEmail,
+                },
+                requestMetadata,
+                data: {
+                  recipientEmail: nextRecipient.email,
+                  recipientName: nextRecipient.name,
+                  recipientId: nextRecipient.id,
+                  recipientRole: nextRecipient.role,
+                  changes: [
+                    {
+                      type: RECIPIENT_DIFF_TYPE.NAME,
+                      from: nextRecipient.name,
+                      to: dictatedNextSigner.name,
+                    },
+                    {
+                      type: RECIPIENT_DIFF_TYPE.EMAIL,
+                      from: nextRecipient.email,
+                      to: dictatedNextSigner.email,
+                    },
+                  ],
+                },
+              }),
+            });
+          });
+        } else {
+          await prisma.recipient.updateMany({
+            where: {
+              id: {
+                in: nextRecipients.map((nextRecipient) => nextRecipient.id),
+              },
+            },
+            data: {
+              sendStatus: SendStatus.SENT,
+              sentAt: new Date(),
+            },
           });
         }
 
-        await tx.recipient.update({
-          where: { id: nextRecipient.id },
-          data: {
-            sendStatus: SendStatus.SENT,
-            ...(nextSigner && envelope.documentMeta?.allowDictateNextSigner
-              ? {
-                  name: nextSigner.name,
-                  email: nextSigner.email,
-                }
-              : {}),
-          },
-        });
-
-        await jobs.triggerJob({
-          name: 'send.signing.requested.email',
-          payload: {
-            userId: envelope.userId,
-            documentId: legacyDocumentId,
-            recipientId: nextRecipient.id,
-            requestMetadata,
-          },
-        });
-      });
+        await Promise.allSettled(
+          nextRecipients.map((nextRecipient) =>
+            jobs.triggerJob({
+              name: 'send.signing.requested.email',
+              payload: {
+                userId: envelope.userId,
+                documentId: legacyDocumentId,
+                recipientId: nextRecipient.id,
+                requestMetadata,
+              },
+            }),
+          ),
+        );
+      }
     }
   }
 

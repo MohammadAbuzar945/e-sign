@@ -1,15 +1,3 @@
-import { useMemo, useTransition } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { DocumentStatus as DocumentStatusEnum } from '@prisma/client';
-import { RecipientRole, SigningStatus } from '@prisma/client';
-import { CheckCircleIcon, DownloadIcon, EyeIcon, Loader, PencilIcon } from 'lucide-react';
-import { DateTime } from 'luxon';
-import { Link, useSearchParams } from 'react-router';
-import { match } from 'ts-pattern';
-
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
@@ -22,18 +10,22 @@ import { DataTablePagination } from '@documenso/ui/primitives/data-table-paginat
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { DocumentStatus as DocumentStatusEnum, RecipientRole, SigningStatus } from '@prisma/client';
+import { CheckCircleIcon, DownloadIcon, EyeIcon, Loader, PencilIcon } from 'lucide-react';
+import { DateTime } from 'luxon';
+import { useQueryStates } from 'nuqs';
+import { useMemo, useTransition } from 'react';
+import { match } from 'ts-pattern';
 
 import { DocumentStatus } from '~/components/general/document/document-status';
 import { useOptionalCurrentTeam } from '~/providers/team';
+import { inboxSearchParams, resolveInboxStatus } from '~/utils/inbox-search-params';
 
 import { EnvelopeDownloadDialog } from '../dialogs/envelope-download-dialog';
 import { StackAvatarsWithTooltip } from '../general/stack-avatars-with-tooltip';
-
-export type DocumentsTableProps = {
-  data?: TFindInboxResponse;
-  isLoading?: boolean;
-  isLoadingError?: boolean;
-};
 
 type DocumentsTableRow = TFindInboxResponse['data'][number];
 
@@ -43,16 +35,28 @@ export const InboxTable = () => {
   const team = useOptionalCurrentTeam();
   const [isPending, startTransition] = useTransition();
 
-  const [searchParams] = useSearchParams();
   const updateSearchParams = useUpdateSearchParams();
 
-  const page = searchParams?.get?.('page') ? Number(searchParams.get('page')) : undefined;
-  const perPage = searchParams?.get?.('perPage') ? Number(searchParams.get('perPage')) : undefined;
-
-  const { data, isLoading, isLoadingError } = trpc.document.inbox.find.useQuery({
-    page: page || 1,
-    perPage: perPage || 10,
+  const [findInboxSearchParams] = useQueryStates(inboxSearchParams, {
+    history: 'push',
   });
+
+  const status = resolveInboxStatus(findInboxSearchParams.status);
+  const query = findInboxSearchParams.query ?? '';
+
+  const { data, isLoading, isLoadingError } = trpc.document.inbox.find.useQuery(
+    {
+      page: Math.max(findInboxSearchParams.page ?? 1, 1),
+      perPage: Math.min(Math.max(findInboxSearchParams.perPage ?? 10, 1), 100),
+      query: query || undefined,
+      status,
+    },
+    {
+      placeholderData: (previousData) => previousData,
+    },
+  );
+
+  const hasSearchQuery = query.trim().length > 0;
 
   const columns = useMemo(() => {
     return [
@@ -65,9 +69,7 @@ export const InboxTable = () => {
       {
         header: _(msg`Title`),
         cell: ({ row }) => (
-          <span className="block max-w-[10rem] truncate font-medium md:max-w-[20rem]">
-            {row.original.title}
-          </span>
+          <span className="block max-w-[10rem] truncate font-medium md:max-w-[20rem]">{row.original.title}</span>
         ),
       },
       {
@@ -79,10 +81,7 @@ export const InboxTable = () => {
         header: _(msg`Recipient`),
         accessorKey: 'recipient',
         cell: ({ row }) => (
-          <StackAvatarsWithTooltip
-            recipients={row.original.recipients}
-            documentStatus={row.original.status}
-          />
+          <StackAvatarsWithTooltip recipients={row.original.recipients} documentStatus={row.original.status} />
         ),
       },
       {
@@ -130,9 +129,22 @@ export const InboxTable = () => {
           enable: isLoadingError || false,
         }}
         emptyState={
-          <div className="text-muted-foreground/60 flex h-60 flex-col items-center justify-center gap-y-4">
+          <div className="flex h-60 flex-col items-center justify-center gap-y-4 text-muted-foreground/60">
             <p>
-              <Trans>Documents that require your attention will appear here</Trans>
+              {match({ hasSearchQuery, status })
+                .with({ hasSearchQuery: true }, () => <Trans>No documents match your search</Trans>)
+                .with({ status: DocumentStatusEnum.COMPLETED }, () => (
+                  <Trans>Documents that you have completed will appear here</Trans>
+                ))
+                .with({ status: DocumentStatusEnum.REJECTED }, () => (
+                  <Trans>Documents that have been rejected will appear here</Trans>
+                ))
+                .with({ status: DocumentStatusEnum.CANCELLED }, () => (
+                  <Trans>Documents that have been cancelled will appear here</Trans>
+                ))
+                .otherwise(() => (
+                  <Trans>Documents that require your attention will appear here</Trans>
+                ))}
             </p>
           </div>
         }
@@ -163,15 +175,13 @@ export const InboxTable = () => {
         }}
       >
         {(table) =>
-          results.totalPages > 1 && (
-            <DataTablePagination additionalInformation="VisibleCount" table={table} />
-          )
+          results.totalPages > 1 && <DataTablePagination additionalInformation="VisibleCount" table={table} />
         }
       </DataTable>
 
       {isPending && (
-        <div className="bg-background/50 absolute inset-0 flex items-center justify-center">
-          <Loader className="text-muted-foreground h-8 w-8 animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+          <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       )}
     </div>
@@ -211,32 +221,32 @@ export const InboxTableActionButton = ({ row }: InboxTableActionButtonProps) => 
   })
     .with({ isPending: true, isSigned: false }, () => (
       <Button className="w-32" asChild>
-        <Link to={`/sign/${recipient?.token}`}>
+        <a href={`/sign/${recipient?.token}`}>
           {match(role)
             .with(RecipientRole.SIGNER, () => (
               <>
-                <PencilIcon className="-ml-1 mr-2 h-4 w-4" />
+                <PencilIcon className="mr-2 -ml-1 h-4 w-4" />
                 <Trans>Sign</Trans>
               </>
             ))
             .with(RecipientRole.APPROVER, () => (
               <>
-                <CheckCircleIcon className="-ml-1 mr-2 h-4 w-4" />
+                <CheckCircleIcon className="mr-2 -ml-1 h-4 w-4" />
                 <Trans>Approve</Trans>
               </>
             ))
             .otherwise(() => (
               <>
-                <EyeIcon className="-ml-1 mr-2 h-4 w-4" />
+                <EyeIcon className="mr-2 -ml-1 h-4 w-4" />
                 <Trans>View</Trans>
               </>
             ))}
-        </Link>
+        </a>
       </Button>
     ))
     .with({ isPending: true, isSigned: true }, () => (
       <Button className="w-32" disabled={true}>
-        <EyeIcon className="-ml-1 mr-2 h-4 w-4" />
+        <EyeIcon className="mr-2 -ml-1 h-4 w-4" />
         <Trans>View</Trans>
       </Button>
     ))
@@ -247,7 +257,7 @@ export const InboxTableActionButton = ({ row }: InboxTableActionButtonProps) => 
         token={recipient?.token}
         trigger={
           <Button className="w-32">
-            <DownloadIcon className="-ml-1 mr-2 inline h-4 w-4" />
+            <DownloadIcon className="mr-2 -ml-1 inline h-4 w-4" />
             <Trans>Download</Trans>
           </Button>
         }

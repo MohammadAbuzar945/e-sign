@@ -1,4 +1,4 @@
-import { zodResolver } from '@hookform/resolvers/zod';
+﻿import { zodResolver } from '@hookform/resolvers/zod';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
@@ -16,6 +16,7 @@ import {
   SITE_SETTINGS_BANNER_ID,
   ZSiteSettingsBannerSchema,
 } from '@documenso/lib/server-only/site-settings/schemas/banner';
+import { SITE_SETTINGS_EMAIL_BLOCKLIST_ID } from '@documenso/lib/server-only/site-settings/schemas/email-blocklist';
 import {
   RESELLER_TERMS_PROVIDER,
   SITE_SETTINGS_RESELLER_ID,
@@ -39,6 +40,7 @@ import { Switch } from '@documenso/ui/primitives/switch';
 import { Textarea } from '@documenso/ui/primitives/textarea';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
+import { AdminEmailBlocklistSection } from '~/components/general/admin-email-blocklist-section';
 import { SettingsHeader } from '~/components/general/settings-header';
 
 import type { Route } from './+types/site-settings';
@@ -70,16 +72,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   const banner = settings.find((setting) => setting.id === SITE_SETTINGS_BANNER_ID);
   const reseller = settings.find((setting) => setting.id === SITE_SETTINGS_RESELLER_ID);
+  const emailBlocklist = settings.find((setting) => setting.id === SITE_SETTINGS_EMAIL_BLOCKLIST_ID);
 
   return {
     banner,
     reseller,
+    emailBlocklist,
     canAccessReseller: hasResellerFeatureAccess(user.email),
   };
 }
 
 export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
-  const { banner, reseller, canAccessReseller } = loaderData;
+  const { banner, reseller, emailBlocklist, canAccessReseller } = loaderData;
 
   const { toast } = useToast();
   const { _ } = useLingui();
@@ -605,6 +609,8 @@ export default function AdminBannerPage({ loaderData }: Route.ComponentProps) {
           </Form>
         </div>
         ) : null}
+
+        <AdminEmailBlocklistSection emailBlocklist={emailBlocklist} />
       </div>
     </div>
   );

@@ -1,17 +1,15 @@
-import { EnvelopeType } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { mapSecondaryIdToTemplateId } from '../../utils/envelope';
+import { assertSenderNotDisabled } from '../user/assert-user-not-disabled';
 
 export interface GetTemplateByDirectLinkTokenOptions {
   token: string;
 }
 
-export const getTemplateByDirectLinkToken = async ({
-  token,
-}: GetTemplateByDirectLinkTokenOptions) => {
+export const getTemplateByDirectLinkToken = async ({ token }: GetTemplateByDirectLinkTokenOptions) => {
   const envelope = await prisma.envelope.findFirst({
     where: {
       type: EnvelopeType.TEMPLATE,
@@ -44,6 +42,8 @@ export const getTemplateByDirectLinkToken = async ({
   if (!directLink || !firstDocumentData) {
     throw new AppError(AppErrorCode.NOT_FOUND);
   }
+
+  await assertSenderNotDisabled({ userId: envelope.userId });
 
   const recipientsWithMappedFields = envelope.recipients.map((recipient) => ({
     ...recipient,
@@ -90,6 +90,7 @@ export const getTemplateByDirectLinkToken = async ({
     envelopeItems: envelope.envelopeItems.map((item) => ({
       id: item.id,
       envelopeId: item.envelopeId,
+      documentDataId: item.documentDataId,
     })),
   };
 };

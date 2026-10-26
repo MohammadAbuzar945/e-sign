@@ -1,10 +1,6 @@
-import { useEffect, useState } from 'react';
-
-import { useLingui } from '@lingui/react/macro';
-import { useLocation, useSearchParams } from 'react-router';
-
-import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { Input } from '@documenso/ui/primitives/input';
+import { useLingui } from '@lingui/react/macro';
+import { debounce, parseAsString, useQueryState } from 'nuqs';
 
 import { SettingsHeader } from '~/components/general/settings-header';
 import { AdminOrganisationsTable } from '~/components/tables/admin-organisations-table';
@@ -12,45 +8,19 @@ import { AdminOrganisationsTable } from '~/components/tables/admin-organisations
 export default function Organisations() {
   const { t } = useLingui();
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { pathname } = useLocation();
-
-  const [searchQuery, setSearchQuery] = useState(() => searchParams?.get('query') ?? '');
-
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, 500);
-
-  /**
-   * Handle debouncing the search query.
-   */
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams?.toString());
-
-    params.set('query', debouncedSearchQuery);
-
-    if (debouncedSearchQuery === '') {
-      params.delete('query');
-    }
-
-    // If nothing  to change then do nothing.
-    if (params.toString() === searchParams?.toString()) {
-      return;
-    }
-
-    setSearchParams(params);
-  }, [debouncedSearchQuery, pathname, searchParams]);
+  const [searchQuery, setSearchQuery] = useQueryState(
+    'query',
+    parseAsString.withDefault('').withOptions({ shallow: false, limitUrlUpdates: debounce(500) }),
+  );
 
   return (
     <div>
-      <SettingsHeader
-        hideDivider
-        title={t`Manage organisations`}
-        subtitle={t`Search and manage all organisations`}
-      />
+      <SettingsHeader hideDivider title={t`Manage organisations`} subtitle={t`Search and manage all organisations`} />
 
       <div className="mt-4">
         <Input
-          defaultValue={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={searchQuery}
+          onChange={(e) => void setSearchQuery(e.target.value || null)}
           placeholder={t`Search by organisation ID, name, customer ID or owner email`}
           className="mb-4"
         />

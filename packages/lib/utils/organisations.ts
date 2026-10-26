@@ -1,14 +1,10 @@
-import {
-  DocumentVisibility,
-  Prisma,
-  type Organisation,
-  type OrganisationGroup,
-  type OrganisationMemberRole,
-} from '@prisma/client';
-
 import type { ORGANISATION_MEMBER_ROLE_MAP } from '@documenso/lib/constants/organisations-translations';
+import type { Organisation, OrganisationGlobalSettings, Prisma } from '@prisma/client';
+import { DocumentVisibility, OrganisationMemberRole, type OrganisationGroup } from '@prisma/client';
 
 import { DEFAULT_DOCUMENT_DATE_FORMAT } from '../constants/date-formats';
+import { DEFAULT_ENVELOPE_EXPIRATION_PERIOD } from '../constants/envelope-expiration';
+import { DEFAULT_ENVELOPE_REMINDER_SETTINGS } from '../constants/envelope-reminder';
 import {
   LOWEST_ORGANISATION_ROLE,
   ORGANISATION_MEMBER_ROLE_HIERARCHY,
@@ -18,7 +14,7 @@ import { DEFAULT_DOCUMENT_EMAIL_SETTINGS } from '../types/document-email';
 
 import { getDefaultOrganisationKbaSettingsJson } from './kba-settings';
 
-export const isPersonalLayout = (organisations: Pick<Organisation, 'type'>[]) => {
+export const isPersonalLayout = (_organisations: Pick<Organisation, 'type'>[]) => {
   return false;
 };
 
@@ -34,6 +30,18 @@ export const canExecuteOrganisationAction = (
   role: keyof typeof ORGANISATION_MEMBER_ROLE_MAP,
 ) => {
   return ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP[action].some((i) => i === role);
+};
+
+/**
+ * Organisation analytics are restricted to organisation admins, unlike organisation
+ * settings which managers can also access.
+ */
+export const canAccessOrganisationAnalytics = (role: keyof typeof ORGANISATION_MEMBER_ROLE_MAP) => {
+  return role === OrganisationMemberRole.ADMIN;
+};
+
+export const formatOrganisationAnalyticsPath = (organisationUrl: string) => {
+  return `/o/${organisationUrl}/analytics`;
 };
 
 /**
@@ -111,7 +119,10 @@ export const buildOrganisationWhereQuery = ({
   };
 };
 
-export const generateDefaultOrganisationSettings = () => {
+export const generateDefaultOrganisationSettings = (): Omit<
+  OrganisationGlobalSettings,
+  'id' | 'organisation'
+> => {
   return {
     documentVisibility: DocumentVisibility.EVERYONE,
     documentLanguage: 'en',
@@ -132,14 +143,21 @@ export const generateDefaultOrganisationSettings = () => {
     brandingLogo: '',
     brandingUrl: '',
     brandingCompanyDetails: '',
+    brandingColors: null,
+    brandingCss: '',
 
     emailId: null,
     emailReplyTo: null,
     // emailReplyToName: null,
     emailDocumentSettings: DEFAULT_DOCUMENT_EMAIL_SETTINGS,
 
-    defaultRecipients: Prisma.DbNull,
+    defaultRecipients: null,
+
+    envelopeExpirationPeriod: DEFAULT_ENVELOPE_EXPIRATION_PERIOD,
+
+    reminderSettings: DEFAULT_ENVELOPE_REMINDER_SETTINGS,
+
     aiFeaturesEnabled: false,
     kbaSettings: getDefaultOrganisationKbaSettingsJson(),
-  } satisfies Omit<Prisma.OrganisationGlobalSettingsUncheckedCreateInput, 'id'>;
+  };
 };

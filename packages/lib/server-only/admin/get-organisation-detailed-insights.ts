@@ -1,8 +1,7 @@
-import type { DocumentStatus } from '@prisma/client';
-import { EnvelopeType } from '@prisma/client';
-
 import type { DateRange } from '@documenso/lib/types/search-params';
 import { kyselyPrisma, sql } from '@documenso/prisma';
+import type { DocumentStatus } from '@prisma/client';
+import { EnvelopeType } from '@prisma/client';
 
 export type OrganisationSummary = {
   totalTeams: number;
@@ -11,6 +10,7 @@ export type OrganisationSummary = {
   activeDocuments: number;
   completedDocuments: number;
   volumeThisPeriod: number;
+  documentsThisPeriod: number;
   volumeAllTime: number;
 };
 
@@ -260,10 +260,7 @@ async function getDocumentInsights(
 
   countQuery = countQuery.select(({ fn }) => [fn.countAll().as('count')]);
 
-  const [documents, countResult] = await Promise.all([
-    documentsQuery.execute(),
-    countQuery.execute(),
-  ]);
+  const [documents, countResult] = await Promise.all([documentsQuery.execute(), countQuery.execute()]);
 
   const count = Number((countResult[0] as { count: number })?.count || 0);
 
@@ -294,24 +291,25 @@ async function getOrganisationSummary(
     .select(sql<number>`count(id)`.as('count'))
     .executeTakeFirst();
 
-  // Current inventory excludes soft-deleted docs; lifetime completed volume includes them
-  // so deleting a completed document does not reduce historical usage metrics.
   const envelopeStatsQuery = kyselyPrisma.$kysely
     .selectFrom('Envelope as e')
     .innerJoin('Team as t', 't.id', 'e.teamId')
     .where('t.organisationId', '=', organisationId)
+    .where('e.deletedAt', 'is', null)
     .where('e.type', '=', sql.lit(EnvelopeType.DOCUMENT))
     .select([
-      sql<number>`count(case when e."deletedAt" is null then 1 end)`.as('totalDocuments'),
-      sql<number>`count(case when e."deletedAt" is null and e.status in ('DRAFT', 'PENDING') then 1 end)`.as(
-        'activeDocuments',
-      ),
+      sql<number>`count(e.id)`.as('totalDocuments'),
+      sql<number>`count(case when e.status in ('DRAFT', 'PENDING') then 1 end)`.as('activeDocuments'),
       sql<number>`count(case when e.status = 'COMPLETED' then 1 end)`.as('completedDocuments'),
       sql<number>`count(case when e.status = 'COMPLETED' then 1 end)`.as('volumeAllTime'),
       (createdAtFrom
         ? sql<number>`count(case when e.status = 'COMPLETED' and e."createdAt" >= ${createdAtFrom} then 1 end)`
         : sql<number>`count(case when e.status = 'COMPLETED' then 1 end)`
       ).as('volumeThisPeriod'),
+      (createdAtFrom
+        ? sql<number>`count(case when e."createdAt" >= ${createdAtFrom} then 1 end)`
+        : sql<number>`count(e.id)`
+      ).as('documentsThisPeriod'),
     ])
     .executeTakeFirst();
 
@@ -328,6 +326,7 @@ async function getOrganisationSummary(
     activeDocuments: Number(envelopeStats?.activeDocuments || 0),
     completedDocuments: Number(envelopeStats?.completedDocuments || 0),
     volumeThisPeriod: Number(envelopeStats?.volumeThisPeriod || 0),
+    documentsThisPeriod: Number(envelopeStats?.documentsThisPeriod || 0),
     volumeAllTime: Number(envelopeStats?.volumeAllTime || 0),
   };
 }

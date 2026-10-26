@@ -9,10 +9,7 @@ import { OrganisationGroupType, OrganisationMemberRole } from '@documenso/prisma
 import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 
 import { authenticatedProcedure } from '../trpc';
-import {
-  ZDeleteTeamGroupRequestSchema,
-  ZDeleteTeamGroupResponseSchema,
-} from './delete-team-group.types';
+import { ZDeleteTeamGroupRequestSchema, ZDeleteTeamGroupResponseSchema } from './delete-team-group.types';
 
 export const deleteTeamGroupRoute = authenticatedProcedure
   // .meta(deleteTeamGroupMeta)
@@ -56,6 +53,15 @@ export const deleteTeamGroupRoute = authenticatedProcedure
     if (!group) {
       throw new AppError(AppErrorCode.NOT_FOUND, {
         message: 'Team group not found',
+      });
+    }
+
+    // You cannot delete internal team groups. These are the system-managed
+    // admin/manager/member groups that back the team's role-based access, and
+    // deleting them would silently strip team members of their access.
+    if (group.organisationGroup.type === OrganisationGroupType.INTERNAL_TEAM) {
+      throw new AppError(AppErrorCode.UNAUTHORIZED, {
+        message: 'You are not allowed to delete internal team groups',
       });
     }
 

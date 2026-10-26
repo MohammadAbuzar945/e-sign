@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from 'react';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { HexColorInput, HexColorPicker } from 'react-colorful';
+import { HexColorInput, HexColorPicker, setNonce } from 'react-colorful';
 
 import { cn } from '../lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
@@ -11,80 +11,86 @@ export type ColorPickerProps = {
   value: string;
   defaultValue?: string;
   onChange: (color: string) => void;
+  nonce?: string;
 } & HTMLAttributes<HTMLDivElement>;
 
-export const ColorPicker = React.forwardRef<HTMLButtonElement, ColorPickerProps>(
-  (
-    { className, disabled = false, value, defaultValue = '#000000', onChange, ...props },
-    ref,
-  ) => {
-    const [color, setColor] = useState(value || defaultValue);
-    const [inputColor, setInputColor] = useState(value || defaultValue);
+export const ColorPicker = ({
+  className,
+  disabled = false,
+  value,
+  defaultValue = '#000000',
+  onChange,
+  nonce,
+  ...props
+}: ColorPickerProps) => {
+  const [color, setColor] = useState(value || defaultValue);
+  const [inputColor, setInputColor] = useState(value || defaultValue);
 
-    useEffect(() => {
-      const nextColor = value || defaultValue;
+  useEffect(() => {
+    const nextColor = value || defaultValue;
 
-      setColor(nextColor);
-      setInputColor(nextColor);
-    }, [value, defaultValue]);
+    setColor(nextColor);
+    setInputColor(nextColor);
+  }, [value, defaultValue]);
 
-    const onColorChange = (newColor: string) => {
-      setColor(newColor);
-      setInputColor(newColor);
-      onChange(newColor);
-    };
+  useEffect(() => {
+    if (nonce) {
+      setNonce(nonce);
+    }
+  }, [nonce]);
 
-    const onInputChange = (newColor: string) => {
-      setInputColor(newColor);
-    };
+  const onColorChange = (newColor: string) => {
+    setColor(newColor);
+    setInputColor(newColor);
+    onChange(newColor);
+  };
 
-    const onInputBlur = () => {
-      setColor(inputColor);
-      onChange(inputColor);
-    };
+  const onInputChange = (newColor: string) => {
+    setInputColor(newColor);
+  };
 
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            ref={ref}
-            type="button"
-            disabled={disabled}
-            className="bg-background h-12 w-12 rounded-md border p-1 disabled:pointer-events-none disabled:opacity-50"
-          >
-            <div className="h-full w-full rounded-sm" style={{ backgroundColor: color }} />
-          </button>
-        </PopoverTrigger>
+  const onInputBlur = () => {
+    setColor(inputColor);
+    onChange(inputColor);
+  };
 
-        <PopoverContent className="w-auto">
-          <HexColorPicker
-            className={cn(
-              className,
-              'w-full aria-disabled:pointer-events-none aria-disabled:opacity-50',
-            )}
-            color={color}
-            onChange={onColorChange}
-            aria-disabled={disabled}
-            {...props}
-          />
+  return (
+    <Popover>
+      <PopoverTrigger>
+        <button
+          type="button"
+          disabled={disabled}
+          className="h-12 w-12 rounded-md border bg-background p-1 disabled:pointer-events-none disabled:opacity-50"
+        >
+          <div className="h-full w-full rounded-sm" style={{ backgroundColor: color }} />
+        </button>
+      </PopoverTrigger>
 
-          <HexColorInput
-            className="mt-4 h-10 rounded-md border bg-transparent px-3 py-2 text-sm disabled:pointer-events-none disabled:opacity-50"
-            color={inputColor}
-            onChange={onInputChange}
-            onBlur={onInputBlur}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onInputBlur();
-              }
-            }}
-            disabled={disabled}
-          />
-        </PopoverContent>
-      </Popover>
-    );
-  },
-);
+      <PopoverContent className="w-auto">
+        <HexColorPicker
+          className={cn(className, 'w-full aria-disabled:pointer-events-none aria-disabled:opacity-50')}
+          color={color}
+          onChange={onColorChange}
+          aria-disabled={disabled}
+          nonce={nonce}
+          {...props}
+        />
 
-ColorPicker.displayName = 'ColorPicker';
+        <HexColorInput
+          className="mt-4 h-10 rounded-md border bg-transparent px-3 py-2 text-sm disabled:pointer-events-none disabled:opacity-50"
+          color={inputColor}
+          onChange={onInputChange}
+          onBlur={onInputBlur}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onInputBlur();
+            }
+          }}
+          disabled={disabled}
+          nonce={nonce}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+};

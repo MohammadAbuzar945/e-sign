@@ -1,9 +1,8 @@
+import { env } from '@documenso/lib/utils/env';
 import { PDF } from '@libpdf/core';
 import { DocumentDataType } from '@prisma/client';
 import { base64 } from '@scure/base';
 import { match } from 'ts-pattern';
-
-import { env } from '@documenso/lib/utils/env';
 
 import { AppError } from '../../errors/app-error';
 import { createDocumentData } from '../../server-only/document-data/create-document-data';
@@ -20,7 +19,7 @@ type File = {
  * Uploads a document file to the appropriate storage location and creates
  * a document data record.
  */
-export const putPdfFileServerSide = async (file: File) => {
+export const putPdfFileServerSide = async (file: File, initialData?: string) => {
   const isEncryptedDocumentsAllowed = false; // Was feature flag.
 
   const arrayBuffer = await file.arrayBuffer();
@@ -41,7 +40,12 @@ export const putPdfFileServerSide = async (file: File) => {
 
   const { type, data } = await putFileServerSide(file);
 
-  return await createDocumentData({ type, data });
+  const createdData = await createDocumentData({ type, data, initialData });
+
+  return {
+    documentData: createdData,
+    filePageCount: pdf.getPageCount(),
+  };
 };
 
 /**
@@ -76,8 +80,9 @@ export const putFileServerSide = async (file: File) => {
   const NEXT_PUBLIC_UPLOAD_TRANSPORT = env('NEXT_PUBLIC_UPLOAD_TRANSPORT');
 
   return await match(NEXT_PUBLIC_UPLOAD_TRANSPORT)
-    .with('s3', async () => putFileInS3(file))
-    .with('gcs', async () => putFileInGCS(file))
+    .with('s3', async () => putFileInObjectStorage(file))
+    .with('gcs', async () => putFileInObjectStorage(file))
+    .with('azure-blob', async () => putFileInObjectStorage(file))
     .otherwise(async () => putFileInDatabase(file));
 };
 
@@ -94,24 +99,7 @@ const putFileInDatabase = async (file: File) => {
   };
 };
 
-const putFileInS3 = async (file: File) => {
-  const buffer = await file.arrayBuffer();
-
-  const blob = new Blob([buffer], { type: file.type });
-
-  const newFile = new File([blob], file.name, {
-    type: file.type,
-  });
-
-  const { key } = await uploadS3File(newFile);
-
-  return {
-    type: DocumentDataType.S3_PATH,
-    data: key,
-  };
-};
-
-const putFileInGCS = async (file: File) => {
+const putFileInObjectStorage = async (file: File) => {
   const buffer = await file.arrayBuffer();
 
   const blob = new Blob([buffer], { type: file.type });

@@ -1,13 +1,18 @@
 import { Trans } from '@lingui/react/macro';
 import {
+  AlertTriangleIcon,
   BarChart3,
+  Building2Icon,
   CoinsIcon,
   FileStack,
   LayersIcon,
+  LineChartIcon,
+  MailIcon,
   Settings,
   StoreIcon,
   Trophy,
   Users,
+  Wallet2,
   WebhookIcon,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
@@ -45,6 +50,18 @@ export const AdminNavLinks = ({
       isActive: pathname?.startsWith('/admin/stats'),
     },
     {
+      href: '/admin/organisations',
+      label: <Trans>Organisations</Trans>,
+      icon: Building2Icon,
+      isActive: pathname?.startsWith('/admin/organisations'),
+    },
+    {
+      href: '/admin/claims',
+      label: <Trans>Claims</Trans>,
+      icon: Wallet2,
+      isActive: pathname?.startsWith('/admin/claims'),
+    },
+    {
       href: '/admin/users',
       label: <Trans>Users</Trans>,
       icon: Users,
@@ -63,10 +80,34 @@ export const AdminNavLinks = ({
       isActive: pathname?.startsWith('/admin/organisation-insights'),
     },
     {
+      href: '/admin/organisation-stats',
+      label: <Trans>Organisation Stats</Trans>,
+      icon: LineChartIcon,
+      isActive: pathname?.startsWith('/admin/organisation-stats'),
+    },
+    {
       href: '/admin/nomia-pricing',
       label: <Trans>Nomia pricing</Trans>,
       icon: CoinsIcon,
       isActive: pathname?.startsWith('/admin/nomia-pricing'),
+    },
+    {
+      href: '/admin/email-domains',
+      label: <Trans>Email Domains</Trans>,
+      icon: MailIcon,
+      isActive: pathname?.startsWith('/admin/email-domains'),
+    },
+    {
+      href: '/admin/email-transports',
+      label: <Trans>Email Transports</Trans>,
+      icon: MailIcon,
+      isActive: pathname?.startsWith('/admin/email-transports'),
+    },
+    {
+      href: '/admin/unsealed-documents',
+      label: <Trans>Unsealed Documents</Trans>,
+      icon: AlertTriangleIcon,
+      isActive: pathname?.startsWith('/admin/unsealed-documents'),
     },
     ...(canAccessReseller && isDemoFeatureVisible('ADMIN_RESELLERS')
       ? [

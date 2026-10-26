@@ -7,9 +7,9 @@ import { parseClaimFlags } from '@documenso/lib/utils/parse-claim-flags';
 
 import { procedure } from '../trpc';
 import {
+  createEmbeddingPresignTokenMeta,
   ZCreateEmbeddingPresignTokenRequestSchema,
   ZCreateEmbeddingPresignTokenResponseSchema,
-  createEmbeddingPresignTokenMeta,
 } from './create-embedding-presign-token.types';
 
 /**
@@ -47,7 +47,7 @@ export const createEmbeddingPresignTokenRoute = procedure
 
         if (!parseClaimFlags(organisationClaim.flags).embedAuthoring) {
           throw new AppError(AppErrorCode.UNAUTHORIZED, {
-            message: 'You do not have permission to create embedding presign tokens',
+            message: 'Embedded Authoring is not included in your current plan. Please contact support.',
           });
         }
       }

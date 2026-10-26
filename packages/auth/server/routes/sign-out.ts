@@ -1,11 +1,10 @@
+import { prisma } from '@documenso/prisma';
 import { sValidator } from '@hono/standard-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
-import { prisma } from '@documenso/prisma';
-
 import { invalidateSessions, validateSessionToken } from '../lib/session/session';
-import { deleteSessionCookie, getSessionCookie } from '../lib/session/session-cookies';
+import { deleteEmbedSessionCookie, deleteSessionCookie, getSessionCookie } from '../lib/session/session-cookies';
 import type { HonoAuthContext } from '../types/context';
 
 const ZSignoutSessionSchema = z.object({
@@ -26,6 +25,7 @@ export const signOutRoute = new Hono<HonoAuthContext>()
 
     if (!session) {
       deleteSessionCookie(c);
+      deleteEmbedSessionCookie(c);
       return new Response('No session found', { status: 401 });
     }
 
@@ -37,6 +37,7 @@ export const signOutRoute = new Hono<HonoAuthContext>()
     });
 
     deleteSessionCookie(c);
+    deleteEmbedSessionCookie(c);
 
     return c.status(200);
   })
@@ -53,6 +54,7 @@ export const signOutRoute = new Hono<HonoAuthContext>()
 
     if (!session) {
       deleteSessionCookie(c);
+      deleteEmbedSessionCookie(c);
       return new Response('No session found', { status: 401 });
     }
 
@@ -96,6 +98,7 @@ export const signOutRoute = new Hono<HonoAuthContext>()
 
     if (!session) {
       deleteSessionCookie(c);
+      deleteEmbedSessionCookie(c);
       return new Response('No session found', { status: 401 });
     }
 
@@ -108,6 +111,7 @@ export const signOutRoute = new Hono<HonoAuthContext>()
 
     if (session.id === sessionIdToRevoke) {
       deleteSessionCookie(c);
+      deleteEmbedSessionCookie(c);
     }
 
     return c.status(200);

@@ -1,6 +1,5 @@
-import { z } from 'zod';
-
 import ApiTokenSchema from '@documenso/prisma/generated/zod/modelSchema/ApiTokenSchema';
+import { z } from 'zod';
 
 export const ZGetApiTokensRequestSchema = z.void();
 
@@ -10,6 +9,7 @@ export const ZGetApiTokensResponseSchema = z.array(
     name: true,
     createdAt: true,
     expires: true,
+    lastUsedAt: true,
   }),
 );
 

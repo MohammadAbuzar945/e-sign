@@ -1,3 +1,4 @@
+import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 import { Loader } from 'lucide-react';
 import { useLoaderData } from 'react-router';
@@ -19,7 +20,7 @@ import { SettingsHeader } from '~/components/general/settings-header';
 import { appMetaTags } from '~/utils/meta';
 
 export function meta() {
-  return appMetaTags('Document Preferences');
+  return appMetaTags(msg`Document Preferences`);
 }
 
 export const loader = () => {
@@ -117,6 +118,8 @@ export default function OrganisationSettingsDocumentPage() {
         description: t`We were unable to update your document preferences at this time, please try again later`,
         variant: 'destructive',
       });
+
+      throw err;
     }
   };
 
@@ -134,7 +137,7 @@ export default function OrganisationSettingsDocumentPage() {
     : t`Here you can set document preferences for your organisation. Teams will inherit these settings by default.`;
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <SettingsHeader title={settingsHeaderText} subtitle={settingsHeaderSubtitle} />
 
       <section>

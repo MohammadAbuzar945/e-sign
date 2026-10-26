@@ -6,12 +6,7 @@ export type EmbedSigningContextValue = {
   isNameLocked: boolean;
   isEmailLocked: boolean;
   hidePoweredBy: boolean;
-  onDocumentCompleted: (data: {
-    token: string;
-    documentId: number;
-    envelopeId: string;
-    recipientId: number;
-  }) => void;
+  onDocumentCompleted: (data: { token: string; documentId: number; envelopeId: string; recipientId: number }) => void;
   onDocumentError: () => void;
   onDocumentRejected: (data: {
     token: string;
@@ -23,6 +18,7 @@ export type EmbedSigningContextValue = {
   onDocumentReady: () => void;
   onFieldSigned: (data: { fieldId?: number; value?: string; isBase64?: boolean }) => void;
   onFieldUnsigned: (data: { fieldId?: number }) => void;
+  onSignatureChanged: (signature: string | null) => void;
 };
 
 const EmbedSigningContext = createContext<EmbedSigningContextValue | null>(null);
@@ -46,12 +42,7 @@ export type EmbedSigningProviderProps = {
   isNameLocked?: boolean;
   isEmailLocked?: boolean;
   hidePoweredBy?: boolean;
-  onDocumentCompleted: (data: {
-    token: string;
-    documentId: number;
-    envelopeId: string;
-    recipientId: number;
-  }) => void;
+  onDocumentCompleted: (data: { token: string; documentId: number; envelopeId: string; recipientId: number }) => void;
   onDocumentError: () => void;
   onDocumentRejected: (data: {
     token: string;
@@ -63,6 +54,7 @@ export type EmbedSigningProviderProps = {
   onDocumentReady: () => void;
   onFieldSigned: (data: { fieldId?: number; value?: string; isBase64?: boolean }) => void;
   onFieldUnsigned: (data: { fieldId?: number }) => void;
+  onSignatureChanged: (signature: string | null) => void;
   children: React.ReactNode;
 };
 
@@ -77,6 +69,7 @@ export const EmbedSigningProvider = ({
   onDocumentReady,
   onFieldSigned,
   onFieldUnsigned,
+  onSignatureChanged,
   children,
 }: EmbedSigningProviderProps) => {
   return (
@@ -93,6 +86,7 @@ export const EmbedSigningProvider = ({
         onDocumentReady,
         onFieldSigned,
         onFieldUnsigned,
+        onSignatureChanged,
       }}
     >
       {children}

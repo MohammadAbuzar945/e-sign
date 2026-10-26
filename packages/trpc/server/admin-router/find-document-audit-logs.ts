@@ -15,9 +15,10 @@ import {
 export const findDocumentAuditLogsRoute = adminProcedure
   .input(ZFindDocumentAuditLogsRequestSchema)
   .output(ZFindDocumentAuditLogsResponseSchema)
-  .query(async ({ input, ctx }) => {
+  .query(async ({ input }) => {
     const {
       envelopeId,
+      recipientId,
       page = 1,
       perPage = 50,
       orderByColumn = 'createdAt',
@@ -43,6 +44,13 @@ export const findDocumentAuditLogsRoute = adminProcedure
     const whereClause: Prisma.DocumentAuditLogWhereInput = {
       envelopeId: envelope.id,
     };
+
+    if (recipientId !== undefined) {
+      whereClause.data = {
+        path: ['recipientId'],
+        equals: recipientId,
+      };
+    }
 
     const [data, count] = await Promise.all([
       prisma.documentAuditLog.findMany({

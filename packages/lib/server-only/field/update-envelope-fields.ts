@@ -1,18 +1,16 @@
+import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
+import type { TFieldMetaSchema } from '@documenso/lib/types/field-meta';
+import { FIELD_META_DEFAULT_VALUES } from '@documenso/lib/types/field-meta';
+import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
+import { createDocumentAuditLogData, diffFieldChanges } from '@documenso/lib/utils/document-audit-logs';
+import { prisma } from '@documenso/prisma';
 import { EnvelopeType, type FieldType } from '@prisma/client';
 
-import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
-import { ZFieldMetaSchema, type TFieldMetaSchema } from '@documenso/lib/types/field-meta';
-import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
-import {
-  createDocumentAuditLogData,
-  diffFieldChanges,
-} from '@documenso/lib/utils/document-audit-logs';
-import { prisma } from '@documenso/prisma';
-
 import { AppError, AppErrorCode } from '../../errors/app-error';
-import { type EnvelopeIdOptions } from '../../utils/envelope';
+import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { mapFieldToLegacyField } from '../../utils/fields';
 import { canRecipientFieldsBeModified } from '../../utils/recipients';
+import { assertEnvelopeMutable } from '../envelope/assert-envelope-mutable';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 
 export interface UpdateEnvelopeFieldsOptions {
@@ -64,6 +62,8 @@ export const updateEnvelopeFields = async ({
     });
   }
 
+  assertEnvelopeMutable(envelope);
+
   if (envelope.completedAt) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'Envelope already complete',
@@ -79,9 +79,7 @@ export const updateEnvelopeFields = async ({
       });
     }
 
-    const recipient = envelope.recipients.find(
-      (recipient) => recipient.id === originalField.recipientId,
-    );
+    const recipient = envelope.recipients.find((recipient) => recipient.id === originalField.recipientId);
 
     // Each field MUST have a recipient associated with it.
     if (!recipient) {
@@ -93,36 +91,26 @@ export const updateEnvelopeFields = async ({
     // Check whether the recipient associated with the field can be modified.
     if (!canRecipientFieldsBeModified(recipient, envelope.fields)) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message:
-          'Cannot modify a field where the recipient has already interacted with the document',
+        message: 'Cannot modify a field where the recipient has already interacted with the document',
       });
     }
 
     const fieldType = field.type || originalField.type;
-    const parsedOriginalFieldMeta = originalField.fieldMeta
-      ? ZFieldMetaSchema.safeParse(originalField.fieldMeta)
-      : null;
-    const originalFieldMetaType =
-      parsedOriginalFieldMeta?.success && parsedOriginalFieldMeta.data
-        ? parsedOriginalFieldMeta.data.type
-        : undefined;
-    const fieldMetaType = field.fieldMeta?.type || originalFieldMetaType;
+    const isFieldTypeChanged = fieldType !== originalField.type;
+
+    // An omitted fieldMeta keeps the stored one, unless the field type changes.
+    const fallbackFieldMeta = isFieldTypeChanged ? FIELD_META_DEFAULT_VALUES[fieldType] : undefined;
+    const fieldMeta = field.fieldMeta ?? fallbackFieldMeta;
+    const fieldMetaType = fieldMeta?.type || originalField.fieldMeta?.type;
 
     // Not going to mess with V1 envelopes.
-    if (
-      envelope.internalVersion === 2 &&
-      fieldMetaType &&
-      fieldMetaType.toLowerCase() !== fieldType.toLowerCase()
-    ) {
+    if (envelope.internalVersion === 2 && fieldMetaType && fieldMetaType.toLowerCase() !== fieldType.toLowerCase()) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Field meta type does not match the field type',
       });
     }
 
-    if (
-      field.envelopeItemId &&
-      !envelope.envelopeItems.some((item) => item.id === field.envelopeItemId)
-    ) {
+    if (field.envelopeItemId && !envelope.envelopeItems.some((item) => item.id === field.envelopeItemId)) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Envelope item not found',
       });
@@ -130,12 +118,17 @@ export const updateEnvelopeFields = async ({
 
     return {
       originalField,
-      updateData: field,
+      updateData: {
+        ...field,
+        fieldMeta,
+      },
       recipientEmail: recipient.email,
     };
   });
 
   const updatedFields = await prisma.$transaction(async (tx) => {
+    await assertEnvelopeMutable(envelope, tx);
+
     return await Promise.all(
       fieldsToUpdate.map(async ({ originalField, updateData, recipientEmail }) => {
         const updatedField = await tx.field.update({

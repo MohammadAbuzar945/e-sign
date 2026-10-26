@@ -1,12 +1,4 @@
-import { useId, useMemo, useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { type Field, type Recipient, RecipientRole } from '@prisma/client';
-import { Controller, useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router';
-
+import { AppError } from '@documenso/lib/errors/app-error';
 import type { DocumentAndSender } from '@documenso/lib/server-only/document/get-document-by-token';
 import type { TRecipientAccessAuth } from '@documenso/lib/types/document-auth';
 import { isFieldUnsignedAndRequired } from '@documenso/lib/utils/advanced-fields-helpers';
@@ -20,11 +12,17 @@ import { Label } from '@documenso/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@documenso/ui/primitives/radio-group';
 import { SignaturePadDialog } from '@documenso/ui/primitives/signature-pad/signature-pad-dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { type Field, type Recipient, RecipientRole } from '@prisma/client';
+import { useId, useMemo, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router';
 
-import {
-  AssistantConfirmationDialog,
-  type NextSigner,
-} from '../../dialogs/assistant-confirmation-dialog';
+import { getSigningCompletionErrorMessage } from '~/utils/toast-error-messages';
+
+import { AssistantConfirmationDialog, type NextSigner } from '../../dialogs/assistant-confirmation-dialog';
 import { DocumentSigningCompleteDialog } from './document-signing-complete-dialog';
 import { useRequiredDocumentSigningContext } from './document-signing-provider';
 
@@ -41,7 +39,11 @@ export type DocumentSigningFormProps = {
   }) => Promise<void>;
   isSubmitting: boolean;
   fieldsValidated: () => void;
-  nextRecipient?: RecipientWithFields;
+  /**
+   * The dictatable next recipient, decided server-side. Only their identity
+   * is needed — for the dictation flag and the prefilled inputs.
+   */
+  nextRecipient?: Pick<Recipient, 'name' | 'email'>;
 };
 
 export const DocumentSigningForm = ({
@@ -74,10 +76,7 @@ export const DocumentSigningForm = ({
     },
   });
 
-  const fieldsRequiringValidation = useMemo(
-    () => fields.filter(isFieldUnsignedAndRequired),
-    [fields],
-  );
+  const fieldsRequiringValidation = useMemo(() => fields.filter(isFieldUnsignedAndRequired), [fields]);
 
   const hasSignatureField = fields.some((field) => isSignatureFieldType(field.type));
 
@@ -88,6 +87,10 @@ export const DocumentSigningForm = ({
   const uninsertedRecipientFields = useMemo(() => {
     return fieldsRequiringValidation.filter((field) => field.recipientId === recipient.id);
   }, [fieldsRequiringValidation, recipient]);
+
+  const allowDictateNextSigner = Boolean(nextRecipient && document.documentMeta?.allowDictateNextSigner);
+
+  const defaultNextSigner = nextRecipient ? { name: nextRecipient.name, email: nextRecipient.email } : undefined;
 
   const localFieldsValidated = () => {
     setValidateUninsertedFields(true);
@@ -108,9 +111,12 @@ export const DocumentSigningForm = ({
     try {
       await completeDocument({ nextSigner });
     } catch (err) {
+      const error = AppError.parseError(err);
+      const toastMessage = getSigningCompletionErrorMessage(error.code);
+
       toast({
-        title: _(msg`Error`),
-        description: _(msg`An error occurred while completing the document. Please try again.`),
+        title: _(toastMessage.title),
+        description: _(toastMessage.description),
         variant: 'destructive',
       });
 
@@ -130,133 +136,106 @@ export const DocumentSigningForm = ({
       <div className="custom-scrollbar -mx-2 flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-2">
         <div className="flex flex-1 flex-col">
           {recipient.role === RecipientRole.VIEWER ? (
-            <>
-              <div className="-mx-2 flex flex-1 flex-col gap-4 overflow-y-auto px-2">
-                <div className="flex flex-1 flex-col gap-y-4" />
-                <div className="flex flex-col gap-4 md:flex-row">
-                  <Button
-                    type="button"
-                    className="w-full bg-black/5 hover:bg-black/10 dark:bg-muted dark:hover:bg-muted/80"
-                    variant="secondary"
-                    size="lg"
-                    disabled={typeof window !== 'undefined' && window.history.length <= 1}
-                    onClick={async () => navigate(-1)}
-                  >
-                    <Trans>Cancel</Trans>
-                  </Button>
+            <div className="-mx-2 flex flex-1 flex-col gap-4 overflow-y-auto px-2">
+              <div className="flex flex-1 flex-col gap-y-4" />
+              <div className="flex flex-col gap-4 md:flex-row">
+                <Button
+                  type="button"
+                  className="w-full bg-black/5 hover:bg-black/10 dark:bg-muted dark:hover:bg-muted/80"
+                  variant="secondary"
+                  size="lg"
+                  disabled={typeof window !== 'undefined' && window.history.length <= 1}
+                  onClick={async () => navigate(-1)}
+                >
+                  <Trans>Cancel</Trans>
+                </Button>
 
-                  <DocumentSigningCompleteDialog
-                    isSubmitting={isSubmitting}
-                    documentTitle={document.title}
-                    fields={fields}
-                    fieldsValidated={localFieldsValidated}
-                    onSignatureComplete={async (nextSigner, accessAuthOptions) =>
-                      completeDocument({ nextSigner, accessAuthOptions })
-                    }
-                    recipient={recipient}
-                    allowDictateNextSigner={document.documentMeta?.allowDictateNextSigner}
-                    defaultNextSigner={
-                      nextRecipient
-                        ? { name: nextRecipient.name, email: nextRecipient.email }
-                        : undefined
-                    }
-                  />
-                </div>
+                <DocumentSigningCompleteDialog
+                  isSubmitting={isSubmitting}
+                  documentTitle={document.title}
+                  fields={fields}
+                  fieldsValidated={localFieldsValidated}
+                  onSignatureComplete={async (nextSigner, accessAuthOptions) =>
+                    completeDocument({ nextSigner, accessAuthOptions })
+                  }
+                  recipient={recipient}
+                  allowDictateNextSigner={allowDictateNextSigner}
+                  defaultNextSigner={defaultNextSigner}
+                />
               </div>
-            </>
+            </div>
           ) : recipient.role === RecipientRole.ASSISTANT ? (
-            <>
-              <form onSubmit={assistantForm.handleSubmit(onAssistantFormSubmit)}>
-                <fieldset className="rounded-2xl border border-border bg-white p-3 dark:bg-background">
-                  <Controller
-                    name="selectedSignerId"
-                    control={assistantForm.control}
-                    rules={{ required: 'Please select a signer' }}
-                    render={({ field }) => (
-                      <RadioGroup
-                        className="gap-0 space-y-3 shadow-none"
-                        value={field.value?.toString()}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedSignerId?.(Number(value));
-                        }}
-                      >
-                        {allRecipients
-                          .filter((r) => r.fields.length > 0)
-                          .map((r) => (
-                            <div
-                              key={`${assistantSignersId}-${r.id}`}
-                              className="relative flex flex-col gap-4 rounded-lg border border-border bg-widget p-4"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <RadioGroupItem
-                                    id={`${assistantSignersId}-${r.id}`}
-                                    value={r.id.toString()}
-                                    className="after:absolute after:inset-0"
-                                  />
+            <form onSubmit={assistantForm.handleSubmit(onAssistantFormSubmit)}>
+              <fieldset className="rounded-2xl border border-border bg-white p-3 dark:bg-background">
+                <Controller
+                  name="selectedSignerId"
+                  control={assistantForm.control}
+                  rules={{ required: 'Please select a signer' }}
+                  render={({ field }) => (
+                    <RadioGroup
+                      className="gap-0 space-y-3 shadow-none"
+                      value={field.value?.toString()}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedSignerId?.(Number(value));
+                      }}
+                    >
+                      {allRecipients
+                        .filter((r) => r.fields.length > 0)
+                        .map((r) => (
+                          <div
+                            key={`${assistantSignersId}-${r.id}`}
+                            className="relative flex flex-col gap-4 rounded-lg border border-border bg-widget p-4"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <RadioGroupItem
+                                  id={`${assistantSignersId}-${r.id}`}
+                                  value={r.id.toString()}
+                                  className="after:absolute after:inset-0"
+                                />
 
-                                  <div className="grid grow gap-1">
-                                    <Label
-                                      className="inline-flex items-start"
-                                      htmlFor={`${assistantSignersId}-${r.id}`}
-                                    >
-                                      {r.name}
+                                <div className="grid grow gap-1">
+                                  <Label className="inline-flex items-start" htmlFor={`${assistantSignersId}-${r.id}`}>
+                                    {r.name}
 
-                                      {r.id === recipient.id && (
-                                        <span className="ml-2 text-muted-foreground">
-                                          {_(msg`(You)`)}
-                                        </span>
-                                      )}
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground">{r.email}</p>
-                                  </div>
-                                </div>
-                                <div className="text-xs leading-[inherit] text-muted-foreground">
-                                  {r.fields.length} {r.fields.length === 1 ? 'field' : 'fields'}
+                                    {r.id === recipient.id && (
+                                      <span className="ml-2 text-muted-foreground">{_(msg`(You)`)}</span>
+                                    )}
+                                  </Label>
+                                  <p className="text-muted-foreground text-xs">{r.email}</p>
                                 </div>
                               </div>
+                              <div className="text-muted-foreground text-xs leading-[inherit]">
+                                {r.fields.length} {r.fields.length === 1 ? 'field' : 'fields'}
+                              </div>
                             </div>
-                          ))}
-                      </RadioGroup>
-                    )}
-                  />
-                </fieldset>
-
-                <div className="mt-6 flex flex-col gap-4 md:flex-row">
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    size="lg"
-                    loading={isAssistantSubmitting}
-                  >
-                    <Trans>Continue</Trans>
-                  </Button>
-                </div>
-
-                <AssistantConfirmationDialog
-                  hasUninsertedFields={uninsertedFields.length > 0}
-                  isOpen={isConfirmationDialogOpen}
-                  onClose={() => !isAssistantSubmitting && setIsConfirmationDialogOpen(false)}
-                  onConfirm={handleAssistantConfirmDialogSubmit}
-                  isSubmitting={isAssistantSubmitting}
-                  allowDictateNextSigner={
-                    nextRecipient && document.documentMeta?.allowDictateNextSigner
-                  }
-                  defaultNextSigner={
-                    nextRecipient
-                      ? { name: nextRecipient.name, email: nextRecipient.email }
-                      : undefined
-                  }
+                          </div>
+                        ))}
+                    </RadioGroup>
+                  )}
                 />
-              </form>
-            </>
+              </fieldset>
+
+              <div className="mt-6 flex flex-col gap-4 md:flex-row">
+                <Button type="submit" className="w-full" size="lg" loading={isAssistantSubmitting}>
+                  <Trans>Continue</Trans>
+                </Button>
+              </div>
+
+              <AssistantConfirmationDialog
+                hasUninsertedFields={uninsertedFields.length > 0}
+                isOpen={isConfirmationDialogOpen}
+                onClose={() => !isAssistantSubmitting && setIsConfirmationDialogOpen(false)}
+                onConfirm={handleAssistantConfirmDialogSubmit}
+                isSubmitting={isAssistantSubmitting}
+                allowDictateNextSigner={allowDictateNextSigner}
+                defaultNextSigner={defaultNextSigner}
+              />
+            </form>
           ) : (
             <>
-              <fieldset
-                disabled={isSubmitting}
-                className="-mx-2 flex flex-1 flex-col gap-4 overflow-y-auto px-2"
-              >
+              <fieldset disabled={isSubmitting} className="-mx-2 flex flex-1 flex-col gap-4 overflow-y-auto px-2">
                 <div className="flex flex-1 flex-col gap-y-4">
                   <div>
                     <Label htmlFor="full-name">
@@ -318,14 +297,8 @@ export const DocumentSigningForm = ({
                     })
                   }
                   recipient={recipient}
-                  allowDictateNextSigner={
-                    nextRecipient && document.documentMeta?.allowDictateNextSigner
-                  }
-                  defaultNextSigner={
-                    nextRecipient
-                      ? { name: nextRecipient.name, email: nextRecipient.email }
-                      : undefined
-                  }
+                  allowDictateNextSigner={allowDictateNextSigner}
+                  defaultNextSigner={defaultNextSigner}
                 />
               </div>
             </>

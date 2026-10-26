@@ -1,31 +1,41 @@
-import {  useMemo, useState } from 'react';
-
-import { Trans } from '@lingui/react/macro';
-import { EnvelopeType } from '@prisma/client';
-import { Bird } from 'lucide-react';
-import { useParams, useSearchParams } from 'react-router';
-
+import { useSessionStorage } from '@documenso/lib/client-only/hooks/use-session-storage';
+import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
+import { useSession } from '@documenso/lib/client-only/providers/session';
 import { FolderType } from '@documenso/lib/types/folder-type';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
 import { formatDocumentsPath, formatTemplatesPath } from '@documenso/lib/utils/teams';
-import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
-import { useSession } from '@documenso/lib/client-only/providers/session';
 import { trpc } from '@documenso/trpc/react';
 import { Avatar, AvatarFallback, AvatarImage } from '@documenso/ui/primitives/avatar';
+import { Button } from '@documenso/ui/primitives/button';
 import type { RowSelectionState } from '@documenso/ui/primitives/data-table';
-import { useSessionStorage } from '@documenso/lib/client-only/hooks/use-session-storage';
+import { msg } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { EnvelopeType, OrganisationType } from '@prisma/client';
+import { Bird, XIcon } from 'lucide-react';
+import { useQueryStates } from 'nuqs';
+import { useMemo, useState } from 'react';
+import { useParams } from 'react-router';
+
 import { EnvelopesBulkDeleteDialog } from '~/components/dialogs/envelopes-bulk-delete-dialog';
 import { EnvelopesBulkMoveDialog } from '~/components/dialogs/envelopes-bulk-move-dialog';
 import { EnvelopeDropZoneWrapper } from '~/components/general/envelope/envelope-drop-zone-wrapper';
 import { FolderGrid } from '~/components/general/folder/folder-grid';
+import { TemplateSearch } from '~/components/general/template/template-search';
 import { EnvelopesTableBulkActionBar } from '~/components/tables/envelopes-table-bulk-action-bar';
 import { TemplatesTable } from '~/components/tables/templates-table';
+import { TemplatesTableOwnerFilter } from '~/components/tables/templates-table-owner-filter';
+import { TemplatesTableViewFilter } from '~/components/tables/templates-table-view-filter';
 import { useCurrentTeam } from '~/providers/team';
 import { appMetaTags } from '~/utils/meta';
+import { templatesSearchParams } from '~/utils/templates-search-params';
 
 export function meta() {
-  return appMetaTags('Templates');
+  return appMetaTags(msg`Templates`);
 }
+
+// Stable initial value: `useSessionStorage` keeps its setter identity stable
+// only while the initial value reference is stable.
+const EMPTY_ROW_SELECTION: RowSelectionState = {};
 
 export default function TemplatesPage() {
   const team = useCurrentTeam();
@@ -33,14 +43,31 @@ export default function TemplatesPage() {
   const { user } = useSession();
 
   const { folderId } = useParams();
-  const [searchParams] = useSearchParams();
+  const [findTemplateSearchParams, setFindTemplateSearchParams] = useQueryStates(templatesSearchParams, {
+    history: 'push',
+  });
+  const page = findTemplateSearchParams.page || undefined;
+  const perPage = findTemplateSearchParams.perPage || undefined;
+  const query = findTemplateSearchParams.query || undefined;
+  const ownerIds = findTemplateSearchParams.ownerIds ?? undefined;
 
-  const page = Number(searchParams.get('page')) || 1;
-  const perPage = Number(searchParams.get('perPage')) || 10;
+  const isOrgView = findTemplateSearchParams.view === 'organisation';
+  const showOrgFilter = organisation.type !== OrganisationType.PERSONAL;
 
+  const hasActiveFilters = Boolean(ownerIds?.length);
+  const isSearchingOrFiltering = hasActiveFilters || Boolean(query);
+
+  const onResetFilters = () => {
+    void setFindTemplateSearchParams({
+      ownerIds: null,
+      page: null,
+    });
+  };
+
+  // Scoped by team so selections made in one team never leak into another.
   const [rowSelection, setRowSelection] = useSessionStorage<RowSelectionState>(
-    'templates-bulk-selection',
-    {},
+    `templates-bulk-selection-${team.id}`,
+    EMPTY_ROW_SELECTION,
   );
   const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
@@ -52,16 +79,33 @@ export default function TemplatesPage() {
   const documentRootPath = formatDocumentsPath(team.url);
   const templateRootPath = formatTemplatesPath(team.url);
 
-  const { data, isLoading, isLoadingError } = trpc.template.findTemplates.useQuery({
-    page: page,
-    perPage: perPage,
-    folderId,
-  });
+  const teamTemplatesQuery = trpc.template.findTemplatesInternal.useQuery(
+    {
+      page,
+      perPage,
+      folderId,
+      query,
+      ownerIds,
+    },
+    {
+      enabled: !isOrgView,
+      placeholderData: (previousData) => previousData,
+    },
+  );
 
-  // // Clear selection when navigation or filters change
-  // useEffect(() => {
-  //   setRowSelection({});
-  // }, [folderId, page, perPage]);
+  const orgTemplatesQuery = trpc.template.findOrganisationTemplates.useQuery(
+    {
+      page,
+      perPage,
+      query,
+    },
+    {
+      enabled: isOrgView,
+      placeholderData: (previousData) => previousData,
+    },
+  );
+
+  const activeQuery = isOrgView ? orgTemplatesQuery : teamTemplatesQuery;
 
   const isOrganisationOwner = organisation.ownerUserId === user.id;
   const isOwnerNonMember = isOrganisationOwner && !team.isTeamMember;
@@ -93,78 +137,98 @@ export default function TemplatesPage() {
   return (
     <EnvelopeDropZoneWrapper type={EnvelopeType.TEMPLATE}>
       <div className="mx-auto max-w-screen-xl px-4 md:px-8">
-        <FolderGrid type={FolderType.TEMPLATE} parentId={folderId ?? null} />
+        {!isOrgView && <FolderGrid type={FolderType.TEMPLATE} parentId={folderId ?? null} />}
 
         <div className="mt-8">
           <div className="flex flex-row items-center">
-            <Avatar className="mr-3 h-12 w-12 border-2 border-solid border-white dark:border-border">
+            <Avatar className="mr-3 h-12 w-12 border-2 border-white border-solid dark:border-border">
               {team.avatarImageId && <AvatarImage src={formatAvatarUrl(team.avatarImageId)} />}
-              <AvatarFallback className="text-xs text-muted-foreground">
-                {team.name.slice(0, 1)}
-              </AvatarFallback>
+              <AvatarFallback className="text-muted-foreground text-xs">{team.name.slice(0, 1)}</AvatarFallback>
             </Avatar>
 
-            <h1 className="truncate text-2xl font-semibold md:text-3xl">
+            <h1 className="truncate font-semibold text-2xl md:text-3xl">
               <Trans>Templates</Trans>
             </h1>
           </div>
 
+          <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-4">
+            <div className="w-56">
+              <TemplateSearch />
+            </div>
+
+            {showOrgFilter && <TemplatesTableViewFilter />}
+
+            {!isOrgView && <TemplatesTableOwnerFilter teamId={team.id} />}
+
+            {hasActiveFilters && (
+              <Button variant="ghost" className="px-2 text-muted-foreground lg:px-3" onClick={onResetFilters}>
+                <Trans>Reset</Trans>
+                <XIcon className="ml-1 h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
           <div className="mt-8">
-            {data && data.count === 0 ? (
+            {activeQuery.data && activeQuery.data.count === 0 && !isSearchingOrFiltering ? (
               <div className="flex h-96 flex-col items-center justify-center gap-y-4 text-muted-foreground/60">
                 <Bird className="h-12 w-12" strokeWidth={1.5} />
 
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="font-semibold text-lg">
                     <Trans>We're all empty</Trans>
                   </h3>
 
                   <p className="mt-2 max-w-[50ch]">
-                    <Trans>
-                      You have not yet created any templates. To create a template please upload
-                      one.
-                    </Trans>
+                    {isOrgView ? (
+                      <Trans>No organisation templates are shared with your team yet.</Trans>
+                    ) : (
+                      <Trans>You have not yet created any templates. To create a template please upload one.</Trans>
+                    )}
                   </p>
                 </div>
               </div>
             ) : (
               <TemplatesTable
-                data={data}
-                isLoading={isLoading}
-                isLoadingError={isLoadingError}
+                data={activeQuery.data}
+                isLoading={activeQuery.isLoading}
+                isLoadingError={activeQuery.isLoadingError}
                 documentRootPath={documentRootPath}
                 templateRootPath={templateRootPath}
-                enableSelection
-                rowSelection={rowSelection}
-                onRowSelectionChange={setRowSelection}
+                enableSelection={!isOrgView}
+                rowSelection={isOrgView ? {} : rowSelection}
+                onRowSelectionChange={isOrgView ? undefined : setRowSelection}
               />
             )}
           </div>
         </div>
 
-        <EnvelopesTableBulkActionBar
-          selectedCount={selectedEnvelopeIds.length}
-          onMoveClick={() => setIsBulkMoveDialogOpen(true)}
-          onDeleteClick={() => setIsBulkDeleteDialogOpen(true)}
-          onClearSelection={() => setRowSelection({})}
-        />
+        {!isOrgView && (
+          <>
+            <EnvelopesTableBulkActionBar
+              selectedCount={selectedEnvelopeIds.length}
+              onMoveClick={() => setIsBulkMoveDialogOpen(true)}
+              onDeleteClick={() => setIsBulkDeleteDialogOpen(true)}
+              onClearSelection={() => setRowSelection({})}
+            />
 
-        <EnvelopesBulkMoveDialog
-          envelopeIds={selectedEnvelopeIds}
-          envelopeType={EnvelopeType.TEMPLATE}
-          open={isBulkMoveDialogOpen}
-          currentFolderId={folderId}
-          onOpenChange={setIsBulkMoveDialogOpen}
-          onSuccess={() => setRowSelection({})}
-        />
+            <EnvelopesBulkMoveDialog
+              envelopeIds={selectedEnvelopeIds}
+              envelopeType={EnvelopeType.TEMPLATE}
+              open={isBulkMoveDialogOpen}
+              currentFolderId={folderId}
+              onOpenChange={setIsBulkMoveDialogOpen}
+              onSuccess={() => setRowSelection({})}
+            />
 
-        <EnvelopesBulkDeleteDialog
-          envelopeIds={selectedEnvelopeIds}
-          envelopeType={EnvelopeType.TEMPLATE}
-          open={isBulkDeleteDialogOpen}
-          onOpenChange={setIsBulkDeleteDialogOpen}
-          onSuccess={() => setRowSelection({})}
-        />
+            <EnvelopesBulkDeleteDialog
+              envelopeIds={selectedEnvelopeIds}
+              envelopeType={EnvelopeType.TEMPLATE}
+              open={isBulkDeleteDialogOpen}
+              onOpenChange={setIsBulkDeleteDialogOpen}
+              onSuccess={() => setRowSelection({})}
+            />
+          </>
+        )}
       </div>
     </EnvelopeDropZoneWrapper>
   );

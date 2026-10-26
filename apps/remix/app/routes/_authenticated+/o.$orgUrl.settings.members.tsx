@@ -1,13 +1,10 @@
-import { useEffect, useState } from 'react';
-
+import { Input } from '@documenso/ui/primitives/input';
+import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
+import { debounce, parseAsString, useQueryState } from 'nuqs';
 import { Link, useLocation, useSearchParams } from 'react-router';
-
-import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
-import { Input } from '@documenso/ui/primitives/input';
-import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 
 import { OrganisationMemberInviteDialog } from '~/components/dialogs/organisation-member-invite-dialog';
 import { SettingsHeader } from '~/components/general/settings-header';
@@ -17,38 +14,20 @@ import { OrganisationMembersDataTable } from '~/components/tables/organisation-m
 export default function TeamsSettingsMembersPage() {
   const { _ } = useLingui();
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const { pathname } = useLocation();
 
-  const [searchQuery, setSearchQuery] = useState(() => searchParams?.get('query') ?? '');
-
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, 500);
+  const [searchQuery, setSearchQuery] = useQueryState(
+    'query',
+    parseAsString.withDefault('').withOptions({ shallow: false, limitUrlUpdates: debounce(500) }),
+  );
 
   const currentTab = searchParams?.get('tab') === 'invites' ? 'invites' : 'members';
-
-  /**
-   * Handle debouncing the search query.
-   */
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams?.toString());
-
-    params.set('query', debouncedSearchQuery);
-
-    if (debouncedSearchQuery === '') {
-      params.delete('query');
-    }
-
-    // If nothing  to change then do nothing.
-    if (params.toString() === searchParams?.toString()) {
-      return;
-    }
-
-    setSearchParams(params);
-  }, [debouncedSearchQuery, pathname, searchParams]);
 
   return (
     <div>
       <SettingsHeader
+        hideDivider
         title={_(msg`Organisation Members`)}
         subtitle={_(msg`Manage the members or invite new members.`)}
       >
@@ -58,8 +37,8 @@ export default function TeamsSettingsMembersPage() {
       <div>
         <div className="my-4 flex flex-row items-center justify-between space-x-4">
           <Input
-            defaultValue={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => void setSearchQuery(e.target.value || null)}
             placeholder={_(msg`Search`)}
           />
 

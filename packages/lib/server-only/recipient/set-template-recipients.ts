@@ -1,43 +1,30 @@
-import type { Recipient } from '@prisma/client';
-import { EnvelopeType, RecipientRole } from '@prisma/client';
-
 import {
   DIRECT_TEMPLATE_RECIPIENT_EMAIL,
   DIRECT_TEMPLATE_RECIPIENT_NAME,
 } from '@documenso/lib/constants/direct-templates';
 import { prisma } from '@documenso/prisma';
+import type { Recipient } from '@prisma/client';
+import { EnvelopeType, RecipientRole } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
-import {
-  type TRecipientActionAuthTypes,
-  ZRecipientAuthOptionsSchema,
-} from '../../types/document-auth';
+import { type TRecipientActionAuthTypes, ZRecipientAuthOptionsSchema } from '../../types/document-auth';
 import { nanoid } from '../../universal/id';
 import { createRecipientAuthOptions } from '../../utils/document-auth';
 import { type EnvelopeIdOptions, mapSecondaryIdToTemplateId } from '../../utils/envelope';
 import { parseClaimFlags } from '../../utils/parse-claim-flags';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
+import { assertCompatibleRecipientGrouping } from '../signature-level/assert-compatible-recipient-grouping';
+import { assertCompatibleRecipientRole } from '../signature-level/assert-compatible-recipient-role';
+import { resolveReplacedRecipientSigningOrders } from './assign-omitted-recipient-signing-orders';
 
 export type SetTemplateRecipientsOptions = {
   userId: number;
   teamId: number;
   id: EnvelopeIdOptions;
-  recipients: {
-    id?: number;
-    email: string;
-    name: string;
-    role: RecipientRole;
-    signingOrder?: number | null;
-    actionAuth?: TRecipientActionAuthTypes[];
-  }[];
+  recipients: RecipientData[];
 };
 
-export const setTemplateRecipients = async ({
-  userId,
-  teamId,
-  id,
-  recipients,
-}: SetTemplateRecipientsOptions) => {
+export const setTemplateRecipients = async ({ userId, teamId, id, recipients }: SetTemplateRecipientsOptions) => {
   const { envelopeWhereInput } = await getEnvelopeWhereInput({
     id,
     type: EnvelopeType.TEMPLATE,
@@ -80,27 +67,42 @@ export const setTemplateRecipients = async ({
     });
   }
 
-  const normalizedRecipients = recipients.map((recipient) => {
-    // Force replace any changes to the name or email of the direct recipient.
-    if (envelope.directLink && recipient.id === envelope.directLink.directTemplateRecipientId) {
-      return {
-        ...recipient,
-        email: DIRECT_TEMPLATE_RECIPIENT_EMAIL,
-        name: DIRECT_TEMPLATE_RECIPIENT_NAME,
-      };
-    }
-
-    return {
-      ...recipient,
-      email: recipient.email.toLowerCase(),
-    };
-  });
+  for (const recipient of recipients) {
+    assertCompatibleRecipientRole({
+      signatureLevel: envelope.signatureLevel,
+      role: recipient.role,
+    });
+  }
 
   const existingRecipients = envelope.recipients;
 
+  const { recipients: normalizedRecipients, requestedOrderRecipients } = resolveReplacedRecipientSigningOrders({
+    recipients: recipients.map((recipient) => {
+      // Force replace any changes to the name or email of the direct recipient.
+      if (envelope.directLink && recipient.id === envelope.directLink.directTemplateRecipientId) {
+        return {
+          ...recipient,
+          email: DIRECT_TEMPLATE_RECIPIENT_EMAIL,
+          name: DIRECT_TEMPLATE_RECIPIENT_NAME,
+        };
+      }
+
+      return {
+        ...recipient,
+        email: recipient.email.toLowerCase(),
+      };
+    }),
+    existingRecipients,
+  });
+
+  assertCompatibleRecipientGrouping({
+    signatureLevel: envelope.signatureLevel,
+    recipients: requestedOrderRecipients,
+    existingRecipients: normalizedRecipients.filter((recipient) => !requestedOrderRecipients.includes(recipient)),
+  });
+
   const removedRecipients = existingRecipients.filter(
-    (existingRecipient) =>
-      !normalizedRecipients.find((recipient) => recipient.id === existingRecipient.id),
+    (existingRecipient) => !normalizedRecipients.find((recipient) => recipient.id === existingRecipient.id),
   );
 
   if (envelope.directLink !== null) {
@@ -126,9 +128,7 @@ export const setTemplateRecipients = async ({
   }
 
   const linkedRecipients = normalizedRecipients.map((recipient) => {
-    const existing = existingRecipients.find(
-      (existingRecipient) => existingRecipient.id === recipient.id,
-    );
+    const existing = existingRecipients.find((existingRecipient) => existingRecipient.id === recipient.id);
 
     return {
       ...recipient,
@@ -187,7 +187,10 @@ export const setTemplateRecipients = async ({
           });
         }
 
-        return upsertedRecipient;
+        return {
+          ...upsertedRecipient,
+          clientId: recipient.clientId,
+        };
       }),
     );
   });
@@ -203,13 +206,9 @@ export const setTemplateRecipients = async ({
   }
 
   // Filter out recipients that have been removed or have been updated.
-  const filteredRecipients: Recipient[] = existingRecipients.filter((recipient) => {
-    const isRemoved = removedRecipients.find(
-      (removedRecipient) => removedRecipient.id === recipient.id,
-    );
-    const isUpdated = persistedRecipients.find(
-      (persistedRecipient) => persistedRecipient.id === recipient.id,
-    );
+  const filteredRecipients: RecipientDataWithClientId[] = existingRecipients.filter((recipient) => {
+    const isRemoved = removedRecipients.find((removedRecipient) => removedRecipient.id === recipient.id);
+    const isUpdated = persistedRecipients.find((persistedRecipient) => persistedRecipient.id === recipient.id);
 
     return !isRemoved && !isUpdated;
   });
@@ -221,4 +220,18 @@ export const setTemplateRecipients = async ({
       templateId: mapSecondaryIdToTemplateId(envelope.secondaryId),
     })),
   };
+};
+
+type RecipientData = {
+  id?: number;
+  clientId?: string | null;
+  email: string;
+  name: string;
+  role: RecipientRole;
+  signingOrder?: number | null;
+  actionAuth?: TRecipientActionAuthTypes[];
+};
+
+type RecipientDataWithClientId = Recipient & {
+  clientId?: string | null;
 };

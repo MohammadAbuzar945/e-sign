@@ -1,23 +1,15 @@
-import { useEffect, useMemo } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { InfoIcon, Loader } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router';
-import { z } from 'zod';
-
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { SUBSCRIPTION_STATUS_MAP } from '@documenso/lib/constants/billing';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { LicenseClient } from '@documenso/lib/server-only/license/license-client';
 import type { TLicenseClaim } from '@documenso/lib/types/license';
 import { SUBSCRIPTION_CLAIM_FEATURE_FLAGS } from '@documenso/lib/types/subscription';
+import { getHighestOrganisationRoleInGroup } from '@documenso/lib/utils/organisations';
 import { trpc } from '@documenso/trpc/react';
 import type { TGetAdminOrganisationResponse } from '@documenso/trpc/server/admin-router/get-admin-organisation.types';
 import { ZUpdateAdminOrganisationRequestSchema } from '@documenso/trpc/server/admin-router/update-admin-organisation.types';
+import { cn } from '@documenso/ui/lib/utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@documenso/ui/primitives/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
@@ -33,11 +25,28 @@ import {
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { OrganisationMemberRole, SubscriptionStatus } from '@prisma/client';
+import { ExternalLinkIcon, InfoIcon, Loader } from 'lucide-react';
+import { useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { Link, useNavigate } from 'react-router';
+import { match } from 'ts-pattern';
+import { z } from 'zod';
 
+import { AdminOrganisationDeleteDialog } from '~/components/dialogs/admin-organisation-delete-dialog';
+import { AdminOrganisationMemberDeleteDialog } from '~/components/dialogs/admin-organisation-member-delete-dialog';
 import { AdminOrganisationMemberUpdateDialog } from '~/components/dialogs/admin-organisation-member-update-dialog';
+import { AdminOrganisationSyncSubscriptionDialog } from '~/components/dialogs/admin-organisation-sync-subscription-dialog';
+import { AdminGlobalSettingsSection } from '~/components/general/admin-global-settings-section';
+import { ClaimLimitFields } from '~/components/general/claim-limit-fields';
 import { GenericErrorLayout } from '~/components/general/generic-error-layout';
+import { OrganisationUsagePanel } from '~/components/general/organisation-usage-panel';
 import { SettingsHeader } from '~/components/general/settings-header';
 
 import type { Route } from './+types/organisations.$id';
@@ -50,13 +59,10 @@ export async function loader() {
   };
 }
 
-export default function OrganisationGroupSettingsPage({
-  params,
-  loaderData,
-}: Route.ComponentProps) {
+export default function OrganisationGroupSettingsPage({ params, loaderData }: Route.ComponentProps) {
   const { licenseFlags } = loaderData;
 
-  const { t } = useLingui();
+  const { i18n, t } = useLingui();
   const { toast } = useToast();
 
   const navigate = useNavigate();
@@ -64,10 +70,14 @@ export default function OrganisationGroupSettingsPage({
   const organisationId = params.id;
 
   const utils = trpc.useUtils();
-  const { data: organisation, isLoading: isLoadingOrganisation } =
-    trpc.admin.organisation.get.useQuery({
+  const { data: organisation, isLoading: isLoadingOrganisation } = trpc.admin.organisation.get.useQuery(
+    {
       organisationId,
-    });
+    },
+    {
+      retry: false,
+    },
+  );
 
   const { mutateAsync: createStripeCustomer, isPending: isCreatingStripeCustomer } =
     trpc.admin.stripe.createCustomer.useMutation({
@@ -93,35 +103,99 @@ export default function OrganisationGroupSettingsPage({
       {
         header: t`Team`,
         accessorKey: 'name',
+        cell: ({ row }) => (
+          <Link className="font-medium hover:underline" to={`/admin/teams/${row.original.id}`}>
+            {row.original.name}
+          </Link>
+        ),
+      },
+      {
+        header: t`Team ID`,
+        accessorKey: 'id',
+        cell: ({ row }) => <span className="font-mono text-muted-foreground text-xs">{row.original.id}</span>,
       },
       {
         header: t`Team url`,
         accessorKey: 'url',
+        cell: ({ row }) => <span className="font-mono text-xs">{row.original.url}</span>,
+      },
+      {
+        header: t`Created`,
+        accessorKey: 'createdAt',
+        cell: ({ row }) => {
+          return (
+            <span className="whitespace-nowrap font-mono text-muted-foreground text-xs">
+              {i18n.date(row.original.createdAt)}
+            </span>
+          );
+        },
       },
     ] satisfies DataTableColumnDef<TGetAdminOrganisationResponse['teams'][number]>[];
-  }, []);
+  }, [i18n, t]);
 
   const organisationMembersColumns = useMemo(() => {
+    if (!organisation) {
+      return [];
+    }
+
     return [
       {
         header: t`Member`,
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Link to={`/admin/users/${row.original.user.id}`}>{row.original.user.name}</Link>
-            {row.original.user.id === organisation?.ownerUserId && <Badge>Owner</Badge>}
+          <div className="space-y-1">
+            <Link className="font-medium hover:underline" to={`/admin/users/${row.original.user.id}`}>
+              {row.original.user.name ?? row.original.user.email}
+            </Link>
+            {row.original.user.name && (
+              <div className="font-mono text-muted-foreground text-xs">{row.original.user.email}</div>
+            )}
           </div>
         ),
       },
       {
-        header: t`Email`,
-        cell: ({ row }) => (
-          <Link to={`/admin/users/${row.original.user.id}`}>{row.original.user.email}</Link>
-        ),
+        header: t`User ID`,
+        accessorKey: 'userId',
+        cell: ({ row }) => <span className="font-mono text-muted-foreground text-xs">{row.original.userId}</span>,
+      },
+      {
+        header: t`Role`,
+        cell: ({ row }) => {
+          const isOwner = row.original.userId === organisation.ownerUserId;
+
+          if (isOwner) {
+            return <Badge>{t`Owner`}</Badge>;
+          }
+
+          const highestRole = getHighestOrganisationRoleInGroup(
+            row.original.organisationGroupMembers.map((ogm) => ogm.group),
+          );
+
+          const roleLabel = match(highestRole)
+            .with(OrganisationMemberRole.ADMIN, () => t`Admin`)
+            .with(OrganisationMemberRole.MANAGER, () => t`Manager`)
+            .with(OrganisationMemberRole.MEMBER, () => t`Member`)
+            .exhaustive();
+
+          return <Badge variant="secondary">{roleLabel}</Badge>;
+        },
+      },
+      {
+        header: t`Joined`,
+        accessorKey: 'createdAt',
+        cell: ({ row }) => {
+          return (
+            <span className="whitespace-nowrap font-mono text-muted-foreground text-xs">
+              {i18n.date(row.original.createdAt)}
+            </span>
+          );
+        },
       },
       {
         header: t`Actions`,
         cell: ({ row }) => {
-          const isOwner = row.original.userId === organisation?.ownerUserId;
+          const isOwner = row.original.userId === organisation.ownerUserId;
+
+          const memberName = row.original.user.name ?? row.original.user.email;
 
           return (
             <div className="flex justify-end space-x-2">
@@ -135,12 +209,22 @@ export default function OrganisationGroupSettingsPage({
                 organisationMember={row.original}
                 isOwner={isOwner}
               />
+
+              {!isOwner && (
+                <AdminOrganisationMemberDeleteDialog
+                  organisationId={organisationId}
+                  organisationName={organisation.name}
+                  organisationMemberId={row.original.id}
+                  organisationMemberName={memberName}
+                  organisationMemberEmail={row.original.user.email}
+                />
+              )}
             </div>
           );
         },
       },
     ] satisfies DataTableColumnDef<TGetAdminOrganisationResponse['members'][number]>[];
-  }, [organisation]);
+  }, [organisation, i18n, t]);
 
   if (isLoadingOrganisation) {
     return (
@@ -176,6 +260,7 @@ export default function OrganisationGroupSettingsPage({
   return (
     <div>
       <SettingsHeader
+        hideDivider
         title={t`Manage organisation`}
         subtitle={t`Manage the ${organisation.name} organisation`}
       >
@@ -194,14 +279,59 @@ export default function OrganisationGroupSettingsPage({
         onSuccess={() => utils.admin.organisation.get.invalidate({ organisationId })}
       />
 
-      {/* <SettingsHeader
+      <SettingsHeader
+        hideDivider
+        title={t`Organisation usage`}
+        subtitle={t`Current usage against organisation limits.`}
+        className="mt-6"
+      />
+
+      <OrganisationUsagePanel
+        organisationId={organisation.id}
+        monthlyStats={organisation.monthlyStats}
+        organisationClaim={organisation.organisationClaim}
+        capacityUsage={{
+          members: organisation.members.length,
+          teams: organisation.teams.length,
+        }}
+      />
+
+      <div className="mt-6 rounded-lg border p-4">
+        <Accordion type="single" collapsible>
+          <AccordionItem value="global-settings" className="border-b-0">
+            <AccordionTrigger className="py-0">
+              <div className="text-left">
+                <p className="font-semibold text-base">
+                  <Trans>Global Settings</Trans>
+                </p>
+                <p className="mt-1 text-muted-foreground text-sm">
+                  <Trans>Default settings applied to this organisation.</Trans>
+                </p>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="mt-4">
+                <AdminGlobalSettingsSection settings={organisation.organisationGlobalSettings} />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+
+      <SettingsHeader
+        hideDivider
         title={t`Manage subscription`}
         subtitle={t`Manage the ${organisation.name} organisation subscription`}
         className="mt-16"
-      /> */}
+      />
 
-      {/* <Alert
-        className="my-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center"
+      <Alert
+        className={cn(
+          'my-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center',
+          organisation.subscription?.status === SubscriptionStatus.ACTIVE &&
+            'border border-green-600/20 bg-green-50 dark:border-green-500/20 dark:bg-green-500/10',
+          organisation.subscription?.status === SubscriptionStatus.INACTIVE && 'opacity-60',
+        )}
         variant="neutral"
       >
         <div className="mb-4 sm:mb-0">
@@ -211,11 +341,16 @@ export default function OrganisationGroupSettingsPage({
 
           <AlertDescription className="mr-2">
             {organisation.subscription ? (
-              <span>
-                {SUBSCRIPTION_STATUS_MAP[organisation.subscription.status]} subscription found
+              <span className="flex items-center gap-2">
+                {organisation.subscription.status === SubscriptionStatus.ACTIVE && (
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-green-600 dark:bg-green-400" aria-hidden="true" />
+                )}
+                <span>{i18n._(SUBSCRIPTION_STATUS_MAP[organisation.subscription.status])} subscription found</span>
               </span>
             ) : (
-              <span>No subscription found</span>
+              <span>
+                <Trans>No subscription found</Trans>
+              </span>
             )}
           </AlertDescription>
         </div>
@@ -224,6 +359,7 @@ export default function OrganisationGroupSettingsPage({
           <div>
             <Button
               variant="outline"
+              className="bg-background"
               loading={isCreatingStripeCustomer}
               onClick={async () => createStripeCustomer({ organisationId })}
             >
@@ -234,7 +370,7 @@ export default function OrganisationGroupSettingsPage({
 
         {organisation.customerId && !organisation.subscription && (
           <div>
-            <Button variant="outline" asChild>
+            <Button variant="outline" className="bg-background" asChild>
               <Link
                 target="_blank"
                 to={`https://dashboard.stripe.com/customers/${organisation.customerId}?create=subscription&subscription_default_customer=${organisation.customerId}`}
@@ -247,8 +383,17 @@ export default function OrganisationGroupSettingsPage({
         )}
 
         {organisation.subscription && (
-          <div>
-            <Button variant="outline" asChild>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <AdminOrganisationSyncSubscriptionDialog
+              organisationId={organisationId}
+              trigger={
+                <Button variant="outline" className="bg-background">
+                  <Trans>Sync Stripe subscription</Trans>
+                </Button>
+              }
+            />
+
+            <Button variant="outline" className="bg-background" asChild>
               <Link
                 target="_blank"
                 to={`https://dashboard.stripe.com/subscriptions/${organisation.subscription.planId}`}
@@ -265,38 +410,67 @@ export default function OrganisationGroupSettingsPage({
 
       <div className="mt-16 space-y-10">
         <div>
-          <label className="text-sm font-medium leading-none">
+          <h3 className="font-semibold text-base">
             <Trans>Organisation Members</Trans>
-          </label>
+          </h3>
+          <p className="mt-1 text-muted-foreground text-sm">
+            <Trans>People with access to this organisation.</Trans>
+          </p>
 
-          <div className="my-2">
+          <div className="mt-3">
             <DataTable columns={organisationMembersColumns} data={organisation.members} />
           </div>
         </div>
 
         <div>
-          <label className="text-sm font-medium leading-none">
+          <h3 className="font-semibold text-base">
             <Trans>Organisation Teams</Trans>
-          </label>
+          </h3>
+          <p className="mt-1 text-muted-foreground text-sm">
+            <Trans>Teams that belong to this organisation.</Trans>
+          </p>
 
-          <div className="my-2">
+          <div className="mt-3">
             <DataTable columns={teamsColumns} data={organisation.teams} />
           </div>
         </div>
       </div>
+
+      <SettingsHeader
+        hideDivider
+        title={t`Danger Zone`}
+        subtitle={t`Irreversible actions for this organisation`}
+        className="mt-16"
+      />
+
+      <Alert className="my-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="destructive">
+        <div className="mb-4 sm:mb-0">
+          <AlertTitle>
+            <Trans>Delete organisation</Trans>
+          </AlertTitle>
+
+          <AlertDescription className="mr-2">
+            <Trans>
+              Permanently delete this organisation. Documents will be orphaned (not deleted) so they remain accessible
+              via the deleted-account service account.
+            </Trans>
+          </AlertDescription>
+        </div>
+
+        <div>
+          <AdminOrganisationDeleteDialog organisationId={organisation.id} organisationName={organisation.name} />
+        </div>
+      </Alert>
     </div>
   );
 }
 
-const ZUpdateGenericOrganisationDataFormSchema =
-  ZUpdateAdminOrganisationRequestSchema.shape.data.pick({
-    name: true,
-    url: true,
-  });
+const ZUpdateGenericOrganisationDataFormSchema = ZUpdateAdminOrganisationRequestSchema.shape.data.pick({
+  name: true,
+  url: true,
+});
 
-type TUpdateGenericOrganisationDataFormSchema = z.infer<
-  typeof ZUpdateGenericOrganisationDataFormSchema
->;
+type TUpdateGenericOrganisationDataFormSchema = z.infer<typeof ZUpdateGenericOrganisationDataFormSchema>;
 
 type OrganisationAdminFormOptions = {
   organisation: TGetAdminOrganisationResponse;
@@ -466,7 +640,7 @@ const GenericOrganisationAdminForm = ({ organisation }: OrganisationAdminFormOpt
                 <Input {...field} />
               </FormControl>
               {!form.formState.errors.url && (
-                <span className="text-xs font-normal text-foreground/50">
+                <span className="font-normal text-foreground/50 text-xs">
                   {field.value ? (
                     `${NEXT_PUBLIC_WEBAPP_URL()}/o/${field.value}`
                   ) : (
@@ -490,11 +664,15 @@ const GenericOrganisationAdminForm = ({ organisation }: OrganisationAdminFormOpt
   );
 };
 
-const ZUpdateOrganisationBillingFormSchema = ZUpdateAdminOrganisationRequestSchema.shape.data.pick({
-  claims: true,
-  customerId: true,
-  originalSubscriptionClaimId: true,
-});
+const ZUpdateOrganisationBillingFormSchema = ZUpdateAdminOrganisationRequestSchema.shape.data
+  .pick({
+    claims: true,
+    customerId: true,
+    originalSubscriptionClaimId: true,
+  })
+  .extend({
+    notifyOrganisation: z.boolean(),
+  });
 
 type TUpdateOrganisationBillingFormSchema = z.infer<typeof ZUpdateOrganisationBillingFormSchema>;
 
@@ -504,11 +682,11 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
 
   const { mutateAsync: updateOrganisation } = trpc.admin.organisation.update.useMutation();
 
-  const visibleFeatureFlags = Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).filter(
-    (flag) => flag.key === 'allowCustomBranding',
-  );
+  const { data: transportsData } = trpc.admin.emailTransport.find.useQuery({ perPage: 100 });
+  const transports = transportsData?.data ?? [];
+  const NONE_VALUE = '__none__';
 
-  const hasRestrictedEnterpriseFeatures = visibleFeatureFlags.some(
+  const hasRestrictedEnterpriseFeatures = Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).some(
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     (flag) => flag.isEnterprise && !licenseFlags?.[flag.key as keyof TLicenseClaim],
   );
@@ -521,22 +699,51 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
         teamCount: organisation.organisationClaim.teamCount,
         memberCount: organisation.organisationClaim.memberCount,
         envelopeItemCount: organisation.organisationClaim.envelopeItemCount,
+        recipientCount: organisation.organisationClaim.recipientCount,
         flags: organisation.organisationClaim.flags,
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        documentRateLimits: organisation.organisationClaim.documentRateLimits as NonNullable<
+          TUpdateOrganisationBillingFormSchema['claims']
+        >['documentRateLimits'],
+        documentQuota: organisation.organisationClaim.documentQuota,
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        emailRateLimits: organisation.organisationClaim.emailRateLimits as NonNullable<
+          TUpdateOrganisationBillingFormSchema['claims']
+        >['emailRateLimits'],
+        emailQuota: organisation.organisationClaim.emailQuota,
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        apiRateLimits: organisation.organisationClaim.apiRateLimits as NonNullable<
+          TUpdateOrganisationBillingFormSchema['claims']
+        >['apiRateLimits'],
+        apiQuota: organisation.organisationClaim.apiQuota,
+        emailTransportId: organisation.organisationClaim.emailTransportId ?? null,
       },
       originalSubscriptionClaimId: organisation.organisationClaim.originalSubscriptionClaimId || '',
+      notifyOrganisation: true,
     },
   });
 
-  const onSubmit = async (values: TUpdateOrganisationBillingFormSchema) => {
+  const onSubmit = async ({ notifyOrganisation, ...values }: TUpdateOrganisationBillingFormSchema) => {
     try {
-      await updateOrganisation({
+      const { isNotificationSent } = await updateOrganisation({
         organisationId: organisation.id,
         data: values,
+        notifyOrganisation,
       });
+
+      form.setValue('notifyOrganisation', false);
+
+      const description = match({ notifyOrganisation, isNotificationSent })
+        .with({ isNotificationSent: true }, () => t`Organisation has been updated and its owner has been notified`)
+        .with(
+          { notifyOrganisation: true },
+          () => t`Organisation has been updated. No limits changed, so no notification was sent`,
+        )
+        .otherwise(() => t`Organisation has been updated successfully`);
 
       toast({
         title: t`Success`,
-        description: t`Organisation has been updated successfully`,
+        description,
         duration: 5000,
       });
     } catch (err) {
@@ -562,7 +769,7 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
               <FormLabel className="flex items-center">
                 <Trans>Inherited subscription claim</Trans>
                 <Tooltip>
-                  <TooltipTrigger>
+                  <TooltipTrigger type="button">
                     <InfoIcon className="mx-2 h-4 w-4" />
                   </TooltipTrigger>
 
@@ -575,31 +782,35 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
 
                     <p>
                       <Trans>
-                        This is the claim that this organisation was initially created with. Any
-                        feature flag changes to this claim will be backported into this
-                        organisation.
+                        This is the claim that this organisation was initially created with. Any feature flag changes to
+                        this claim will be backported into this organisation.
                       </Trans>
                     </p>
 
                     <p>
                       <Trans>
-                        For example, if the claim has a new flag "FLAG_1" set to true, then this
-                        organisation will get that flag added.
+                        For example, if the claim has a new flag "FLAG_1" set to true, then this organisation will get
+                        that flag added.
                       </Trans>
                     </p>
                     <p>
                       <Trans>
-                        This will ONLY backport feature flags which are set to true, anything
-                        disabled in the initial claim will not be backported
+                        This will ONLY backport feature flags which are set to true, anything disabled in the initial
+                        claim will not be backported
                       </Trans>
                     </p>
                   </TooltipContent>
                 </Tooltip>
               </FormLabel>
-              <FormControl>
-                <Input disabled {...field} />
-              </FormControl>
-              <FormMessage />
+              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+                {field.value ? (
+                  <span className="font-mono text-foreground">{field.value}</span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    <Trans>No inherited claim</Trans>
+                  </span>
+                )}
+              </div>
             </FormItem>
           )}
         /> */}
@@ -619,7 +830,7 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
                 <Link
                   target="_blank"
                   to={`https://dashboard.stripe.com/customers/${field.value}`}
-                  className="text-xs font-normal text-foreground/50"
+                  className="font-normal text-foreground/50 text-xs"
                 >
                   {`https://dashboard.stripe.com/customers/${field.value}`}
                 </Link>
@@ -630,87 +841,115 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
           )}
         /> */}
 
-        <FormField
-          control={form.control}
-          name="claims.teamCount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                <Trans>Team Count</Trans>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={0}
-                  {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
-                />
-              </FormControl>
-              <FormDescription>
-                <Trans>Number of teams allowed. 0 = Unlimited</Trans>
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="claims.teamCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  <Trans>Team Count</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  <Trans>Number of teams allowed. 0 = Unlimited</Trans>
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="claims.memberCount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                <Trans>Member Count</Trans>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={0}
-                  {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
-                />
-              </FormControl>
-              <FormDescription>
-                <Trans>Number of members allowed. 0 = Unlimited</Trans>
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="claims.memberCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  <Trans>Member Count</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  <Trans>Number of members allowed. 0 = Unlimited</Trans>
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="claims.envelopeItemCount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                <Trans>Envelope Item Count</Trans>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={1}
-                  {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
-                />
-              </FormControl>
-              <FormDescription>
-                <Trans>Maximum number of uploaded files per envelope allowed</Trans>
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="claims.envelopeItemCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  <Trans>Envelope Item Count</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={1}
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  <Trans>Maximum number of uploaded files per envelope allowed</Trans>
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="claims.recipientCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  <Trans>Recipient Count</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  <Trans>Maximum number of recipients per document allowed. 0 = Unlimited</Trans>
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div>
-          <FormLabel>
+          <h3 className="font-semibold text-base">
             <Trans>Feature Flags</Trans>
-          </FormLabel>
+          </h3>
+          <p className="mt-1 text-muted-foreground text-sm">
+            <Trans>Capabilities enabled for this organisation.</Trans>
+          </p>
 
-          <div className="mt-2 space-y-2 rounded-md border p-4">
-            {visibleFeatureFlags.map(({ key, label, isEnterprise }) => {
-              const isRestrictedFeature =
-                isEnterprise && !licenseFlags?.[key as keyof TLicenseClaim]; // eslint-disable-line @typescript-eslint/consistent-type-assertions
+          <div className="mt-3 space-y-2 rounded-md border p-4">
+            {Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).map(({ key, label, isEnterprise }) => {
+              const isRestrictedFeature = isEnterprise && !licenseFlags?.[key as keyof TLicenseClaim]; // eslint-disable-line @typescript-eslint/consistent-type-assertions
 
               return (
                 <FormField
@@ -729,7 +968,7 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
                           />
 
                           <label
-                            className="ml-2 flex flex-row items-center text-sm text-muted-foreground"
+                            className="ml-2 flex flex-row items-center text-muted-foreground text-sm"
                             htmlFor={`flag-${key}`}
                           >
                             {label}
@@ -760,6 +999,67 @@ const OrganisationAdminForm = ({ organisation, licenseFlags }: OrganisationAdmin
             </Alert>
           )} */}
         </div>
+
+        <ClaimLimitFields control={form.control} prefix="claims." />
+
+        <FormField
+          control={form.control}
+          name="claims.emailTransportId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                <Trans>Email transport</Trans>
+              </FormLabel>
+              <Select
+                value={field.value ?? NONE_VALUE}
+                onValueChange={(value) => field.onChange(value === NONE_VALUE ? null : value)}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t`Default (system mailer)`} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>{t`Default (system mailer)`}</SelectItem>
+                  {transports.map((transport) => (
+                    <SelectItem key={transport.id} value={transport.id}>
+                      {transport.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                <Trans>Organisations without a transport use the system default mailer.</Trans>
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="notifyOrganisation"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center">
+                <FormControl>
+                  <Checkbox id="notify-organisation" checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+
+                <label className="ml-2 text-muted-foreground text-sm" htmlFor="notify-organisation">
+                  <Trans>Notify the organisation about limit changes</Trans>
+                </label>
+              </div>
+              <FormDescription>
+                <Trans>
+                  Emails the organisation owner to let them know their limits have been updated. No email is sent if no
+                  limits changed.
+                </Trans>
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end">
           <Button type="submit" loading={form.formState.isSubmitting}>

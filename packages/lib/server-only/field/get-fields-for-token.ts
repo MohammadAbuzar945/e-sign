@@ -1,6 +1,7 @@
+import { prisma } from '@documenso/prisma';
 import { EnvelopeType, FieldType, RecipientRole, SigningStatus } from '@prisma/client';
 
-import { prisma } from '@documenso/prisma';
+import { getLaterSigningStepRecipientsWhereInput } from '../../utils/recipient-queries';
 
 export type GetFieldsForTokenOptions = {
   token: string;
@@ -32,9 +33,8 @@ export const getFieldsForToken = async ({ token }: GetFieldsForTokenOptions) => 
               signingStatus: {
                 not: SigningStatus.SIGNED,
               },
-              signingOrder: {
-                gte: recipient.signingOrder ?? 0,
-              },
+              envelopeId: recipient.envelopeId,
+              AND: [getLaterSigningStepRecipientsWhereInput(recipient)],
             },
             envelope: {
               id: recipient.envelopeId,

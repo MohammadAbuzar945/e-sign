@@ -1,6 +1,3 @@
-import { EnvelopeType, type Field, FieldType } from '@prisma/client';
-import { isDeepEqual } from 'remeda';
-
 import { validateCheckboxField } from '@documenso/lib/advanced-fields-validation/validate-checkbox';
 import { validateDropdownField } from '@documenso/lib/advanced-fields-validation/validate-dropdown';
 import { validateNumberField } from '@documenso/lib/advanced-fields-validation/validate-number';
@@ -18,11 +15,10 @@ import {
   ZTextFieldMeta,
 } from '@documenso/lib/types/field-meta';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
-import {
-  createDocumentAuditLogData,
-  diffFieldChanges,
-} from '@documenso/lib/utils/document-audit-logs';
+import { createDocumentAuditLogData, diffFieldChanges } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType, type Field, FieldType } from '@prisma/client';
+import { isDeepEqual } from 'remeda';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
@@ -93,9 +89,7 @@ export const setFieldsForDocument = async ({
     const recipient = envelope.recipients.find((recipient) => recipient.id === field.recipientId);
 
     // Check whether the field is being attached to an allowed envelope item.
-    const foundEnvelopeItem = envelope.envelopeItems.find(
-      (envelopeItem) => envelopeItem.id === field.envelopeItemId,
-    );
+    const foundEnvelopeItem = envelope.envelopeItems.find((envelopeItem) => envelopeItem.id === field.envelopeItemId);
 
     if (!foundEnvelopeItem) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
@@ -111,22 +105,16 @@ export const setFieldsForDocument = async ({
     }
 
     // Check whether the existing field can be modified.
-    if (
-      existing &&
-      hasFieldBeenChanged(existing, field) &&
-      !canRecipientFieldsBeModified(recipient, existingFields)
-    ) {
+    if (existing && hasFieldBeenChanged(existing, field) && !canRecipientFieldsBeModified(recipient, existingFields)) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message:
-          'Cannot modify a field where the recipient has already interacted with the document',
+        message: 'Cannot modify a field where the recipient has already interacted with the document',
       });
     }
 
     // Prevent creating new fields when recipient has interacted with the document.
     if (!existing && !canRecipientFieldsBeModified(recipient, existingFields)) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message:
-          'Cannot modify a field where the recipient has already interacted with the document',
+        message: 'Cannot modify a field where the recipient has already interacted with the document',
       });
     }
 
@@ -137,98 +125,78 @@ export const setFieldsForDocument = async ({
     };
   });
 
-  const preparedFields = linkedFields.map((field) => {
-    const fieldSignerEmail = field._recipient.email.toLowerCase();
-
-    const parsedFieldMeta = field.fieldMeta
-      ? ZFieldMetaSchema.parse(field.fieldMeta)
-      : FIELD_META_DEFAULT_VALUES[field.type];
-
-    // Meta parsing/validation is CPU-only; keep it out of the interactive transaction
-    // to avoid Prisma's 10s timeout.
-    if (field.type === FieldType.TEXT && field.fieldMeta) {
-      const textFieldParsedMeta = ZTextFieldMeta.parse(field.fieldMeta);
-      const errors = validateTextField(textFieldParsedMeta.text || '', textFieldParsedMeta);
-
-      if (errors.length > 0) {
-        throw new Error(errors.join(', '));
-      }
-    }
-
-    if (field.type === FieldType.NUMBER && field.fieldMeta) {
-      const numberFieldParsedMeta = ZNumberFieldMeta.parse(field.fieldMeta);
-
-      const errors = validateNumberField(
-        String(numberFieldParsedMeta.value || ''),
-        numberFieldParsedMeta,
-        false,
-      );
-
-      if (errors.length > 0) {
-        throw new Error(errors.join(', '));
-      }
-    }
-
-    if (field.type === FieldType.CHECKBOX) {
-      if (field.fieldMeta) {
-        const checkboxFieldParsedMeta = ZCheckboxFieldMeta.parse(field.fieldMeta);
-        const errors = validateCheckboxField(
-          checkboxFieldParsedMeta?.values?.map((item) => item.value) ?? [],
-          checkboxFieldParsedMeta,
-        );
-
-        if (errors.length > 0) {
-          throw new Error(errors.join(', '));
-        }
-      } else {
-        throw new Error(
-          'To proceed further, please set at least one value for the Checkbox field',
-        );
-      }
-    }
-
-    if (field.type === FieldType.RADIO) {
-      if (field.fieldMeta) {
-        const radioFieldParsedMeta = ZRadioFieldMeta.parse(field.fieldMeta);
-        const checkedRadioFieldValue = radioFieldParsedMeta.values?.find(
-          (option) => option.checked,
-        )?.value;
-
-        const errors = validateRadioField(checkedRadioFieldValue, radioFieldParsedMeta);
-
-        if (errors.length > 0) {
-          throw new Error(errors.join('. '));
-        }
-      } else {
-        throw new Error('To proceed further, please set at least one value for the Radio field');
-      }
-    }
-
-    if (field.type === FieldType.DROPDOWN) {
-      if (field.fieldMeta) {
-        const dropdownFieldParsedMeta = ZDropdownFieldMeta.parse(field.fieldMeta);
-        const errors = validateDropdownField(undefined, dropdownFieldParsedMeta);
-
-        if (errors.length > 0) {
-          throw new Error(errors.join('. '));
-        }
-      } else {
-        throw new Error(
-          'To proceed further, please set at least one value for the Dropdown field',
-        );
-      }
-    }
-
-    return {
-      field,
-      fieldSignerEmail,
-      parsedFieldMeta,
-    };
-  });
-
   const persistedFields = await prisma.$transaction(async (tx) => {
-    const upsertResults = await Promise.all(
-      preparedFields.map(async ({ field, fieldSignerEmail, parsedFieldMeta }) => {
+    return await Promise.all(
+      linkedFields.map(async (field) => {
+        const fieldSignerEmail = field._recipient.email.toLowerCase();
+
+        const parsedFieldMeta = field.fieldMeta
+          ? ZFieldMetaSchema.parse(field.fieldMeta)
+          : FIELD_META_DEFAULT_VALUES[field.type];
+
+        if (field.type === FieldType.TEXT && field.fieldMeta) {
+          const textFieldParsedMeta = ZTextFieldMeta.parse(field.fieldMeta);
+          const errors = validateTextField(textFieldParsedMeta.text || '', textFieldParsedMeta);
+
+          if (errors.length > 0) {
+            throw new Error(errors.join(', '));
+          }
+        }
+
+        if (field.type === FieldType.NUMBER && field.fieldMeta) {
+          const numberFieldParsedMeta = ZNumberFieldMeta.parse(field.fieldMeta);
+
+          const errors = validateNumberField(String(numberFieldParsedMeta.value || ''), numberFieldParsedMeta, false);
+
+          if (errors.length > 0) {
+            throw new Error(errors.join(', '));
+          }
+        }
+
+        if (field.type === FieldType.CHECKBOX) {
+          if (field.fieldMeta) {
+            const checkboxFieldParsedMeta = ZCheckboxFieldMeta.parse(field.fieldMeta);
+            const errors = validateCheckboxField(
+              checkboxFieldParsedMeta?.values?.map((item) => item.value) ?? [],
+              checkboxFieldParsedMeta,
+            );
+
+            if (errors.length > 0) {
+              throw new Error(errors.join(', '));
+            }
+          } else {
+            throw new Error('To proceed further, please set at least one value for the Checkbox field');
+          }
+        }
+
+        if (field.type === FieldType.RADIO) {
+          if (field.fieldMeta) {
+            const radioFieldParsedMeta = ZRadioFieldMeta.parse(field.fieldMeta);
+            const checkedRadioFieldValue = radioFieldParsedMeta.values?.find((option) => option.checked)?.value;
+
+            const errors = validateRadioField(checkedRadioFieldValue, radioFieldParsedMeta);
+
+            if (errors.length > 0) {
+              throw new Error(errors.join('. '));
+            }
+          } else {
+            throw new Error('To proceed further, please set at least one value for the Radio field');
+          }
+        }
+
+        if (field.type === FieldType.DROPDOWN) {
+          if (field.fieldMeta) {
+            const dropdownFieldParsedMeta = ZDropdownFieldMeta.parse(field.fieldMeta);
+            const errors = validateDropdownField(undefined, dropdownFieldParsedMeta);
+
+            if (errors.length > 0) {
+              throw new Error(errors.join('. '));
+            }
+          } else {
+            throw new Error('To proceed further, please set at least one value for the Dropdown field');
+          }
+        }
+
         const upsertedField = await tx.field.upsert({
           where: {
             id: field._persisted?.id ?? -1,
@@ -284,60 +252,43 @@ export const setFieldsForDocument = async ({
           fieldType: upsertedField.type,
         };
 
-        const changes = field._persisted
-          ? diffFieldChanges(field._persisted, upsertedField)
-          : [];
+        const changes = field._persisted ? diffFieldChanges(field._persisted, upsertedField) : [];
+
+        // Handle field updated audit log.
+        if (field._persisted && changes.length > 0) {
+          await tx.documentAuditLog.create({
+            data: createDocumentAuditLogData({
+              type: DOCUMENT_AUDIT_LOG_TYPE.FIELD_UPDATED,
+              envelopeId: envelope.id,
+              metadata: requestMetadata,
+              data: {
+                changes,
+                ...baseAuditLog,
+              },
+            }),
+          });
+        }
+
+        // Handle field created audit log.
+        if (!field._persisted) {
+          await tx.documentAuditLog.create({
+            data: createDocumentAuditLogData({
+              type: DOCUMENT_AUDIT_LOG_TYPE.FIELD_CREATED,
+              envelopeId: envelope.id,
+              metadata: requestMetadata,
+              data: {
+                ...baseAuditLog,
+              },
+            }),
+          });
+        }
 
         return {
-          upsertedField,
-          field,
-          baseAuditLog,
-          changes,
+          ...upsertedField,
+          formId: field.formId,
         };
       }),
     );
-
-    const auditLogsToCreate = upsertResults.flatMap((result) => {
-      if (result.field._persisted) {
-        if (result.changes.length === 0) {
-          return [];
-        }
-
-        return [
-          createDocumentAuditLogData({
-            type: DOCUMENT_AUDIT_LOG_TYPE.FIELD_UPDATED,
-            envelopeId: envelope.id,
-            metadata: requestMetadata,
-            data: {
-              changes: result.changes,
-              ...result.baseAuditLog,
-            },
-          }),
-        ];
-      }
-
-      return [
-        createDocumentAuditLogData({
-          type: DOCUMENT_AUDIT_LOG_TYPE.FIELD_CREATED,
-          envelopeId: envelope.id,
-          metadata: requestMetadata,
-          data: {
-            ...result.baseAuditLog,
-          },
-        }),
-      ];
-    });
-
-    if (auditLogsToCreate.length > 0) {
-      await tx.documentAuditLog.createMany({
-        data: auditLogsToCreate,
-      });
-    }
-
-    return upsertResults.map((result) => ({
-      ...result.upsertedField,
-      formId: result.field.formId,
-    }));
   });
 
   if (removedFields.length > 0) {

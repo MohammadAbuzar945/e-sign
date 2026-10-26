@@ -1,4 +1,4 @@
-import type { DocumentMeta, Envelope, Recipient, WebhookTriggerEvents } from '@prisma/client';
+import type { DocumentMeta, Envelope, Recipient } from '@prisma/client';
 import {
   DocumentDistributionMethod,
   DocumentSigningOrder,
@@ -10,10 +10,9 @@ import {
   RecipientRole,
   SendStatus,
   SigningStatus,
+  WebhookTriggerEvents,
 } from '@prisma/client';
 import { z } from 'zod';
-
-import { NEXT_PUBLIC_WEBAPP_URL } from '../constants/app';
 
 import { mapSecondaryIdToDocumentId, mapSecondaryIdToTemplateId } from '../utils/envelope';
 
@@ -22,14 +21,16 @@ import { mapSecondaryIdToDocumentId, mapSecondaryIdToTemplateId } from '../utils
  */
 export const ZWebhookRecipientSchema = z.object({
   id: z.number(),
+  envelopeId: z.string(),
   documentId: z.number().nullable(),
   templateId: z.number().nullable(),
   email: z.string(),
   name: z.string(),
   token: z.string(),
-  documentDeletedAt: z.date().nullable(),
-  expired: z.date().nullable(),
-  signedAt: z.date().nullable(),
+  documentDeletedAt: z.coerce.date().nullable(),
+  expiresAt: z.coerce.date().nullable(),
+  expirationNotifiedAt: z.coerce.date().nullable(),
+  signedAt: z.coerce.date().nullable(),
   authOptions: z.any().nullable(),
   signingOrder: z.number().nullable(),
   rejectionReason: z.string().nullable(),
@@ -64,6 +65,7 @@ export const ZWebhookDocumentMetaSchema = z.object({
  */
 export const ZWebhookDocumentSchema = z.object({
   id: z.number(),
+  envelopeId: z.string(),
   externalId: z.string().nullable(),
   userId: z.number(),
   authOptions: z.any().nullable(),
@@ -71,27 +73,36 @@ export const ZWebhookDocumentSchema = z.object({
   visibility: z.nativeEnum(DocumentVisibility),
   title: z.string(),
   status: z.nativeEnum(DocumentStatus),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  completedAt: z.date().nullable(),
-  deletedAt: z.date().nullable(),
-  shareQrCodeLink: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  completedAt: z.coerce.date().nullable(),
+  deletedAt: z.coerce.date().nullable(),
   teamId: z.number().nullable(),
   templateId: z.number().nullable(),
   source: z.nativeEnum(DocumentSource),
   documentMeta: ZWebhookDocumentMetaSchema.nullable(),
   recipients: z.array(ZWebhookRecipientSchema),
+
+  /**
+   * Legacy field for backwards compatibility.
+   */
+  Recipient: z.array(ZWebhookRecipientSchema),
+});
+
+/**
+ * Schema for the full webhook delivery envelope (what receivers see on the wire
+ * and what is persisted to `WebhookCall.requestBody`).
+ */
+export const ZWebhookPayloadSchema = z.object({
+  event: z.nativeEnum(WebhookTriggerEvents),
+  payload: ZWebhookDocumentSchema,
+  createdAt: z.string(),
+  webhookEndpoint: z.string(),
 });
 
 export type TWebhookRecipient = z.infer<typeof ZWebhookRecipientSchema>;
 export type TWebhookDocument = z.infer<typeof ZWebhookDocumentSchema>;
-
-export type WebhookPayload = {
-  event: WebhookTriggerEvents;
-  payload: TWebhookDocument;
-  createdAt: string;
-  webhookEndpoint: string;
-};
+export type WebhookPayload = z.infer<typeof ZWebhookPayloadSchema>;
 
 export const mapEnvelopeToWebhookDocumentPayload = (
   envelope: Envelope & {
@@ -108,13 +119,15 @@ export const mapEnvelopeToWebhookDocumentPayload = (
 
   const mappedRecipients = rawRecipients.map((recipient) => ({
     id: recipient.id,
+    envelopeId: envelope.id,
     documentId: envelope.type === EnvelopeType.DOCUMENT ? legacyId : null,
     templateId: envelope.type === EnvelopeType.TEMPLATE ? legacyId : null,
     email: recipient.email,
     name: recipient.name,
     token: recipient.token,
     documentDeletedAt: recipient.documentDeletedAt,
-    expired: recipient.expired,
+    expiresAt: recipient.expiresAt,
+    expirationNotifiedAt: recipient.expirationNotifiedAt,
     signedAt: recipient.signedAt,
     authOptions: recipient.authOptions,
     signingOrder: recipient.signingOrder,
@@ -127,6 +140,7 @@ export const mapEnvelopeToWebhookDocumentPayload = (
 
   return {
     id: legacyId,
+    envelopeId: envelope.id,
     externalId: envelope.externalId,
     userId: envelope.userId,
     authOptions: envelope.authOptions,
@@ -138,10 +152,6 @@ export const mapEnvelopeToWebhookDocumentPayload = (
     updatedAt: envelope.updatedAt,
     completedAt: envelope.completedAt,
     deletedAt: envelope.deletedAt,
-    shareQrCodeLink:
-      envelope.status === DocumentStatus.COMPLETED && envelope.qrToken
-        ? `${NEXT_PUBLIC_WEBAPP_URL()}/share/${envelope.qrToken}`
-        : null,
     teamId: envelope.teamId,
     templateId: envelope.templateId,
     source: envelope.source,
@@ -153,6 +163,7 @@ export const mapEnvelopeToWebhookDocumentPayload = (
           dateFormat: 'yyyy-MM-dd hh:mm a',
         }
       : null,
+    Recipient: mappedRecipients,
     recipients: mappedRecipients,
   };
 };

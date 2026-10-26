@@ -1,27 +1,17 @@
-import {
-  ALLOWED_TEAM_GROUP_TYPES,
-  TEAM_MEMBER_ROLE_PERMISSIONS_MAP,
-} from '@documenso/lib/constants/teams';
+import { ALLOWED_TEAM_GROUP_TYPES, TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
 import { TEAM_AUDIT_LOG_TYPE } from '@documenso/lib/types/team-audit-logs';
 import { generateDatabaseId } from '@documenso/lib/universal/id';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
-import {
-  OrganisationGroupType,
-  OrganisationMemberRole,
-  TeamMemberRole,
-} from '@documenso/prisma/generated/types';
+import { OrganisationGroupType, OrganisationMemberRole, TeamMemberRole } from '@documenso/prisma/generated/types';
 
 import type { CreateTeamAuditLogDataResponse } from '@documenso/lib/utils/team-audit-logs';
 import { createTeamAuditLogData } from '@documenso/lib/utils/team-audit-logs';
 
 import { authenticatedProcedure } from '../trpc';
-import {
-  ZCreateTeamGroupsRequestSchema,
-  ZCreateTeamGroupsResponseSchema,
-} from './create-team-groups.types';
+import { ZCreateTeamGroupsRequestSchema, ZCreateTeamGroupsResponseSchema } from './create-team-groups.types';
 
 export const createTeamGroupsRoute = authenticatedProcedure
   // .meta(createTeamGroupsMeta)
@@ -69,10 +59,10 @@ export const createTeamGroupsRoute = authenticatedProcedure
       },
     });
 
+    // Hard validation — these failures indicate programming or authorisation
+    // errors and should reject the whole request.
     const isValid = groups.every((group) => {
-      const organisationGroup = team.organisation.groups.find(
-        ({ id }) => id === group.organisationGroupId,
-      );
+      const organisationGroup = team.organisation.groups.find(({ id }) => id === group.organisationGroupId);
 
       // Only allow specific organisation groups to be used as a reference for team groups.
       if (!organisationGroup?.type || !ALLOWED_TEAM_GROUP_TYPES.includes(organisationGroup.type)) {
@@ -85,11 +75,6 @@ export const createTeamGroupsRoute = authenticatedProcedure
         organisationGroup.organisationRole === OrganisationMemberRole.MEMBER &&
         group.teamRole !== TeamMemberRole.MEMBER
       ) {
-        return false;
-      }
-
-      // Check that the group is not already added to the team.
-      if (organisationGroup.teamGroups.some((teamGroup) => teamGroup.teamId === teamId)) {
         return false;
       }
 
@@ -107,8 +92,21 @@ export const createTeamGroupsRoute = authenticatedProcedure
       });
     }
 
+    // Silently drop groups already attached to the team. Makes the create
+    // idempotent for the common race where a group was added between the
+    // picker fetch and the submit.
+    const filteredGroups = groups.filter((group) => {
+      const organisationGroup = team.organisation.groups.find(({ id }) => id === group.organisationGroupId);
+
+      return !organisationGroup?.teamGroups.some((teamGroup) => teamGroup.teamId === teamId);
+    });
+
+    if (filteredGroups.length === 0) {
+      return;
+    }
+
     await prisma.teamGroup.createMany({
-      data: groups.map((group) => ({
+      data: filteredGroups.map((group) => ({
         id: generateDatabaseId('team_group'),
         teamId,
         organisationGroupId: group.organisationGroupId,

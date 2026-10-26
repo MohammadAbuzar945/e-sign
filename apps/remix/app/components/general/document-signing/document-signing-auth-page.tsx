@@ -1,35 +1,42 @@
-import { useState } from 'react';
-
+import { authClient } from '@documenso/auth/client';
+import { useIsFramed } from '@documenso/lib/client-only/hooks/use-is-framed';
+import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
+import { formatPath } from '@documenso/lib/constants/app';
+import { Button } from '@documenso/ui/primitives/button';
+import { useToast } from '@documenso/ui/primitives/use-toast';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
+import { useState } from 'react';
 
-import { authClient } from '@documenso/auth/client';
-import { Button } from '@documenso/ui/primitives/button';
-import { useToast } from '@documenso/ui/primitives/use-toast';
+import { EmbedPopupAuth } from '~/components/embed/embed-popup-auth';
 
 export type DocumentSigningAuthPageViewProps = {
   email?: string;
   emailHasAccount?: boolean;
 };
 
-export const DocumentSigningAuthPageView = ({
-  email,
-  emailHasAccount,
-}: DocumentSigningAuthPageViewProps) => {
+export const DocumentSigningAuthPageView = ({ email, emailHasAccount }: DocumentSigningAuthPageViewProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
 
+  const isFramed = useIsFramed();
+
+  const { sessionData } = useOptionalSession();
+
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const mismatchedUserEmail =
+    sessionData?.user && email && sessionData.user.email !== email ? sessionData.user.email : undefined;
 
   const handleChangeAccount = async (email?: string) => {
     try {
       setIsSigningOut(true);
 
-      let redirectPath = '/signin';
+      let redirectPath = formatPath('/signin');
 
       if (email) {
-        redirectPath = emailHasAccount ? `/signin#email=${email}` : `/signup#email=${email}`;
+        redirectPath = emailHasAccount ? formatPath(`/signin#email=${email}`) : formatPath(`/signup#email=${email}`);
       }
 
       await authClient.signOut({
@@ -49,12 +56,12 @@ export const DocumentSigningAuthPageView = ({
 
   return (
     <div className="mx-auto flex h-[70vh] w-full max-w-md flex-col items-center justify-center">
-      <div>
-        <h1 className="text-3xl font-semibold">
+      <div className="w-full">
+        <h1 className="font-semibold text-3xl">
           <Trans>Authentication required</Trans>
         </h1>
 
-        <p className="text-muted-foreground mt-2 text-sm">
+        <p className="mt-2 text-muted-foreground text-sm">
           {email ? (
             <Trans>
               You need to be logged in as <strong>{email}</strong> to view this page.
@@ -64,14 +71,23 @@ export const DocumentSigningAuthPageView = ({
           )}
         </p>
 
-        <Button
-          className="mt-4 w-full"
-          type="submit"
-          onClick={async () => handleChangeAccount(email)}
-          loading={isSigningOut}
-        >
-          {emailHasAccount ? <Trans>Login</Trans> : <Trans>Sign up</Trans>}
-        </Button>
+        {isFramed ? (
+          <EmbedPopupAuth
+            className="mt-4"
+            email={email || undefined}
+            signedInAs={mismatchedUserEmail}
+            onSuccess={() => window.location.reload()}
+          />
+        ) : (
+          <Button
+            className="mt-4 w-full"
+            type="submit"
+            onClick={async () => handleChangeAccount(email)}
+            loading={isSigningOut}
+          >
+            {emailHasAccount ? <Trans>Login</Trans> : <Trans>Sign up</Trans>}
+          </Button>
+        )}
       </div>
     </div>
   );

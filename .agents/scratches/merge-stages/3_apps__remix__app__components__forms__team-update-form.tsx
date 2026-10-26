@@ -1,0 +1,147 @@
+import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { trpc } from '@documenso/trpc/react';
+import { ZUpdateTeamRequestSchema } from '@documenso/trpc/server/team-router/update-team.types';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
+import { Input } from '@documenso/ui/primitives/input';
+import { useToast } from '@documenso/ui/primitives/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router';
+import type { z } from 'zod';
+
+import { FormStickySaveBar } from './form-sticky-save-bar';
+
+export type UpdateTeamDialogProps = {
+  teamId: number;
+  teamName: string;
+  teamUrl: string;
+};
+
+const ZTeamUpdateFormSchema = ZUpdateTeamRequestSchema.shape.data.pick({
+  name: true,
+  url: true,
+});
+
+type TTeamUpdateFormSchema = z.infer<typeof ZTeamUpdateFormSchema>;
+
+export const TeamUpdateForm = ({ teamId, teamName, teamUrl }: UpdateTeamDialogProps) => {
+  const navigate = useNavigate();
+  const { _ } = useLingui();
+  const { toast } = useToast();
+
+  const form = useForm({
+    resolver: zodResolver(ZTeamUpdateFormSchema),
+    defaultValues: {
+      name: teamName,
+      url: teamUrl,
+    },
+  });
+
+  const { mutateAsync: updateTeam } = trpc.team.update.useMutation();
+
+  const onFormSubmit = async ({ name, url }: TTeamUpdateFormSchema) => {
+    try {
+      await updateTeam({
+        data: {
+          name,
+          url,
+        },
+        teamId,
+      });
+
+      toast({
+        title: _(msg`Success`),
+        description: _(msg`Your team has been successfully updated.`),
+        duration: 5000,
+      });
+
+      form.reset({
+        name,
+        url,
+      });
+
+      if (url !== teamUrl) {
+        await navigate(`/t/${url}/settings/general`);
+      }
+    } catch (err) {
+      const error = AppError.parseError(err);
+
+      if (error.code === AppErrorCode.ALREADY_EXISTS) {
+        form.setError('url', {
+          type: 'manual',
+          message: _(msg`This URL is already in use.`),
+        });
+
+        return;
+      }
+
+      toast({
+        title: _(msg`An unknown error occurred`),
+        description: _(
+          msg`We encountered an unknown error while attempting to update your team. Please try again later.`,
+        ),
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onFormSubmit)}>
+        <fieldset className="flex h-full flex-col" disabled={form.formState.isSubmitting}>
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>
+                  <Trans>Team Name</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input className="bg-background" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="url"
+            render={({ field }) => (
+              <FormItem className="mt-4">
+                <FormLabel required>
+                  <Trans>Team URL</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input className="bg-background" {...field} />
+                </FormControl>
+                {!form.formState.errors.url && (
+                  <span className="font-normal text-foreground/50 text-xs">
+                    {field.value ? (
+                      `${NEXT_PUBLIC_WEBAPP_URL()}/t/${field.value}`
+                    ) : (
+                      <Trans>A unique URL to identify your team</Trans>
+                    )}
+                  </span>
+                )}
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormStickySaveBar
+            isDirty={form.formState.isDirty}
+            isSubmitting={form.formState.isSubmitting}
+            onReset={() => form.reset()}
+          />
+        </fieldset>
+      </form>
+    </Form>
+  );
+};

@@ -1,17 +1,8 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { AnimatePresence, motion } from 'framer-motion';
-import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router';
-import type { z } from 'zod';
-
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { trpc } from '@documenso/trpc/react';
 import { ZUpdateTeamRequestSchema } from '@documenso/trpc/server/team-router/update-team.types';
-import { Button } from '@documenso/ui/primitives/button';
+import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import {
   Form,
   FormControl,
@@ -22,7 +13,15 @@ import {
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { Checkbox } from '@documenso/ui/primitives/checkbox';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router';
+import type { z } from 'zod';
+
+import { FormStickySaveBar } from './form-sticky-save-bar';
 
 export type UpdateTeamDialogProps = {
   teamId: number;
@@ -215,37 +214,11 @@ export const TeamUpdateForm = ({
               </FormItem>
             )}
           />
-
-          <div className="flex flex-row justify-end space-x-4">
-            <AnimatePresence>
-              {form.formState.isDirty && (
-                <motion.div
-                  initial={{
-                    opacity: 0,
-                  }}
-                  animate={{
-                    opacity: 1,
-                  }}
-                  exit={{
-                    opacity: 0,
-                  }}
-                >
-                  <Button type="button" variant="secondary" onClick={() => form.reset()}>
-                    <Trans>Reset</Trans>
-                  </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <Button
-              type="submit"
-              className="transition-opacity"
-              disabled={!form.formState.isDirty}
-              loading={form.formState.isSubmitting}
-            >
-              <Trans>Update team</Trans>
-            </Button>
-          </div>
+          <FormStickySaveBar
+            isDirty={form.formState.isDirty}
+            isSubmitting={form.formState.isSubmitting}
+            onReset={() => form.reset()}
+          />
         </fieldset>
       </form>
     </Form>

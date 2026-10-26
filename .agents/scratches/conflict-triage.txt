@@ -1,0 +1,428 @@
+﻿FILE: apps/remix/app/components/dialogs/envelope-distribute-dialog.tsx HUNK#1
+  OURS(29ln): import { useEffect, useMemo, useState } from 'react'; import { zodResolver } from '@hookform/resolvers/zod'; import { us
+  THEIRS(10ln): import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics'; import { useCurrentEnvelopeEditor } from 
+
+FILE: apps/remix/app/components/dialogs/envelope-distribute-dialog.tsx HUNK#2
+  OURS(4ln):  const isKbaSendBlocked = useMemo(() => { const auth = extractDocumentAuthMethods({ documentAuth: envelope.authOptions, 
+  THEIRS(12ln):  /** * List of recipients who must have an email due to having auth enabled. */ const recipientsMissingRequiredEmail = u
+
+FILE: apps/remix/app/components/dialogs/envelope-distribute-dialog.tsx HUNK#3
+  OURS(7ln):  toast({ title: t`Something went wrong`, description: error.code === AppErrorCode.LIMIT_EXCEEDED ? t`You do not have eno
+  THEIRS(12ln):  analytics.captureException(err, { source: 'editor', location: 'distribute_document', envelopeId: envelope.id, }); const
+
+FILE: apps/remix/app/components/dialogs/envelope-distribute-dialog.tsx HUNK#4
+  OURS(1ln): 
+  THEIRS(37ln):  {hasOverlappingEnvelopeFields && ( <Alert variant="warning" className="mb-4 flex flex-row items-start gap-3"> <AlertTri
+
+FILE: apps/remix/app/components/dialogs/envelope-distribute-dialog.tsx HUNK#5
+  OURS(2ln):  )} 
+  THEIRS(23ln):  ) : distributionMethod === DocumentDistributionMethod.NONE ? ( <motion.div key={'Links'} initial={{ opacity: 0, y: 5 }}
+
+FILE: apps/remix/app/components/dialogs/envelope-distribute-dialog.tsx HUNK#6
+  OURS(14ln):  <Trans> Security question (KBA) is turned on for this document, but the question, answer, or multiple-choice options ar
+  THEIRS(10ln):  <Trans>The following recipients require an email address:</Trans> <ul className="mt-1 ml-2 list-inside list-disc"> {rec
+
+FILE: apps/remix/app/components/dialogs/envelopes-bulk-delete-dialog.tsx HUNK#1
+  OURS(7ln): import { Plural, useLingui } from '@lingui/react/macro'; import { Trans } from '@lingui/react/macro'; import { EnvelopeT
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/dialogs/envelopes-bulk-delete-dialog.tsx HUNK#2
+  OURS(7ln):  <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={isPending} > 
+  THEIRS(2ln):  <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={isPending}> 
+
+FILE: apps/remix/app/components/dialogs/organisation-create-dialog.tsx HUNK#1
+  OURS(13ln): import { useEffect, useState } from 'react'; import { zodResolver } from '@hookform/resolvers/zod'; import { useLingui }
+  THEIRS(5ln): import type { InternalClaimPlans } from '@documenso/ee/server-only/stripe/get-internal-claim-plans'; import { useUpdateS
+
+FILE: apps/remix/app/components/dialogs/organisation-create-dialog.tsx HUNK#2
+  OURS(1ln): 
+  THEIRS(5ln):  const [step, setStep] = useState<'billing' | 'create'>(IS_BILLING_ENABLED() ? 'billing' : 'create'); const [selectedPri
+
+FILE: apps/remix/app/components/dialogs/organisation-create-dialog.tsx HUNK#3
+  OURS(15ln):  <Dialog {...props} open={openValue} onOpenChange={setOpenValue} > {!isControlled && ( <DialogTrigger onClick={(e) => e.
+  THEIRS(9ln):  <Dialog {...props} open={open} onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}> <DialogTrigger
+
+FILE: apps/remix/app/components/dialogs/organisation-create-dialog.tsx HUNK#4
+  OURS(12ln):  <Button type="submit" data-testid="dialog-create-organisation-button" loading={form.formState.isSubmitting} > <Trans>Cr
+  THEIRS(71ln):  {isIndividualPlan(selectedPriceId) && isPersonalLayoutMode ? ( <IndividualPersonalLayoutCheckoutButton priceId={selecte
+
+FILE: apps/remix/app/components/dialogs/organisation-create-dialog.tsx HUNK#5
+  OURS(1ln): 
+  THEIRS(163ln): // This is separated from the internal claims constant because we need to use the msg // macro which would cause import 
+
+FILE: apps/remix/app/components/dialogs/organisation-group-create-dialog.tsx HUNK#1
+  OURS(15ln):  const { data: membersFindResult, isLoading: isLoadingMembers } = trpc.organisation.member.find.useQuery({ organisationI
+  THEIRS(2ln):  const onFormSubmit = async ({ name, organisationRole, memberIds }: TCreateOrganisationGroupFormSchema) => { 
+
+FILE: apps/remix/app/components/dialogs/organisation-group-create-dialog.tsx HUNK#2
+  OURS(13ln):  <MultiSelectCombobox options={members.map((member) => ({ label: member.name ? `${member.name} (${member.email})` : memb
+  THEIRS(10ln):  <OrganisationMembersMultiSelectCombobox organisationId={organisation.id} selectedMembers={selectedMembers} onChange={(m
+
+FILE: apps/remix/app/components/dialogs/team-member-create-dialog.tsx HUNK#1
+  OURS(14ln): import { useEffect, useMemo, useRef, useState } from 'react'; import { zodResolver } from '@hookform/resolvers/zod'; imp
+  THEIRS(2ln): import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation'; 
+
+FILE: apps/remix/app/components/dialogs/team-member-create-dialog.tsx HUNK#2
+  OURS(27ln):  page: 1, perPage: MEMBER_SELECTION_PER_PAGE, }); const teamMemberQuery = trpc.team.member.find.useQuery({ teamId: team.
+  THEIRS(7ln):  perPage: 1, excludeTeamId: team.id, }); const hasNoAvailableMembers = !availableMemberCountQuery.isLoading && (availabl
+
+FILE: apps/remix/app/components/dialogs/team-member-create-dialog.tsx HUNK#3
+  OURS(15ln):  <MultiSelectCombobox options={avaliableOrganisationMembers.map((member) => ({ label: member.name || member.email, descr
+  THEIRS(7ln):  <OrganisationMembersMultiSelectCombobox organisationId={team.organisationId} selectedMembers={selectedMembers} excludeT
+
+FILE: apps/remix/app/components/dialogs/template-use-dialog.tsx HUNK#1
+  OURS(15ln): import { useEffect, useState } from 'react'; import { zodResolver } from '@hookform/resolvers/zod'; import { msg } from 
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/dialogs/template-use-dialog.tsx HUNK#2
+  OURS(7ln): import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION, SKIP_QUERY_BATCH_META, } from '@documenso/lib/constants/trpc'; import { Ap
+  THEIRS(4ln): import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION, SKIP_QUERY_BATCH_META } from '@documenso/lib/constants/trpc'; import { App
+
+FILE: apps/remix/app/components/dialogs/template-use-dialog.tsx HUNK#3
+  OURS(16ln):  }; if (error.code === AppErrorCode.LIMIT_EXCEEDED) { toastPayload.description = _( msg`You do not have enough credits t
+  THEIRS(2ln):  }); 
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#1
+  OURS(12ln): import { zodResolver } from '@hookform/resolvers/zod'; import { msg } from '@lingui/core/macro'; import { useLingui } fr
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#2
+  OURS(11ln): import { ZDocumentKbaModeSchema, type TDocumentKbaSettings, } from '@documenso/lib/types/document-auth'; import { type T
+  THEIRS(3ln): import { type TDocumentMetaDateFormat, ZDocumentMetaDateFormatSchema } from '@documenso/lib/types/document-meta'; import
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#3
+  OURS(5ln): import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert'; import { AvatarWithText } from '@d
+  THEIRS(2ln): import { AvatarWithText } from '@documenso/ui/primitives/avatar'; 
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#4
+  OURS(10ln): import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@documenso/ui/primitives/select'; import
+  THEIRS(10ln): import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select'; import 
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#5
+  OURS(5ln):  includeSenderDetails: boolean | null; includeSigningCertificate: boolean | null; includeQrCodeInCertificate: boolean | 
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#6
+  OURS(5ln):  | 'includeSenderDetails' | 'includeSigningCertificate' | 'includeQrCodeInCertificate' | 'includeAuditLog' 
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#7
+  OURS(18ln):  /** * Effective KBA defaults when the team has not overridden (`kbaSettings` is null on the team). */ effectiveKbaSetti
+  THEIRS(22ln):  onFormSubmit: (data: TDocumentPreferencesFormSchema) => Promise<void>; }; const getDocumentPreferencesFormValues = (set
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#8
+  OURS(6ln):  documentDateFormat: ZDocumentMetaTimezoneSchema.nullable(), includeSenderDetails: z.boolean().nullable(), includeSignin
+  THEIRS(2ln):  documentDateFormat: ZDocumentMetaDateFormatSchema.nullable(), 
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#9
+  OURS(40ln):  const resolvedEffectiveKba = effectiveKbaSettings ?? normalizeStoredKbaSettings(settings.kbaSettings); const displayKba
+  THEIRS(39ln):  const defaultValues = getDocumentPreferencesFormValues(settings); const defaultSettings = canInherit ? generateDefaultT
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#10
+  OURS(226ln):  </FormItem> )} /> {!isPersonalLayoutMode && !isPersonalOrganisation && ( <FormField control={form.control} name="includ
+  THEIRS(2ln):  </InheritableField> 
+
+FILE: apps/remix/app/components/forms/document-preferences-form.tsx HUNK#11
+  OURS(247ln):  <div className="border-t pt-6"> <h3 className="mb-4 text-lg font-medium"> <Trans>Knowledge-based authentication (KBA)</
+  THEIRS(16ln):  <FormStickySaveBar isDirty={form.formState.isDirty} isSubmitting={form.formState.isSubmitting} onReset={() => form.rese
+
+FILE: apps/remix/app/components/forms/organisation-update-form.tsx HUNK#1
+  OURS(11ln): import { Button } from '@documenso/ui/primitives/button'; import { Form, FormControl, FormDescription, FormField, FormIt
+  THEIRS(2ln): import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form'; 
+
+FILE: apps/remix/app/components/forms/organisation-update-form.tsx HUNK#2
+  OURS(85ln):  <FormField control={form.control} name="vatNumber" render={({ field }) => ( <FormItem className="mt-4"> <FormLabel> <Tr
+  THEIRS(6ln):  <FormStickySaveBar isDirty={form.formState.isDirty} isSubmitting={form.formState.isSubmitting} onReset={() => form.rese
+
+FILE: apps/remix/app/components/forms/signin.tsx HUNK#1
+  OURS(1ln): 
+  THEIRS(6ln): import type { TurnstileInstance } from '@marsidev/react-turnstile'; import { Turnstile } from '@marsidev/react-turnstile
+
+FILE: apps/remix/app/components/forms/signin.tsx HUNK#2
+  OURS(1ln): 
+  THEIRS(7ln):  const turnstileSiteKey = env('NEXT_PUBLIC_TURNSTILE_SITE_KEY'); const turnstileRef = useRef<TurnstileInstance>(null); c
+
+FILE: apps/remix/app/components/forms/signin.tsx HUNK#3
+  OURS(1ln): 
+  THEIRS(3ln):  const { mutateAsync: createPasskeySigninOptions } = trpc.auth.passkey.createSigninOptions.useMutation(); 
+
+FILE: apps/remix/app/components/forms/signin.tsx HUNK#4
+  OURS(1ln): 
+  THEIRS(53ln):  const onSignInWithPasskey = async () => { if (!browserSupportsWebAuthn()) { toast({ title: _(msg`Not supported`), descr
+
+FILE: apps/remix/app/components/forms/signin.tsx HUNK#5
+  OURS(64ln):  <form className={cn('flex w-full flex-col gap-y-4', className)} onSubmit={form.handleSubmit(onFormSubmit)} > <fieldset 
+  THEIRS(4ln):  <form className={cn('flex w-full flex-col gap-y-4', className)} onSubmit={form.handleSubmit(onFormSubmit)}> <fieldset c
+
+FILE: apps/remix/app/components/forms/signin.tsx HUNK#6
+  OURS(1ln): 
+  THEIRS(66ln):  {isEmailPasswordSigninEnabled && hasSocialAuthEnabled && ( <div className="relative flex items-center justify-center ga
+
+FILE: apps/remix/app/components/forms/signup.tsx HUNK#1
+  OURS(22ln): import communityCardsImage from '@documenso/assets/images/community-cards.png'; import { authClient } from '@documenso/a
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/forms/signup.tsx HUNK#2
+  OURS(2ln):  ...(affiliateSlug ? { affiliateSlug } : {}), 
+  THEIRS(2ln):  captchaToken: token ?? undefined, 
+
+FILE: apps/remix/app/components/forms/signup.tsx HUNK#3
+  OURS(2ln):  {/* <div className="bg-background rounded-2xl border px-4 py-1 text-sm font-medium"> 
+  THEIRS(2ln):  <div className="rounded-2xl border bg-background px-4 py-1 font-medium text-sm"> 
+
+FILE: apps/remix/app/components/forms/signup.tsx HUNK#4
+  OURS(32ln):  <Button loading={form.formState.isSubmitting} type="submit" size="lg" className="mt-6 w-full" > <Trans>Create account</
+  THEIRS(34ln):  {isEmailPasswordSignupEnabled && ( <Button loading={form.formState.isSubmitting} type="submit" size="lg" className="mt-
+
+FILE: apps/remix/app/components/forms/team-update-form.tsx HUNK#1
+  OURS(2ln): import { Checkbox } from '@documenso/ui/primitives/checkbox'; 
+  THEIRS(10ln): import { zodResolver } from '@hookform/resolvers/zod'; import { msg } from '@lingui/core/macro'; import { useLingui } fr
+
+FILE: apps/remix/app/components/forms/team-update-form.tsx HUNK#2
+  OURS(4ln):  const organisationSuffix = organisationId.slice(-5); const organisationScopedTeamUrl = `${organisationSuffix}-${url}`; 
+  THEIRS(2ln):  await navigate(`/t/${url}/settings/general`); 
+
+FILE: apps/remix/app/components/forms/team-update-form.tsx HUNK#3
+  OURS(57ln):  <FormField control={form.control} name="isPrivate" render={({ field }) => ( <FormItem className="mt-4 flex items-center
+  THEIRS(6ln):  <FormStickySaveBar isDirty={form.formState.isDirty} isSubmitting={form.formState.isSubmitting} onReset={() => form.rese
+
+FILE: apps/remix/app/components/general/app-nav-mobile.tsx HUNK#1
+  OURS(8ln): import { useMemo } from 'react'; import { useLingui } from '@lingui/react/macro'; import { Trans } from '@lingui/react/m
+  THEIRS(2ln): import LogoImage from '@documenso/assets/logo.png'; 
+
+FILE: apps/remix/app/components/general/app-nav-mobile.tsx HUNK#2
+  OURS(3ln): import { isAdmin } from '@documenso/lib/utils/is-admin'; import { isPersonalLayout } from '@documenso/lib/utils/organisa
+  THEIRS(3ln): import { canAccessOrganisationAnalytics, formatOrganisationAnalyticsPath } from '@documenso/lib/utils/organisations'; im
+
+FILE: apps/remix/app/components/general/app-nav-mobile.tsx HUNK#3
+  OURS(2ln):  <BrandingLogo alt="Nomia Logo" className="h-6 w-auto" /> 
+  THEIRS(2ln):  <img src={LogoImage} alt="Documenso Logo" className="dark:invert" width={170} height={25} /> 
+
+FILE: apps/remix/app/components/general/app-nav-mobile.tsx HUNK#4
+  OURS(2ln):  Â© {new Date().getFullYear()} Nomia Pvt Ltd. <br /> All rights reserved. 
+  THEIRS(4ln):  Â© {new Date().getFullYear()} Documenso, Inc. <br /> <Trans>All rights reserved.</Trans> 
+
+FILE: apps/remix/app/components/general/document-signing/document-signing-page-view-v1.tsx HUNK#1
+  OURS(27ln):  const targetSigner = recipient.role === RecipientRole.ASSISTANT && selectedSigner ? selectedSigner : null; console.log(
+  THEIRS(2ln):  const targetSigner = recipient.role === RecipientRole.ASSISTANT && selectedSigner ? selectedSigner : null; 
+
+FILE: apps/remix/app/components/general/document-signing/document-signing-page-view-v1.tsx HUNK#2
+  OURS(7ln):  {document.team.teamGlobalSettings.brandingEnabled && document.team.teamGlobalSettings.brandingLogo && ( <img src={`/api
+  THEIRS(6ln):  {hasCustomBrandingLogo && ( <img src={`/api/branding/logo/team/${document.teamId}`} alt={`${document.team.name}'s Logo`
+
+FILE: apps/remix/app/components/general/document/document-edit-form.tsx HUNK#1
+  OURS(6ln): import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION, SKIP_QUERY_BATCH_META, } from '@documenso/lib/constants/trpc'; import { Ap
+  THEIRS(3ln): import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION, SKIP_QUERY_BATCH_META } from '@documenso/lib/constants/trpc'; import { App
+
+FILE: apps/remix/app/components/general/document/document-edit-form.tsx HUNK#2
+  OURS(10ln):  toast({ title: _(msg`Error`), description: error.code === AppErrorCode.LIMIT_EXCEEDED ? _( msg`You do not have enough c
+  THEIRS(6ln):  const errorMessage = getDistributeErrorMessage(error.code); toast({ title: _(errorMessage.title), description: _(errorM
+
+FILE: apps/remix/app/components/general/document/document-page-view-dropdown.tsx HUNK#1
+  OURS(17ln): import { useState } from 'react'; import { useLingui } from '@lingui/react'; import { Trans } from '@lingui/react/macro'
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/general/document/document-page-view-dropdown.tsx HUNK#2
+  OURS(1ln): 
+  THEIRS(3ln): import { trpc as trpcReact } from '@documenso/trpc/react'; import { DocumentShareButton } from '@documenso/ui/components
+
+FILE: apps/remix/app/components/general/document/document-page-view-dropdown.tsx HUNK#3
+  OURS(3ln):  const documentsPath = formatDocumentsPath(team.url); const documentsListPath = formatDocumentsPath(team.url, envelope.f
+  THEIRS(2ln):  const { canTitleBeChanged } = getEnvelopeItemPermissions(envelope, []); 
+
+FILE: apps/remix/app/components/general/document/document-page-view-dropdown.tsx HUNK#4
+  OURS(11ln):  <DocumentDeleteDialog id={mapSecondaryIdToDocumentId(envelope.secondaryId)} status={envelope.status} documentTitle={env
+  THEIRS(5ln):  <EnvelopeSaveAsTemplateDialog envelopeId={envelope.id} open={isSaveAsTemplateDialogOpen} onOpenChange={setSaveAsTemplat
+
+FILE: apps/remix/app/components/general/document/document-page-view-recent-activity.tsx HUNK#1
+  OURS(8ln):  className={cn( 'flex-auto truncate py-0.5 text-xs leading-5 text-muted-foreground dark:text-muted-foreground/70', { 'fo
+  THEIRS(2ln):  className="flex-auto truncate py-0.5 text-muted-foreground text-xs leading-5 dark:text-muted-foreground/70" 
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page-renderer.tsx HUNK#1
+  OURS(15ln):  // Reconcile selection state with live field nodes after flush/sync updates. const liveSelectedFieldGroups = selectedKo
+  THEIRS(39ln):  // Reconcile selection state with live field nodes after flush/sync updates. const liveSelectedFieldGroups = selectedKo
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page-renderer.tsx HUNK#2
+  OURS(2ln):  }, [localPageFields, selectedKonvaFieldGroups]); 
+  THEIRS(13ln):  }, [ localPageFields, selectedKonvaFieldGroups, overlappingFieldFormIds, isFieldChanging, editorFields.selectedField?.f
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page-renderer.tsx HUNK#3
+  OURS(5ln):  const fieldGroups = nodes.filter( (node) => node.hasName('field-group') && Boolean(node.getStage()) && Boolean(node.get
+  THEIRS(3ln):  const fieldGroups = nodes.filter( (node) => node.hasName('field-group') && Boolean(node.getStage()) && Boolean(node.get
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page-renderer.tsx HUNK#4
+  OURS(9ln):  if (fields.length === 0 || !fields[0]?.recipientId) { return null; } const recipient = envelope.recipients.find( (recip
+  THEIRS(6ln):  if (fields.length === 0) { return null; } const recipient = envelope.recipients.find((recipient) => recipient.id === fi
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page.tsx HUNK#1
+  OURS(13ln): import { lazy, useEffect, useMemo, useState } from 'react'; import type { MessageDescriptor } from '@lingui/core'; impor
+  THEIRS(2ln): import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value'; 
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page.tsx HUNK#2
+  OURS(17ln):  {/* <Button type="button" variant="outline" size="sm" className="mt-4 w-full" onClick={onDetectClick} disabled={envelop
+  THEIRS(19ln):  {editorConfig.fields?.allowAIDetection && ( <> <Button type="button" variant="outline" size="sm" className="mt-4 w-full
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-header.tsx HUNK#1
+  OURS(5ln):  <div className="flex items-center space-x-2"> <OrganisationCreditsChip className="inline-flex" /> <DocumentAttachmentsP
+  THEIRS(8ln):  <div className="flex shrink-0 items-center space-x-2"> {allowAttachments && (isEmbedded ? ( <EmbeddedEditorAttachmentPo
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-recipient-form.tsx HUNK#1
+  OURS(22ln): import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; import { DragDropContext, Draggable, type Dro
+  THEIRS(4ln): import { useLimits } from '@documenso/ee/server-only/limits/provider/client'; import { updateEditorSigners, 
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-recipient-form.tsx HUNK#2
+  OURS(14ln): const getCompleteSignersSyncKey = (signers: TEditorRecipientsFormSchema['signers']) => { return JSON.stringify( signers 
+  THEIRS(2ln): import { RecipientStepList } from './recipient-step-list'; 
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-recipient-form.tsx HUNK#3
+  OURS(15ln):  const lastSyncedSignersKeyRef = useRef<string | null>(null); const lastSyncedMetaKeyRef = useRef<string | null>(null); 
+  THEIRS(2ln):  const { recipients } = envelope; 
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-recipient-form.tsx HUNK#4
+  OURS(26ln):  const onRemoveSigner = (index: number) => { const signer = signers[index]; if (!canRecipientBeModified(signer.id)) { to
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-recipient-form.tsx HUNK#5
+  OURS(5ln):  // Weird edge case where the whole envelope is created via API // with no signing order. If they come to this page it w
+  THEIRS(6ln):  // Locked recipients hold persisted values the server refuses to rewrite, // e.g. an envelope created via API with no s
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-recipient-form.tsx HUNK#6
+  OURS(3ln):  if (signersKey !== lastSyncedSignersKeyRef.current) { lastSyncedSignersKeyRef.current = signersKey; 
+  THEIRS(27ln):  const hasSigningOrderChanged = envelope.documentMeta.signingOrder !== data.signingOrder; const hasAllowDictateNextSigne
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-recipient-form.tsx HUNK#7
+  OURS(22ln):  {/* <Tooltip> <TooltipTrigger asChild> <Button variant="outline" type="button" size="sm" disabled={isSubmitting} onClic
+  THEIRS(24ln):  {editorConfig.recipients?.allowAIDetection && ( <Tooltip> <TooltipTrigger asChild> <Button variant="outline" type="butt
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-upload-page.tsx HUNK#1
+  OURS(4ln):  const { t } = useLingui(); const { envelope, setLocalEnvelope, relativePath, editorFields } = useCurrentEnvelopeEditor(
+  THEIRS(3ln):  const { t, i18n } = useLingui(); const { maximumEnvelopeItemCount, remaining } = useLimits(); 
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor-upload-page.tsx HUNK#2
+  OURS(15ln):  {localFiles.length > 1 && !localFile.isUploading && localFile.envelopeItemId && ( <EnvelopeItemDeleteDialog canItemBeDe
+  THEIRS(53ln):  {localFile.envelopeItemId && envelopeItemPermissions.canFileBeChanged && uploadConfig?.allowReplace && ( <Button varian
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor.tsx HUNK#1
+  OURS(30ln):  const navigateToStep = async (step: EnvelopeEditorStep) => { if (step === currentStep) { return; } setIsStepLoading(tru
+  THEIRS(19ln):  const [pageToRender, setPageToRender] = useState<EnvelopeEditorStep | 'loading'>(searchParamsStep); const latestStepCha
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor.tsx HUNK#2
+  OURS(2ln):  void navigateToStep(foundStep.id as EnvelopeEditorStep); 
+  THEIRS(2ln):  void handleStepChange(foundStep.id as EnvelopeEditorStep); 
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor.tsx HUNK#3
+  OURS(2ln):  <div className="h-screen w-full overflow-hidden bg-gray-50 dark:bg-background"> 
+  THEIRS(2ln):  <div className="h-screen w-screen bg-envelope-editor-background"> 
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor.tsx HUNK#4
+  OURS(16ln):  }`} onClick={() => void navigateToStep(step.id as EnvelopeEditorStep)} > <div className="flex items-center space-x-3"> 
+  THEIRS(20ln):  }`, { 'p-3': !minimizeLeftSidebar, }, )} onClick={() => void navigateToStep(step.id as EnvelopeEditorStep)} > <div clas
+
+FILE: apps/remix/app/components/general/envelope-editor/envelope-editor.tsx HUNK#5
+  OURS(47ln):  <EnvelopeDownloadDialog envelopeId={envelope.id} envelopeStatus={envelope.status} envelopeItems={envelope.envelopeItems
+  THEIRS(92ln):  {allowDuplication && ( <EnvelopeDuplicateDialog envelopeId={envelope.id} envelopeType={envelope.type} trigger={ <Button
+
+FILE: apps/remix/app/components/general/envelope-signing/envelope-signer-header.tsx HUNK#1
+  OURS(1ln): 
+  THEIRS(4ln): import { PublicLegalLinksDropdownMenuItems } from '~/components/general/public-legal-links'; import { BrandingLogoIcon }
+
+FILE: apps/remix/app/components/general/envelope-signing/envelope-signer-header.tsx HUNK#2
+  OURS(21ln):  {!isEmbedSigning && ( <Link to="/" className="flex-shrink-0"> {envelopeData.settings.brandingEnabled && envelopeData.se
+  THEIRS(14ln):  {!isEmbedSigning && (hasCustomBrandingLogo ? ( <img src={`/api/branding/logo/team/${envelope.teamId}`} alt={`${envelope
+
+FILE: apps/remix/app/components/general/envelope/envelope-drop-zone-wrapper.tsx HUNK#1
+  OURS(12ln):  const errorMessage = match(error.code) .with('INVALID_DOCUMENT_FILE', () => t`You cannot upload encrypted PDFs.`) .with
+  THEIRS(7ln):  analytics.captureException(err, { source: 'editor', location: 'upload_document', }); const errorMessage = getUploadErro
+
+FILE: apps/remix/app/components/general/envelope/envelope-drop-zone-wrapper.tsx HUNK#2
+  OURS(3ln):  to={organisation ? `/o/${organisation.url}/price-plan` : `/price-plans`} className="mt-4 text-sm text-amber-500 hover:u
+  THEIRS(3ln):  to={`/o/${organisation.url}/settings/billing`} className="mt-4 text-amber-500 text-sm hover:underline dark:text-amber-4
+
+FILE: apps/remix/app/components/general/envelope/envelope-drop-zone-wrapper.tsx HUNK#3
+  OURS(8ln):  <p className={`mt-4 text-sm ${ remaining.documents < 0 ? 'font-medium text-amber-700' : 'text-muted-foreground/80' }`} 
+  THEIRS(2ln):  <p className="mt-4 text-muted-foreground/80 text-sm"> 
+
+FILE: apps/remix/app/components/general/envelope/envelope-upload-button.tsx HUNK#1
+  OURS(12ln):  const errorMessage = match(error.code) .with('INVALID_DOCUMENT_FILE', () => t`You cannot upload encrypted PDFs.`) .with
+  THEIRS(7ln):  analytics.captureException(err, { source: 'editor', location: 'upload_document', }); const errorMessage = getUploadErro
+
+FILE: apps/remix/app/components/general/envelope/envelope-upload-button.tsx HUNK#2
+  OURS(6ln):  {showCreditsInfo && remaining.documents !== 0 && ( <TooltipContent> <p className="text-sm"> <Trans> {remaining.document
+  THEIRS(6ln):  {type === EnvelopeType.DOCUMENT && remaining.documents > 0 && Number.isFinite(remaining.documents) && ( <TooltipContent
+
+FILE: apps/remix/app/components/general/settings-header.tsx HUNK#1
+  OURS(2ln):  <div className={cn('flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', className)}> 
+  THEIRS(2ln):  <div className={cn('mb-4 flex flex-row items-center justify-between', className)}> 
+
+FILE: apps/remix/app/components/tables/admin-document-logs-table.tsx HUNK#1
+  OURS(11ln):  cell: ({ row }) => ( <span className={cn({ 'font-medium text-destructive': row.original.type === DOCUMENT_AUDIT_LOG_TYP
+  THEIRS(2ln):  cell: ({ row }) => <span>{formatDocumentAuditLogAction(i18n, row.original).description}</span>, 
+
+FILE: apps/remix/app/components/tables/document-logs-table.tsx HUNK#1
+  OURS(9ln): import { useMemo } from 'react'; import { msg } from '@lingui/core/macro'; import { useLingui } from '@lingui/react'; im
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/tables/document-logs-table.tsx HUNK#2
+  OURS(11ln):  cell: ({ row }) => ( <span className={cn({ 'font-medium text-destructive': row.original.type === DOCUMENT_AUDIT_LOG_TYP
+  THEIRS(2ln):  cell: ({ row }) => <span>{formatDocumentAuditLogAction(i18n, row.original, userId).description}</span>, 
+
+FILE: apps/remix/app/components/tables/documents-table-action-dropdown.tsx HUNK#1
+  OURS(25ln): import { useState } from 'react'; import { msg } from '@lingui/core/macro'; import { useLingui } from '@lingui/react'; i
+  THEIRS(9ln): import { useSession } from '@documenso/lib/client-only/providers/session'; import type { TDocumentMany as TDocumentRow }
+
+FILE: apps/remix/app/components/tables/documents-table-action-dropdown.tsx HUNK#2
+  OURS(7ln):  <DropdownMenuTrigger data-testid="document-table-action-btn" onClick={(e) => e.stopPropagation()} className="inline-fle
+  THEIRS(3ln):  <DropdownMenuTrigger data-testid="document-table-action-btn"> <MoreHorizontal className="h-5 w-5 text-muted-foreground"
+
+FILE: apps/remix/app/components/tables/envelopes-table-bulk-action-bar.tsx HUNK#1
+  OURS(5ln): import { useLingui } from '@lingui/react/macro'; import { Trans } from '@lingui/react/macro'; import { FolderInputIcon, 
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/tables/envelopes-table-bulk-action-bar.tsx HUNK#2
+  OURS(5ln):  canResend?: boolean; onMoveClick: () => void; onDeleteClick: () => void; onResendClick?: () => void; 
+  THEIRS(5ln):  onDownloadClick?: () => void; onMoveClick: () => void; onDeleteClick: () => void; onCancelClick?: () => void; 
+
+FILE: apps/remix/app/components/tables/envelopes-table-bulk-action-bar.tsx HUNK#3
+  OURS(5ln):  canResend = false, onMoveClick, onDeleteClick, onResendClick, 
+  THEIRS(5ln):  onDownloadClick, onMoveClick, onDeleteClick, onCancelClick, 
+
+FILE: apps/remix/app/components/tables/envelopes-table-bulk-action-bar.tsx HUNK#4
+  OURS(5ln):  <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-x-4 rounded-lg border border-border
+  THEIRS(16ln):  <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-x-1 rounded-xl bg-popover p-1.5 tex
+
+FILE: apps/remix/app/components/tables/envelopes-table-bulk-action-bar.tsx HUNK#5
+  OURS(10ln):  {canResend && ( <Button type="button" variant="outline" size="sm" onClick={onResendClick}> <SendIcon className="mr-2 h-
+  THEIRS(46ln):  <Button type="button" variant="ghost" size="sm" onClick={onMoveClick} className="h-8 gap-x-1.5 py-1.5 pr-2.5 pl-2" > <F
+
+FILE: apps/remix/app/components/tables/internal-audit-log-table.tsx HUNK#1
+  OURS(8ln): import { DOCUMENT_AUDIT_LOG_TYPE, type TDocumentAuditLog, } from '@documenso/lib/types/document-audit-logs'; import { fo
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/tables/internal-audit-log-table.tsx HUNK#2
+  OURS(6ln):  <div className={cn('text-sm font-medium text-foreground print:text-[8pt]', { 'text-destructive': log.type === DOCUMENT_
+  THEIRS(2ln):  <div className="font-medium text-foreground text-sm print:text-[8pt]"> 
+
+FILE: apps/remix/app/components/tables/internal-audit-log-table.tsx HUNK#3
+  OURS(3ln):  <div className="text-sm text-muted-foreground print:text-[8pt]"> {DateTime.fromJSDate(log.createdAt).toFormat('yyyy-MM-
+  THEIRS(5ln):  <div className="text-muted-foreground text-sm print:text-[8pt]"> {DateTime.fromJSDate(log.createdAt) .setLocale(APP_I18
+
+FILE: apps/remix/app/components/tables/team-members-table.tsx HUNK#1
+  OURS(10ln): import { useMemo } from 'react'; import { msg } from '@lingui/core/macro'; import { useLingui } from '@lingui/react'; im
+  THEIRS(1ln): 
+
+FILE: apps/remix/app/components/tables/team-members-table.tsx HUNK#2
+  OURS(7ln):  cell: ({ row }) => { const isDirectTeamMember = groups.some( (group) => group.organisationGroupType === OrganisationGro
+  THEIRS(6ln):  cell: ({ row }) => ( <DropdownMenu> <DropdownMenuTrigger> <MoreHorizontal className="h-5 w-5 text-muted-foreground" /> 
+
+FILE: apps/remix/app/components/tables/team-members-table.tsx HUNK#3
+  OURS(57ln):  <DropdownMenuContent className="w-52" align="start" forceMount> <DropdownMenuLabel> <Trans>Actions</Trans> </DropdownMe
+  THEIRS(18ln):  <TeamMemberDeleteDialog teamId={team.id} teamName={team.name} memberId={row.original.id} memberName={row.original.name 
+
+FILE: apps/remix/app/components/tables/team-members-table.tsx HUNK#4
+  OURS(7ln):  {!groupQuery.isPending && ( <TeamInheritMemberAlert memberAccessTeamGroup={memberAccessTeamGroup || null} isPrivate={te
+  THEIRS(2ln):  {!groupQuery.isPending && <TeamInheritMemberAlert memberAccessTeamGroup={memberAccessTeamGroup || null} />} 
+
+FILE: apps/remix/app/components/tables/user-organisations-table.tsx HUNK#1
+  OURS(5ln):  <Link to={isPersonalLayoutMode ? `/o/${row.original.url}` : `/o/${row.original.url}`} preventScrollReset={true} > 
+  THEIRS(2ln):  <Link to={`/o/${row.original.url}`} preventScrollReset={true}> 
+
